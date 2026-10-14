@@ -31,6 +31,9 @@ object ThemeSettingsRepository {
     private val _amoledEnabled = MutableStateFlow(false)
     val amoledEnabled: StateFlow<Boolean> = _amoledEnabled.asStateFlow()
 
+    private val _amoledSurfacesEnabled = MutableStateFlow(false)
+    val amoledSurfacesEnabled: StateFlow<Boolean> = _amoledSurfacesEnabled.asStateFlow()
+
     private val _liquidGlassNativeTabBarEnabled = MutableStateFlow(false)
     val liquidGlassNativeTabBarEnabled: StateFlow<Boolean> = _liquidGlassNativeTabBarEnabled.asStateFlow()
 
@@ -63,6 +66,7 @@ object ThemeSettingsRepository {
         _customThemePreference.value = CustomThemeColors.Default
         _customThemeColors.value = CustomThemeColors.solid(CustomThemeColors.Default.second)
         _amoledEnabled.value = false
+        _amoledSurfacesEnabled.value = false
         _liquidGlassNativeTabBarEnabled.value = false
         NativeTabBridge.publishAccentColor(ThemeColors.White.nativeAccentHex)
         NativeTabBridge.publishLiquidGlassEnabled(false)
@@ -86,7 +90,9 @@ object ThemeSettingsRepository {
         _selectedThemePreference.value = theme
         _customThemePreference.value = CustomThemeColors.decode(ThemeSettingsStorage.loadCustomThemeColors())
         applyEffectiveTheme()
-        _amoledEnabled.value = ThemeSettingsStorage.loadAmoledEnabled() ?: false
+        val amoledEnabled = ThemeSettingsStorage.loadAmoledEnabled() ?: false
+        _amoledEnabled.value = amoledEnabled
+        _amoledSurfacesEnabled.value = amoledEnabled && (ThemeSettingsStorage.loadAmoledSurfacesEnabled() ?: false)
         val liquidGlassEnabled = ThemeSettingsStorage.loadLiquidGlassNativeTabBarEnabled() ?: false
         _liquidGlassNativeTabBarEnabled.value = liquidGlassEnabled
         NativeTabBridge.publishLiquidGlassEnabled(liquidGlassEnabled)
@@ -123,6 +129,18 @@ object ThemeSettingsRepository {
         if (_amoledEnabled.value == enabled) return
         _amoledEnabled.value = enabled
         ThemeSettingsStorage.saveAmoledEnabled(enabled)
+        if (!enabled && _amoledSurfacesEnabled.value) {
+            _amoledSurfacesEnabled.value = false
+            ThemeSettingsStorage.saveAmoledSurfacesEnabled(false)
+        }
+    }
+
+    fun setAmoledSurfaces(enabled: Boolean) {
+        ensureLoaded()
+        if (enabled && !_amoledEnabled.value) return
+        if (_amoledSurfacesEnabled.value == enabled) return
+        _amoledSurfacesEnabled.value = enabled
+        ThemeSettingsStorage.saveAmoledSurfacesEnabled(enabled)
     }
 
     fun setLiquidGlassNativeTabBar(enabled: Boolean) {

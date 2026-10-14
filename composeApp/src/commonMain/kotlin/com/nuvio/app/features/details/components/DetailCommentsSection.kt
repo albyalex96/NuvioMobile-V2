@@ -172,7 +172,7 @@ private fun CommentCard(
     modifier: Modifier = Modifier,
 ) {
     val colorScheme = MaterialTheme.colorScheme
-    val isAmoled = colorScheme.background == Color.Black && colorScheme.surface == Color(0xFF050505)
+    val isAmoled = colorScheme.background == Color.Black && colorScheme.surfaceVariant == Color.Black
     val bodyText = if (review.hasSpoilerContent) {
         stringResource(Res.string.detail_comments_spoiler_card)
     } else {

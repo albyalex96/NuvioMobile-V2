@@ -8,6 +8,7 @@ import androidx.compose.material3.Typography
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -41,7 +42,28 @@ val MaterialTheme.appTheme: AppTheme
 private fun contentColorFor(background: Color): Color =
     if (background.luminance() > 0.5f) Color(0xFF111111) else Color(0xFFF5F7F8)
 
-private fun buildColorScheme(palette: ThemeColorPalette, amoled: Boolean = false) = darkColorScheme(
+private fun buildColorScheme(
+    palette: ThemeColorPalette,
+    amoled: Boolean = false,
+    amoledSurfaces: Boolean = false,
+): ColorScheme {
+    val baseScheme = buildBaseColorScheme(palette, amoled = amoled)
+    if (!amoled || !amoledSurfaces) return baseScheme
+    return baseScheme.copy(
+        surface = Color.Black,
+        surfaceVariant = Color.Black,
+        surfaceTint = Color.Black,
+        surfaceDim = Color.Black,
+        surfaceBright = Color.Black,
+        surfaceContainerLowest = Color.Black,
+        surfaceContainerLow = Color.Black,
+        surfaceContainer = Color.Black,
+        surfaceContainerHigh = Color.Black,
+        surfaceContainerHighest = Color.Black,
+    )
+}
+
+private fun buildBaseColorScheme(palette: ThemeColorPalette, amoled: Boolean) = darkColorScheme(
     primary = palette.secondary,
     onPrimary = palette.onSecondary,
     primaryContainer = palette.focusBackground,
@@ -197,14 +219,20 @@ fun NuvioTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     appTheme: AppTheme = AppTheme.WHITE,
     amoled: Boolean = false,
+    amoledSurfaces: Boolean = false,
     customThemeColors: CustomThemeColors = CustomThemeColors.Default,
     content: @Composable () -> Unit,
 ) {
     val palette = remember(appTheme, customThemeColors) {
         ThemeColors.getColorPalette(appTheme, customThemeColors)
     }
-    val colorScheme = buildColorScheme(palette, amoled = amoled)
-    val tokens = defaultNuvioThemeTokens(palette, amoled = amoled, colorScheme = colorScheme)
+    val colorScheme = buildColorScheme(palette, amoled = amoled, amoledSurfaces = amoledSurfaces)
+    val tokens = defaultNuvioThemeTokens(
+        palette,
+        amoled = amoled,
+        amoledSurfaces = amoledSurfaces,
+        colorScheme = colorScheme,
+    )
 
     val density = LocalDensity.current
     CompositionLocalProvider(

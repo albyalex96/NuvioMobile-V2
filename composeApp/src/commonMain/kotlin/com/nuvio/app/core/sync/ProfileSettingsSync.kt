@@ -185,6 +185,7 @@ object ProfileSettingsSync {
             ThemeSettingsRepository.selectedThemePreference.map { "theme" },
             ThemeSettingsRepository.customThemePreference.map { "custom_theme_colors" },
             ThemeSettingsRepository.amoledEnabled.map { "amoled" },
+            ThemeSettingsRepository.amoledSurfacesEnabled.map { "amoled_surfaces" },
             ThemeSettingsRepository.liquidGlassNativeTabBarEnabled.map { "liquid_glass_tab_bar" },
             ThemeSettingsRepository.navBarGlowEnabled.map { "nav_bar_glow_enabled" },
             ThemeSettingsRepository.navBarStyle.map { "nav_bar_style" },

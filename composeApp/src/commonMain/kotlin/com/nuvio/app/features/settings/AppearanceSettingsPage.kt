@@ -51,6 +51,8 @@ import nuvio.composeapp.generated.resources.settings_nav_bar_glow_off
 import nuvio.composeapp.generated.resources.settings_nav_bar_summary
 import nuvio.composeapp.generated.resources.settings_appearance_amoled_black
 import nuvio.composeapp.generated.resources.settings_appearance_amoled_description
+import nuvio.composeapp.generated.resources.settings_appearance_amoled_surfaces
+import nuvio.composeapp.generated.resources.settings_appearance_amoled_surfaces_description
 import nuvio.composeapp.generated.resources.settings_appearance_continue_watching_description
 import nuvio.composeapp.generated.resources.settings_appearance_liquid_glass
 import nuvio.composeapp.generated.resources.settings_appearance_liquid_glass_description
@@ -75,6 +77,8 @@ internal fun LazyListScope.appearanceSettingsContent(
     onThemeSelected: (AppTheme) -> Unit,
     amoledEnabled: Boolean,
     onAmoledToggle: (Boolean) -> Unit,
+    amoledSurfacesEnabled: Boolean,
+    onAmoledSurfacesToggle: (Boolean) -> Unit,
     liquidGlassNativeTabBarSupported: Boolean,
     liquidGlassNativeTabBarEnabled: Boolean,
     onLiquidGlassNativeTabBarToggle: (Boolean) -> Unit,
@@ -127,6 +131,16 @@ internal fun LazyListScope.appearanceSettingsContent(
                     isTablet = isTablet,
                     onCheckedChange = onAmoledToggle,
                 )
+                if (amoledEnabled) {
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.settings_appearance_amoled_surfaces),
+                        description = stringResource(Res.string.settings_appearance_amoled_surfaces_description),
+                        checked = amoledSurfacesEnabled,
+                        isTablet = isTablet,
+                        onCheckedChange = onAmoledSurfacesToggle,
+                    )
+                }
                 if (liquidGlassNativeTabBarSupported) {
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsSwitchRow(
