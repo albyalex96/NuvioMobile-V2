@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-# version.json is the source of truth; older commits only have the iOS xcconfig.
+# version.json is the source of truth ("version"; older commits use "versionName", the oldest only have the iOS xcconfig).
 version_file="${VERSION_FILE:-version.json}"
 legacy_version_file="iosApp/Configuration/Version.xcconfig"
 target_ref="${1:-HEAD}"
@@ -16,7 +16,7 @@ read_version() {
     local commit="$1"
     if git cat-file -e "${commit}:${version_file}" 2>/dev/null; then
         git show "${commit}:${version_file}" \
-            | sed -nE 's/.*"versionName"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' \
+            | sed -nE 's/.*"version(Name)?"[[:space:]]*:[[:space:]]*"([^"]+)".*/\2/p' \
             | head -n 1
     else
         git show "${commit}:${legacy_version_file}" 2>/dev/null \

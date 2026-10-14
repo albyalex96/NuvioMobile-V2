@@ -42,7 +42,7 @@ jobs:
       - name: Read version.json
         id: version
         run: |
-          version="$(jq -er '.versionName' version.json)"
+          version="$(jq -er '.version' version.json)"
           short_sha="$(git rev-parse --short HEAD)"
           branch_slug="$(printf '%s' "${GITHUB_REF_NAME}" | tr -c '[:alnum:]._-' '-')"
           echo "version=${version}" >> "${GITHUB_OUTPUT}"

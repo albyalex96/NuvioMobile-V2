@@ -1,7 +1,7 @@
 name: Build & Release (push)
 
 # Builds the signed Android full release on every push to main and publishes a GitHub
-# release (tag v<versionName> from version.json) with generated release notes.
+# release (tag v<version> from version.json) with generated release notes.
 # A release is created only when version.json carries a version that has not been released
 # yet: pushes without a version bump still build and upload the APKs as workflow artifacts.
 
@@ -43,8 +43,7 @@ jobs:
       - name: Read version.json
         id: version
         run: |
-          version="$(jq -er '.versionName' version.json)"
-          version_code="$(jq -er '.versionCode' version.json)"
+          version="$(jq -er '.version' version.json)"
           tag="v${version}"
           prerelease=false
           [[ "${version}" == *-* ]] && prerelease=true
@@ -56,7 +55,6 @@ jobs:
           fi
           {
             echo "version=${version}"
-            echo "version_code=${version_code}"
             echo "tag=${tag}"
             echo "prerelease=${prerelease}"
             echo "release_exists=${release_exists}"

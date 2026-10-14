@@ -4,7 +4,7 @@ set -euo pipefail
 
 repository_root="$(cd "$(dirname "$0")/.." && pwd -P)"
 version_file="${repository_root}/version.json"
-version="${1:-$(sed -nE 's/.*"versionName"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' "${version_file}" | head -n 1)}"
+version="${1:-$(sed -nE 's/.*"version"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' "${version_file}" | head -n 1)}"
 configuration="${IOS_CONFIGURATION:-Release}"
 case "${configuration}" in
     Debug)
