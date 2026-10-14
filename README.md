@@ -8,14 +8,14 @@
     Bring your own sources. Nuvio turns them into a library with artwork, ratings, subtitles, and your place saved on every screen.
   </p>
 
-  [Website](https://nuvio.tv) · [GitHub releases](https://github.com/NuvioMedia/NuvioMobile/releases/latest) · [Support Nuvio](https://nuvio.tv/support)
+  [Website](https://nuvio.tv) · [GitHub releases](https://github.com/albyalex96/NuvioMobile-V2/releases/latest) · [Support Nuvio](https://nuvio.tv/support)
 
 </div>
 
 ## Get Nuvio Mobile
 
 - [Android on Google Play](https://play.google.com/store/apps/details?id=com.nuvio.app)
-- [Android APK](https://github.com/NuvioMedia/NuvioMobile/releases/latest)
+- [Android APK](https://github.com/albyalex96/NuvioMobile-V2/releases/latest)
 - iOS via AltStore or SideStore: add [this source URL](https://raw.githubusercontent.com/NuvioMedia/NuvioMobile/cmp-rewrite/store.json) in the app's Sources section, then install Nuvio.
 
 ## Build from source
