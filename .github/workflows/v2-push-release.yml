@@ -9,7 +9,7 @@ name: Build & Release (push)
 on:
   push:
     branches:
-      - main
+      - enhanced/v2
     paths-ignore:
       - '**.md'
       - '.github/ISSUE_TEMPLATE/**'
