@@ -3,8 +3,8 @@
 set -euo pipefail
 
 repository_root="$(cd "$(dirname "$0")/.." && pwd -P)"
-version_file="${repository_root}/iosApp/Configuration/Version.xcconfig"
-version="${1:-$(sed -nE 's/^[[:space:]]*MARKETING_VERSION[[:space:]]*=[[:space:]]*([^[:space:]#]+).*$/\1/p' "${version_file}" | head -n 1)}"
+version_file="${repository_root}/version.json"
+version="${1:-$(sed -nE 's/.*"versionName"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/p' "${version_file}" | head -n 1)}"
 configuration="${IOS_CONFIGURATION:-Release}"
 case "${configuration}" in
     Debug)

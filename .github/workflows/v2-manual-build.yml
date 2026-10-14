@@ -1,0 +1,93 @@
+name: Manual Build (branch)
+
+# Run from Actions > "Manual Build (branch)" > "Run workflow".
+# Pick the branch to build in the "Use workflow from" dropdown, which lists every branch
+# of the repository; the selected branch is checked out and built. The APKs are uploaded
+# as workflow artifacts (no GitHub release is created).
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: Build type
+        required: true
+        type: choice
+        options:
+          - debug
+          - release
+        default: debug
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v2-manual-build-${{ github.ref }}-${{ inputs.build_type }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build ${{ inputs.build_type }} from ${{ github.ref_name }}
+    runs-on: ubuntu-latest
+    env:
+      BUILD_TYPE: ${{ inputs.build_type }}
+      RELEASE_PROPERTIES_BASE64: ${{ secrets.NUVIO_LOCAL_PROPERTIES_BASE64 }}
+      RELEASE_KEYSTORE_BASE64: ${{ secrets.NUVIO_RELEASE_KEYSTORE_BASE64 }}
+
+    steps:
+      - name: Check out selected branch
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Read version.json
+        id: version
+        run: |
+          version="$(jq -er '.versionName' version.json)"
+          short_sha="$(git rev-parse --short HEAD)"
+          branch_slug="$(printf '%s' "${GITHUB_REF_NAME}" | tr -c '[:alnum:]._-' '-')"
+          echo "version=${version}" >> "${GITHUB_OUTPUT}"
+          echo "artifact=nuvio-${version}-${branch_slug}-${short_sha}-${BUILD_TYPE}" >> "${GITHUB_OUTPUT}"
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Configure properties
+        run: |
+          if [[ -n "${RELEASE_PROPERTIES_BASE64}" ]]; then
+            printf '%s' "${RELEASE_PROPERTIES_BASE64}" | base64 --decode > local.properties
+            sed -i -E '/^[[:space:]]*(sdk\.dir|NUVIO_RELEASE_STORE_FILE)[[:space:]]*=/d' local.properties
+          else
+            echo "::warning::NUVIO_LOCAL_PROPERTIES_BASE64 is not set; building without runtime keys."
+            touch local.properties
+          fi
+
+          if [[ "${BUILD_TYPE}" == "release" ]]; then
+            if [[ -z "${RELEASE_KEYSTORE_BASE64}" ]]; then
+              echo "NUVIO_RELEASE_KEYSTORE_BASE64 is required for release builds." >&2
+              exit 1
+            fi
+            keystore_path="${RUNNER_TEMP}/nuvio-release.jks"
+            printf '%s' "${RELEASE_KEYSTORE_BASE64}" | base64 --decode > "${keystore_path}"
+            printf '\nNUVIO_RELEASE_STORE_FILE=%s\n' "${keystore_path}" >> local.properties
+          fi
+
+      - name: Build full ${{ inputs.build_type }} APK
+        run: |
+          if [[ "${BUILD_TYPE}" == "release" ]]; then
+            ./gradlew :androidApp:assembleFullRelease --stacktrace
+          else
+            ./gradlew :androidApp:assembleFullDebug --stacktrace
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.version.outputs.artifact }}
+          path: androidApp/build/outputs/apk/full/${{ inputs.build_type }}/*.apk
+          if-no-files-found: error

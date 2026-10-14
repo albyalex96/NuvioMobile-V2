@@ -1,0 +1,183 @@
+name: Build & Release (push)
+
+# Builds the signed Android full release on every push to main and publishes a GitHub
+# release (tag v<versionName> from version.json) with generated release notes.
+# A release is created only when version.json carries a version that has not been released
+# yet: pushes without a version bump still build and upload the APKs as workflow artifacts.
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - '.github/ISSUE_TEMPLATE/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v2-push-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build Android release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+      release_exists: ${{ steps.version.outputs.release_exists }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      RELEASE_PROPERTIES_BASE64: ${{ secrets.NUVIO_LOCAL_PROPERTIES_BASE64 }}
+      RELEASE_KEYSTORE_BASE64: ${{ secrets.NUVIO_RELEASE_KEYSTORE_BASE64 }}
+
+    steps:
+      - name: Check out full history
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Read version.json
+        id: version
+        run: |
+          version="$(jq -er '.versionName' version.json)"
+          version_code="$(jq -er '.versionCode' version.json)"
+          tag="v${version}"
+          prerelease=false
+          [[ "${version}" == *-* ]] && prerelease=true
+          release_exists=false
+          if gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${tag}" >/dev/null 2>&1 \
+            || git rev-parse --verify --quiet "refs/tags/${tag}" >/dev/null; then
+            release_exists=true
+            echo "::notice::${tag} already released; bump version.json to publish a new release. Building artifacts only."
+          fi
+          {
+            echo "version=${version}"
+            echo "version_code=${version_code}"
+            echo "tag=${tag}"
+            echo "prerelease=${prerelease}"
+            echo "release_exists=${release_exists}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Configure release signing
+        run: |
+          missing=()
+          [[ -n "${RELEASE_PROPERTIES_BASE64}" ]] || missing+=(NUVIO_LOCAL_PROPERTIES_BASE64)
+          [[ -n "${RELEASE_KEYSTORE_BASE64}" ]] || missing+=(NUVIO_RELEASE_KEYSTORE_BASE64)
+          if (( ${#missing[@]} > 0 )); then
+            echo "Missing repository secrets: ${missing[*]}" >&2
+            echo "Release APKs must be signed with the same key as the installed app for in-app updates to work." >&2
+            exit 1
+          fi
+
+          keystore_path="${RUNNER_TEMP}/nuvio-release.jks"
+          printf '%s' "${RELEASE_KEYSTORE_BASE64}" | base64 --decode > "${keystore_path}"
+          printf '%s' "${RELEASE_PROPERTIES_BASE64}" | base64 --decode > local.properties
+          sed -i -E '/^[[:space:]]*(sdk\.dir|NUVIO_RELEASE_STORE_FILE)[[:space:]]*=/d' local.properties
+          printf '\nNUVIO_RELEASE_STORE_FILE=%s\n' "${keystore_path}" >> local.properties
+
+          for property_name in NUVIO_RELEASE_STORE_PASSWORD NUVIO_RELEASE_KEY_ALIAS NUVIO_RELEASE_KEY_PASSWORD; do
+            if ! grep -Eq "^${property_name}=.+" local.properties; then
+              echo "Missing required property in NUVIO_LOCAL_PROPERTIES_BASE64: ${property_name}" >&2
+              exit 1
+            fi
+          done
+
+      - name: Build full release APKs
+        run: ./gradlew :androidApp:assembleFullRelease --stacktrace
+
+      - name: Rename APKs
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          mkdir -p dist
+          for apk in androidApp/build/outputs/apk/full/release/*.apk; do
+            abi="$(basename "${apk}" .apk | sed -E 's/^androidApp-full-//; s/-release(-unsigned)?$//')"
+            cp "${apk}" "dist/NuvioEnhanced-${VERSION}-${abi}.apk"
+          done
+          ls -l dist
+
+      - name: Generate release notes
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          previous_tag="$(git describe --tags --abbrev=0 --match 'v[0-9]*' HEAD 2>/dev/null || true)"
+          if [[ -n "${previous_tag}" && "${previous_tag}" != "${TAG}" ]]; then
+            from_ref="${previous_tag}"
+          else
+            # First v2 release: start from the commit that introduced version.json.
+            from_ref="$(git log --diff-filter=A --format='%H' -- version.json | tail -n 1)"
+          fi
+
+          ./scripts/generate-release-notes.sh \
+            --from "${from_ref}" \
+            --to "${GITHUB_SHA}" \
+            --repository "${GITHUB_REPOSITORY}" \
+            > dist/release-notes.md || true
+          if [[ ! -s dist/release-notes.md ]]; then
+            echo "- Maintenance release" > dist/release-notes.md
+          fi
+          if [[ -n "${previous_tag}" && "${previous_tag}" != "${TAG}" ]]; then
+            printf '\n**Full changelog:** https://github.com/%s/compare/%s...%s\n' \
+              "${GITHUB_REPOSITORY}" "${previous_tag}" "${TAG}" >> dist/release-notes.md
+          fi
+
+          {
+            echo "## ${VERSION} release notes"
+            echo
+            cat dist/release-notes.md
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: nuvio-${{ steps.version.outputs.version }}-android-full-release
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: Publish GitHub release
+    needs: build
+    if: needs.build.outputs.release_exists != 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TAG: ${{ needs.build.outputs.tag }}
+      VERSION: ${{ needs.build.outputs.version }}
+      PRERELEASE: ${{ needs.build.outputs.prerelease }}
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: nuvio-${{ needs.build.outputs.version }}-android-full-release
+          path: dist
+
+      - name: Create release
+        run: |
+          release_args=(
+            "${TAG}"
+            --repo "${GITHUB_REPOSITORY}"
+            --target "${GITHUB_SHA}"
+            --title "Nuvio Enhanced ${VERSION}"
+            --notes-file dist/release-notes.md
+          )
+          if [[ "${PRERELEASE}" == "true" ]]; then
+            release_args+=(--prerelease)
+          fi
+          gh release create "${release_args[@]}" dist/*.apk
