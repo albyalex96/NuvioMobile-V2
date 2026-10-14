@@ -720,6 +720,7 @@
   <string name="player_still_watching_message">Hai guardato %1$d episodi di fila. Vuoi continuare a guardare?</string>
   <string name="player_still_watching_continue">Continua a guardare</string>
   <string name="player_still_watching_stop">Esci dal player</string>
+  <string name="player_still_watching_auto_exit">Il player si chiuderà tra %1$d s</string>
   <string name="player_skip">Salta</string>
   <string name="player_skip_intro">Salta Intro</string>
   <string name="player_skip_outro">Salta Finale</string>

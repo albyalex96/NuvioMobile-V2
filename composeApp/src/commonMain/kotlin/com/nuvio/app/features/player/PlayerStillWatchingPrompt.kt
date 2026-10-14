@@ -6,6 +6,9 @@ private const val STILL_WATCHING_NIGHT_START_HOUR = 22
 private const val STILL_WATCHING_NIGHT_END_HOUR = 4
 private const val MILLIS_PER_HOUR = 3_600_000L
 
+/** Seconds the prompt waits for a choice before closing the player. */
+internal const val STILL_WATCHING_AUTO_EXIT_SECONDS = 10
+
 /** Night window is 22:00 (inclusive) to 04:00 (exclusive), local time. */
 internal fun isStillWatchingNightHour(hour: Int): Boolean =
     hour >= STILL_WATCHING_NIGHT_START_HOUR || hour < STILL_WATCHING_NIGHT_END_HOUR
