@@ -1,5 +1,6 @@
 package com.nuvio.app.features.home.components
 
+import com.nuvio.app.core.format.formatEpisodeCodeWithSelectedFormat
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -126,7 +127,8 @@ private fun continueWatchingProgressPercent(progressFraction: Float): Int =
 private fun localizedContinueWatchingMetaLine(item: ContinueWatchingItem): String =
     when {
         item.seasonNumber != null && item.episodeNumber != null ->
-            stringResource(Res.string.compose_player_episode_code_full, item.seasonNumber, item.episodeNumber)
+            formatEpisodeCodeWithSelectedFormat(item.seasonNumber, item.episodeNumber)
+                ?: stringResource(Res.string.compose_player_episode_code_full, item.seasonNumber, item.episodeNumber)
         item.isCloudLibraryItem() ->
             stringResource(Res.string.library_source_cloud)
         else ->
@@ -700,7 +702,8 @@ private fun ContinueWatchingCard(
         artworkUrl = imageUrl,
     )
     val episodeCode = if (item.seasonNumber != null && item.episodeNumber != null) {
-        stringResource(Res.string.streams_episode_badge, item.seasonNumber, item.episodeNumber)
+        formatEpisodeCodeWithSelectedFormat(item.seasonNumber, item.episodeNumber)
+            ?: stringResource(Res.string.streams_episode_badge, item.seasonNumber, item.episodeNumber)
     } else {
         null
     }
@@ -1138,7 +1141,7 @@ private fun ContinueWatchingPosterCard(
             }
             if (item.seasonNumber != null && item.episodeNumber != null) {
                 Text(
-                    text = stringResource(
+                    text = formatEpisodeCodeWithSelectedFormat(item.seasonNumber, item.episodeNumber) ?: stringResource(
                         Res.string.streams_episode_badge,
                         item.seasonNumber,
                         item.episodeNumber,

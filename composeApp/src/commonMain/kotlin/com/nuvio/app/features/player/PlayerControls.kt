@@ -1,5 +1,6 @@
 package com.nuvio.app.features.player
 
+import com.nuvio.app.core.format.formatEpisodeCodeWithSelectedFormat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -374,7 +375,9 @@ private fun PlayerHeader(
                     if (seasonNumber != null && episodeNumber != null && !episodeTitle.isNullOrBlank()) {
                         val displayEpisodeTitle = localizedEpisodeTitle(episodeTitle, episodeNumber) ?: episodeTitle
                         Text(
-                            text = stringResource(
+                            text = formatEpisodeCodeWithSelectedFormat(seasonNumber, episodeNumber)
+                                ?.let { "$it • $displayEpisodeTitle" }
+                                ?: stringResource(
                                 Res.string.compose_player_episode_title_format,
                                 seasonNumber,
                                 episodeNumber,

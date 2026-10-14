@@ -34,6 +34,7 @@ internal actual object PlatformLocalAccountDataCleaner {
         "amoled_enabled",
         "amoled_surfaces_enabled",
         "date_format",
+        "episode_code_format",
         "show_loading_overlay",
         "preferred_audio_language",
         "secondary_preferred_audio_language",

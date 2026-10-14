@@ -1,5 +1,6 @@
 package com.nuvio.app.features.downloads
 
+import com.nuvio.app.core.format.formatEpisodeCodeWithSelectedFormat
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -474,7 +475,7 @@ private fun downloadDisplaySubtitle(
         return item.displaySubtitle
     }
 
-    val episodeCode = stringResource(
+    val episodeCode = formatEpisodeCodeWithSelectedFormat(seasonNumber, episodeNumber) ?: stringResource(
         Res.string.compose_player_episode_code_full,
         seasonNumber,
         episodeNumber,

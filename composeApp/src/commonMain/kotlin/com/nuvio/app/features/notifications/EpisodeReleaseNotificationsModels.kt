@@ -1,5 +1,6 @@
 package com.nuvio.app.features.notifications
 
+import com.nuvio.app.core.format.formatEpisodeCodeWithSelectedFormat
 import com.nuvio.app.core.time.parseEpisodeReleaseLocalDate
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
@@ -83,7 +84,7 @@ internal fun buildEpisodeReleaseNotificationBody(
     episodeNumber: Int?,
     episodeTitle: String?,
 ): String = runBlocking {
-    val code = when {
+    val code = formatEpisodeCodeWithSelectedFormat(seasonNumber, episodeNumber) ?: when {
         seasonNumber != null && episodeNumber != null ->
             getString(Res.string.compose_player_episode_code_full, seasonNumber, episodeNumber)
         episodeNumber != null ->

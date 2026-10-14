@@ -1,5 +1,6 @@
 package com.nuvio.app.features.player
 
+import com.nuvio.app.core.format.formatEpisodeCodeWithSelectedFormat
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -327,7 +328,7 @@ private fun EpisodeRow(
     val cardShape = RoundedCornerShape(16.dp)
     val shouldBlurArtwork = blurUnwatchedEpisodes && !isWatched
     val playingDescription = stringResource(Res.string.compose_player_playing)
-    val episodeCode = when {
+    val episodeCode = formatEpisodeCodeWithSelectedFormat(episode.season, episode.episode) ?: when {
         episode.season != null && episode.episode != null -> stringResource(
             Res.string.compose_player_episode_code_full,
             episode.season,
@@ -456,7 +457,7 @@ private fun EpisodeStreamsPanelContent(
                 text = buildString {
                     if (episode.season != null && episode.episode != null) {
                         append(
-                            stringResource(
+                            formatEpisodeCodeWithSelectedFormat(episode.season, episode.episode) ?: stringResource(
                                 Res.string.compose_player_episode_code_full,
                                 episode.season,
                                 episode.episode,

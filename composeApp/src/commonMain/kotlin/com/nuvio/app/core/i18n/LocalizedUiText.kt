@@ -1,5 +1,6 @@
 package com.nuvio.app.core.i18n
 
+import com.nuvio.app.core.format.formatEpisodeCodeWithSelectedFormat
 import kotlinx.coroutines.runBlocking
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_play
@@ -82,7 +83,7 @@ fun localizedEpisodeTitle(episodeTitle: String?, episodeNumber: Int? = null): St
 }
 
 fun localizedSeasonEpisodeCode(seasonNumber: Int?, episodeNumber: Int?): String? =
-    when {
+    formatEpisodeCodeWithSelectedFormat(seasonNumber, episodeNumber) ?: when {
         seasonNumber != null && episodeNumber != null ->
             resourceString("S${seasonNumber} E${episodeNumber}") {
                 getString(Res.string.compose_player_episode_code_full, seasonNumber, episodeNumber)
@@ -114,7 +115,9 @@ fun localizedResumeLabel(seasonNumber: Int?, episodeNumber: Int?): String {
 
 fun localizedUpNextLabel(seasonNumber: Int?, episodeNumber: Int?): String =
     if (seasonNumber != null && episodeNumber != null) {
-        resourceString("Next Up • S${seasonNumber} E${episodeNumber}") {
+        formatEpisodeCodeWithSelectedFormat(seasonNumber, episodeNumber)?.let { code ->
+            "${resourceString("Next Up") { getString(Res.string.continue_watching_up_next) }} • $code"
+        } ?: resourceString("Next Up • S${seasonNumber} E${episodeNumber}") {
             getString(Res.string.continue_watching_up_next_episode, seasonNumber, episodeNumber)
         }
     } else {

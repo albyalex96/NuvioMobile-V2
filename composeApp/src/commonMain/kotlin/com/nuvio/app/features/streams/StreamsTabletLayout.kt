@@ -1,5 +1,6 @@
 package com.nuvio.app.features.streams
 
+import com.nuvio.app.core.format.formatEpisodeCodeWithSelectedFormat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -330,12 +331,17 @@ private fun TabletEpisodeInfoPanel(
 
         Spacer(modifier = Modifier.height(12.dp))
         Text(
-            text = stringResource(
-                Res.string.streams_episode_title_with_name,
-                seasonNumber,
-                episodeNumber,
-                episodeTitle?.takeIf { it.isNotBlank() } ?: stringResource(Res.string.streams_episode_fallback_title),
-            ),
+            text = run {
+                val displayTitle = episodeTitle?.takeIf { it.isNotBlank() }
+                    ?: stringResource(Res.string.streams_episode_fallback_title)
+                formatEpisodeCodeWithSelectedFormat(seasonNumber, episodeNumber)?.let { "$it - $displayTitle" }
+                    ?: stringResource(
+                        Res.string.streams_episode_title_with_name,
+                        seasonNumber,
+                        episodeNumber,
+                        displayTitle,
+                    )
+            },
             style = MaterialTheme.typography.bodyLarge.copy(
                 fontSize = 16.sp,
                 lineHeight = 24.sp,

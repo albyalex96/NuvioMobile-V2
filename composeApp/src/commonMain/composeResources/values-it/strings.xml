@@ -325,6 +325,9 @@
   <string name="settings_appearance_date_format">Formato data</string>
   <string name="settings_appearance_date_format_sheet_title">Formato data</string>
   <string name="settings_date_format_system">Predefinito di sistema</string>
+  <string name="settings_appearance_episode_code_format">Formato episodi</string>
+  <string name="settings_appearance_episode_code_format_sheet_title">Formato episodi</string>
+  <string name="settings_episode_code_format_default">Predefinito (%1$s)</string>
   <string name="settings_appearance_app_language_sheet_title">Scegli lingua</string>
   <string name="settings_appearance_continue_watching_description">Mostra, nascondi e personalizza lo stile della riga "Continua a guardare".</string>
   <string name="settings_appearance_poster_customization_description">Regola la larghezza delle locandine e i preset del raggio degli angoli.</string>

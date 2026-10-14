@@ -1,5 +1,6 @@
 package com.nuvio.app.features.player
 
+import com.nuvio.app.core.format.formatEpisodeCodeWithSelectedFormat
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -40,7 +41,10 @@ fun PlayerSourcesPanel(
     val tokens = MaterialTheme.nuvio
     val contentLabel = if (currentSeason != null && currentEpisode != null) {
         buildString {
-            append(stringResource(Res.string.compose_player_episode_code_full, currentSeason, currentEpisode))
+            append(
+                formatEpisodeCodeWithSelectedFormat(currentSeason, currentEpisode)
+                    ?: stringResource(Res.string.compose_player_episode_code_full, currentSeason, currentEpisode),
+            )
             currentEpisodeTitle?.takeIf { it.isNotBlank() }?.let {
                 append(" • ")
                 append(it)

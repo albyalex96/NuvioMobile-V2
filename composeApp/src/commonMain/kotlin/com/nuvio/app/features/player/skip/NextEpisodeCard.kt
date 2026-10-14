@@ -1,5 +1,6 @@
 package com.nuvio.app.features.player.skip
 
+import com.nuvio.app.core.format.formatEpisodeCodeWithSelectedFormat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
@@ -189,7 +190,9 @@ fun NextEpisodeCard(
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = stringResource(
+                    text = formatEpisodeCodeWithSelectedFormat(nextEpisode.season, nextEpisode.episode)
+                        ?.let { "$it • ${nextEpisode.title}" }
+                        ?: stringResource(
                         Res.string.compose_player_episode_title_format,
                         nextEpisode.season,
                         nextEpisode.episode,

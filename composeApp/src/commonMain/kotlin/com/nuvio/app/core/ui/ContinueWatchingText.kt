@@ -1,5 +1,6 @@
 package com.nuvio.app.core.ui
 
+import com.nuvio.app.core.format.formatEpisodeCodeWithSelectedFormat
 import androidx.compose.runtime.Composable
 import com.nuvio.app.features.cloud.CloudLibraryContentType
 import com.nuvio.app.core.i18n.localizedEpisodeTitle
@@ -15,7 +16,8 @@ fun localizedContinueWatchingSubtitle(item: ContinueWatchingItem, compact: Boole
 
     val base = when {
         seasonNumber != null && episodeNumber != null ->
-            stringResource(Res.string.compose_player_episode_code_full, seasonNumber, episodeNumber)
+            formatEpisodeCodeWithSelectedFormat(seasonNumber, episodeNumber)
+                ?: stringResource(Res.string.compose_player_episode_code_full, seasonNumber, episodeNumber)
         item.parentMetaType.equals(CloudLibraryContentType, ignoreCase = true) ->
             stringResource(Res.string.library_source_cloud)
         else ->

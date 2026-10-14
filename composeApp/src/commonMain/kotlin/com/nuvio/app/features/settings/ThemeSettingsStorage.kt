@@ -22,6 +22,8 @@ internal expect object ThemeSettingsStorage {
     fun saveNavBarGlowEnabled(enabled: Boolean)
     fun loadDateFormat(): String?
     fun saveDateFormat(formatKey: String)
+    fun loadEpisodeCodeFormat(): String?
+    fun saveEpisodeCodeFormat(formatKey: String)
     fun exportToSyncPayload(): JsonObject
     fun replaceFromSyncPayload(payload: JsonObject)
 }

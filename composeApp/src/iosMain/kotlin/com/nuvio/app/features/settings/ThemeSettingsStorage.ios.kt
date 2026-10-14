@@ -20,6 +20,7 @@ actual object ThemeSettingsStorage {
     private const val navBarStyleKey = "nav_bar_style"
     private const val navBarGlowEnabledKey = "nav_bar_glow_enabled"
     private const val dateFormatKey = "date_format"
+    private const val episodeCodeFormatKey = "episode_code_format"
     private val profileScopedSyncKeys = listOf(
         selectedThemeKey,
         customThemeColorsKey,
@@ -29,6 +30,7 @@ actual object ThemeSettingsStorage {
         liquidGlassNativeTabBarEnabledKey,
         navBarStyleKey,
         dateFormatKey,
+        episodeCodeFormatKey,
     )
 
     actual fun loadSelectedTheme(): String? =
@@ -147,6 +149,13 @@ actual object ThemeSettingsStorage {
         NSUserDefaults.standardUserDefaults.setObject(formatKey, forKey = ProfileScopedKey.of(dateFormatKey))
     }
 
+    actual fun loadEpisodeCodeFormat(): String? =
+        NSUserDefaults.standardUserDefaults.stringForKey(ProfileScopedKey.of(episodeCodeFormatKey))
+
+    actual fun saveEpisodeCodeFormat(formatKey: String) {
+        NSUserDefaults.standardUserDefaults.setObject(formatKey, forKey = ProfileScopedKey.of(episodeCodeFormatKey))
+    }
+
     actual fun exportToSyncPayload(): JsonObject = buildJsonObject {
         loadSelectedTheme()?.let { put(selectedThemeKey, encodeSyncString(it)) }
         loadCustomThemeColors()?.let { put(customThemeColorsKey, encodeSyncString(it)) }
@@ -156,6 +165,7 @@ actual object ThemeSettingsStorage {
         loadLiquidGlassNativeTabBarEnabled()?.let { put(liquidGlassNativeTabBarEnabledKey, encodeSyncBoolean(it)) }
         loadNavBarStyle()?.let { put(navBarStyleKey, encodeSyncString(it)) }
         loadDateFormat()?.let { put(dateFormatKey, encodeSyncString(it)) }
+        loadEpisodeCodeFormat()?.let { put(episodeCodeFormatKey, encodeSyncString(it)) }
     }
 
     actual fun replaceFromSyncPayload(payload: JsonObject) {
@@ -171,6 +181,7 @@ actual object ThemeSettingsStorage {
         payload.decodeSyncBoolean(liquidGlassNativeTabBarEnabledKey)?.let(::saveLiquidGlassNativeTabBarEnabled)
         payload.decodeSyncString(navBarStyleKey)?.let(::saveNavBarStyle)
         payload.decodeSyncString(dateFormatKey)?.let(::saveDateFormat)
+        payload.decodeSyncString(episodeCodeFormatKey)?.let(::saveEpisodeCodeFormat)
         applySelectedAppLanguage(loadSelectedAppLanguage() ?: AppLanguage.DEVICE.code)
     }
 }

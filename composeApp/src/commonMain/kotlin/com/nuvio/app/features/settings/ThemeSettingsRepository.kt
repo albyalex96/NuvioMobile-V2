@@ -1,6 +1,7 @@
 package com.nuvio.app.features.settings
 
 import com.nuvio.app.core.format.DateFormatPreset
+import com.nuvio.app.core.format.EpisodeCodeFormat
 import com.nuvio.app.core.ui.AppTheme
 import com.nuvio.app.core.ui.CustomThemeColors
 import com.nuvio.app.core.ui.NativeTabBridge
@@ -57,6 +58,13 @@ object ThemeSettingsRepository {
     private val _dateFormatState = mutableStateOf(DateFormatPreset.SYSTEM)
     val dateFormatState: State<DateFormatPreset> = _dateFormatState
 
+    private val _episodeCodeFormat = MutableStateFlow(EpisodeCodeFormat.DEFAULT)
+    val episodeCodeFormat: StateFlow<EpisodeCodeFormat> = _episodeCodeFormat.asStateFlow()
+
+    // Snapshot mirror of [episodeCodeFormat], read by episode code formatters during composition.
+    private val _episodeCodeFormatState = mutableStateOf(EpisodeCodeFormat.DEFAULT)
+    val episodeCodeFormatState: State<EpisodeCodeFormat> = _episodeCodeFormatState
+
     private var hasLoaded = false
     private var observesMembership = false
 
@@ -85,6 +93,7 @@ object ThemeSettingsRepository {
         _navBarGlowEnabled.value = true
         _navBarStyle.value = NavBarStyle.ADAPTIVE
         applyDateFormat(DateFormatPreset.SYSTEM)
+        applyEpisodeCodeFormat(EpisodeCodeFormat.DEFAULT)
     }
 
     private fun loadFromDisk() {
@@ -114,6 +123,7 @@ object ThemeSettingsRepository {
         _navBarGlowEnabled.value = ThemeSettingsStorage.loadNavBarGlowEnabled() ?: true
         _navBarStyle.value = NavBarStyle.fromKey(ThemeSettingsStorage.loadNavBarStyle())
         applyDateFormat(DateFormatPreset.fromKey(ThemeSettingsStorage.loadDateFormat()))
+        applyEpisodeCodeFormat(EpisodeCodeFormat.fromKey(ThemeSettingsStorage.loadEpisodeCodeFormat()))
     }
 
     fun setTheme(theme: AppTheme) {
@@ -196,6 +206,18 @@ object ThemeSettingsRepository {
     private fun applyDateFormat(preset: DateFormatPreset) {
         _dateFormat.value = preset
         _dateFormatState.value = preset
+    }
+
+    fun setEpisodeCodeFormat(format: EpisodeCodeFormat) {
+        ensureLoaded()
+        if (_episodeCodeFormat.value == format) return
+        applyEpisodeCodeFormat(format)
+        ThemeSettingsStorage.saveEpisodeCodeFormat(format.key)
+    }
+
+    private fun applyEpisodeCodeFormat(format: EpisodeCodeFormat) {
+        _episodeCodeFormat.value = format
+        _episodeCodeFormatState.value = format
     }
 
     private fun observeMembership() {

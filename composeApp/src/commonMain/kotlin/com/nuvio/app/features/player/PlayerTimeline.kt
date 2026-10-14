@@ -1,5 +1,6 @@
 package com.nuvio.app.features.player
 
+import com.nuvio.app.core.format.formatEpisodeCodeWithSelectedFormat
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -71,7 +72,8 @@ internal fun PlayerTimelineDetails(
             overflow = TextOverflow.Ellipsis,
         )
         if (seasonNumber != null && episodeNumber != null) {
-            val episodeCode = stringResource(Res.string.compose_player_episode_code_full, seasonNumber, episodeNumber)
+            val episodeCode = formatEpisodeCodeWithSelectedFormat(seasonNumber, episodeNumber)
+                ?: stringResource(Res.string.compose_player_episode_code_full, seasonNumber, episodeNumber)
             val displayEpisodeTitle = localizedEpisodeTitle(episodeTitle, episodeNumber)
             Text(
                 text = if (displayEpisodeTitle.isNullOrBlank()) episodeCode else "$episodeCode • $displayEpisodeTitle",

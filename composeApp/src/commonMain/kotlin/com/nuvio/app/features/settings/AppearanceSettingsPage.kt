@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.format.DateFormatPreset
+import com.nuvio.app.core.format.EpisodeCodeFormat
 import com.nuvio.app.core.format.formatReleaseDate
 import com.nuvio.app.core.ui.floatingNavigationGlowSupported
 import com.nuvio.app.core.ui.AppTheme
@@ -37,6 +38,7 @@ import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.cd_selected
 import nuvio.composeapp.generated.resources.collections_header
+import nuvio.composeapp.generated.resources.compose_player_episode_code_full
 import nuvio.composeapp.generated.resources.compose_settings_page_continue_watching
 import nuvio.composeapp.generated.resources.compose_settings_page_homescreen
 import nuvio.composeapp.generated.resources.compose_settings_page_meta_screen
@@ -50,6 +52,9 @@ import nuvio.composeapp.generated.resources.settings_appearance_app_icon
 import nuvio.composeapp.generated.resources.settings_appearance_date_format
 import nuvio.composeapp.generated.resources.settings_appearance_date_format_sheet_title
 import nuvio.composeapp.generated.resources.settings_date_format_system
+import nuvio.composeapp.generated.resources.settings_appearance_episode_code_format
+import nuvio.composeapp.generated.resources.settings_appearance_episode_code_format_sheet_title
+import nuvio.composeapp.generated.resources.settings_episode_code_format_default
 import nuvio.composeapp.generated.resources.settings_appearance_nav_bar_style
 import nuvio.composeapp.generated.resources.settings_nav_bar_glow_on
 import nuvio.composeapp.generated.resources.settings_nav_bar_glow_off
@@ -123,6 +128,8 @@ internal fun LazyListScope.appearanceSettingsContent(
         var showAppIconPicker by remember { mutableStateOf(false) }
         var showDateFormatSheet by remember { mutableStateOf(false) }
         val dateFormat by ThemeSettingsRepository.dateFormat.collectAsStateWithLifecycle()
+        var showEpisodeCodeFormatSheet by remember { mutableStateOf(false) }
+        val episodeCodeFormat by ThemeSettingsRepository.episodeCodeFormat.collectAsStateWithLifecycle()
         val navBarStyleAvailable = !isIos
         val glowEnabled by ThemeSettingsRepository.navBarGlowEnabled.collectAsStateWithLifecycle()
         val effectiveNavBarStyle = if (isTablet) NavBarStyle.COMPACT else selectedNavBarStyle
@@ -190,6 +197,13 @@ internal fun LazyListScope.appearanceSettingsContent(
                     isTablet = isTablet,
                     onClick = { showDateFormatSheet = true },
                 )
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsNavigationRow(
+                    title = stringResource(Res.string.settings_appearance_episode_code_format),
+                    description = episodeCodeFormatOptionLabel(episodeCodeFormat),
+                    isTablet = isTablet,
+                    onClick = { showEpisodeCodeFormatSheet = true },
+                )
                 if (navBarStyleAvailable) {
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
@@ -224,10 +238,24 @@ internal fun LazyListScope.appearanceSettingsContent(
         }
 
         if (showDateFormatSheet) {
-            AppearanceDateFormatBottomSheet(
-                selectedFormat = dateFormat,
-                onFormatSelected = ThemeSettingsRepository::setDateFormat,
+            AppearanceOptionBottomSheet(
+                title = stringResource(Res.string.settings_appearance_date_format_sheet_title),
+                options = DateFormatPreset.entries,
+                selected = dateFormat,
+                optionLabel = { dateFormatOptionLabel(it) },
+                onSelected = ThemeSettingsRepository::setDateFormat,
                 onDismiss = { showDateFormatSheet = false },
+            )
+        }
+
+        if (showEpisodeCodeFormatSheet) {
+            AppearanceOptionBottomSheet(
+                title = stringResource(Res.string.settings_appearance_episode_code_format_sheet_title),
+                options = EpisodeCodeFormat.entries,
+                selected = episodeCodeFormat,
+                optionLabel = { episodeCodeFormatOptionLabel(it) },
+                onSelected = ThemeSettingsRepository::setEpisodeCodeFormat,
+                onDismiss = { showEpisodeCodeFormatSheet = false },
             )
         }
 
@@ -411,11 +439,22 @@ private fun dateFormatOptionLabel(preset: DateFormatPreset): String {
     return "$name ($sample)"
 }
 
+/** "Default (S1 E2)" or "1x2". */
+@Composable
+private fun episodeCodeFormatOptionLabel(format: EpisodeCodeFormat): String =
+    format.sample ?: stringResource(
+        Res.string.settings_episode_code_format_default,
+        stringResource(Res.string.compose_player_episode_code_full, 1, 2),
+    )
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AppearanceDateFormatBottomSheet(
-    selectedFormat: DateFormatPreset,
-    onFormatSelected: (DateFormatPreset) -> Unit,
+private fun <T> AppearanceOptionBottomSheet(
+    title: String,
+    options: List<T>,
+    selected: T,
+    optionLabel: @Composable (T) -> String,
+    onSelected: (T) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -436,7 +475,7 @@ private fun AppearanceDateFormatBottomSheet(
         ) {
             item {
                 Text(
-                    text = stringResource(Res.string.settings_appearance_date_format_sheet_title),
+                    text = title,
                     style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onSurface,
                     fontWeight = FontWeight.SemiBold,
@@ -444,18 +483,18 @@ private fun AppearanceDateFormatBottomSheet(
                 )
             }
 
-            items(DateFormatPreset.entries) { preset ->
+            items(options) { option ->
                 NuvioBottomSheetActionRow(
-                    title = dateFormatOptionLabel(preset),
-                    selected = preset == selectedFormat,
+                    title = optionLabel(option),
+                    selected = option == selected,
                     onClick = {
-                        onFormatSelected(preset)
+                        onSelected(option)
                         coroutineScope.launch {
                             dismissNuvioBottomSheet(sheetState = sheetState, onDismiss = onDismiss)
                         }
                     },
                     trailingContent = {
-                        if (preset == selectedFormat) {
+                        if (option == selected) {
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = stringResource(Res.string.cd_selected),
