@@ -1129,6 +1129,12 @@
     <string name="settings_playback_reuse_binge_group_description">Remember and reuse the last binge group across sessions (Continue Watching, Details, etc.).</string>
     <string name="settings_playback_preload_next_episode">Preload Next Episode Sources</string>
     <string name="settings_playback_preload_next_episode_description">Start searching for sources in the background before the next episode button appears.</string>
+    <string name="settings_playback_still_watching">Ask If Still Watching</string>
+    <string name="settings_playback_still_watching_description">Pause playback and ask before auto-playing the next episode after several consecutive episodes.</string>
+    <string name="settings_playback_still_watching_episodes">Episodes Before Asking</string>
+    <string name="settings_playback_still_watching_episodes_description">Number of consecutive episodes played before the prompt appears.</string>
+    <string name="settings_playback_still_watching_night_only">Only at Night</string>
+    <string name="settings_playback_still_watching_night_only_description">Ask only between 22:00 and 04:00.</string>
     <string name="settings_playback_preferred_audio_language">Preferred Audio Language</string>
     <string name="settings_playback_preferred_subtitle_language">Preferred Language</string>
     <string name="settings_playback_presets">Presets</string>
@@ -1437,6 +1443,10 @@
     <string name="player_next_episode_playing_via_countdown">Playing via %1$s in %2$ds…</string>
     <string name="player_next_episode_thumbnail">Next episode thumbnail</string>
     <string name="player_next_episode_unaired">Unaired</string>
+    <string name="player_still_watching_title">Are you still watching?</string>
+    <string name="player_still_watching_message">You have watched %1$d episodes in a row. Do you want to keep watching?</string>
+    <string name="player_still_watching_continue">Keep watching</string>
+    <string name="player_still_watching_stop">Exit Player</string>
     <string name="player_skip">Skip</string>
     <string name="player_skip_intro">Skip Intro</string>
     <string name="player_skip_outro">Skip Outro</string>

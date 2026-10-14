@@ -71,6 +71,7 @@ import com.nuvio.app.features.player.localizedLabel
 import com.nuvio.app.features.player.IosTargetPrimaries
 import com.nuvio.app.features.player.IosTargetTransfer
 import com.nuvio.app.features.player.PlayerSettingsRepository
+import com.nuvio.app.features.player.STILL_WATCHING_EPISODE_COUNT_RANGE
 import com.nuvio.app.features.player.STREAM_AUTO_PLAY_TIMEOUT_VALUES
 import com.nuvio.app.features.player.SubtitleBackgroundColorSwatches
 import com.nuvio.app.features.player.SubtitleColorSwatches
@@ -1427,6 +1428,78 @@ private fun PlaybackSettingsSection(
                     isTablet = isTablet,
                     onCheckedChange = PlayerSettingsRepository::setPreloadNextEpisodeSources,
                 )
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.settings_playback_still_watching),
+                    description = stringResource(Res.string.settings_playback_still_watching_description),
+                    checked = autoPlayPlayerSettings.stillWatchingPromptEnabled,
+                    enabled = autoPlayPlayerSettings.streamAutoPlayNextEpisodeEnabled,
+                    isTablet = isTablet,
+                    onCheckedChange = PlayerSettingsRepository::setStillWatchingPromptEnabled,
+                )
+                if (autoPlayPlayerSettings.streamAutoPlayNextEpisodeEnabled &&
+                    autoPlayPlayerSettings.stillWatchingPromptEnabled) {
+                    SettingsGroupDivider(isTablet = isTablet)
+                    val episodeCount = autoPlayPlayerSettings.stillWatchingEpisodeCount
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = if (isTablet) 18.dp else 16.dp, vertical = 10.dp),
+                    ) {
+                        var sliderValue by remember(episodeCount) { mutableFloatStateOf(episodeCount.toFloat()) }
+                        var lastHapticCount by remember(episodeCount) { mutableStateOf(episodeCount.toFloat()) }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                                Text(
+                                    text = stringResource(Res.string.settings_playback_still_watching_episodes),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Text(
+                                    text = stringResource(Res.string.settings_playback_still_watching_episodes_description),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            ValueBox(text = sliderValue.toInt().toString(), modifier = Modifier.wrapContentWidth())
+                        }
+                        val minCount = STILL_WATCHING_EPISODE_COUNT_RANGE.first.toFloat()
+                        val maxCount = STILL_WATCHING_EPISODE_COUNT_RANGE.last.toFloat()
+                        Slider(
+                            value = sliderValue,
+                            onValueChange = {
+                                val snapped = snapToStep(it, 1f)
+                                sliderValue = snapped
+
+                                if (snapped != lastHapticCount) {
+                                    lastHapticCount = snapped
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
+                            },
+                            onValueChangeFinished = {
+                                PlayerSettingsRepository.setStillWatchingEpisodeCount(sliderValue.toInt())
+                            },
+                            valueRange = minCount..maxCount,
+                            steps = calculateSteps(minCount, maxCount, 1f),
+                            colors = SliderDefaults.colors(
+                                thumbColor = MaterialTheme.colorScheme.primary,
+                                activeTrackColor = MaterialTheme.colorScheme.primary,
+                            ),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.settings_playback_still_watching_night_only),
+                        description = stringResource(Res.string.settings_playback_still_watching_night_only_description),
+                        checked = autoPlayPlayerSettings.stillWatchingNightOnly,
+                        isTablet = isTablet,
+                        onCheckedChange = PlayerSettingsRepository::setStillWatchingNightOnly,
+                    )
+                }
                 SettingsGroupDivider(isTablet = isTablet)
                 var showThresholdModeDialog by remember { mutableStateOf(false) }
                 SettingsNavigationRow(

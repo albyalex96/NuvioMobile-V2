@@ -148,6 +148,12 @@ internal expect object PlayerSettingsStorage {
     fun saveNextEpisodeThresholdMinutesBeforeEnd(minutes: Float)
     fun loadPreloadNextEpisodeSources(): Boolean?
     fun savePreloadNextEpisodeSources(enabled: Boolean)
+    fun loadStillWatchingPromptEnabled(): Boolean?
+    fun saveStillWatchingPromptEnabled(enabled: Boolean)
+    fun loadStillWatchingEpisodeCount(): Int?
+    fun saveStillWatchingEpisodeCount(count: Int)
+    fun loadStillWatchingNightOnly(): Boolean?
+    fun saveStillWatchingNightOnly(enabled: Boolean)
     fun loadUseLibass(): Boolean?
     fun saveUseLibass(enabled: Boolean)
     fun loadLibassRenderType(): String?

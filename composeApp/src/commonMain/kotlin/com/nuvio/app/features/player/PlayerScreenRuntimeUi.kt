@@ -239,7 +239,24 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
             p2pRebufferProgress = p2pRebufferProgress,
         )
         RenderPlayerModals(displayedPositionMs = displayedPositionMs)
+        RenderStillWatchingPrompt()
     }
+}
+
+@Composable
+private fun PlayerScreenRuntime.RenderStillWatchingPrompt() {
+    com.nuvio.app.core.ui.NuvioStatusModal(
+        title = org.jetbrains.compose.resources.stringResource(Res.string.player_still_watching_title),
+        message = org.jetbrains.compose.resources.stringResource(
+            Res.string.player_still_watching_message,
+            consecutiveEpisodesPlayed,
+        ),
+        isVisible = showStillWatchingPrompt,
+        confirmText = org.jetbrains.compose.resources.stringResource(Res.string.player_still_watching_continue),
+        dismissText = org.jetbrains.compose.resources.stringResource(Res.string.player_still_watching_stop),
+        onConfirm = { continueAfterStillWatchingPrompt() },
+        onDismiss = { exitAfterStillWatchingPrompt() },
+    )
 }
 
 @Composable

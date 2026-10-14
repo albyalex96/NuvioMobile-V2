@@ -716,6 +716,10 @@
   <string name="player_next_episode_playing_via_countdown">In riproduzione tramite %1$s tra %2$ds…</string>
   <string name="player_next_episode_thumbnail">Miniatura prossimo episodio</string>
   <string name="player_next_episode_unaired">Non ancora trasmesso</string>
+  <string name="player_still_watching_title">Stai ancora guardando?</string>
+  <string name="player_still_watching_message">Hai guardato %1$d episodi di fila. Vuoi continuare a guardare?</string>
+  <string name="player_still_watching_continue">Continua a guardare</string>
+  <string name="player_still_watching_stop">Esci dal player</string>
   <string name="player_skip">Salta</string>
   <string name="player_skip_intro">Salta Intro</string>
   <string name="player_skip_outro">Salta Finale</string>
@@ -1795,6 +1799,12 @@
   <string name="settings_playback_ios_audio_output_dialog">Uscita audio</string>
   <string name="settings_playback_ios_target_primaries_dialog">Primarie di destinazione</string>
   <string name="settings_playback_ios_target_transfer_dialog">Trasferimento di destinazione</string>
+  <string name="settings_playback_still_watching">Chiedi se stai ancora guardando</string>
+  <string name="settings_playback_still_watching_description">Mette in pausa e chiede conferma prima di avviare il prossimo episodio dopo più episodi consecutivi.</string>
+  <string name="settings_playback_still_watching_episodes">Episodi prima della richiesta</string>
+  <string name="settings_playback_still_watching_episodes_description">Numero di episodi consecutivi riprodotti prima che appaia la richiesta.</string>
+  <string name="settings_playback_still_watching_night_only">Solo di notte</string>
+  <string name="settings_playback_still_watching_night_only_description">Chiedi solo tra le 22:00 e le 04:00.</string>
   <string name="collections_editor_resolved_trakt_list">Lista Trakt identificata</string>
   <string name="collections_editor_tmdb_discover">Scopri TMDB</string>
   <string name="collections_editor_watch_region_placeholder">US, KR, JP, IN</string>

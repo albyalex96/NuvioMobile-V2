@@ -448,6 +448,10 @@ internal fun PlayerScreenRuntime.playNextEpisode(automatic: Boolean = false) {
                 !nextEpisodeCardDismissed && isAtNextEpisodeThreshold()
             ))
     if (!isCurrentRequest()) return
+    if (automatic && shouldPromptStillWatching()) {
+        showStillWatchingPromptAndPause()
+        return
+    }
     nextEpisodeAutoPlayAutomatic = automatic
 
     scope.launchPlayerNextEpisodeAutoPlay(
@@ -460,10 +464,16 @@ internal fun PlayerScreenRuntime.playNextEpisode(automatic: Boolean = false) {
         settings = playerSettingsUiState,
         currentStreamBingeGroup = currentStreamBingeGroup,
         onDownloadedEpisodeSelected = { item, episode ->
-            if (isCurrentRequest()) switchToDownloadedEpisode(item, episode)
+            if (isCurrentRequest()) {
+                recordEpisodeAdvance(automatic)
+                switchToDownloadedEpisode(item, episode)
+            }
         },
         onEpisodeStreamSelected = { stream, episode ->
-            if (isCurrentRequest()) switchToEpisodeStream(stream, episode)
+            if (isCurrentRequest()) {
+                recordEpisodeAdvance(automatic)
+                switchToEpisodeStream(stream, episode)
+            }
         },
         onManualSelectionRequired = { nextVideo ->
             if (isCurrentRequest()) {

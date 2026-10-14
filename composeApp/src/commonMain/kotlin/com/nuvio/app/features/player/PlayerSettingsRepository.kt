@@ -14,6 +14,9 @@ val STREAM_AUTO_PLAY_TIMEOUT_VALUES: List<Int> = listOf(
     0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30, Int.MAX_VALUE
 )
 
+const val DEFAULT_STILL_WATCHING_EPISODE_COUNT: Int = 3
+val STILL_WATCHING_EPISODE_COUNT_RANGE: IntRange = 1..10
+
 /**
  * Snaps [value] to the nearest allowed timeout value in [STREAM_AUTO_PLAY_TIMEOUT_VALUES].
  * Ties break to the lower value. Negative values snap to 0.
@@ -91,6 +94,9 @@ data class PlayerSettingsUiState(
     val nextEpisodeThresholdPercent: Float = 99f,
     val nextEpisodeThresholdMinutesBeforeEnd: Float = 2f,
     val preloadNextEpisodeSources: Boolean = false,
+    val stillWatchingPromptEnabled: Boolean = false,
+    val stillWatchingEpisodeCount: Int = DEFAULT_STILL_WATCHING_EPISODE_COUNT,
+    val stillWatchingNightOnly: Boolean = false,
     val useLibass: Boolean = false,
     val libassRenderType: String = "CUES",
     val iosVideoOutputPreset: IosVideoOutputPreset = IosVideoOutputPreset.NativeEdr,
@@ -173,6 +179,9 @@ object PlayerSettingsRepository {
     private var nextEpisodeThresholdPercent = 99f
     private var nextEpisodeThresholdMinutesBeforeEnd = 2f
     private var preloadNextEpisodeSources = false
+    private var stillWatchingPromptEnabled = false
+    private var stillWatchingEpisodeCount = DEFAULT_STILL_WATCHING_EPISODE_COUNT
+    private var stillWatchingNightOnly = false
     private var useLibass = false
     private var libassRenderType = "CUES"
     private var iosVideoOutputPreset = IosVideoOutputPreset.NativeEdr
@@ -261,6 +270,9 @@ object PlayerSettingsRepository {
         nextEpisodeThresholdPercent = 99f
         nextEpisodeThresholdMinutesBeforeEnd = 2f
         preloadNextEpisodeSources = false
+        stillWatchingPromptEnabled = false
+        stillWatchingEpisodeCount = DEFAULT_STILL_WATCHING_EPISODE_COUNT
+        stillWatchingNightOnly = false
         useLibass = false
         libassRenderType = "CUES"
         iosVideoOutputPreset = IosVideoOutputPreset.NativeEdr
@@ -415,6 +427,10 @@ object PlayerSettingsRepository {
         nextEpisodeThresholdPercent = PlayerSettingsStorage.loadNextEpisodeThresholdPercent() ?: 99f
         nextEpisodeThresholdMinutesBeforeEnd = PlayerSettingsStorage.loadNextEpisodeThresholdMinutesBeforeEnd() ?: 2f
         preloadNextEpisodeSources = PlayerSettingsStorage.loadPreloadNextEpisodeSources() ?: false
+        stillWatchingPromptEnabled = PlayerSettingsStorage.loadStillWatchingPromptEnabled() ?: false
+        stillWatchingEpisodeCount = (PlayerSettingsStorage.loadStillWatchingEpisodeCount() ?: DEFAULT_STILL_WATCHING_EPISODE_COUNT)
+            .coerceIn(STILL_WATCHING_EPISODE_COUNT_RANGE)
+        stillWatchingNightOnly = PlayerSettingsStorage.loadStillWatchingNightOnly() ?: false
         useLibass = PlayerSettingsStorage.loadUseLibass() ?: false
         libassRenderType = PlayerSettingsStorage.loadLibassRenderType() ?: "CUES"
         iosVideoOutputPreset = PlayerSettingsStorage.loadIosVideoOutputPreset()
@@ -972,6 +988,31 @@ object PlayerSettingsRepository {
         PlayerSettingsStorage.savePreloadNextEpisodeSources(enabled)
     }
 
+    fun setStillWatchingPromptEnabled(enabled: Boolean) {
+        ensureLoaded()
+        if (stillWatchingPromptEnabled == enabled) return
+        stillWatchingPromptEnabled = enabled
+        publish()
+        PlayerSettingsStorage.saveStillWatchingPromptEnabled(enabled)
+    }
+
+    fun setStillWatchingEpisodeCount(count: Int) {
+        ensureLoaded()
+        val normalized = count.coerceIn(STILL_WATCHING_EPISODE_COUNT_RANGE)
+        if (stillWatchingEpisodeCount == normalized) return
+        stillWatchingEpisodeCount = normalized
+        publish()
+        PlayerSettingsStorage.saveStillWatchingEpisodeCount(normalized)
+    }
+
+    fun setStillWatchingNightOnly(enabled: Boolean) {
+        ensureLoaded()
+        if (stillWatchingNightOnly == enabled) return
+        stillWatchingNightOnly = enabled
+        publish()
+        PlayerSettingsStorage.saveStillWatchingNightOnly(enabled)
+    }
+
     fun setUseLibass(enabled: Boolean) {
         ensureLoaded()
         if (useLibass == enabled) return
@@ -1213,6 +1254,9 @@ object PlayerSettingsRepository {
             nextEpisodeThresholdPercent = nextEpisodeThresholdPercent,
             nextEpisodeThresholdMinutesBeforeEnd = nextEpisodeThresholdMinutesBeforeEnd,
             preloadNextEpisodeSources = preloadNextEpisodeSources,
+            stillWatchingPromptEnabled = stillWatchingPromptEnabled,
+            stillWatchingEpisodeCount = stillWatchingEpisodeCount,
+            stillWatchingNightOnly = stillWatchingNightOnly,
             useLibass = useLibass,
             libassRenderType = libassRenderType,
             iosVideoOutputPreset = iosVideoOutputPreset,
