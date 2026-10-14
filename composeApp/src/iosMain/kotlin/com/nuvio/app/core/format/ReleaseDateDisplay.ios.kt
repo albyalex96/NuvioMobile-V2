@@ -17,3 +17,13 @@ internal actual fun formatCalendarDate(isoDate: String, localeTag: String, inclu
         setLocalizedDateFormatFromTemplate(if (includeYear) "dMMMMy" else "dMMMM")
     }.stringFromDate(date)
 }
+
+internal actual fun formatCalendarDateWithPattern(isoDate: String, localeTag: String, pattern: String): String {
+    val epochMs = parseEpisodeReleaseEpochMs(isoDate) ?: return isoDate
+    val date = NSDate.dateWithTimeIntervalSince1970(epochMs / 1_000.0)
+    return NSDateFormatter().apply {
+        locale = NSLocale(localeIdentifier = localeTag)
+        timeZone = NSTimeZone.timeZoneForSecondsFromGMT(0)
+        dateFormat = pattern
+    }.stringFromDate(date)
+}

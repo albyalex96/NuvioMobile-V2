@@ -19,6 +19,7 @@ actual object ThemeSettingsStorage {
     private const val selectedAppLanguageKey = "selected_app_language"
     private const val navBarStyleKey = "nav_bar_style"
     private const val navBarGlowEnabledKey = "nav_bar_glow_enabled"
+    private const val dateFormatKey = "date_format"
     private val profileScopedSyncKeys = listOf(
         selectedThemeKey,
         customThemeColorsKey,
@@ -27,6 +28,7 @@ actual object ThemeSettingsStorage {
         navBarGlowEnabledKey,
         liquidGlassNativeTabBarEnabledKey,
         navBarStyleKey,
+        dateFormatKey,
     )
 
     actual fun loadSelectedTheme(): String? =
@@ -138,6 +140,13 @@ actual object ThemeSettingsStorage {
         NSUserDefaults.standardUserDefaults.setObject(styleKey, forKey = ProfileScopedKey.of(navBarStyleKey))
     }
 
+    actual fun loadDateFormat(): String? =
+        NSUserDefaults.standardUserDefaults.stringForKey(ProfileScopedKey.of(dateFormatKey))
+
+    actual fun saveDateFormat(formatKey: String) {
+        NSUserDefaults.standardUserDefaults.setObject(formatKey, forKey = ProfileScopedKey.of(dateFormatKey))
+    }
+
     actual fun exportToSyncPayload(): JsonObject = buildJsonObject {
         loadSelectedTheme()?.let { put(selectedThemeKey, encodeSyncString(it)) }
         loadCustomThemeColors()?.let { put(customThemeColorsKey, encodeSyncString(it)) }
@@ -146,6 +155,7 @@ actual object ThemeSettingsStorage {
         loadAmoledSurfacesEnabled()?.let { put(amoledSurfacesEnabledKey, encodeSyncBoolean(it)) }
         loadLiquidGlassNativeTabBarEnabled()?.let { put(liquidGlassNativeTabBarEnabledKey, encodeSyncBoolean(it)) }
         loadNavBarStyle()?.let { put(navBarStyleKey, encodeSyncString(it)) }
+        loadDateFormat()?.let { put(dateFormatKey, encodeSyncString(it)) }
     }
 
     actual fun replaceFromSyncPayload(payload: JsonObject) {
@@ -160,6 +170,7 @@ actual object ThemeSettingsStorage {
         payload.decodeSyncBoolean(amoledSurfacesEnabledKey)?.let(::saveAmoledSurfacesEnabled)
         payload.decodeSyncBoolean(liquidGlassNativeTabBarEnabledKey)?.let(::saveLiquidGlassNativeTabBarEnabled)
         payload.decodeSyncString(navBarStyleKey)?.let(::saveNavBarStyle)
+        payload.decodeSyncString(dateFormatKey)?.let(::saveDateFormat)
         applySelectedAppLanguage(loadSelectedAppLanguage() ?: AppLanguage.DEVICE.code)
     }
 }

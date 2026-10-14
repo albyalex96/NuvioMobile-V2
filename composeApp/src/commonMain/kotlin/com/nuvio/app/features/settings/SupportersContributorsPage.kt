@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material3.Button
+import com.nuvio.app.core.format.formatDateWithSelectedPreset
 import com.nuvio.app.core.ui.DialogButton
 import com.nuvio.app.core.ui.DialogButtons
 import com.nuvio.app.core.ui.DialogButtonStyle
@@ -950,6 +951,7 @@ private fun formatMembershipLevel(rawLevel: String): String = rawLevel
 
 @Composable
 internal fun formatDonationDate(rawDate: String): String {
+    formatDateWithSelectedPreset(rawDate)?.let { return it }
     val datePart = rawDate.substringBefore('T')
     val parts = datePart.split('-')
     if (parts.size != 3) return rawDate

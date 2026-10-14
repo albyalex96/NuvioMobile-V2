@@ -4,7 +4,20 @@ import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import java.util.Locale
 
-actual fun formatLocalDateTime(epochMs: Long): String =
-    DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault())
-        .format(Instant.ofEpochMilli(epochMs))
+internal actual fun formatLocalDateTimeWithPatterns(
+    epochMs: Long,
+    localeTag: String,
+    datePattern: String?,
+    timePattern: String,
+): String {
+    val locale = Locale.forLanguageTag(localeTag)
+    val dateTime = Instant.ofEpochMilli(epochMs).atZone(ZoneId.systemDefault())
+    val dateFormatter = if (datePattern != null) {
+        DateTimeFormatter.ofPattern(datePattern, locale)
+    } else {
+        DateTimeFormatter.ofLocalizedDate(FormatStyle.SHORT).withLocale(locale)
+    }
+    return "${dateFormatter.format(dateTime)} ${DateTimeFormatter.ofPattern(timePattern, locale).format(dateTime)}"
+}

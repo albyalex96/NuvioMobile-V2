@@ -108,4 +108,44 @@ class ReleaseDateDisplayTest {
         TimeZone.setDefault(TimeZone.getTimeZone("America/Los_Angeles"))
         assertEquals("January 31, 2025", formatReleaseDate("2025-02-01T01:00:00Z", true, "en-US"))
     }
+
+    @Test
+    fun formatsWithNumericPresets() {
+        assertEquals("01/02/2025", formatReleaseDate("2025-02-01", true, "en-US", DateFormatPreset.DD_MM_YYYY))
+        assertEquals("02/01/2025", formatReleaseDate("2025-02-01", true, "en-US", DateFormatPreset.MM_DD_YYYY))
+        assertEquals("2025-02-01", formatReleaseDate("2025-02-01", true, "en-US", DateFormatPreset.YYYY_MM_DD))
+    }
+
+    @Test
+    fun formatsWithMonthNamePresetsUsingLocale() {
+        assertEquals("01 Feb 2025", formatReleaseDate("2025-02-01", true, "en-US", DateFormatPreset.DD_MMM_YYYY))
+        assertEquals("Feb 01, 2025", formatReleaseDate("2025-02-01", true, "en-US", DateFormatPreset.MMM_DD_YYYY))
+        assertEquals("01 ott 2025", formatReleaseDate("2025-10-01", true, "it-IT", DateFormatPreset.DD_MMM_YYYY))
+    }
+
+    @Test
+    fun presetsDropYearWhenRequested() {
+        assertEquals("01/02", formatReleaseDate("2025-02-01", false, "en-US", DateFormatPreset.DD_MM_YYYY))
+        assertEquals("02/01", formatReleaseDate("2025-02-01", false, "en-US", DateFormatPreset.MM_DD_YYYY))
+    }
+
+    @Test
+    fun presetsLeaveNonDatesUnchanged() {
+        assertEquals("TBA", formatReleaseDate("TBA", true, "en-US", DateFormatPreset.DD_MM_YYYY))
+        assertEquals("2024", formatReleaseDate("2024", true, "en-US", DateFormatPreset.DD_MM_YYYY))
+    }
+
+    @Test
+    fun formatsDateTimeWithPresetAnd24HourTime() {
+        // 2025-02-01T13:05:00Z
+        assertEquals("01/02/2025 13:05", formatLocalDateTime(1_738_415_100_000L, "en-US", DateFormatPreset.DD_MM_YYYY))
+        assertEquals("2/1/25 13:05", formatLocalDateTime(1_738_415_100_000L, "en-US", DateFormatPreset.SYSTEM))
+    }
+
+    @Test
+    fun parsesPresetKeysWithSystemFallback() {
+        assertEquals(DateFormatPreset.MM_DD_YYYY, DateFormatPreset.fromKey("mm_dd_yyyy"))
+        assertEquals(DateFormatPreset.SYSTEM, DateFormatPreset.fromKey(null))
+        assertEquals(DateFormatPreset.SYSTEM, DateFormatPreset.fromKey("unknown"))
+    }
 }

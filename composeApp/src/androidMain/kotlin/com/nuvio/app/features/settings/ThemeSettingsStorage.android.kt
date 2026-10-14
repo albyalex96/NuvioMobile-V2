@@ -23,6 +23,7 @@ actual object ThemeSettingsStorage {
     private const val selectedAppLanguageKey = "selected_app_language"
     private const val NAV_BAR_STYLE_KEY = "nav_bar_style"
     private const val navBarGlowEnabledKey = "nav_bar_glow_enabled"
+    private const val dateFormatKey = "date_format"
     private val profileScopedSyncKeys = listOf(
         selectedThemeKey,
         customThemeColorsKey,
@@ -31,6 +32,7 @@ actual object ThemeSettingsStorage {
         navBarGlowEnabledKey,
         liquidGlassNativeTabBarEnabledKey,
         NAV_BAR_STYLE_KEY,
+        dateFormatKey,
     )
 
     private var preferences: SharedPreferences? = null
@@ -147,6 +149,16 @@ actual object ThemeSettingsStorage {
             ?.apply()
     }
 
+    actual fun loadDateFormat(): String? =
+        preferences?.getString(ProfileScopedKey.of(dateFormatKey), null)
+
+    actual fun saveDateFormat(formatKey: String) {
+        preferences
+            ?.edit()
+            ?.putString(ProfileScopedKey.of(dateFormatKey), formatKey)
+            ?.apply()
+    }
+
     actual fun exportToSyncPayload(): JsonObject = buildJsonObject {
         loadSelectedTheme()?.let { put(selectedThemeKey, encodeSyncString(it)) }
         loadCustomThemeColors()?.let { put(customThemeColorsKey, encodeSyncString(it)) }
@@ -155,6 +167,7 @@ actual object ThemeSettingsStorage {
         loadAmoledSurfacesEnabled()?.let { put(amoledSurfacesEnabledKey, encodeSyncBoolean(it)) }
         loadLiquidGlassNativeTabBarEnabled()?.let { put(liquidGlassNativeTabBarEnabledKey, encodeSyncBoolean(it)) }
         loadNavBarStyle()?.let { put(NAV_BAR_STYLE_KEY, encodeSyncString(it)) }
+        loadDateFormat()?.let { put(dateFormatKey, encodeSyncString(it)) }
     }
 
     actual fun replaceFromSyncPayload(payload: JsonObject) {
@@ -169,6 +182,7 @@ actual object ThemeSettingsStorage {
         payload.decodeSyncBoolean(amoledSurfacesEnabledKey)?.let(::saveAmoledSurfacesEnabled)
         payload.decodeSyncBoolean(liquidGlassNativeTabBarEnabledKey)?.let(::saveLiquidGlassNativeTabBarEnabled)
         payload.decodeSyncString(NAV_BAR_STYLE_KEY)?.let(::saveNavBarStyle)
+        payload.decodeSyncString(dateFormatKey)?.let(::saveDateFormat)
         applySelectedAppLanguage(loadSelectedAppLanguage() ?: AppLanguage.DEVICE.code)
     }
 }

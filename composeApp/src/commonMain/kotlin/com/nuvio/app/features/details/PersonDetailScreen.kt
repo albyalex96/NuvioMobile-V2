@@ -61,6 +61,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
+import com.nuvio.app.core.format.formatDateWithSelectedPreset
 import com.nuvio.app.core.i18n.localizedShortMonthName
 import com.nuvio.app.core.ui.SkeletonPosterRow
 import com.nuvio.app.core.ui.landscapePosterHeightForWidth
@@ -1223,6 +1224,7 @@ private fun calculateAge(birthday: String, deathday: String?): Int? {
 }
 
 private fun formatDateForDisplay(date: String): String? {
+    formatDateWithSelectedPreset(date)?.let { return it }
     val parts = date.split("-").mapNotNull { it.toIntOrNull() }
     if (parts.size < 3) return null
     val month = parts[1]

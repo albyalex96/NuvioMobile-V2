@@ -1,5 +1,6 @@
 package com.nuvio.app.features.settings
 
+import com.nuvio.app.core.format.DateFormatPreset
 import com.nuvio.app.core.ui.AppTheme
 import com.nuvio.app.core.ui.CustomThemeColors
 import com.nuvio.app.core.ui.NativeTabBridge
@@ -8,6 +9,8 @@ import com.nuvio.app.features.membership.MemberAccessRepository
 import com.nuvio.app.features.membership.availableAppThemes
 import com.nuvio.app.features.membership.resolveAppTheme
 import com.nuvio.app.features.membership.resolveCustomThemeColors
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -46,6 +49,14 @@ object ThemeSettingsRepository {
     private val _navBarGlowEnabled = MutableStateFlow(true)
     val navBarGlowEnabled: StateFlow<Boolean> = _navBarGlowEnabled.asStateFlow()
 
+    private val _dateFormat = MutableStateFlow(DateFormatPreset.SYSTEM)
+    val dateFormat: StateFlow<DateFormatPreset> = _dateFormat.asStateFlow()
+
+    // Snapshot mirror of [dateFormat]: date formatters read it during composition so that
+    // visible dates recompose immediately when the preset changes.
+    private val _dateFormatState = mutableStateOf(DateFormatPreset.SYSTEM)
+    val dateFormatState: State<DateFormatPreset> = _dateFormatState
+
     private var hasLoaded = false
     private var observesMembership = false
 
@@ -73,6 +84,7 @@ object ThemeSettingsRepository {
         _selectedAppLanguage.value = AppLanguage.DEVICE
         _navBarGlowEnabled.value = true
         _navBarStyle.value = NavBarStyle.ADAPTIVE
+        applyDateFormat(DateFormatPreset.SYSTEM)
     }
 
     private fun loadFromDisk() {
@@ -101,6 +113,7 @@ object ThemeSettingsRepository {
         _selectedAppLanguage.value = appLanguage
         _navBarGlowEnabled.value = ThemeSettingsStorage.loadNavBarGlowEnabled() ?: true
         _navBarStyle.value = NavBarStyle.fromKey(ThemeSettingsStorage.loadNavBarStyle())
+        applyDateFormat(DateFormatPreset.fromKey(ThemeSettingsStorage.loadDateFormat()))
     }
 
     fun setTheme(theme: AppTheme) {
@@ -171,6 +184,18 @@ object ThemeSettingsRepository {
         if (_navBarGlowEnabled.value == enabled) return
         _navBarGlowEnabled.value = enabled
         ThemeSettingsStorage.saveNavBarGlowEnabled(enabled)
+    }
+
+    fun setDateFormat(preset: DateFormatPreset) {
+        ensureLoaded()
+        if (_dateFormat.value == preset) return
+        applyDateFormat(preset)
+        ThemeSettingsStorage.saveDateFormat(preset.key)
+    }
+
+    private fun applyDateFormat(preset: DateFormatPreset) {
+        _dateFormat.value = preset
+        _dateFormatState.value = preset
     }
 
     private fun observeMembership() {

@@ -10,3 +10,6 @@ internal actual fun formatCalendarDate(isoDate: String, localeTag: String, inclu
     val pattern = DateFormat.getBestDateTimePattern(locale, if (includeYear) "dMMMMy" else "dMMMM")
     return DateTimeFormatter.ofPattern(pattern, locale).format(LocalDate.parse(isoDate))
 }
+
+internal actual fun formatCalendarDateWithPattern(isoDate: String, localeTag: String, pattern: String): String =
+    DateTimeFormatter.ofPattern(pattern, Locale.forLanguageTag(localeTag)).format(LocalDate.parse(isoDate))

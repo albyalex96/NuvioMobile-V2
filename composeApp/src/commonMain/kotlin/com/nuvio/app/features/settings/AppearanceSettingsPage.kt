@@ -23,6 +23,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nuvio.app.core.format.DateFormatPreset
+import com.nuvio.app.core.format.formatReleaseDate
 import com.nuvio.app.core.ui.floatingNavigationGlowSupported
 import com.nuvio.app.core.ui.AppTheme
 import com.nuvio.app.isIos
@@ -45,6 +47,9 @@ import nuvio.composeapp.generated.resources.settings_appearance_app_language_res
 import nuvio.composeapp.generated.resources.settings_appearance_app_language_restart_title
 import nuvio.composeapp.generated.resources.settings_appearance_app_language_sheet_title
 import nuvio.composeapp.generated.resources.settings_appearance_app_icon
+import nuvio.composeapp.generated.resources.settings_appearance_date_format
+import nuvio.composeapp.generated.resources.settings_appearance_date_format_sheet_title
+import nuvio.composeapp.generated.resources.settings_date_format_system
 import nuvio.composeapp.generated.resources.settings_appearance_nav_bar_style
 import nuvio.composeapp.generated.resources.settings_nav_bar_glow_on
 import nuvio.composeapp.generated.resources.settings_nav_bar_glow_off
@@ -116,6 +121,8 @@ internal fun LazyListScope.appearanceSettingsContent(
         val layoutDirection = LocalLayoutDirection.current
         var showNavBarStyleSheet by remember { mutableStateOf(false) }
         var showAppIconPicker by remember { mutableStateOf(false) }
+        var showDateFormatSheet by remember { mutableStateOf(false) }
+        val dateFormat by ThemeSettingsRepository.dateFormat.collectAsStateWithLifecycle()
         val navBarStyleAvailable = !isIos
         val glowEnabled by ThemeSettingsRepository.navBarGlowEnabled.collectAsStateWithLifecycle()
         val effectiveNavBarStyle = if (isTablet) NavBarStyle.COMPACT else selectedNavBarStyle
@@ -176,6 +183,13 @@ internal fun LazyListScope.appearanceSettingsContent(
                     isTablet = isTablet,
                     onClick = { showLanguageSheet = true },
                 )
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsNavigationRow(
+                    title = stringResource(Res.string.settings_appearance_date_format),
+                    description = dateFormatOptionLabel(dateFormat),
+                    isTablet = isTablet,
+                    onClick = { showDateFormatSheet = true },
+                )
                 if (navBarStyleAvailable) {
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
@@ -206,6 +220,14 @@ internal fun LazyListScope.appearanceSettingsContent(
                     if (isIos && newLayoutDirection != layoutDirection) showLanguageRestartDialog = true
                 },
                 onDismiss = { showLanguageSheet = false },
+            )
+        }
+
+        if (showDateFormatSheet) {
+            AppearanceDateFormatBottomSheet(
+                selectedFormat = dateFormat,
+                onFormatSelected = ThemeSettingsRepository::setDateFormat,
+                onDismiss = { showDateFormatSheet = false },
             )
         }
 
@@ -366,6 +388,74 @@ private fun AppearanceLanguageBottomSheet(
                     },
                     trailingContent = {
                         if (option.language == selectedLanguage) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = stringResource(Res.string.cd_selected),
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    },
+                )
+            }
+        }
+    }
+}
+
+private const val DATE_FORMAT_SAMPLE_ISO = "2026-10-14"
+
+/** "System default (14 October 2026)" or "DD/MM/YYYY (14/10/2026)". */
+@Composable
+private fun dateFormatOptionLabel(preset: DateFormatPreset): String {
+    val name = preset.patternLabel ?: stringResource(Res.string.settings_date_format_system)
+    val sample = formatReleaseDate(DATE_FORMAT_SAMPLE_ISO, includeYear = true, preset = preset)
+    return "$name ($sample)"
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AppearanceDateFormatBottomSheet(
+    selectedFormat: DateFormatPreset,
+    onFormatSelected: (DateFormatPreset) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val coroutineScope = rememberCoroutineScope()
+
+    NuvioModalBottomSheet(
+        onDismissRequest = {
+            coroutineScope.launch {
+                dismissNuvioBottomSheet(sheetState = sheetState, onDismiss = onDismiss)
+            }
+        },
+        sheetState = sheetState,
+    ) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+        ) {
+            item {
+                Text(
+                    text = stringResource(Res.string.settings_appearance_date_format_sheet_title),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                )
+            }
+
+            items(DateFormatPreset.entries) { preset ->
+                NuvioBottomSheetActionRow(
+                    title = dateFormatOptionLabel(preset),
+                    selected = preset == selectedFormat,
+                    onClick = {
+                        onFormatSelected(preset)
+                        coroutineScope.launch {
+                            dismissNuvioBottomSheet(sheetState = sheetState, onDismiss = onDismiss)
+                        }
+                    },
+                    trailingContent = {
+                        if (preset == selectedFormat) {
                             Icon(
                                 imageVector = Icons.Default.Check,
                                 contentDescription = stringResource(Res.string.cd_selected),
