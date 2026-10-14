@@ -3,6 +3,7 @@ package com.nuvio.app.features.details.components
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -28,6 +29,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -36,7 +38,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,9 +56,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -808,10 +816,23 @@ private fun EpisodeHorizontalCard(
     } else {
         metrics.contentBottomPadding
     }
+    var overviewExpanded by remember(video.id) { mutableStateOf(false) }
+    val expandedScrimAlpha by animateFloatAsState(
+        targetValue = if (overviewExpanded) 0.45f else 0f,
+        animationSpec = tween(EPISODE_OVERVIEW_ANIMATION_MS),
+        label = "episode_overview_scrim",
+    )
     Box(
         modifier = Modifier
             .width(metrics.cardWidth)
-            .height(metrics.cardHeight)
+            .animateContentSize(animationSpec = tween(EPISODE_OVERVIEW_ANIMATION_MS))
+            .then(
+                if (overviewExpanded) {
+                    Modifier.heightIn(min = metrics.cardHeight)
+                } else {
+                    Modifier.height(metrics.cardHeight)
+                },
+            )
             .clip(cardShape)
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
             .nuvioCardDepth(
@@ -826,13 +847,22 @@ private fun EpisodeHorizontalCard(
                 zoomCornerRadius = metrics.cornerRadius,
             ),
     ) {
+        // Fills the area below the artwork when the overview is expanded, continuing the gradient.
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .padding(top = metrics.cardHeight)
+                .background(Color.Black.copy(alpha = 0.92f)),
+        )
+
         val shouldBlurArtwork = blurUnwatchedEpisodes && !isWatched
         if (imageUrl != null) {
             AsyncImage(
                 model = imageUrl,
                 contentDescription = video.title,
                 modifier = Modifier
-                    .fillMaxSize()
+                    .fillMaxWidth()
+                    .height(metrics.cardHeight)
                     .then(if (shouldBlurArtwork) Modifier.blur(18.dp) else Modifier),
                 contentScale = ContentScale.Crop,
             )
@@ -840,7 +870,8 @@ private fun EpisodeHorizontalCard(
 
         Box(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
+                .height(metrics.cardHeight)
                 .background(
                     Brush.verticalGradient(
                         0f to Color.Transparent,
@@ -852,6 +883,14 @@ private fun EpisodeHorizontalCard(
                     ),
                 ),
         )
+
+        if (expandedScrimAlpha > 0f) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(Color.Black.copy(alpha = expandedScrimAlpha)),
+            )
+        }
 
         NuvioAnimatedWatchedBadge(
             isVisible = isWatched,
@@ -894,15 +933,19 @@ private fun EpisodeHorizontalCard(
             )
 
             if (!video.overview.isNullOrBlank()) {
-                Text(
+                ExpandableEpisodeOverview(
                     text = video.overview,
+                    expanded = overviewExpanded,
+                    onToggle = { overviewExpanded = !overviewExpanded },
+                    collapsedMaxLines = metrics.overviewMaxLines,
                     style = MaterialTheme.typography.bodySmall.copy(
                         fontSize = metrics.bodyTextSize,
                         lineHeight = metrics.bodyLineHeight,
                     ),
                     color = Color.White.copy(alpha = 0.86f),
-                    maxLines = metrics.overviewMaxLines,
-                    overflow = TextOverflow.Ellipsis,
+                    toggleContainerColor = Color.Black.copy(alpha = 0.55f),
+                    toggleContentColor = Color.White,
+                    toggleSize = 22.dp,
                 )
             }
 
@@ -1186,10 +1229,11 @@ private fun EpisodeListCard(
     }
     val dateFormat = ThemeSettingsRepository.dateFormatState.value
     val formattedDate = remember(video.released, dateFormat) { video.released?.let { formatReleaseDateForDisplay(it) } }
+    var overviewExpanded by remember(video.id) { mutableStateOf(false) }
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(sizing.cardHeight)
+            .animateContentSize(animationSpec = tween(EPISODE_OVERVIEW_ANIMATION_MS))
             .clip(cardShape)
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
             .border(
@@ -1204,13 +1248,13 @@ private fun EpisodeListCard(
             ),
     ) {
         Row(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            // Image area - fixed width matching card height per spec
+            // Image area - fixed size so the artwork keeps its proportions when the card expands
             Box(
                 modifier = Modifier
                     .width(sizing.imageWidth)
-                    .fillMaxHeight()
+                    .height(sizing.cardHeight)
                     .clip(RoundedCornerShape(topStart = cornerRadius, bottomStart = cornerRadius)),
             ) {
                 val imageUrl = video.thumbnail ?: fallbackImage
@@ -1250,12 +1294,33 @@ private fun EpisodeListCard(
                         .align(Alignment.TopEnd)
                         .padding(8.dp),
                 )
+
+                progressEntry
+                    ?.takeIf { it.durationMs > 0L && !it.isCompleted }
+                    ?.let { entry ->
+                        NuvioProgressBar(
+                            progress = entry.progressFraction,
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .fillMaxWidth()
+                                .padding(start = 12.dp, end = 12.dp, bottom = 10.dp),
+                            height = 5.dp,
+                            trackColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.14f),
+                            fillColor = MaterialTheme.colorScheme.primary,
+                        )
+                    }
             }
 
             Column(
                 modifier = Modifier
-                    .fillMaxHeight()
                     .weight(1f)
+                    .then(
+                        if (overviewExpanded) {
+                            Modifier.heightIn(min = sizing.cardHeight)
+                        } else {
+                            Modifier.height(sizing.cardHeight)
+                        },
+                    )
                     .padding(
                         start = sizing.contentHorizontalPadding,
                         end = sizing.contentHorizontalPadding,
@@ -1306,34 +1371,91 @@ private fun EpisodeListCard(
                 }
 
                 if (!video.overview.isNullOrBlank()) {
-                    Text(
+                    ExpandableEpisodeOverview(
                         text = video.overview,
+                        expanded = overviewExpanded,
+                        onToggle = { overviewExpanded = !overviewExpanded },
+                        collapsedMaxLines = sizing.overviewMaxLines,
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontSize = sizing.bodyTextSize,
                             lineHeight = sizing.bodyLineHeight,
                         ),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = sizing.overviewMaxLines,
-                        overflow = TextOverflow.Ellipsis,
+                        toggleContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                        toggleContentColor = MaterialTheme.colorScheme.onSurface,
+                        toggleSize = 24.dp,
                     )
                 }
             }
         }
+    }
+}
 
-        progressEntry
-            ?.takeIf { it.durationMs > 0L && !it.isCompleted }
-            ?.let { entry ->
-                NuvioProgressBar(
-                    progress = entry.progressFraction,
+private const val EPISODE_OVERVIEW_ANIMATION_MS = 280
+
+/**
+ * Episode overview clamped to [collapsedMaxLines], with an arrow button overlaid on its
+ * bottom-end corner that reveals the full text. The button only appears when the text
+ * actually overflows, so cards with short overviews keep their original look.
+ */
+@Composable
+private fun ExpandableEpisodeOverview(
+    text: String,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    collapsedMaxLines: Int,
+    style: TextStyle,
+    color: Color,
+    toggleContainerColor: Color,
+    toggleContentColor: Color,
+    toggleSize: Dp,
+    modifier: Modifier = Modifier,
+) {
+    var canExpand by remember(text) { mutableStateOf(false) }
+    val arrowRotation by animateFloatAsState(
+        targetValue = if (expanded) 180f else 0f,
+        animationSpec = tween(EPISODE_OVERVIEW_ANIMATION_MS),
+        label = "episode_overview_arrow",
+    )
+
+    Box(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = text,
+            style = style,
+            color = color,
+            maxLines = if (expanded) Int.MAX_VALUE else collapsedMaxLines,
+            overflow = TextOverflow.Ellipsis,
+            onTextLayout = { result ->
+                if (!expanded) {
+                    canExpand = result.hasVisualOverflow
+                }
+            },
+            // When expanded, leave room below the text so the button never covers it.
+            modifier = Modifier.padding(bottom = if (expanded) toggleSize + 4.dp else 0.dp),
+        )
+
+        if (canExpand || expanded) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .size(toggleSize)
+                    .clip(CircleShape)
+                    .background(toggleContainerColor)
+                    .clickable(onClick = onToggle),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.KeyboardArrowDown,
+                    contentDescription = stringResource(
+                        if (expanded) Res.string.details_show_less else Res.string.details_show_more,
+                    ),
+                    tint = toggleContentColor,
                     modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .width(sizing.imageWidth - 24.dp)
-                        .padding(start = 12.dp, bottom = 10.dp),
-                    height = 5.dp,
-                    trackColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.14f),
-                    fillColor = MaterialTheme.colorScheme.primary,
+                        .size(toggleSize * 0.8f)
+                        .rotate(arrowRotation),
                 )
             }
+        }
     }
 }
 
