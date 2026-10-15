@@ -1,14 +1,14 @@
 package com.nuvio.app.core.logging
 
-/** Viewer filters: a tag ([category], null = all), the visible levels and a free-text query. */
+/** Viewer filters: the selected tags ([categories], empty = all), the visible levels and a free-text query. */
 data class AppLogFilter(
-    val category: String? = null,
+    val categories: Set<String> = emptySet(),
     val levels: Set<AppLogLevel> = AppLogLevel.entries.toSet(),
     val query: String = "",
 ) {
     fun matches(entry: AppLogEntry): Boolean {
         if (entry.level !in levels) return false
-        if (category != null && entry.tag != category) return false
+        if (categories.isNotEmpty() && entry.tag !in categories) return false
         val needle = query.trim()
         if (needle.isEmpty()) return true
         return entry.tag.contains(needle, ignoreCase = true) ||

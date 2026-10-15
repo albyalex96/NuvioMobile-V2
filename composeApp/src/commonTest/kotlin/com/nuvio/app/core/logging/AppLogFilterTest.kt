@@ -24,10 +24,11 @@ class AppLogFilterTest {
 
     @Test
     fun filtersByLevelAndCategory() {
-        val filter = AppLogFilter(category = "Sync", levels = setOf(AppLogLevel.WARN, AppLogLevel.ERROR))
+        val filter = AppLogFilter(categories = setOf("Sync", "Auth"), levels = setOf(AppLogLevel.WARN, AppLogLevel.ERROR))
         assertTrue(filter.matches(entry(1, level = AppLogLevel.ERROR, tag = "Sync")))
-        assertFalse(filter.matches(entry(2, level = AppLogLevel.INFO, tag = "Sync")))
-        assertFalse(filter.matches(entry(3, level = AppLogLevel.ERROR, tag = "Player")))
+        assertTrue(filter.matches(entry(2, level = AppLogLevel.WARN, tag = "Auth")))
+        assertFalse(filter.matches(entry(3, level = AppLogLevel.INFO, tag = "Sync")))
+        assertFalse(filter.matches(entry(4, level = AppLogLevel.ERROR, tag = "Player")))
     }
 
     @Test

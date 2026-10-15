@@ -1,5 +1,6 @@
 package com.nuvio.app.features.settings
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -9,12 +10,16 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
@@ -24,29 +29,35 @@ import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Terminal
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -64,16 +75,22 @@ import com.nuvio.app.core.ui.DialogButtonStyle
 import com.nuvio.app.core.ui.DialogButtons
 import com.nuvio.app.core.ui.DialogSurface
 import com.nuvio.app.core.ui.NuvioInputField
+import com.nuvio.app.core.ui.NuvioModalBottomSheet
 import com.nuvio.app.core.ui.NuvioSectionLabel
 import com.nuvio.app.core.ui.NuvioToastController
+import com.nuvio.app.core.ui.NuvioTokens
+import com.nuvio.app.core.ui.dismissNuvioBottomSheet
 import com.nuvio.app.core.ui.nuvio
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_cancel
+import nuvio.composeapp.generated.resources.action_done
+import nuvio.composeapp.generated.resources.app_logs_categories_selected
 import nuvio.composeapp.generated.resources.app_logs_category_all
 import nuvio.composeapp.generated.resources.app_logs_category_option
+import nuvio.composeapp.generated.resources.app_logs_category_sheet_hint
 import nuvio.composeapp.generated.resources.app_logs_category_sheet_title
 import nuvio.composeapp.generated.resources.app_logs_category_title
 import nuvio.composeapp.generated.resources.app_logs_clear_confirm
@@ -124,8 +141,10 @@ private const val ENTRY_TIME_PATTERN = "HH:mm:ss.SSS"
 private const val ENTRY_DAY_TIME_PATTERN = "dd/MM HH:mm:ss.SSS"
 private const val DAY_KEY_PATTERN = "yyyyMMdd"
 
-/** Spacing the settings lists put between items (see `NuvioScreen` and the tablet column of `SettingsScreen`). */
-private val TabletSettingsItemGap = 18.dp
+/** The log console has a fixed height (a share of the window) and scrolls on its own. */
+private const val CONSOLE_WINDOW_HEIGHT_FRACTION = 0.7f
+private val ConsoleMinHeight = 280.dp
+private val ConsoleMaxHeight = 900.dp
 
 private val AppLogInfoColor = Color(0xFF4FA3FF)
 private val AppLogWarnColor = Color(0xFFFFB020)
@@ -146,31 +165,76 @@ internal fun LazyListScope.appLogsSettingsContent(
         AppLogsActionsSection(isTablet = isTablet, viewer = viewer)
     }
 
+    item(key = "app_logs_console") {
+        AppLogsConsole(isTablet = isTablet, viewer = viewer)
+    }
+}
+
+/**
+ * Fixed-height card holding the entries in its own lazy list: the settings page keeps its size and
+ * only the console scrolls. With live updates on, it stays pinned to the newest entry while at the top.
+ */
+@OptIn(ExperimentalComposeUiApi::class)
+@Composable
+private fun AppLogsConsole(
+    isTablet: Boolean,
+    viewer: AppLogsViewerState,
+) {
+    val tokens = MaterialTheme.nuvio
     val result = viewer.result
-    item(key = "app_logs_entries_header") {
+    val density = LocalDensity.current
+    val windowHeight = with(density) { LocalWindowInfo.current.containerSize.height.toDp() }
+    val consoleHeight = (windowHeight * CONSOLE_WINDOW_HEIGHT_FRACTION).coerceIn(ConsoleMinHeight, ConsoleMaxHeight)
+    val listState = rememberLazyListState()
+    var stickToTop by remember { mutableStateOf(true) }
+
+    // Only the user's scrolling decides whether the console follows the newest entries.
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.isScrollInProgress }.collect { scrolling ->
+            if (!scrolling) {
+                stickToTop = listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
+            }
+        }
+    }
+    val newestId = result.entries.firstOrNull()?.id
+    LaunchedEffect(newestId) {
+        if (stickToTop && newestId != null) listState.scrollToItem(0)
+    }
+
+    Column {
         NuvioSectionLabel(
             text = stringResource(Res.string.app_logs_section_entries, result.entries.size, result.totalCount),
         )
-    }
-    if (result.entries.isEmpty()) {
-        item(key = "app_logs_empty") {
-            AppLogsEmptyState(isTablet = isTablet)
-        }
-    } else {
-        val lastIndex = result.entries.lastIndex
-        itemsIndexed(
-            items = result.entries,
-            key = { _, entry -> "app_log_${entry.id}" },
-            contentType = { _, _ -> "app_log_entry" },
-        ) { index, entry ->
-            AppLogEntryRow(
-                entry = entry,
-                expanded = entry.id in viewer.expandedIds,
-                isFirst = index == 0,
-                isLast = index == lastIndex,
-                isTablet = isTablet,
-                onClick = { viewer.toggleExpanded(entry.id) },
-            )
+        Spacer(modifier = Modifier.height(if (isTablet) tokens.spacing.listGap else NuvioTokens.Space.s10))
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(consoleHeight),
+            color = tokens.colors.surface,
+            shape = if (isTablet) RoundedCornerShape(NuvioTokens.Radius.xl) else tokens.shapes.compactCard,
+            border = BorderStroke(tokens.borders.hairline, tokens.colors.borderSubtle),
+        ) {
+            if (result.entries.isEmpty()) {
+                AppLogsEmptyState(isTablet = isTablet)
+            } else {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    itemsIndexed(
+                        items = result.entries,
+                        key = { _, entry -> entry.id },
+                        contentType = { _, _ -> "app_log_entry" },
+                    ) { index, entry ->
+                        AppLogEntryRow(
+                            entry = entry,
+                            expanded = entry.id in viewer.expandedIds,
+                            showDivider = index < result.entries.lastIndex,
+                            onClick = { viewer.toggleExpanded(entry.id) },
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -208,6 +272,11 @@ private fun AppLogsFiltersSection(
     val filter = viewer.filter
     val result = viewer.result
     val allCategoriesLabel = stringResource(Res.string.app_logs_category_all)
+    val selectedCategoriesLabel = when (filter.categories.size) {
+        0 -> allCategoriesLabel
+        1, 2 -> filter.categories.sortedWith(String.CASE_INSENSITIVE_ORDER).joinToString()
+        else -> stringResource(Res.string.app_logs_categories_selected, filter.categories.size)
+    }
 
     SettingsSection(
         title = stringResource(Res.string.app_logs_section_filters),
@@ -216,7 +285,7 @@ private fun AppLogsFiltersSection(
         SettingsGroup(isTablet = isTablet) {
             SettingsNavigationRow(
                 title = stringResource(Res.string.app_logs_category_title),
-                description = filter.category ?: allCategoriesLabel,
+                description = selectedCategoriesLabel,
                 isTablet = isTablet,
                 onClick = { showCategorySheet = true },
             )
@@ -270,22 +339,122 @@ private fun AppLogsFiltersSection(
     }
 
     if (showCategorySheet) {
-        val options = remember(result.categories) { listOf<String?>(null) + result.categories.map { it.first } }
-        val counts = remember(result.categories) { result.categories.toMap() }
-        val categoryOptionFormat = Res.string.app_logs_category_option
-        AppearanceOptionBottomSheet(
-            title = stringResource(Res.string.app_logs_category_sheet_title),
-            options = options,
-            selected = filter.category,
-            optionLabel = { category ->
-                if (category == null) {
-                    stringResource(categoryOptionFormat, allCategoriesLabel, result.totalCount)
-                } else {
-                    stringResource(categoryOptionFormat, category, counts[category] ?: 0)
-                }
-            },
-            onSelected = { viewer.filter = viewer.filter.copy(category = it) },
+        AppLogsCategorySheet(
+            categories = result.categories,
+            totalCount = result.totalCount,
+            selected = filter.categories,
+            allCategoriesLabel = allCategoriesLabel,
+            onToggle = viewer::toggleCategory,
+            onSelectAll = viewer::clearCategories,
             onDismiss = { showCategorySheet = false },
+        )
+    }
+}
+
+/** Multi-select category picker: "All categories" clears the selection, every other row toggles a tag. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AppLogsCategorySheet(
+    categories: List<Pair<String, Int>>,
+    totalCount: Int,
+    selected: Set<String>,
+    allCategoriesLabel: String,
+    onToggle: (String) -> Unit,
+    onSelectAll: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val tokens = MaterialTheme.nuvio
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val coroutineScope = rememberCoroutineScope()
+    val dismiss: () -> Unit = {
+        coroutineScope.launch { dismissNuvioBottomSheet(sheetState = sheetState, onDismiss = onDismiss) }
+    }
+    // Tags selected earlier but no longer in the list (e.g. after clearing) stay visible to be unticked.
+    val rows = remember(categories, selected) {
+        val known = categories.map { it.first }.toSet()
+        categories + selected.filter { it !in known }.map { it to 0 }
+    }
+
+    NuvioModalBottomSheet(
+        onDismissRequest = dismiss,
+        sheetState = sheetState,
+    ) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 16.dp),
+        ) {
+            item {
+                Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+                    Text(
+                        text = stringResource(Res.string.app_logs_category_sheet_title),
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    Text(
+                        text = stringResource(Res.string.app_logs_category_sheet_hint),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = tokens.colors.textMuted,
+                    )
+                }
+            }
+            item {
+                AppLogsCategoryRow(
+                    label = stringResource(Res.string.app_logs_category_option, allCategoriesLabel, totalCount),
+                    checked = selected.isEmpty(),
+                    onClick = onSelectAll,
+                )
+            }
+            items(rows, key = { it.first }) { (category, count) ->
+                AppLogsCategoryRow(
+                    label = stringResource(Res.string.app_logs_category_option, category, count),
+                    checked = category in selected,
+                    onClick = { onToggle(category) },
+                )
+            }
+            item {
+                DialogButtons(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    DialogButton(
+                        text = stringResource(Res.string.action_done),
+                        onClick = dismiss,
+                        style = DialogButtonStyle.Primary,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AppLogsCategoryRow(
+    label: String,
+    checked: Boolean,
+    onClick: () -> Unit,
+) {
+    val tokens = MaterialTheme.nuvio
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Checkbox(
+            checked = checked,
+            onCheckedChange = { onClick() },
+            colors = CheckboxDefaults.colors(
+                checkedColor = tokens.colors.accent,
+                uncheckedColor = tokens.colors.textMuted,
+                checkmarkColor = tokens.colors.onAccent,
+            ),
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = tokens.colors.textPrimary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
@@ -316,8 +485,8 @@ private fun AppLogLevelCheckbox(
         Text(
             text = label,
             style = MaterialTheme.typography.bodyMedium,
-            color = if (checked) tokens.colors.textPrimary else tokens.colors.textMuted,
-            fontWeight = FontWeight.Medium,
+            color = if (checked) color else color.copy(alpha = 0.55f),
+            fontWeight = FontWeight.SemiBold,
         )
     }
 }
@@ -469,13 +638,14 @@ private fun AppLogsClearDialog(
 private fun AppLogsEmptyState(isTablet: Boolean) {
     val tokens = MaterialTheme.nuvio
     val recording by AppLoggerSettings.enabled.collectAsStateWithLifecycle()
-    SettingsGroup(isTablet = isTablet) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(
             text = stringResource(
                 if (recording) Res.string.app_logs_empty else Res.string.app_logs_empty_disabled,
             ),
             style = MaterialTheme.typography.bodyMedium,
             color = tokens.colors.textMuted,
+            textAlign = TextAlign.Center,
             modifier = Modifier.padding(
                 horizontal = if (isTablet) 20.dp else 16.dp,
                 vertical = 18.dp,
@@ -484,37 +654,19 @@ private fun AppLogsEmptyState(isTablet: Boolean) {
     }
 }
 
-/**
- * One line of the log "console". Rows are separate lazy items (the list can hold thousands of entries)
- * but must look like one continuous card, so each row except the last swallows the list item gap.
- */
+/** One line of the log console; tapping it shows the full message and stack trace. */
 @Composable
 private fun AppLogEntryRow(
     entry: AppLogEntry,
     expanded: Boolean,
-    isFirst: Boolean,
-    isLast: Boolean,
-    isTablet: Boolean,
+    showDivider: Boolean,
     onClick: () -> Unit,
 ) {
     val tokens = MaterialTheme.nuvio
     val levelColor = entry.level.color()
-    val itemGap = if (isTablet) TabletSettingsItemGap else tokens.spacing.listGap
-    val corner = 12.dp
-    val shape: Shape = RoundedCornerShape(
-        topStart = if (isFirst) corner else 0.dp,
-        topEnd = if (isFirst) corner else 0.dp,
-        bottomStart = if (isLast) corner else 0.dp,
-        bottomEnd = if (isLast) corner else 0.dp,
-    )
     val monoSmall = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
 
-    Column(
-        modifier = Modifier
-            .then(if (isLast) Modifier else Modifier.swallowListGap(itemGap))
-            .fillMaxWidth()
-            .background(tokens.colors.surface, shape),
-    ) {
+    Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -545,10 +697,13 @@ private fun AppLogEntryRow(
                         color = tokens.colors.textMuted,
                     )
                     Text(
-                        text = entry.level.shortLabel,
-                        style = monoSmall.copy(fontSize = 11.sp),
+                        text = stringResource(entry.level.labelRes).uppercase(),
+                        style = monoSmall.copy(fontSize = 10.sp),
                         color = levelColor,
                         fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .background(levelColor.copy(alpha = 0.16f), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 5.dp, vertical = 1.dp),
                     )
                     Text(
                         text = entry.tag,
@@ -589,20 +744,13 @@ private fun AppLogEntryRow(
                 }
             }
         }
-        if (!isLast) {
+        if (showDivider) {
             HorizontalDivider(
                 thickness = tokens.borders.hairline,
                 color = tokens.colors.borderSubtle,
             )
         }
     }
-}
-
-/** Reports [gap] less height than measured, so the next lazy item starts right below this one. */
-private fun Modifier.swallowListGap(gap: Dp): Modifier = layout { measurable, constraints ->
-    val placeable = measurable.measure(constraints)
-    val height = (placeable.height - gap.roundToPx()).coerceAtLeast(0)
-    layout(placeable.width, height) { placeable.place(0, 0) }
 }
 
 /** `HH:mm:ss.SSS` for today's entries, with the day in front for older ones (retention spans 24 h). */

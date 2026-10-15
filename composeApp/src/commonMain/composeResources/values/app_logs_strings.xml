@@ -6,9 +6,11 @@
     <string name="app_logs_enabled_title">Record logs</string>
     <string name="app_logs_enabled_description">Saves the app logs on this device. Entries are kept for 24 hours.</string>
     <string name="app_logs_section_filters">Filters</string>
-    <string name="app_logs_category_title">Category</string>
+    <string name="app_logs_category_title">Categories</string>
     <string name="app_logs_category_all">All categories</string>
-    <string name="app_logs_category_sheet_title">Log category</string>
+    <string name="app_logs_category_sheet_title">Log categories</string>
+    <string name="app_logs_category_sheet_hint">Select one or more categories</string>
+    <string name="app_logs_categories_selected">%1$d categories</string>
     <string name="app_logs_category_option">%1$s (%2$d)</string>
     <string name="app_logs_levels_title">Levels</string>
     <string name="app_logs_levels_description">Show only the selected levels</string>

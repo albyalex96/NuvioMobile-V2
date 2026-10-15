@@ -48,6 +48,15 @@ internal class AppLogsViewerState {
         filter = filter.copy(levels = if (level in levels) levels - level else levels + level)
     }
 
+    fun toggleCategory(category: String) {
+        val categories = filter.categories
+        filter = filter.copy(categories = if (category in categories) categories - category else categories + category)
+    }
+
+    fun clearCategories() {
+        filter = filter.copy(categories = emptySet())
+    }
+
     fun toggleExpanded(id: Long) {
         expandedIds = if (id in expandedIds) expandedIds - id else expandedIds + id
     }
