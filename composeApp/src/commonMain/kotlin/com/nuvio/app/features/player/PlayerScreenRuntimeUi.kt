@@ -367,8 +367,9 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
                 args.onBack()
             },
             onTogglePlayback = { togglePlayback() },
-            onSeekBack = { seekBy(-10_000L) },
-            onSeekForward = { seekBy(10_000L) },
+            seekIntervalSeconds = playerSettingsUiState.seekIntervalSeconds,
+            onSeekBack = { seekBy(-playerSettingsUiState.seekIntervalSeconds * 1_000L) },
+            onSeekForward = { seekBy(playerSettingsUiState.seekIntervalSeconds * 1_000L) },
             onResizeModeClick = { cycleResizeMode() },
             onSpeedClick = { cyclePlaybackSpeed() },
             onSubtitleClick = {

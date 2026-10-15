@@ -72,6 +72,7 @@ import com.nuvio.app.features.player.IosTargetPrimaries
 import com.nuvio.app.features.player.IosTargetTransfer
 import com.nuvio.app.features.player.PlayerSettingsRepository
 import com.nuvio.app.features.player.STILL_WATCHING_EPISODE_COUNT_RANGE
+import com.nuvio.app.features.player.SEEK_INTERVAL_SECONDS_RANGE
 import com.nuvio.app.features.player.STREAM_AUTO_PLAY_TIMEOUT_VALUES
 import com.nuvio.app.features.player.SubtitleBackgroundColorSwatches
 import com.nuvio.app.features.player.SubtitleColorSwatches
@@ -482,6 +483,17 @@ private fun PlaybackSettingsSection(
                     enabled = !autoPlayPlayerSettings.externalPlayerEnabled,
                     isTablet = isTablet,
                     onCheckedChange = PlayerSettingsRepository::setTouchGesturesEnabled,
+                )
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsSliderRow(
+                    title = stringResource(Res.string.settings_playback_seek_interval),
+                    value = autoPlayPlayerSettings.seekIntervalSeconds,
+                    valueText = { seconds -> stringResource(Res.string.settings_playback_seek_interval_value, seconds) },
+                    valueRange = SEEK_INTERVAL_SECONDS_RANGE,
+                    step = 1,
+                    isTablet = isTablet,
+                    enabled = !autoPlayPlayerSettings.externalPlayerEnabled,
+                    onValueChange = PlayerSettingsRepository::setSeekIntervalSeconds,
                 )
                 SettingsGroupDivider(isTablet = isTablet)
                 SettingsSwitchRow(

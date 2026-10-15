@@ -16,6 +16,8 @@ val STREAM_AUTO_PLAY_TIMEOUT_VALUES: List<Int> = listOf(
 
 const val DEFAULT_STILL_WATCHING_EPISODE_COUNT: Int = 3
 val STILL_WATCHING_EPISODE_COUNT_RANGE: IntRange = 1..10
+const val DEFAULT_SEEK_INTERVAL_SECONDS: Int = 10
+val SEEK_INTERVAL_SECONDS_RANGE: IntRange = 1..20
 
 /**
  * Snaps [value] to the nearest allowed timeout value in [STREAM_AUTO_PLAY_TIMEOUT_VALUES].
@@ -97,6 +99,7 @@ data class PlayerSettingsUiState(
     val stillWatchingPromptEnabled: Boolean = false,
     val stillWatchingEpisodeCount: Int = DEFAULT_STILL_WATCHING_EPISODE_COUNT,
     val stillWatchingNightOnly: Boolean = false,
+    val seekIntervalSeconds: Int = DEFAULT_SEEK_INTERVAL_SECONDS,
     val useLibass: Boolean = false,
     val libassRenderType: String = "CUES",
     val iosVideoOutputPreset: IosVideoOutputPreset = IosVideoOutputPreset.NativeEdr,
@@ -182,6 +185,7 @@ object PlayerSettingsRepository {
     private var stillWatchingPromptEnabled = false
     private var stillWatchingEpisodeCount = DEFAULT_STILL_WATCHING_EPISODE_COUNT
     private var stillWatchingNightOnly = false
+    private var seekIntervalSeconds = DEFAULT_SEEK_INTERVAL_SECONDS
     private var useLibass = false
     private var libassRenderType = "CUES"
     private var iosVideoOutputPreset = IosVideoOutputPreset.NativeEdr
@@ -273,6 +277,7 @@ object PlayerSettingsRepository {
         stillWatchingPromptEnabled = false
         stillWatchingEpisodeCount = DEFAULT_STILL_WATCHING_EPISODE_COUNT
         stillWatchingNightOnly = false
+        seekIntervalSeconds = DEFAULT_SEEK_INTERVAL_SECONDS
         useLibass = false
         libassRenderType = "CUES"
         iosVideoOutputPreset = IosVideoOutputPreset.NativeEdr
@@ -431,6 +436,8 @@ object PlayerSettingsRepository {
         stillWatchingEpisodeCount = (PlayerSettingsStorage.loadStillWatchingEpisodeCount() ?: DEFAULT_STILL_WATCHING_EPISODE_COUNT)
             .coerceIn(STILL_WATCHING_EPISODE_COUNT_RANGE)
         stillWatchingNightOnly = PlayerSettingsStorage.loadStillWatchingNightOnly() ?: false
+        seekIntervalSeconds = (PlayerSettingsStorage.loadSeekIntervalSeconds() ?: DEFAULT_SEEK_INTERVAL_SECONDS)
+            .coerceIn(SEEK_INTERVAL_SECONDS_RANGE)
         useLibass = PlayerSettingsStorage.loadUseLibass() ?: false
         libassRenderType = PlayerSettingsStorage.loadLibassRenderType() ?: "CUES"
         iosVideoOutputPreset = PlayerSettingsStorage.loadIosVideoOutputPreset()
@@ -1013,6 +1020,15 @@ object PlayerSettingsRepository {
         PlayerSettingsStorage.saveStillWatchingNightOnly(enabled)
     }
 
+    fun setSeekIntervalSeconds(seconds: Int) {
+        ensureLoaded()
+        val normalized = seconds.coerceIn(SEEK_INTERVAL_SECONDS_RANGE)
+        if (seekIntervalSeconds == normalized) return
+        seekIntervalSeconds = normalized
+        publish()
+        PlayerSettingsStorage.saveSeekIntervalSeconds(normalized)
+    }
+
     fun setUseLibass(enabled: Boolean) {
         ensureLoaded()
         if (useLibass == enabled) return
@@ -1257,6 +1273,7 @@ object PlayerSettingsRepository {
             stillWatchingPromptEnabled = stillWatchingPromptEnabled,
             stillWatchingEpisodeCount = stillWatchingEpisodeCount,
             stillWatchingNightOnly = stillWatchingNightOnly,
+            seekIntervalSeconds = seekIntervalSeconds,
             useLibass = useLibass,
             libassRenderType = libassRenderType,
             iosVideoOutputPreset = iosVideoOutputPreset,

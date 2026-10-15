@@ -94,6 +94,7 @@ actual object PlayerSettingsStorage {
     private const val stillWatchingPromptEnabledKey = "still_watching_prompt_enabled"
     private const val stillWatchingEpisodeCountKey = "still_watching_episode_count"
     private const val stillWatchingNightOnlyKey = "still_watching_night_only"
+    private const val seekIntervalSecondsKey = "seek_interval_seconds"
     private const val useLibassKey = "use_libass"
     private const val libassRenderTypeKey = "libass_render_type"
     private const val iosVideoOutputPresetKey = "ios_video_output_preset"
@@ -171,6 +172,7 @@ actual object PlayerSettingsStorage {
         stillWatchingPromptEnabledKey,
         stillWatchingEpisodeCountKey,
         stillWatchingNightOnlyKey,
+        seekIntervalSecondsKey,
         useLibassKey,
         libassRenderTypeKey,
         iosVideoOutputPresetKey,
@@ -1223,6 +1225,21 @@ actual object PlayerSettingsStorage {
             ?.apply()
     }
 
+    actual fun loadSeekIntervalSeconds(): Int? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(seekIntervalSecondsKey)
+            if (sharedPreferences.contains(key)) {
+                sharedPreferences.getInt(key, 10)
+            } else null
+        }
+
+    actual fun saveSeekIntervalSeconds(seconds: Int) {
+        preferences
+            ?.edit()
+            ?.putInt(ProfileScopedKey.of(seekIntervalSecondsKey), seconds)
+            ?.apply()
+    }
+
     actual fun loadUseLibass(): Boolean? =
         preferences?.let { sharedPreferences ->
             val key = ProfileScopedKey.of(useLibassKey)
@@ -1433,6 +1450,7 @@ actual object PlayerSettingsStorage {
         loadStillWatchingPromptEnabled()?.let { put(stillWatchingPromptEnabledKey, encodeSyncBoolean(it)) }
         loadStillWatchingEpisodeCount()?.let { put(stillWatchingEpisodeCountKey, encodeSyncInt(it)) }
         loadStillWatchingNightOnly()?.let { put(stillWatchingNightOnlyKey, encodeSyncBoolean(it)) }
+        loadSeekIntervalSeconds()?.let { put(seekIntervalSecondsKey, encodeSyncInt(it)) }
         loadUseLibass()?.let { put(useLibassKey, encodeSyncBoolean(it)) }
         loadLibassRenderType()?.let { put(libassRenderTypeKey, encodeSyncString(it)) }
         loadIosVideoOutputPreset()?.let { put(iosVideoOutputPresetKey, encodeSyncString(it)) }
@@ -1519,6 +1537,7 @@ actual object PlayerSettingsStorage {
         payload.decodeSyncBoolean(stillWatchingPromptEnabledKey)?.let(::saveStillWatchingPromptEnabled)
         payload.decodeSyncInt(stillWatchingEpisodeCountKey)?.let(::saveStillWatchingEpisodeCount)
         payload.decodeSyncBoolean(stillWatchingNightOnlyKey)?.let(::saveStillWatchingNightOnly)
+        payload.decodeSyncInt(seekIntervalSecondsKey)?.let(::saveSeekIntervalSeconds)
         payload.decodeSyncBoolean(useLibassKey)?.let(::saveUseLibass)
         payload.decodeSyncString(libassRenderTypeKey)?.let(::saveLibassRenderType)
         payload.decodeSyncString(iosVideoOutputPresetKey)?.let(::saveIosVideoOutputPreset)

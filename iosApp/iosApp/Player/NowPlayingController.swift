@@ -180,8 +180,10 @@ final class PlayerNowPlayingController {
         center.skipForwardCommand.isEnabled = true
         center.skipBackwardCommand.isEnabled = true
         center.changePlaybackPositionCommand.isEnabled = true
-        center.skipForwardCommand.preferredIntervals = [10]
-        center.skipBackwardCommand.preferredIntervals = [10]
+        let storedSeekInterval = UserDefaults.standard.integer(forKey: "nuvio_now_playing_seek_interval_seconds")
+        let seekInterval = NSNumber(value: (1...20).contains(storedSeekInterval) ? storedSeekInterval : 10)
+        center.skipForwardCommand.preferredIntervals = [seekInterval]
+        center.skipBackwardCommand.preferredIntervals = [seekInterval]
 
         remoteTargets.append(
             RemoteCommandTarget(

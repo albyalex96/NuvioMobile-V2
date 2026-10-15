@@ -154,6 +154,8 @@ internal expect object PlayerSettingsStorage {
     fun saveStillWatchingEpisodeCount(count: Int)
     fun loadStillWatchingNightOnly(): Boolean?
     fun saveStillWatchingNightOnly(enabled: Boolean)
+    fun loadSeekIntervalSeconds(): Int?
+    fun saveSeekIntervalSeconds(seconds: Int)
     fun loadUseLibass(): Boolean?
     fun saveUseLibass(enabled: Boolean)
     fun loadLibassRenderType(): String?

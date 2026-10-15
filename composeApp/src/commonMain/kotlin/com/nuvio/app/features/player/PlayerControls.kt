@@ -30,10 +30,8 @@ import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Flag
-import androidx.compose.material.icons.rounded.Forward10
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
-import androidx.compose.material.icons.rounded.Replay10
 import com.nuvio.app.core.ui.NuvioLoadingIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -102,6 +100,7 @@ internal fun PlayerControlsShell(
     onLockToggle: () -> Unit,
     onBack: () -> Unit,
     onTogglePlayback: () -> Unit,
+    seekIntervalSeconds: Int = DEFAULT_SEEK_INTERVAL_SECONDS,
     onSeekBack: () -> Unit,
     onSeekForward: () -> Unit,
     onResizeModeClick: () -> Unit,
@@ -223,6 +222,7 @@ internal fun PlayerControlsShell(
                     CenterControls(
                         snapshot = playbackSnapshot,
                         metrics = metrics,
+                        seekIntervalSeconds = seekIntervalSeconds,
                         onSeekBack = {
                             if (!useLegacyLayout) onInteraction()
                             onSeekBack()
@@ -513,6 +513,7 @@ internal fun PlayerHeaderIconButton(
 private fun CenterControls(
     snapshot: PlayerPlaybackSnapshot,
     metrics: PlayerLayoutMetrics,
+    seekIntervalSeconds: Int,
     onSeekBack: () -> Unit,
     onSeekForward: () -> Unit,
     onTogglePlayback: () -> Unit,
@@ -524,8 +525,9 @@ private fun CenterControls(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         SideControlButton(
-            icon = Icons.Rounded.Replay10,
-            contentDescription = stringResource(Res.string.compose_player_seek_back_10),
+            seekIntervalSeconds = seekIntervalSeconds,
+            forward = false,
+            contentDescription = stringResource(Res.string.compose_player_seek_back_seconds, seekIntervalSeconds),
             metrics = metrics,
             onClick = onSeekBack,
         )
@@ -536,8 +538,9 @@ private fun CenterControls(
             onClick = onTogglePlayback,
         )
         SideControlButton(
-            icon = Icons.Rounded.Forward10,
-            contentDescription = stringResource(Res.string.compose_player_seek_forward_10),
+            seekIntervalSeconds = seekIntervalSeconds,
+            forward = true,
+            contentDescription = stringResource(Res.string.compose_player_seek_forward_seconds, seekIntervalSeconds),
             metrics = metrics,
             onClick = onSeekForward,
         )
@@ -546,7 +549,8 @@ private fun CenterControls(
 
 @Composable
 private fun SideControlButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    seekIntervalSeconds: Int,
+    forward: Boolean,
     contentDescription: String,
     metrics: PlayerLayoutMetrics,
     onClick: () -> Unit,
@@ -558,8 +562,9 @@ private fun SideControlButton(
             .padding(metrics.sideButtonPadding),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(
-            imageVector = icon,
+        SeekIntervalIcon(
+            seconds = seekIntervalSeconds,
+            forward = forward,
             contentDescription = contentDescription,
             tint = Color.White,
             modifier = Modifier.size(metrics.playIconSize),

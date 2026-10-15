@@ -183,13 +183,14 @@ internal fun PlayerScreenRuntime.seekBy(offsetMs: Long) {
 internal fun PlayerScreenRuntime.handleDoubleTapSeek(direction: PlayerSeekDirection) {
     val currentPositionMs = playbackSnapshot.positionMs.coerceAtLeast(0L)
     val currentSeekState = accumulatedSeekState
+    val seekStepMs = playerSettingsUiState.seekIntervalSeconds * 1_000L
     val nextState = if (currentSeekState?.direction == direction) {
-        currentSeekState.copy(amountMs = currentSeekState.amountMs + PlayerDoubleTapSeekStepMs)
+        currentSeekState.copy(amountMs = currentSeekState.amountMs + seekStepMs)
     } else {
         PlayerAccumulatedSeekState(
             direction = direction,
             baselinePositionMs = currentPositionMs,
-            amountMs = PlayerDoubleTapSeekStepMs,
+            amountMs = seekStepMs,
         )
     }
     accumulatedSeekState = nextState
