@@ -39,6 +39,7 @@ import nuvio.composeapp.generated.resources.parental_severity_severe
 import nuvio.composeapp.generated.resources.parental_violence
 import nuvio.composeapp.generated.resources.compose_player_tba
 import org.jetbrains.compose.resources.stringResource
+import com.nuvio.app.tv.BindTvPlayerRemote
 
 @Composable
 internal fun PlayerScreenContent(args: PlayerScreenArgs) {
@@ -72,6 +73,7 @@ internal fun PlayerScreenContent(args: PlayerScreenArgs) {
 
     val runtime = remember { PlayerScreenRuntime(args) }
     runtime.args = args
+    runtime.BindTvPlayerRemote()
 
     BoxWithConstraints(
         modifier = args.modifier

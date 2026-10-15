@@ -174,6 +174,7 @@ import com.nuvio.app.features.watchprogress.continueWatchingItemKey
 import com.nuvio.app.features.watchprogress.nextUpDismissKey
 import com.nuvio.app.features.watchprogress.toContinueWatchingItem
 import com.nuvio.app.navigation.*
+import com.nuvio.app.tv.ShellTabsDestination
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import com.nuvio.app.features.servers.ServerMatcher
@@ -1302,7 +1303,7 @@ internal fun MainAppContent(
                     sharedTransitionScope = this@SharedTransitionLayout,
                     entryProvider = entryProvider<NavKey> {
                 entry<TabsRoute> {
-                    MainTabsDestination(
+                    ShellTabsDestination(
                         selectedTab = selectedTab,
                         initialHomeReady = initialHomeReady,
                         rootRouteActive = currentRoute is TabsRoute,

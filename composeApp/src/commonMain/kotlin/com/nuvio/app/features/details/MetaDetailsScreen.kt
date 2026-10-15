@@ -152,6 +152,8 @@ import com.nuvio.app.features.watchprogress.WatchProgressEntry
 import com.nuvio.app.features.watchprogress.WatchProgressClock
 import com.nuvio.app.features.watchprogress.WatchProgressRepository
 import com.nuvio.app.features.watchprogress.buildPlaybackVideoId
+import com.nuvio.app.tv.LocalTvShell
+import com.nuvio.app.tv.buildTvDetailsModel
 import com.nuvio.app.features.watchprogress.ContinueWatchingPreferencesRepository
 import com.nuvio.app.features.watching.application.WatchingActions
 import com.nuvio.app.features.watching.application.WatchingState
@@ -983,6 +985,52 @@ fun MetaDetailsScreen(
                                 video.thumbnail, video.overview, 0L)
                         },
                     )
+                }
+                LocalTvShell.current?.let { tvShell ->
+                    fun episodeEntry(video: MetaVideo) = progressByVideoId[
+                        buildPlaybackVideoId(
+                            parentMetaId = meta.id,
+                            seasonNumber = video.season,
+                            episodeNumber = video.episode,
+                            fallbackVideoId = video.id,
+                        ),
+                    ]
+                    tvShell.details(
+                        buildTvDetailsModel(
+                            meta = meta,
+                            hasEpisodes = hasEpisodes,
+                            primaryActionLabel = playButtonLabel,
+                            primaryActionEnabled = isPrimaryPlayEnabled,
+                            primaryActionSeason = seriesAction?.seasonNumber,
+                            primaryActionEpisode = seriesAction?.episodeNumber,
+                            primaryActionProgress = if (seriesAction != null) {
+                                seriesAction.resumePositionMs?.takeIf { it > 0L }?.let {
+                                    progressByVideoId[seriesStreamVideoId ?: seriesAction.videoId]?.progressFraction
+                                }
+                            } else {
+                                movieProgress?.progressFraction
+                            },
+                            onPrimaryAction = onPrimaryPlayClick,
+                            onPrimaryActionManual = onPrimaryPlayLongClick,
+                            episodeProgress = { video ->
+                                episodeEntry(video)?.takeUnless { it.isEffectivelyCompleted }?.progressFraction
+                            },
+                            isEpisodeWatched = { video ->
+                                isEpisodeWatchedForActions(meta, video, watchedUiState.watchedKeys, progressByVideoId)
+                            },
+                            onEpisodeClick = onEpisodePlayClick,
+                            onEpisodeManualClick = onEpisodeManualPlayClick.takeIf { showManualPlayOption },
+                            isSaved = isSaved,
+                            onToggleSaved = toggleSaved,
+                            isWatched = isWatched,
+                            onToggleWatched = toggleWatched,
+                            shuffleActive = shuffleSettings.enabled,
+                            onShuffleClick = onShuffleClick,
+                            onOpenMeta = onOpenMeta,
+                            onBack = onBackFromDetails,
+                        ),
+                    )
+                    return@Box
                 }
                 val listState = rememberLazyListState()
                 val heroStretchState = rememberHeroStretchState(listState)

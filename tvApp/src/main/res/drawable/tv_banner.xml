@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android TV launcher banner (320x180dp): brand background with the app logo. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <size
+                android:width="320dp"
+                android:height="180dp" />
+            <gradient
+                android:angle="315"
+                android:endColor="#000000"
+                android:startColor="#1A1A1A" />
+        </shape>
+    </item>
+    <item
+        android:width="132dp"
+        android:height="132dp"
+        android:drawable="@drawable/ic_splash_logo"
+        android:gravity="center" />
+</layer-list>

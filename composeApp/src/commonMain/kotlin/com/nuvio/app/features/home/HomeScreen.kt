@@ -93,6 +93,8 @@ import com.nuvio.app.features.watching.application.WatchingState
 import com.nuvio.app.features.watching.domain.WatchingContentRef
 import com.nuvio.app.features.watching.domain.isReleasedBy
 import com.nuvio.app.features.collection.CollectionRepository
+import com.nuvio.app.tv.LocalTvShell
+import com.nuvio.app.tv.buildTvHomeModel
 import com.nuvio.app.features.profiles.ProfileRepository
 import com.nuvio.app.features.home.components.HomeCollectionRowSection
 import kotlinx.coroutines.Dispatchers
@@ -942,6 +944,42 @@ fun HomeScreen(
         addonManifestsLoading = addonManifestsLoading,
         homeCatalogLoading = homeUiState.isLoading,
     )
+
+    LocalTvShell.current?.let { tvShell ->
+        tvShell.home(
+            buildTvHomeModel(
+                homeUiState = homeUiState,
+                enabledHomeItems = enabledHomeItems,
+                sectionsMap = sectionsMap,
+                collectionsMap = collectionsMap,
+                continueWatchingItems = continueWatchingItems,
+                upcomingItems = upcomingItems,
+                showContinueWatching = continueWatchingPreferences.isVisible,
+                isInitialLoading = isInitialHomeContentLoading,
+                hasContentSources = hasActiveAddons || hasServerLibraries || hasRenderableCollectionRows,
+                addonManifestErrorMessage = addonManifestErrorMessage,
+                isPosterWatched = { item ->
+                    WatchingState.isPosterWatched(
+                        watchedKeys = watchedUiState.watchedKeys,
+                        item = item,
+                        fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
+                    )
+                },
+                onPosterClick = onPosterClick,
+                onPosterLongClick = onPosterLongClick,
+                onContinueWatchingClick = onContinueWatchingClick,
+                onContinueWatchingLongPress = onContinueWatchingLongPress,
+                onCatalogClick = onCatalogClick,
+                onFolderClick = onFolderClick,
+                onRetry = {
+                    NetworkStatusRepository.requestRefresh(force = true)
+                    AddonRepository.refreshAll()
+                    HomeRepository.refresh(addonsUiState.addons.enabledAddons(), force = true)
+                },
+            ),
+        )
+        return
+    }
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val homeSectionPadding = homeSectionHorizontalPaddingForWidth(maxWidth.value)

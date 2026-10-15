@@ -19,6 +19,7 @@ import com.nuvio.app.core.ui.platformProvidesImageLoader
 import com.nuvio.app.features.settings.ThemeSettingsRepository
 import com.nuvio.app.navigation.AppRoute
 import com.nuvio.app.navigation.TabsRoute
+import com.nuvio.app.tv.TvShellThemeOverlay
 
 fun disposeRoute(route: AppRoute) {
     disposeRouteResources(route)
@@ -108,6 +109,6 @@ internal fun AppEnvironment(content: @Composable () -> Unit) {
         amoledSurfaces = amoledSurfacesEnabled,
         customThemeColors = customThemeColors,
     ) {
-        content()
+        TvShellThemeOverlay(content)
     }
 }

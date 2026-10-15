@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tv_app_name">Nuvio Enhanced TV</string>
+
+    <string name="tv_nav_home">Home</string>
+    <string name="tv_nav_search">Cerca</string>
+    <string name="tv_nav_library">Libreria</string>
+    <string name="tv_nav_live_tv">Live TV</string>
+    <string name="tv_nav_settings">Impostazioni</string>
+    <string name="tv_nav_profile">Cambia profilo</string>
+
+    <string name="tv_home_continue_watching">Continua a guardare</string>
+    <string name="tv_home_upcoming">In arrivo</string>
+    <string name="tv_home_see_all">Vedi tutto</string>
+    <string name="tv_home_loading">Caricamento dei cataloghi…</string>
+    <string name="tv_home_no_sources_title">Nessuna sorgente di contenuti</string>
+    <string name="tv_home_no_sources_message">Aggiungi un addon o un server multimediale nelle Impostazioni per riempire la Home.</string>
+    <string name="tv_home_empty_title">Niente da mostrare</string>
+    <string name="tv_home_empty_message">Attiva qualche catalogo in Impostazioni → Schermata Home.</string>
+    <string name="tv_home_error_title">Impossibile caricare la Home</string>
+    <string name="tv_action_retry">Riprova</string>
+    <string name="tv_action_details">Dettagli</string>
+    <string name="tv_watched">Visto</string>
+    <string name="tv_up_next">Prossimo</string>
+    <string name="tv_new_episode">Nuovo</string>
+
+    <string name="tv_details_choose_source">Scegli la sorgente</string>
+    <string name="tv_details_add_to_library">Aggiungi alla libreria</string>
+    <string name="tv_details_in_library">In libreria</string>
+    <string name="tv_details_mark_watched">Segna come visto</string>
+    <string name="tv_details_watched">Visto</string>
+    <string name="tv_details_shuffle">Shuffle</string>
+    <string name="tv_details_shuffle_on">Shuffle attivo</string>
+    <string name="tv_details_season">Stagione %1$d</string>
+    <string name="tv_details_specials">Speciali</string>
+    <string name="tv_details_episode_code">S%1$d E%2$d</string>
+    <string name="tv_details_episodes">Episodi</string>
+    <string name="tv_details_more_like_this">Titoli simili</string>
+    <string name="tv_details_collection">Collezione</string>
+    <string name="tv_details_cast">Cast</string>
+    <string name="tv_details_unavailable">Non ancora disponibile</string>
+    <string name="tv_details_hint_manual">Tieni premuto OK per scegliere la sorgente</string>
+</resources>
