@@ -22,7 +22,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.features.debrid.DebridSettingsRepository
 import com.nuvio.app.features.streams.LocalStreamSizeLabelFormat
 import com.nuvio.app.features.streams.StreamBadgeSettingsRepository
-import com.nuvio.app.features.streams.StreamCard
+import com.nuvio.app.features.streams.parser.StreamCardHost
 import com.nuvio.app.features.streams.StreamCardSkeleton
 import com.nuvio.app.features.streams.StreamItem
 import com.nuvio.app.features.streams.StreamsUiState
@@ -99,7 +99,7 @@ internal fun PlayerStreamList(
                     items = streams,
                     key = { index, _ -> streamKeys[index] },
                 ) { _, stream ->
-                    StreamCard(
+                    StreamCardHost(
                         stream = stream,
                         enabled = stream.isSelectableForPlayback(debridSettings.canResolvePlayableLinks),
                         appendInstantServiceToDefaultName = debridSettings.canResolvePlayableLinks &&

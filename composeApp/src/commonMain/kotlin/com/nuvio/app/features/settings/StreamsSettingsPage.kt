@@ -59,6 +59,7 @@ import com.nuvio.app.features.streams.StreamBadgePlacement
 import com.nuvio.app.features.streams.StreamBadgeRules
 import com.nuvio.app.features.streams.StreamBadgeSettingsRepository
 import com.nuvio.app.features.streams.StreamBackgroundMode
+import com.nuvio.app.features.streams.parser.streamParserSettingsSection
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_cancel
@@ -195,6 +196,7 @@ internal fun LazyListScope.streamsSettingsContent(isTablet: Boolean) {
             )
         }
     }
+    streamParserSettingsSection(isTablet)
 }
 
 @Composable

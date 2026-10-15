@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="stream_parser_section_title">Stream Parser</string>
+    <string name="stream_parser_enabled_title">Stream Parser</string>
+    <string name="stream_parser_enabled_description">Mostra i dettagli dei flussi con badge in una card dedicata</string>
+    <string name="stream_parser_animations_title">Animazioni dei badge</string>
+    <string name="stream_parser_animations_description">Anima i badge di qualità, cached, torrent e proxy</string>
+    <string name="stream_parser_direct">Diretto</string>
+    <string name="stream_parser_cached">Cached</string>
+    <string name="stream_parser_torrent">Torrent</string>
+    <string name="stream_parser_proxied">Proxied</string>
+    <string name="stream_parser_season">Stagione: %1$s</string>
+    <string name="stream_parser_episode">Episodio: %1$s</string>
+    <string name="stream_parser_language_italian">Italiano</string>
+    <string name="stream_parser_language_english">Inglese</string>
+    <string name="stream_parser_language_french">Francese</string>
+    <string name="stream_parser_language_german">Tedesco</string>
+    <string name="stream_parser_language_spanish">Spagnolo</string>
+    <string name="stream_parser_language_latin_spanish">Spagnolo latino</string>
+    <string name="stream_parser_language_portuguese">Portoghese</string>
+    <string name="stream_parser_language_japanese">Giapponese</string>
+    <string name="stream_parser_language_chinese">Cinese</string>
+    <string name="stream_parser_language_korean">Coreano</string>
+    <string name="stream_parser_language_russian">Russo</string>
+    <string name="stream_parser_language_ukrainian">Ucraino</string>
+    <string name="stream_parser_language_polish">Polacco</string>
+    <string name="stream_parser_language_hungarian">Ungherese</string>
+    <string name="stream_parser_language_czech">Ceco</string>
+    <string name="stream_parser_language_dutch">Olandese</string>
+    <string name="stream_parser_language_danish">Danese</string>
+    <string name="stream_parser_language_finnish">Finlandese</string>
+    <string name="stream_parser_language_norwegian">Norvegese</string>
+    <string name="stream_parser_language_swedish">Svedese</string>
+    <string name="stream_parser_language_romanian">Rumeno</string>
+    <string name="stream_parser_language_greek">Greco</string>
+    <string name="stream_parser_language_turkish">Turco</string>
+    <string name="stream_parser_language_arabic">Arabo</string>
+    <string name="stream_parser_language_hindi">Hindi</string>
+    <string name="stream_parser_language_multi">Multilingua</string>
+</resources>

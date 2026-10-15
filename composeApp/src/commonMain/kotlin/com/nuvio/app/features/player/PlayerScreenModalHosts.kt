@@ -8,6 +8,7 @@ import com.nuvio.app.features.p2p.P2pConsentDialog
 import com.nuvio.app.features.p2p.P2pSettingsRepository
 import com.nuvio.app.features.streams.StreamItem
 import com.nuvio.app.features.streams.StreamsUiState
+import com.nuvio.app.features.streams.parser.StreamParserContextEffect
 import com.nuvio.app.features.watchprogress.WatchProgressEntry
 
 @Composable
@@ -154,6 +155,7 @@ internal fun PlayerScreenModalHosts(
         onDismiss = onVideoSettingsModalDismissed,
     )
 
+    StreamParserContextEffect(contentTitle, activeSeasonNumber, activeEpisodeNumber, activeEpisodeTitle)
     PlayerSourcesPanel(
         visible = showSourcesPanel,
         streamsUiState = sourceStreamsState,

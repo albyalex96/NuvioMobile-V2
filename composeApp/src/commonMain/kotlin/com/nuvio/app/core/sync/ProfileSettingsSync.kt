@@ -27,6 +27,7 @@ import com.nuvio.app.features.settings.ThemeSettingsStorage
 import com.nuvio.app.features.settings.ThemeSettingsRepository
 import com.nuvio.app.features.streams.StreamBadgeSettingsRepository
 import com.nuvio.app.features.streams.StreamBadgeSettingsStorage
+import com.nuvio.app.features.streams.parser.StreamParserSettingsRepository
 import com.nuvio.app.features.tmdb.TmdbSettingsStorage
 import com.nuvio.app.features.tmdb.TmdbSettingsRepository
 import com.nuvio.app.features.trakt.TraktCommentsStorage
@@ -197,6 +198,7 @@ object ProfileSettingsSync {
             CardDepthStyleRepository.uiState.map { "card_depth_style" },
             PlayerSettingsRepository.uiState.map { "player" },
             StreamBadgeSettingsRepository.uiState.map { "stream_badges" },
+            StreamParserSettingsRepository.uiState.map { "stream_parser" },
             DebridSettingsRepository.uiState.map { "debrid" },
             TmdbSettingsRepository.uiState.map { "tmdb" },
             MdbListSettingsRepository.uiState.map { "mdblist" },
@@ -252,7 +254,9 @@ object ProfileSettingsSync {
                     PROFILE_PLAYER_SETTINGS_FEATURE,
                     PlayerSettingsStorage.exportToSyncPayload(),
                 ),
-                streamBadgeSettings = StreamBadgeSettingsStorage.exportToSyncPayload(),
+                streamBadgeSettings = JsonObject(
+                    StreamBadgeSettingsStorage.exportToSyncPayload() + StreamParserSettingsRepository.exportToSyncPayload(),
+                ),
                 debridSettings = withoutProfileCredentials(
                     PROFILE_DEBRID_SETTINGS_FEATURE,
                     DebridSettingsStorage.exportToSyncPayload(),
@@ -310,6 +314,7 @@ object ProfileSettingsSync {
 
         StreamBadgeSettingsStorage.replaceFromSyncPayload(blob.features.streamBadgeSettings)
         StreamBadgeSettingsRepository.onProfileChanged()
+        StreamParserSettingsRepository.replaceFromSyncPayload(blob.features.streamBadgeSettings)
 
         DebridSettingsStorage.replaceFromSyncPayload(
             preservingLocalProfileCredentials(
@@ -364,6 +369,7 @@ object ProfileSettingsSync {
         CardDepthStyleRepository.ensureLoaded()
         PlayerSettingsRepository.ensureLoaded()
         StreamBadgeSettingsRepository.ensureLoaded()
+        StreamParserSettingsRepository.ensureLoaded()
         DebridSettingsRepository.ensureLoaded()
         TmdbSettingsRepository.ensureLoaded()
         MdbListSettingsRepository.ensureLoaded()

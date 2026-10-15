@@ -48,6 +48,7 @@ import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.details.MetaVideo
 import com.nuvio.app.features.streams.StreamItem
 import com.nuvio.app.features.streams.StreamsUiState
+import com.nuvio.app.features.streams.parser.StreamParserContextEffect
 import com.nuvio.app.features.watchprogress.WatchProgressEntry
 import com.nuvio.app.features.watchprogress.buildPlaybackVideoId
 import com.nuvio.app.features.watching.application.WatchingState
@@ -442,6 +443,12 @@ private fun EpisodeStreamsPanelContent(
     val tokens = MaterialTheme.nuvio
     val episode = state.selectedEpisode ?: return
     val streamsUiState = state.streamsUiState
+    StreamParserContextEffect(
+        title = null,
+        seasonNumber = episode.season,
+        episodeNumber = episode.episode,
+        episodeTitle = episode.title,
+    )
 
     Column(modifier = modifier) {
         Row(
