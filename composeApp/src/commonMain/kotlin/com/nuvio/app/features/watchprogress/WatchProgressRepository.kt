@@ -1255,6 +1255,8 @@ object WatchProgressRepository {
         persist: Boolean,
         syncRemote: Boolean,
     ) {
+        if (session.isLiveTvSession()) return
+
         val targetProfileId = session.profileId
         val positionMs = snapshot.positionMs.coerceAtLeast(0L)
         val durationMs = snapshot.durationMs.coerceAtLeast(0L)
@@ -1749,3 +1751,9 @@ internal fun projectWatchProgressUiState(
     hasLoadedRemoteProgress =
         providerSnapshot?.hasLoadedRemoteProgress ?: hasLoadedNuvioRemoteProgress,
 )
+
+// Live TV channels have no meaningful position, so they never enter watch progress.
+private fun WatchProgressPlaybackSession.isLiveTvSession(): Boolean =
+    contentType.equals("live", ignoreCase = true) ||
+        parentMetaType.equals("live", ignoreCase = true) ||
+        providerAddonId?.equals("live-tv", ignoreCase = true) == true

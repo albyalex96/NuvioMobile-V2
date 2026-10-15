@@ -92,6 +92,8 @@ actual object PlayerSettingsStorage {
     private const val stillWatchingPromptEnabledKey = "still_watching_prompt_enabled"
     private const val stillWatchingEpisodeCountKey = "still_watching_episode_count"
     private const val stillWatchingNightOnlyKey = "still_watching_night_only"
+    private const val stillWatchingLiveTvEnabledKey = "still_watching_live_tv_enabled"
+    private const val stillWatchingLiveTvMinutesKey = "still_watching_live_tv_minutes"
     private const val seekIntervalSecondsKey = "seek_interval_seconds"
 
     // Unscoped mirror read by the Swift NowPlayingController for the remote skip intervals.
@@ -173,6 +175,8 @@ actual object PlayerSettingsStorage {
         stillWatchingPromptEnabledKey,
         stillWatchingEpisodeCountKey,
         stillWatchingNightOnlyKey,
+        stillWatchingLiveTvEnabledKey,
+        stillWatchingLiveTvMinutesKey,
         seekIntervalSecondsKey,
         useLibassKey,
         libassRenderTypeKey,
@@ -1007,6 +1011,26 @@ actual object PlayerSettingsStorage {
         saveBoolean(stillWatchingNightOnlyKey, enabled)
     }
 
+    actual fun loadStillWatchingLiveTvEnabled(): Boolean? = loadBoolean(stillWatchingLiveTvEnabledKey)
+
+    actual fun saveStillWatchingLiveTvEnabled(enabled: Boolean) {
+        saveBoolean(stillWatchingLiveTvEnabledKey, enabled)
+    }
+
+    actual fun loadStillWatchingLiveTvMinutes(): Int? {
+        val defaults = NSUserDefaults.standardUserDefaults
+        val key = ProfileScopedKey.of(stillWatchingLiveTvMinutesKey)
+        return if (defaults.objectForKey(key) != null) {
+            defaults.integerForKey(key).toInt()
+        } else {
+            null
+        }
+    }
+
+    actual fun saveStillWatchingLiveTvMinutes(minutes: Int) {
+        NSUserDefaults.standardUserDefaults.setInteger(minutes.toLong(), forKey = ProfileScopedKey.of(stillWatchingLiveTvMinutesKey))
+    }
+
     actual fun loadSeekIntervalSeconds(): Int? {
         val defaults = NSUserDefaults.standardUserDefaults
         val key = ProfileScopedKey.of(seekIntervalSecondsKey)
@@ -1199,6 +1223,8 @@ actual object PlayerSettingsStorage {
         loadStillWatchingPromptEnabled()?.let { put(stillWatchingPromptEnabledKey, encodeSyncBoolean(it)) }
         loadStillWatchingEpisodeCount()?.let { put(stillWatchingEpisodeCountKey, encodeSyncInt(it)) }
         loadStillWatchingNightOnly()?.let { put(stillWatchingNightOnlyKey, encodeSyncBoolean(it)) }
+        loadStillWatchingLiveTvEnabled()?.let { put(stillWatchingLiveTvEnabledKey, encodeSyncBoolean(it)) }
+        loadStillWatchingLiveTvMinutes()?.let { put(stillWatchingLiveTvMinutesKey, encodeSyncInt(it)) }
         loadSeekIntervalSeconds()?.let { put(seekIntervalSecondsKey, encodeSyncInt(it)) }
         loadUseLibass()?.let { put(useLibassKey, encodeSyncBoolean(it)) }
         loadLibassRenderType()?.let { put(libassRenderTypeKey, encodeSyncString(it)) }
@@ -1284,6 +1310,8 @@ actual object PlayerSettingsStorage {
         payload.decodeSyncBoolean(stillWatchingPromptEnabledKey)?.let(::saveStillWatchingPromptEnabled)
         payload.decodeSyncInt(stillWatchingEpisodeCountKey)?.let(::saveStillWatchingEpisodeCount)
         payload.decodeSyncBoolean(stillWatchingNightOnlyKey)?.let(::saveStillWatchingNightOnly)
+        payload.decodeSyncBoolean(stillWatchingLiveTvEnabledKey)?.let(::saveStillWatchingLiveTvEnabled)
+        payload.decodeSyncInt(stillWatchingLiveTvMinutesKey)?.let(::saveStillWatchingLiveTvMinutes)
         payload.decodeSyncInt(seekIntervalSecondsKey)?.let(::saveSeekIntervalSeconds)
         payload.decodeSyncBoolean(useLibassKey)?.let(::saveUseLibass)
         payload.decodeSyncString(libassRenderTypeKey)?.let(::saveLibassRenderType)

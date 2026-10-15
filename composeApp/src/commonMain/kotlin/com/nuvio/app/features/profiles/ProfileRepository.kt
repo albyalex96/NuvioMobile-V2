@@ -192,6 +192,7 @@ object ProfileRepository {
         CollectionRepository.onProfileChanged()
         CollectionMobileSettingsRepository.onProfileChanged()
         DownloadsRepository.onProfileChanged()
+        com.nuvio.app.features.livetv.LiveTvRepository.onProfileChanged()
         ServerRepository.onProfileChanged()
         ProfileSettingsSync.onProfileChanged()
     }

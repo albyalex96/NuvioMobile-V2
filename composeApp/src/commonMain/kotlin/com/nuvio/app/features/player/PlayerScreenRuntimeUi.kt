@@ -31,6 +31,11 @@ import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.isIos
 import kotlin.math.ceil
 import kotlinx.coroutines.launch
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.getValue
+import com.nuvio.app.features.livetv.LiveTvRepository
+import com.nuvio.app.features.livetv.currentProgram
+import com.nuvio.app.features.livetv.rememberLiveTvEpgNowMillis
 import nuvio.composeapp.generated.resources.*
 
 @Composable
@@ -124,6 +129,7 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
     val playbackGesturesEnabled = initialLoadCompleted && errorMessage == null
 
     BindAutoSyncRuntimeEffects() // AutoSync hook
+    BindLiveTvStillWatchingTimer()
 
     Box(
         modifier = Modifier
@@ -222,8 +228,8 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
             exit = fadeOut(animationSpec = tween(durationMillis = 180)),
         ) {
             PauseMetadataOverlay(
-                title = title,
-                logo = logo,
+                title = if (isLiveTvPlayback) activeStreamTitle else title,
+                logo = if (isLiveTvPlayback) activeLogo else logo,
                 isEpisode = isEpisode,
                 seasonNumber = activeSeasonNumber,
                 episodeNumber = activeEpisodeNumber,
@@ -273,10 +279,17 @@ private fun PlayerScreenRuntime.RenderStillWatchingPrompt() {
     com.nuvio.app.core.ui.DialogSurface(
         onDismissRequest = { exitAfterStillWatchingPrompt() },
         title = org.jetbrains.compose.resources.stringResource(Res.string.player_still_watching_title),
-        message = org.jetbrains.compose.resources.stringResource(
-            Res.string.player_still_watching_message,
-            consecutiveEpisodesPlayed,
-        ),
+        message = if (isLiveTvPlayback) {
+            org.jetbrains.compose.resources.stringResource(
+                Res.string.player_still_watching_live_tv_message,
+                playerSettingsUiState.stillWatchingLiveTvMinutes,
+            )
+        } else {
+            org.jetbrains.compose.resources.stringResource(
+                Res.string.player_still_watching_message,
+                consecutiveEpisodesPlayed,
+            )
+        },
     ) {
         Text(
             text = org.jetbrains.compose.resources.stringResource(
@@ -330,6 +343,17 @@ private fun PlayerScreenRuntime.currentInitialPositionRequestKey(): String? {
 @Composable
 private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, isEpisode: Boolean) {
     val isInPip = rememberIsInPictureInPicture()
+    // For live TV the provider line also shows the programme currently on air (from the EPG).
+    val liveTvNowProgramTitle = if (isLiveTvPlayback) {
+        LaunchedEffect(Unit) { LiveTvRepository.ensureChannelsLoaded() }
+        val liveTvEpgNowMillis = rememberLiveTvEpgNowMillis()
+        val liveTvState by LiveTvRepository.uiState.collectAsStateWithLifecycle()
+        activeVideoId?.let { channelId -> liveTvState.epgPrograms[channelId] }
+            ?.currentProgram(liveTvEpgNowMillis)
+            ?.title
+    } else {
+        null
+    }
     AnimatedVisibility(
         visible = (controlsVisible || showParentalGuide) && !playerControlsLocked && !isInPip,
         enter = fadeIn(),
@@ -338,7 +362,8 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
         PlayerControlsShell(
             title = title,
             streamTitle = activeStreamTitle,
-            providerName = activeProviderName,
+            providerName = liveTvNowProgramTitle?.let { programTitle -> "$activeProviderName · $programTitle" }
+                ?: activeProviderName,
             seasonNumber = activeSeasonNumber,
             episodeNumber = activeEpisodeNumber,
             episodeTitle = activeEpisodeTitle,
@@ -388,8 +413,14 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
             } else {
                 null
             },
-            onSourcesClick = if (activeVideoId != null) { { openSourcesPanel() } } else null,
+            onSourcesClick = if (!isLiveTvPlayback && activeVideoId != null) { { openSourcesPanel() } } else null,
             onEpisodesClick = if (isSeries) { { openEpisodesPanel() } } else null,
+            onLiveChannelsClick = if (isLiveTvPlayback) {
+                {
+                    showLiveChannelsPanel = true
+                    controlsVisible = false
+                }
+            } else null,
             onOpenInExternalPlayer = args.onOpenInExternalPlayer
                 ?.takeUnless { ServerStreams.isServerSourceId(activeProviderAddonId) }
                 ?.let { openExternal ->
@@ -480,9 +511,9 @@ private fun BoxScope.RenderPlaybackOverlays(
         horizontalSafePadding = horizontalSafePadding,
         onUnlock = { unlockPlayerControls() },
         showOpeningOverlay = playerSettingsUiState.showLoadingOverlay && !initialLoadCompleted && errorMessage == null,
-        backdropArtwork = background ?: poster,
-        logo = logo,
-        title = title,
+        backdropArtwork = if (isLiveTvPlayback) activeLogo?.takeIf(String::isNotBlank) ?: background ?: poster else background ?: poster,
+        logo = if (isLiveTvPlayback) activeLogo else logo,
+        title = if (isLiveTvPlayback) activeStreamTitle else title,
         onBackWithProgress = {
             flushWatchProgress()
             args.onBack()
@@ -737,4 +768,18 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
         addonSubtitle = selectedAddonSubtitle.takeIf { useCustomSubtitles },
         onDismiss = { showStreamInfo = false },
     )
+
+    if (isLiveTvPlayback) {
+        val liveTvState by LiveTvRepository.uiState.collectAsStateWithLifecycle()
+        PlayerLiveChannelsPanel(
+            visible = showLiveChannelsPanel,
+            channels = liveTvState.channels,
+            currentStreamUrl = activeSourceUrl,
+            onChannelSelected = { channel -> switchToLiveChannel(channel) },
+            onDismiss = {
+                showLiveChannelsPanel = false
+                controlsVisible = true
+            },
+        )
+    }
 }

@@ -1,5 +1,7 @@
 package com.nuvio.app.core.sync
 
+import com.nuvio.app.features.livetv.LiveTvProfileSync
+import com.nuvio.app.features.livetv.LiveTvRepository
 import co.touchlab.kermit.Logger
 import com.nuvio.app.core.auth.AuthRepository
 import com.nuvio.app.core.auth.AuthState
@@ -204,6 +206,7 @@ object ProfileSettingsSync {
             StreamParserSettingsRepository.uiState.map { "stream_parser" },
             PluginRepository.uiState.map { "plugins_group_${it.groupStreamsByRepository}" },
             AppLoggerSettings.enabled.map { "app_logger_$it" },
+            LiveTvRepository.uiState.map { "live_tv_${LiveTvProfileSync.syncSignature(it)}" }.distinctUntilChanged(),
             DebridSettingsRepository.uiState.map { "debrid" },
             TmdbSettingsRepository.uiState.map { "tmdb" },
             MdbListSettingsRepository.uiState.map { "mdblist" },
@@ -263,7 +266,8 @@ object ProfileSettingsSync {
                     StreamBadgeSettingsStorage.exportToSyncPayload() +
                         StreamParserSettingsRepository.exportToSyncPayload() +
                         PluginGroupingSync.exportToSyncPayload() +
-                        AppLoggerSettings.exportToSyncPayload(),
+                        AppLoggerSettings.exportToSyncPayload() +
+                        LiveTvProfileSync.exportToSyncPayload(),
                 ),
                 debridSettings = withoutProfileCredentials(
                     PROFILE_DEBRID_SETTINGS_FEATURE,
@@ -325,6 +329,7 @@ object ProfileSettingsSync {
         StreamParserSettingsRepository.replaceFromSyncPayload(blob.features.streamBadgeSettings)
         PluginGroupingSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
         AppLoggerSettings.applyFromSyncPayload(blob.features.streamBadgeSettings)
+        LiveTvProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
 
         DebridSettingsStorage.replaceFromSyncPayload(
             preservingLocalProfileCredentials(

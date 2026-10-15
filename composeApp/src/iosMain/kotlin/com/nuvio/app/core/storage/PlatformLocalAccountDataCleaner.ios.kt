@@ -75,6 +75,16 @@ internal actual object PlatformLocalAccountDataCleaner {
         "pending_watch_progress_source",
         "collection_mobile_settings_payload",
         "collections_payload",
+        // Live TV (LiveTvStorage.ios.kt)
+        "playlist_url",
+        "playlists_blob",
+        "favorite_channel_ids_blob",
+        "last_watched_channel_id",
+        "navigation_enabled",
+        "stalker_settings",
+        "xtream_settings",
+        "epg_sources_blob",
+        "epg_auto_detect_enabled",
     )
 
     actual fun wipe() {

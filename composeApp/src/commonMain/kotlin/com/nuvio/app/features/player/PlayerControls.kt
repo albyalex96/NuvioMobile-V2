@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.rounded.Build
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Tv
 import androidx.compose.material.icons.rounded.LockOpen
 import com.nuvio.app.core.ui.NuvioLoadingIndicator
 import androidx.compose.material3.Icon
@@ -110,6 +111,7 @@ internal fun PlayerControlsShell(
     onVideoSettingsClick: (() -> Unit)? = null,
     onSourcesClick: (() -> Unit)? = null,
     onEpisodesClick: (() -> Unit)? = null,
+    onLiveChannelsClick: (() -> Unit)? = null,
     onOpenInExternalPlayer: (() -> Unit)? = null,
     onSubmitIntroClick: (() -> Unit)? = null,
     onSwitchEngineClick: (() -> Unit)? = null,
@@ -256,6 +258,7 @@ internal fun PlayerControlsShell(
                     onAudioClick = onAudioClick,
                     onSourcesClick = onSourcesClick,
                     onEpisodesClick = onEpisodesClick,
+                    onLiveChannelsClick = onLiveChannelsClick,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
@@ -305,6 +308,7 @@ internal fun PlayerControlsShell(
                         onAudioClick = onAudioClick,
                         onSourcesClick = onSourcesClick,
                         onEpisodesClick = onEpisodesClick,
+                        onLiveChannelsClick = onLiveChannelsClick,
                         onNextEpisodeClick = onNextEpisodeClick,
                         onSwitchEngineClick = onSwitchEngineClick,
                         onSpeedClick = onSpeedClick,
@@ -623,6 +627,7 @@ private fun ProgressControls(
     onAudioClick: () -> Unit,
     onSourcesClick: (() -> Unit)? = null,
     onEpisodesClick: (() -> Unit)? = null,
+    onLiveChannelsClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val aspectRatioPainter = appIconPainter(AppIconResource.PlayerAspectRatio)
@@ -689,6 +694,13 @@ private fun ProgressControls(
                             label = stringResource(Res.string.compose_player_episodes),
                             painter = episodesPainter,
                             onClick = onEpisodesClick,
+                        )
+                    }
+                    if (onLiveChannelsClick != null) {
+                        PlayerActionPillButton(
+                            label = stringResource(Res.string.compose_player_channels),
+                            icon = Icons.Rounded.Tv,
+                            onClick = onLiveChannelsClick,
                         )
                     }
                 }

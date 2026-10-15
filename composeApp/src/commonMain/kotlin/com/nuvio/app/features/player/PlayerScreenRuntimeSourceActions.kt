@@ -1,5 +1,6 @@
 package com.nuvio.app.features.player
 
+import co.touchlab.kermit.Logger
 import com.nuvio.app.core.ui.NuvioToastController
 import com.nuvio.app.features.debrid.DirectDebridPlayableResult
 import com.nuvio.app.features.debrid.DirectDebridPlaybackResolver
@@ -9,6 +10,8 @@ import com.nuvio.app.features.details.MetaVideo
 import com.nuvio.app.features.downloads.DownloadItem
 import com.nuvio.app.features.downloads.DownloadSubtitles
 import com.nuvio.app.features.downloads.DownloadsRepository
+import com.nuvio.app.features.livetv.LiveTvChannel
+import com.nuvio.app.features.livetv.LiveTvRepository
 import com.nuvio.app.features.p2p.P2pSettingsRepository
 import com.nuvio.app.features.p2p.P2pStreamingEngine
 import com.nuvio.app.features.servers.ServerPlayback
@@ -502,6 +505,60 @@ internal fun PlayerScreenRuntime.playNextEpisode(automatic: Boolean = false) {
     }
 }
 
+private val liveTvPlayerLog = Logger.withTag("LiveTv")
+
+internal fun PlayerScreenRuntime.switchToLiveChannel(channel: LiveTvChannel) {
+    scope.launch {
+        val playableChannel = runCatching { LiveTvRepository.prepareForPlayback(channel) }
+            .onFailure { error ->
+                if (error is CancellationException) throw error
+                liveTvPlayerLog.w(error) { "Failed to prepare channel ${channel.name}, using the original stream" }
+            }
+            .getOrDefault(channel)
+        switchToPreparedLiveChannel(playableChannel)
+    }
+}
+
+private fun PlayerScreenRuntime.switchToPreparedLiveChannel(channel: LiveTvChannel) {
+    LiveTvRepository.markChannelWatched(channel)
+    resetLiveTvStillWatchingTimer()
+    showLiveChannelsPanel = false
+    controlsVisible = true
+
+    if (channel.streamUrl == activeSourceUrl) {
+        liveTvPlayerLog.d { "Selected the channel already playing: ${channel.name}" }
+        activeStreamTitle = channel.name
+        activeStreamSubtitle = channel.group
+        activeLogo = channel.logoUrl
+        activeVideoId = channel.id
+        return
+    }
+    liveTvPlayerLog.i { "Switching to channel ${channel.name} (group=${channel.group.orEmpty()})" }
+    stopActiveP2pStream()
+    externalSubtitles = emptyList()
+    activeSourceUrl = channel.streamUrl
+    activeSourceAudioUrl = null
+    activeSourceHeaders = sanitizePlaybackHeaders(channel.headers)
+    activeSourceResponseHeaders = emptyMap()
+    activeSourceIdentityKey = null
+    activeStreamType = channel.streamType
+    activeStreamTitle = channel.name
+    activeStreamSubtitle = channel.group
+    activeProviderName = "Live TV"
+    activeProviderAddonId = "live-tv"
+    activeLogo = channel.logoUrl
+    currentStreamBingeGroup = null
+    activeSeasonNumber = null
+    activeEpisodeNumber = null
+    activeEpisodeTitle = null
+    activeEpisodeThumbnail = null
+    activeVideoId = channel.id
+    activeInitialPositionMs = 0L
+    activeInitialProgressFraction = null
+    showSourcesPanel = false
+    showEpisodesPanel = false
+}
+
 internal fun PlayerScreenRuntime.openSourcesPanel() {
     val vid = activeVideoId ?: return
     PlayerStreamsRepository.loadSources(
@@ -512,6 +569,7 @@ internal fun PlayerScreenRuntime.openSourcesPanel() {
     )
     showSourcesPanel = true
     showEpisodesPanel = false
+    showLiveChannelsPanel = false
     controlsVisible = false
 }
 
@@ -523,6 +581,7 @@ internal fun PlayerScreenRuntime.openEpisodesPanel() {
     }
     showEpisodesPanel = true
     showSourcesPanel = false
+    showLiveChannelsPanel = false
     controlsVisible = false
 }
 
@@ -532,6 +591,7 @@ private fun PlayerScreenRuntime.resetEpisodePanelAndNextEpisodeState() {
     showNextEpisodeCard = false
     showSourcesPanel = false
     showEpisodesPanel = false
+    showLiveChannelsPanel = false
     episodeStreamsPanelState = EpisodeStreamsPanelState()
     cancelNextEpisodeAutoPlay()
     PlayerStreamsRepository.clearEpisodeStreams()

@@ -16,6 +16,10 @@ val STREAM_AUTO_PLAY_TIMEOUT_VALUES: List<Int> = listOf(
 
 const val DEFAULT_STILL_WATCHING_EPISODE_COUNT: Int = 3
 val STILL_WATCHING_EPISODE_COUNT_RANGE: IntRange = 1..10
+const val DEFAULT_STILL_WATCHING_LIVE_TV_MINUTES: Int = 120
+/** Minutes of continuous live TV playback before asking; selectable in [STILL_WATCHING_LIVE_TV_MINUTES_STEP] steps. */
+val STILL_WATCHING_LIVE_TV_MINUTES_RANGE: IntRange = 15..360
+const val STILL_WATCHING_LIVE_TV_MINUTES_STEP: Int = 15
 const val DEFAULT_SEEK_INTERVAL_SECONDS: Int = 10
 val SEEK_INTERVAL_SECONDS_RANGE: IntRange = 1..20
 
@@ -99,6 +103,8 @@ data class PlayerSettingsUiState(
     val stillWatchingPromptEnabled: Boolean = false,
     val stillWatchingEpisodeCount: Int = DEFAULT_STILL_WATCHING_EPISODE_COUNT,
     val stillWatchingNightOnly: Boolean = false,
+    val stillWatchingLiveTvEnabled: Boolean = false,
+    val stillWatchingLiveTvMinutes: Int = DEFAULT_STILL_WATCHING_LIVE_TV_MINUTES,
     val seekIntervalSeconds: Int = DEFAULT_SEEK_INTERVAL_SECONDS,
     val useLibass: Boolean = false,
     val libassRenderType: String = "CUES",
@@ -185,6 +191,8 @@ object PlayerSettingsRepository {
     private var stillWatchingPromptEnabled = false
     private var stillWatchingEpisodeCount = DEFAULT_STILL_WATCHING_EPISODE_COUNT
     private var stillWatchingNightOnly = false
+    private var stillWatchingLiveTvEnabled = false
+    private var stillWatchingLiveTvMinutes = DEFAULT_STILL_WATCHING_LIVE_TV_MINUTES
     private var seekIntervalSeconds = DEFAULT_SEEK_INTERVAL_SECONDS
     private var useLibass = false
     private var libassRenderType = "CUES"
@@ -277,6 +285,8 @@ object PlayerSettingsRepository {
         stillWatchingPromptEnabled = false
         stillWatchingEpisodeCount = DEFAULT_STILL_WATCHING_EPISODE_COUNT
         stillWatchingNightOnly = false
+        stillWatchingLiveTvEnabled = false
+        stillWatchingLiveTvMinutes = DEFAULT_STILL_WATCHING_LIVE_TV_MINUTES
         seekIntervalSeconds = DEFAULT_SEEK_INTERVAL_SECONDS
         useLibass = false
         libassRenderType = "CUES"
@@ -436,6 +446,10 @@ object PlayerSettingsRepository {
         stillWatchingEpisodeCount = (PlayerSettingsStorage.loadStillWatchingEpisodeCount() ?: DEFAULT_STILL_WATCHING_EPISODE_COUNT)
             .coerceIn(STILL_WATCHING_EPISODE_COUNT_RANGE)
         stillWatchingNightOnly = PlayerSettingsStorage.loadStillWatchingNightOnly() ?: false
+        stillWatchingLiveTvEnabled = PlayerSettingsStorage.loadStillWatchingLiveTvEnabled() ?: false
+        stillWatchingLiveTvMinutes = normalizeStillWatchingLiveTvMinutes(
+            PlayerSettingsStorage.loadStillWatchingLiveTvMinutes() ?: DEFAULT_STILL_WATCHING_LIVE_TV_MINUTES,
+        )
         seekIntervalSeconds = (PlayerSettingsStorage.loadSeekIntervalSeconds() ?: DEFAULT_SEEK_INTERVAL_SECONDS)
             .coerceIn(SEEK_INTERVAL_SECONDS_RANGE)
         useLibass = PlayerSettingsStorage.loadUseLibass() ?: false
@@ -1020,6 +1034,23 @@ object PlayerSettingsRepository {
         PlayerSettingsStorage.saveStillWatchingNightOnly(enabled)
     }
 
+    fun setStillWatchingLiveTvEnabled(enabled: Boolean) {
+        ensureLoaded()
+        if (stillWatchingLiveTvEnabled == enabled) return
+        stillWatchingLiveTvEnabled = enabled
+        publish()
+        PlayerSettingsStorage.saveStillWatchingLiveTvEnabled(enabled)
+    }
+
+    fun setStillWatchingLiveTvMinutes(minutes: Int) {
+        ensureLoaded()
+        val normalized = normalizeStillWatchingLiveTvMinutes(minutes)
+        if (stillWatchingLiveTvMinutes == normalized) return
+        stillWatchingLiveTvMinutes = normalized
+        publish()
+        PlayerSettingsStorage.saveStillWatchingLiveTvMinutes(normalized)
+    }
+
     fun setSeekIntervalSeconds(seconds: Int) {
         ensureLoaded()
         val normalized = seconds.coerceIn(SEEK_INTERVAL_SECONDS_RANGE)
@@ -1273,6 +1304,8 @@ object PlayerSettingsRepository {
             stillWatchingPromptEnabled = stillWatchingPromptEnabled,
             stillWatchingEpisodeCount = stillWatchingEpisodeCount,
             stillWatchingNightOnly = stillWatchingNightOnly,
+            stillWatchingLiveTvEnabled = stillWatchingLiveTvEnabled,
+            stillWatchingLiveTvMinutes = stillWatchingLiveTvMinutes,
             seekIntervalSeconds = seekIntervalSeconds,
             useLibass = useLibass,
             libassRenderType = libassRenderType,
@@ -1301,4 +1334,12 @@ object PlayerSettingsRepository {
             source
         }
     }
+}
+
+/** Clamps to the allowed range and snaps to the selector step. */
+internal fun normalizeStillWatchingLiveTvMinutes(minutes: Int): Int {
+    val clamped = minutes.coerceIn(STILL_WATCHING_LIVE_TV_MINUTES_RANGE)
+    val first = STILL_WATCHING_LIVE_TV_MINUTES_RANGE.first
+    val steps = ((clamped - first) + STILL_WATCHING_LIVE_TV_MINUTES_STEP / 2) / STILL_WATCHING_LIVE_TV_MINUTES_STEP
+    return (first + steps * STILL_WATCHING_LIVE_TV_MINUTES_STEP).coerceIn(STILL_WATCHING_LIVE_TV_MINUTES_RANGE)
 }

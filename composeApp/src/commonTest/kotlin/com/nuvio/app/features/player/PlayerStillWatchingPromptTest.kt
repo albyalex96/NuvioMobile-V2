@@ -35,4 +35,20 @@ class PlayerStillWatchingPromptTest {
         assertTrue(shouldPromptStillWatching(nightOnly, 3) { 23 })
         assertFalse(shouldPromptStillWatching(nightOnly, 3) { null })
     }
+
+    @Test
+    fun liveTvPromptsAfterConfiguredMinutesOnlyWhenEnabled() {
+        val liveTv = PlayerSettingsUiState(stillWatchingLiveTvEnabled = true, stillWatchingLiveTvMinutes = 30)
+        assertFalse(shouldPromptStillWatchingLiveTv(liveTv.copy(stillWatchingLiveTvEnabled = false), 3_600_000L))
+        assertFalse(shouldPromptStillWatchingLiveTv(liveTv, 29L * 60_000L))
+        assertTrue(shouldPromptStillWatchingLiveTv(liveTv, 30L * 60_000L))
+    }
+
+    @Test
+    fun liveTvMinutesAreClampedAndSnappedToTheSelectorStep() {
+        kotlin.test.assertEquals(15, normalizeStillWatchingLiveTvMinutes(1))
+        kotlin.test.assertEquals(360, normalizeStillWatchingLiveTvMinutes(1_000))
+        kotlin.test.assertEquals(90, normalizeStillWatchingLiveTvMinutes(95))
+        kotlin.test.assertEquals(105, normalizeStillWatchingLiveTvMinutes(100))
+    }
 }

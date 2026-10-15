@@ -72,6 +72,8 @@ import com.nuvio.app.features.player.IosTargetPrimaries
 import com.nuvio.app.features.player.IosTargetTransfer
 import com.nuvio.app.features.player.PlayerSettingsRepository
 import com.nuvio.app.features.player.STILL_WATCHING_EPISODE_COUNT_RANGE
+import com.nuvio.app.features.player.STILL_WATCHING_LIVE_TV_MINUTES_RANGE
+import com.nuvio.app.features.player.STILL_WATCHING_LIVE_TV_MINUTES_STEP
 import com.nuvio.app.features.player.SEEK_INTERVAL_SECONDS_RANGE
 import com.nuvio.app.features.player.STREAM_AUTO_PLAY_TIMEOUT_VALUES
 import com.nuvio.app.features.player.SubtitleBackgroundColorSwatches
@@ -1511,6 +1513,72 @@ private fun PlaybackSettingsSection(
                         isTablet = isTablet,
                         onCheckedChange = PlayerSettingsRepository::setStillWatchingNightOnly,
                     )
+                }
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.settings_playback_still_watching_live_tv),
+                    description = stringResource(Res.string.settings_playback_still_watching_live_tv_description),
+                    checked = autoPlayPlayerSettings.stillWatchingLiveTvEnabled,
+                    isTablet = isTablet,
+                    onCheckedChange = PlayerSettingsRepository::setStillWatchingLiveTvEnabled,
+                )
+                if (autoPlayPlayerSettings.stillWatchingLiveTvEnabled) {
+                    SettingsGroupDivider(isTablet = isTablet)
+                    val liveTvMinutes = autoPlayPlayerSettings.stillWatchingLiveTvMinutes
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = if (isTablet) 18.dp else 16.dp, vertical = 10.dp),
+                    ) {
+                        var sliderValue by remember(liveTvMinutes) { mutableFloatStateOf(liveTvMinutes.toFloat()) }
+                        var lastHapticMinutes by remember(liveTvMinutes) { mutableStateOf(liveTvMinutes.toFloat()) }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                                Text(
+                                    text = stringResource(Res.string.settings_playback_still_watching_live_tv_minutes),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Text(
+                                    text = stringResource(Res.string.settings_playback_still_watching_live_tv_minutes_description),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            ValueBox(
+                                text = formatStillWatchingLiveTvMinutes(sliderValue.toInt()),
+                                modifier = Modifier.wrapContentWidth(),
+                            )
+                        }
+                        val minMinutes = STILL_WATCHING_LIVE_TV_MINUTES_RANGE.first.toFloat()
+                        val maxMinutes = STILL_WATCHING_LIVE_TV_MINUTES_RANGE.last.toFloat()
+                        val stepMinutes = STILL_WATCHING_LIVE_TV_MINUTES_STEP.toFloat()
+                        Slider(
+                            value = sliderValue,
+                            onValueChange = {
+                                val snapped = snapToStep(it, stepMinutes)
+                                sliderValue = snapped
+
+                                if (snapped != lastHapticMinutes) {
+                                    lastHapticMinutes = snapped
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
+                            },
+                            onValueChangeFinished = {
+                                PlayerSettingsRepository.setStillWatchingLiveTvMinutes(sliderValue.toInt())
+                            },
+                            valueRange = minMinutes..maxMinutes,
+                            steps = calculateSteps(minMinutes, maxMinutes, stepMinutes),
+                            colors = SliderDefaults.colors(
+                                thumbColor = MaterialTheme.colorScheme.primary,
+                                activeTrackColor = MaterialTheme.colorScheme.primary,
+                            ),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
                 }
                 SettingsGroupDivider(isTablet = isTablet)
                 var showThresholdModeDialog by remember { mutableStateOf(false) }
@@ -3010,3 +3078,14 @@ private fun libassRenderTypeRes(renderType: String): StringResource = when (rend
 
 @Composable
 private fun libassRenderTypeLabel(renderType: String): String = stringResource(libassRenderTypeRes(renderType))
+
+/** Compact duration for the live TV prompt interval, e.g. "45 min", "2 h", "1 h 30 min". */
+private fun formatStillWatchingLiveTvMinutes(minutes: Int): String {
+    val hours = minutes / 60
+    val rest = minutes % 60
+    return when {
+        hours == 0 -> "$rest min"
+        rest == 0 -> "$hours h"
+        else -> "$hours h $rest min"
+    }
+}

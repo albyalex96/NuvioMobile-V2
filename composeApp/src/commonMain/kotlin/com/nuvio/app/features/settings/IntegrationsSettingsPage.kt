@@ -1,6 +1,10 @@
 package com.nuvio.app.features.settings
 
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.LiveTv
+import nuvio.composeapp.generated.resources.compose_settings_page_live_tv
+import nuvio.composeapp.generated.resources.settings_integrations_live_tv_description
 import nuvio.composeapp.generated.resources.compose_settings_page_debrid
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.compose_settings_page_mdblist_ratings
@@ -16,6 +20,7 @@ internal fun LazyListScope.integrationsContent(
     onTmdbClick: () -> Unit,
     onMdbListClick: () -> Unit,
     onDebridClick: () -> Unit,
+    onLiveTvClick: () -> Unit,
 ) {
     item {
         SettingsSection(
@@ -44,6 +49,14 @@ internal fun LazyListScope.integrationsContent(
                     description = stringResource(Res.string.settings_integrations_debrid_description),
                     isTablet = isTablet,
                     onClick = onDebridClick,
+                )
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsNavigationRow(
+                    title = stringResource(Res.string.compose_settings_page_live_tv),
+                    description = stringResource(Res.string.settings_integrations_live_tv_description),
+                    icon = Icons.Rounded.LiveTv,
+                    isTablet = isTablet,
+                    onClick = onLiveTvClick,
                 )
             }
         }

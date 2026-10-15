@@ -251,6 +251,7 @@ internal fun PlayerScreenRuntime.BindPlayerRuntimeEffects() {
         activeEpisodeTitle,
         poster,
         background,
+        activeLogo,
     ) {
         val controller = playerController ?: return@LaunchedEffect
         if (playerControllerSourceUrl != activeSourceUrl) return@LaunchedEffect
@@ -705,14 +706,19 @@ private fun PlayerScreenRuntime.BindPlayerMetadataAndSkipEffects() {
 private fun PlayerScreenRuntime.buildNowPlayingInfo(): PlayerNowPlayingInfo {
     val isEpisode = activeSeasonNumber != null && activeEpisodeNumber != null
     return PlayerNowPlayingInfo(
-        title = title.ifBlank { activeStreamTitle },
+        // Live TV shows the current channel, which changes when zapping.
+        title = if (isLiveTvPlayback) activeStreamTitle else title.ifBlank { activeStreamTitle },
         subtitle = buildNowPlayingSubtitle(
             isEpisode = isEpisode,
             seasonNumber = activeSeasonNumber,
             episodeNumber = activeEpisodeNumber,
             episodeTitle = activeEpisodeTitle,
         ),
-        artworkUrl = firstNonBlankUrl(poster, background),
+        artworkUrl = if (isLiveTvPlayback) {
+            firstNonBlankUrl(activeLogo, poster, background)
+        } else {
+            firstNonBlankUrl(poster, background)
+        },
     )
 }
 

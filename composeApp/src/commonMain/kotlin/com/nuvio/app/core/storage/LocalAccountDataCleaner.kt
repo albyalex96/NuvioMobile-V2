@@ -81,6 +81,7 @@ internal object LocalAccountDataCleaner {
         StreamBadgeSettingsRepository.clearLocalState()
         StreamParserSettingsRepository.clearLocalState()
         P2pSettingsRepository.clearLocalState()
+        com.nuvio.app.features.livetv.LiveTvRepository.clearLocalState()
         CatalogRepository.clear()
         StreamsRepository.clear()
         MetaDetailsRepository.clear()
