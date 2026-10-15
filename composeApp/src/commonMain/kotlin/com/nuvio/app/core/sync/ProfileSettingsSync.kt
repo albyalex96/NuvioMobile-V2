@@ -28,6 +28,8 @@ import com.nuvio.app.features.settings.ThemeSettingsRepository
 import com.nuvio.app.features.streams.StreamBadgeSettingsRepository
 import com.nuvio.app.features.streams.StreamBadgeSettingsStorage
 import com.nuvio.app.features.streams.parser.StreamParserSettingsRepository
+import com.nuvio.app.features.plugins.PluginGroupingSync
+import com.nuvio.app.features.plugins.PluginRepository
 import com.nuvio.app.features.tmdb.TmdbSettingsStorage
 import com.nuvio.app.features.tmdb.TmdbSettingsRepository
 import com.nuvio.app.features.trakt.TraktCommentsStorage
@@ -199,6 +201,7 @@ object ProfileSettingsSync {
             PlayerSettingsRepository.uiState.map { "player" },
             StreamBadgeSettingsRepository.uiState.map { "stream_badges" },
             StreamParserSettingsRepository.uiState.map { "stream_parser" },
+            PluginRepository.uiState.map { "plugins_group_${it.groupStreamsByRepository}" },
             DebridSettingsRepository.uiState.map { "debrid" },
             TmdbSettingsRepository.uiState.map { "tmdb" },
             MdbListSettingsRepository.uiState.map { "mdblist" },
@@ -255,7 +258,9 @@ object ProfileSettingsSync {
                     PlayerSettingsStorage.exportToSyncPayload(),
                 ),
                 streamBadgeSettings = JsonObject(
-                    StreamBadgeSettingsStorage.exportToSyncPayload() + StreamParserSettingsRepository.exportToSyncPayload(),
+                    StreamBadgeSettingsStorage.exportToSyncPayload() +
+                        StreamParserSettingsRepository.exportToSyncPayload() +
+                        PluginGroupingSync.exportToSyncPayload(),
                 ),
                 debridSettings = withoutProfileCredentials(
                     PROFILE_DEBRID_SETTINGS_FEATURE,
@@ -315,6 +320,7 @@ object ProfileSettingsSync {
         StreamBadgeSettingsStorage.replaceFromSyncPayload(blob.features.streamBadgeSettings)
         StreamBadgeSettingsRepository.onProfileChanged()
         StreamParserSettingsRepository.replaceFromSyncPayload(blob.features.streamBadgeSettings)
+        PluginGroupingSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
 
         DebridSettingsStorage.replaceFromSyncPayload(
             preservingLocalProfileCredentials(
