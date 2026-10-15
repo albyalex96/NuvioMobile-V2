@@ -127,7 +127,8 @@ android {
 
 androidComponents {
     onVariants(selector().withBuildType("debug")) { variant ->
-        variant.applicationId.set("com.nuviodebug.com")
+        // Release ID + ".debug" (hyphens are not allowed in Android application IDs).
+        variant.applicationId.set("com.nuvioenhanced.alby.debug")
     }
 }
 
