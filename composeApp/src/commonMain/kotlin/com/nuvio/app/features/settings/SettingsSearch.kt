@@ -419,6 +419,14 @@ internal fun settingsSearchEntries(
         category = advancedCategory,
         icon = Icons.Rounded.Tune,
     )
+    addPage(
+        page = SettingsPage.AppLogs,
+        key = "app-logs",
+        title = stringResource(Res.string.settings_app_logs_title),
+        description = stringResource(Res.string.settings_app_logs_entry_description),
+        category = advancedCategory,
+        icon = Icons.Rounded.Tune,
+    )
     if (SentrySettingsRepository.isSupported) {
         addRow(
             page = SettingsPage.Advanced,

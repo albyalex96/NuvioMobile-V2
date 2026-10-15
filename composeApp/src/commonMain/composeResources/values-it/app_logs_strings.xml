@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_app_logs_title">Log dell'app</string>
+    <string name="settings_app_logs_entry_description">Visualizza, filtra e condividi i log dell'app senza un computer</string>
+    <string name="app_logs_section_recording">Registrazione</string>
+    <string name="app_logs_enabled_title">Registra log</string>
+    <string name="app_logs_enabled_description">Salva i log dell'app su questo dispositivo. Le voci vengono conservate per 24 ore.</string>
+    <string name="app_logs_section_filters">Filtri</string>
+    <string name="app_logs_category_title">Categoria</string>
+    <string name="app_logs_category_all">Tutte le categorie</string>
+    <string name="app_logs_category_sheet_title">Categoria dei log</string>
+    <string name="app_logs_category_option">%1$s (%2$d)</string>
+    <string name="app_logs_levels_title">Livelli</string>
+    <string name="app_logs_levels_description">Mostra solo i livelli selezionati</string>
+    <string name="app_logs_level_debug">Debug</string>
+    <string name="app_logs_level_info">Info</string>
+    <string name="app_logs_level_warn">Avviso</string>
+    <string name="app_logs_level_error">Errore</string>
+    <string name="app_logs_search_placeholder">Cerca nei log</string>
+    <string name="app_logs_search_clear">Cancella ricerca</string>
+    <string name="app_logs_live_title">Aggiornamento in tempo reale</string>
+    <string name="app_logs_live_description">Disattiva per bloccare l'elenco durante la lettura</string>
+    <string name="app_logs_section_actions">Azioni</string>
+    <string name="app_logs_copy_title">Copia log</string>
+    <string name="app_logs_copy_description">Copia negli appunti le voci filtrate</string>
+    <string name="app_logs_share_title">Condividi file di log</string>
+    <string name="app_logs_share_description">Esporta le voci filtrate in un file di testo</string>
+    <string name="app_logs_import_title">Importa log di sistema</string>
+    <string name="app_logs_import_description">Aggiunge le righe di logcat dell'app, compresi il player e le librerie</string>
+    <string name="app_logs_clear_title">Cancella log</string>
+    <string name="app_logs_clear_description">Elimina tutte le voci salvate</string>
+    <string name="app_logs_clear_dialog_title">Cancellare i log?</string>
+    <string name="app_logs_clear_dialog_message">Tutte le voci salvate su questo dispositivo verranno eliminate.</string>
+    <string name="app_logs_clear_confirm">Cancella</string>
+    <string name="app_logs_section_entries">Voci (%1$d di %2$d)</string>
+    <string name="app_logs_empty">Nessuna voce corrisponde ai filtri</string>
+    <string name="app_logs_empty_disabled">Attiva \"Registra log\" per iniziare a raccogliere le voci</string>
+    <string name="app_logs_copied">%1$d voci copiate</string>
+    <string name="app_logs_copied_truncated">Copiate le ultime %1$d voci (limite degli appunti). Usa Condividi per il log completo.</string>
+    <string name="app_logs_nothing_to_export">Nessuna voce da esportare</string>
+    <string name="app_logs_share_failed">Impossibile creare il file di log</string>
+    <string name="app_logs_imported">%1$d righe di sistema importate</string>
+    <string name="app_logs_import_failed">Impossibile leggere il log di sistema</string>
+    <string name="app_logs_system_badge">sistema</string>
+</resources>

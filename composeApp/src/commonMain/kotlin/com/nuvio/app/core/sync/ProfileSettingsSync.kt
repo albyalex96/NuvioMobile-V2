@@ -3,6 +3,7 @@ package com.nuvio.app.core.sync
 import co.touchlab.kermit.Logger
 import com.nuvio.app.core.auth.AuthRepository
 import com.nuvio.app.core.auth.AuthState
+import com.nuvio.app.core.logging.AppLoggerSettings
 import com.nuvio.app.core.network.SupabaseProvider
 import com.nuvio.app.features.collection.CollectionMobileSettingsRepository
 import com.nuvio.app.features.collection.CollectionMobileSettingsStorage
@@ -202,6 +203,7 @@ object ProfileSettingsSync {
             StreamBadgeSettingsRepository.uiState.map { "stream_badges" },
             StreamParserSettingsRepository.uiState.map { "stream_parser" },
             PluginRepository.uiState.map { "plugins_group_${it.groupStreamsByRepository}" },
+            AppLoggerSettings.enabled.map { "app_logger_$it" },
             DebridSettingsRepository.uiState.map { "debrid" },
             TmdbSettingsRepository.uiState.map { "tmdb" },
             MdbListSettingsRepository.uiState.map { "mdblist" },
@@ -260,7 +262,8 @@ object ProfileSettingsSync {
                 streamBadgeSettings = JsonObject(
                     StreamBadgeSettingsStorage.exportToSyncPayload() +
                         StreamParserSettingsRepository.exportToSyncPayload() +
-                        PluginGroupingSync.exportToSyncPayload(),
+                        PluginGroupingSync.exportToSyncPayload() +
+                        AppLoggerSettings.exportToSyncPayload(),
                 ),
                 debridSettings = withoutProfileCredentials(
                     PROFILE_DEBRID_SETTINGS_FEATURE,
@@ -321,6 +324,7 @@ object ProfileSettingsSync {
         StreamBadgeSettingsRepository.onProfileChanged()
         StreamParserSettingsRepository.replaceFromSyncPayload(blob.features.streamBadgeSettings)
         PluginGroupingSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
+        AppLoggerSettings.applyFromSyncPayload(blob.features.streamBadgeSettings)
 
         DebridSettingsStorage.replaceFromSyncPayload(
             preservingLocalProfileCredentials(
@@ -376,6 +380,7 @@ object ProfileSettingsSync {
         PlayerSettingsRepository.ensureLoaded()
         StreamBadgeSettingsRepository.ensureLoaded()
         StreamParserSettingsRepository.ensureLoaded()
+        AppLoggerSettings.ensureLoaded()
         DebridSettingsRepository.ensureLoaded()
         TmdbSettingsRepository.ensureLoaded()
         MdbListSettingsRepository.ensureLoaded()

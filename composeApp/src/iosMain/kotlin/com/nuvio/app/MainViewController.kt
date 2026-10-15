@@ -3,6 +3,7 @@ package com.nuvio.app
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.uikit.OnFocusBehavior
 import androidx.compose.ui.window.ComposeUIViewController
+import com.nuvio.app.core.logging.AppLogger
 import com.nuvio.app.core.ui.NativeProfileSwitcherController
 import com.nuvio.app.navigation.AppRoute
 import platform.UIKit.UIColor
@@ -98,9 +99,12 @@ fun AppGateViewController(
 
 private fun nuvioComposeViewController(
     content: @androidx.compose.runtime.Composable () -> Unit,
-): UIViewController = ComposeUIViewController(
-    configure = { onFocusBehavior = OnFocusBehavior.DoNothing },
-    content = content,
-).apply {
-    view.backgroundColor = nuvioBackgroundColor
+): UIViewController {
+    AppLogger.install()
+    return ComposeUIViewController(
+        configure = { onFocusBehavior = OnFocusBehavior.DoNothing },
+        content = content,
+    ).apply {
+        view.backgroundColor = nuvioBackgroundColor
+    }
 }

@@ -35,6 +35,7 @@ import nuvio.composeapp.generated.resources.compose_settings_page_tmdb_enrichmen
 import nuvio.composeapp.generated.resources.compose_settings_page_trakt
 import nuvio.composeapp.generated.resources.compose_settings_page_tracking
 import nuvio.composeapp.generated.resources.settings_account
+import nuvio.composeapp.generated.resources.settings_app_logs_title
 import org.jetbrains.compose.resources.StringResource
 
 internal enum class SettingsCategory(
@@ -91,6 +92,11 @@ internal enum class SettingsPage(
         titleRes = Res.string.compose_settings_page_advanced,
         category = SettingsCategory.Advanced,
         parentPage = Root,
+    ),
+    AppLogs(
+        titleRes = Res.string.settings_app_logs_title,
+        category = SettingsCategory.Advanced,
+        parentPage = Advanced,
     ),
     Notifications(
         titleRes = Res.string.compose_settings_page_notifications,

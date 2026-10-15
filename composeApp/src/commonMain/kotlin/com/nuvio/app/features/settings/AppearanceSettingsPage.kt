@@ -449,7 +449,7 @@ private fun episodeCodeFormatOptionLabel(format: EpisodeCodeFormat): String =
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun <T> AppearanceOptionBottomSheet(
+internal fun <T> AppearanceOptionBottomSheet(
     title: String,
     options: List<T>,
     selected: T,

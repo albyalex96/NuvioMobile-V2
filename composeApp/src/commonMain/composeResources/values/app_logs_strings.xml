@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_app_logs_title">App logs</string>
+    <string name="settings_app_logs_entry_description">View, filter and share the app logs without a computer</string>
+    <string name="app_logs_section_recording">Recording</string>
+    <string name="app_logs_enabled_title">Record logs</string>
+    <string name="app_logs_enabled_description">Saves the app logs on this device. Entries are kept for 24 hours.</string>
+    <string name="app_logs_section_filters">Filters</string>
+    <string name="app_logs_category_title">Category</string>
+    <string name="app_logs_category_all">All categories</string>
+    <string name="app_logs_category_sheet_title">Log category</string>
+    <string name="app_logs_category_option">%1$s (%2$d)</string>
+    <string name="app_logs_levels_title">Levels</string>
+    <string name="app_logs_levels_description">Show only the selected levels</string>
+    <string name="app_logs_level_debug">Debug</string>
+    <string name="app_logs_level_info">Info</string>
+    <string name="app_logs_level_warn">Warning</string>
+    <string name="app_logs_level_error">Error</string>
+    <string name="app_logs_search_placeholder">Search in logs</string>
+    <string name="app_logs_search_clear">Clear search</string>
+    <string name="app_logs_live_title">Live updates</string>
+    <string name="app_logs_live_description">Turn off to freeze the list while reading</string>
+    <string name="app_logs_section_actions">Actions</string>
+    <string name="app_logs_copy_title">Copy logs</string>
+    <string name="app_logs_copy_description">Copies the filtered entries to the clipboard</string>
+    <string name="app_logs_share_title">Share log file</string>
+    <string name="app_logs_share_description">Exports the filtered entries as a text file</string>
+    <string name="app_logs_import_title">Import system log</string>
+    <string name="app_logs_import_description">Adds the app's logcat lines, including the player and the libraries</string>
+    <string name="app_logs_clear_title">Clear logs</string>
+    <string name="app_logs_clear_description">Deletes all the stored entries</string>
+    <string name="app_logs_clear_dialog_title">Clear logs?</string>
+    <string name="app_logs_clear_dialog_message">All the entries stored on this device will be deleted.</string>
+    <string name="app_logs_clear_confirm">Clear</string>
+    <string name="app_logs_section_entries">Entries (%1$d of %2$d)</string>
+    <string name="app_logs_empty">No entries match the current filters</string>
+    <string name="app_logs_empty_disabled">Turn on \"Record logs\" to start collecting entries</string>
+    <string name="app_logs_copied">%1$d entries copied</string>
+    <string name="app_logs_copied_truncated">Copied the latest %1$d entries (clipboard limit). Use Share for the full log.</string>
+    <string name="app_logs_nothing_to_export">No entries to export</string>
+    <string name="app_logs_share_failed">Couldn't create the log file</string>
+    <string name="app_logs_imported">%1$d system lines imported</string>
+    <string name="app_logs_import_failed">Couldn't read the system log</string>
+    <string name="app_logs_system_badge">system</string>
+</resources>

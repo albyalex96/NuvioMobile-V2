@@ -665,6 +665,8 @@ private fun MobileSettingsScreen(
             }
         }
 
+        val appLogsViewer = if (page == SettingsPage.AppLogs) rememberAppLogsViewerState() else null
+
         NuvioScreen(
             modifier = Modifier.nestedScroll(rootSearchRevealConnection),
             listState = listState,
@@ -787,6 +789,11 @@ private fun MobileSettingsScreen(
                 SettingsPage.Advanced -> advancedSettingsContent(
                     isTablet = false,
                     rememberLastProfileEnabled = rememberLastProfileEnabled,
+                    onAppLogsClick = { onPageChange(SettingsPage.AppLogs) },
+                )
+                SettingsPage.AppLogs -> appLogsSettingsContent(
+                    isTablet = false,
+                    viewer = requireNotNull(appLogsViewer),
                 )
                 SettingsPage.Notifications -> notificationsSettingsContent(
                     isTablet = false,
@@ -1086,6 +1093,7 @@ private fun TabletSettingsScreen(
                     listState.animateScrollToItem(0)
                 }
             }
+            val appLogsViewer = if (page == SettingsPage.AppLogs) rememberAppLogsViewerState() else null
             LazyColumn(
                 state = listState,
                 modifier = Modifier
@@ -1227,6 +1235,11 @@ private fun TabletSettingsScreen(
                     SettingsPage.Advanced -> advancedSettingsContent(
                         isTablet = true,
                         rememberLastProfileEnabled = rememberLastProfileEnabled,
+                        onAppLogsClick = { openInlinePage(SettingsPage.AppLogs) },
+                    )
+                    SettingsPage.AppLogs -> appLogsSettingsContent(
+                        isTablet = true,
+                        viewer = requireNotNull(appLogsViewer),
                     )
                     SettingsPage.Notifications -> notificationsSettingsContent(
                         isTablet = true,
