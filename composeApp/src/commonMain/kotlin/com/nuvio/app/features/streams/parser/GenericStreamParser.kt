@@ -13,7 +13,12 @@ import com.nuvio.app.features.streams.StreamItem
  */
 object GenericStreamParser {
     private const val BYTES_PER_KIB = 1024.0
-    private const val PLUGIN_ADDON_ID_PREFIX = "plugin:"
+
+    /**
+     * `addonId` prefixes of plugin streams (see `toPluginProviderGroups`): one group per
+     * scraper (`plugin:<id>`) or one per repository when grouping is on (`plugin-repo:<url>`).
+     */
+    private val PLUGIN_ADDON_ID_PREFIXES = listOf("plugin:", "plugin-repo:")
 
     private class Field(
         val prepared: String,
@@ -210,7 +215,7 @@ object GenericStreamParser {
 
     private fun detectCached(stream: StreamItem, rawLower: String): Boolean {
         // Plugin streams are scraped direct links: they can never be debrid-cached.
-        if (stream.addonId.startsWith(PLUGIN_ADDON_ID_PREFIX)) return false
+        if (PLUGIN_ADDON_ID_PREFIXES.any { stream.addonId.startsWith(it) }) return false
         when (stream.debridCacheStatus?.state) {
             StreamDebridCacheState.CACHED -> return true
             StreamDebridCacheState.NOT_CACHED -> return false

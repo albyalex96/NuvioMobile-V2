@@ -183,6 +183,17 @@ class GenericStreamParserTest {
             ).copy(debridCacheStatus = StreamDebridCacheStatus("torbox", "TorBox", StreamDebridCacheState.CACHED)),
         )
         assertFalse(info.isCached)
+
+        val groupedByRepository = parse(
+            StreamItem(
+                name = "⚡ Instant 1080p",
+                description = "Ready (TB) cached",
+                url = "https://cdn.example/video.mp4",
+                addonName = "My Plugins",
+                addonId = "plugin-repo:https://repo.example/manifest.json",
+            ),
+        )
+        assertFalse(groupedByRepository.isCached)
     }
 
     @Test
