@@ -101,6 +101,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
+import com.nuvio.app.tv.tvFocusRegion
 
 private val SettingsSearchRevealThreshold = 28.dp
 private const val SettingsSearchRevealAnimationMillis = 240L
@@ -1113,6 +1114,7 @@ private fun TabletSettingsScreen(
                 state = listState,
                 modifier = Modifier
                     .fillMaxSize()
+                    .tvFocusRegion(key = page.name to activeCategory.name)
                     .nestedScroll(rootSearchRevealConnection),
                 contentPadding = PaddingValues(
                     start = 40.dp,

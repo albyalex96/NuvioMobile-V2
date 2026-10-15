@@ -72,6 +72,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import com.nuvio.app.navigation.LocalNativeNavigationBarHidden
 import com.nuvio.app.navigation.LocalUseNativeNavigation
+import com.nuvio.app.tv.tvNotFocusable
 
 @Composable
 fun NuvioScreen(
@@ -284,6 +285,7 @@ fun NuvioBackButton(
             .size(buttonSize)
             .clip(shape)
             .background(containerColor)
+            .tvNotFocusable()
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {

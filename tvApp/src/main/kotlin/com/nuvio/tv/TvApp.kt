@@ -9,6 +9,7 @@ import com.nuvio.app.tv.TvShell
 import com.nuvio.tv.details.TvDetailsScreen
 import com.nuvio.tv.home.TvHomeScreen
 import com.nuvio.tv.shell.TvSidebarChrome
+import com.nuvio.tv.ui.TvFocusCoordinator
 import com.nuvio.tv.ui.TvThemeOverlay
 
 /** The shared app, rendered through the TV shell. */
@@ -23,6 +24,8 @@ fun TvApp() {
         )
     }
     CompositionLocalProvider(LocalTvShell provides shell) {
-        App()
+        TvFocusCoordinator {
+            App()
+        }
     }
 }

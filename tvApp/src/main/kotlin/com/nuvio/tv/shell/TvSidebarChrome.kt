@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -54,7 +53,9 @@ import com.nuvio.app.AppScreenTab
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.profiles.NuvioProfile
 import com.nuvio.app.features.profiles.parseHexColor
+import com.nuvio.app.tv.TvFocusRegions
 import com.nuvio.app.tv.TvTabsChrome
+import com.nuvio.app.tv.tvFocusRegion
 import com.nuvio.tv.R
 import com.nuvio.tv.ui.TvDimens
 import com.nuvio.tv.ui.TvRemoteImage
@@ -78,7 +79,8 @@ fun TvSidebarChrome(chrome: TvTabsChrome, content: @Composable () -> Unit) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(start = TvDimens.sidebarCollapsedWidth),
+                .padding(start = TvDimens.sidebarCollapsedWidth)
+                .tvFocusRegion(key = chrome.selectedTab),
         ) {
             content()
         }
@@ -102,7 +104,7 @@ fun TvSidebarChrome(chrome: TvTabsChrome, content: @Composable () -> Unit) {
             )
         }
 
-        Column(
+        Box(
             modifier = Modifier
                 .zIndex(2f)
                 .width(sidebarWidth)
@@ -113,24 +115,35 @@ fun TvSidebarChrome(chrome: TvTabsChrome, content: @Composable () -> Unit) {
                 .padding(horizontal = 12.dp, vertical = 28.dp)
                 .onFocusChanged { sidebarFocused = it.hasFocus }
                 .focusRestorer(selectedRequester),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
+            // Profile pinned at the top, navigation centered on the screen's horizontal midline.
             ProfileItem(
                 profile = chrome.activeProfile,
                 expanded = sidebarFocused,
                 onClick = chrome.onSwitchProfile,
+                modifier = Modifier.align(Alignment.TopStart),
             )
-            Spacer(modifier = Modifier.height(18.dp))
-            chrome.tabs.forEach { tab ->
-                val selected = tab == chrome.selectedTab
-                SidebarItem(
-                    icon = tab.icon(),
-                    label = tab.label(),
-                    selected = selected,
-                    expanded = sidebarFocused,
-                    onClick = { chrome.onTabSelected(tab) },
-                    modifier = if (selected) Modifier.focusRequester(selectedRequester) else Modifier,
-                )
+            Column(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                chrome.tabs.forEach { tab ->
+                    val selected = tab == chrome.selectedTab
+                    SidebarItem(
+                        icon = tab.icon(),
+                        label = tab.label(),
+                        selected = selected,
+                        expanded = sidebarFocused,
+                        onClick = {
+                            chrome.onTabSelected(tab)
+                            // Leave the sidebar and land on the first element of the opened page.
+                            TvFocusRegions.request(force = true)
+                        },
+                        modifier = if (selected) Modifier.focusRequester(selectedRequester) else Modifier,
+                    )
+                }
             }
         }
     }
