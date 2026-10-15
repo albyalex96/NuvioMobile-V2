@@ -71,6 +71,43 @@ class AppUpdaterRepositoryTest {
         )
     }
 
+    @Test
+    fun phoneAndTvAppsPickTheirOwnApkFromTheSameRelease() {
+        val response = """{
+            "tag_name": "v0.5.16", "assets": [
+                {"name": "Nuvio-Enhanced-Alby-0.5.16-arm64-v8a.apk", "browser_download_url": "https://example.com/phone.apk"},
+                {"name": "Nuvio-Enhanced-Alby-TV-0.5.16-arm64-v8a.apk", "browser_download_url": "https://example.com/tv.apk"}
+            ]
+        }"""
+        assertEquals(
+            "Nuvio-Enhanced-Alby-0.5.16-arm64-v8a.apk",
+            AppUpdaterRepository.selectUpdate(response, UpdateChannel.STABLE, listOf("arm64-v8a"), tvApp = false)?.assetName,
+        )
+        assertEquals(
+            "Nuvio-Enhanced-Alby-TV-0.5.16-arm64-v8a.apk",
+            AppUpdaterRepository.selectUpdate(response, UpdateChannel.STABLE, listOf("arm64-v8a"), tvApp = true)?.assetName,
+        )
+    }
+
+    @Test
+    fun tvAppIgnoresReleasesWithoutTvApk() {
+        val response = """{
+            "tag_name": "v0.5.16", "assets": [
+                {"name": "Nuvio-Enhanced-Alby-0.5.16-arm64-v8a.apk", "browser_download_url": "https://example.com/phone.apk"}
+            ]
+        }"""
+        assertNull(AppUpdaterRepository.selectUpdate(response, UpdateChannel.STABLE, listOf("arm64-v8a"), tvApp = true))
+    }
+
+    @Test
+    fun tvTokenMustBeAStandaloneWord() {
+        assertEquals(true, isTvApkAssetName("Nuvio-Enhanced-Alby-TV-0.5.16-x86.apk"))
+        assertEquals(true, isTvApkAssetName("nuvio_tv_universal.apk"))
+        assertEquals(false, isTvApkAssetName("Nuvio-Enhanced-Alby-0.5.16-arm64-v8a.apk"))
+        assertEquals(false, isTvApkAssetName("NuvioTV-legacy.apk"))
+        assertEquals(false, isTvApkAssetName("app-tvos.apk"))
+    }
+
     private fun select(response: String, channel: UpdateChannel): AppUpdate? =
-        AppUpdaterRepository.selectUpdate(response, channel, listOf("arm64-v8a"))
+        AppUpdaterRepository.selectUpdate(response, channel, listOf("arm64-v8a"), tvApp = false)
 }

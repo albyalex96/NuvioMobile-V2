@@ -1,6 +1,7 @@
 package com.nuvio.app.features.updater
 
 import com.nuvio.app.features.addons.httpRequestRaw
+import com.nuvio.app.tv.TvAppRuntime
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.serialization.SerialName
@@ -65,13 +66,14 @@ internal object AppUpdaterRepository {
         responseBody: String,
         channel: UpdateChannel,
         supportedAbis: List<String>,
+        tvApp: Boolean = TvAppRuntime.isTvApp,
     ): AppUpdate? {
         val releases = when (channel) {
             UpdateChannel.STABLE -> listOf(json.decodeFromString<GitHubReleaseDto>(responseBody))
             UpdateChannel.BETA -> json.decodeFromString<List<GitHubReleaseDto>>(responseBody)
         }
         return ReleaseSelector.eligibleReleases(releases, channel).firstNotNullOfOrNull { release ->
-            val asset = chooseBestApkAsset(release.assets, supportedAbis) ?: return@firstNotNullOfOrNull null
+            val asset = chooseBestApkAsset(release.assets, supportedAbis, tvApp) ?: return@firstNotNullOfOrNull null
             val tag = release.tagName?.takeIf { VersionUtils.parse(it) != null }
                 ?: release.name.orEmpty()
             AppUpdate(
@@ -89,11 +91,12 @@ internal object AppUpdaterRepository {
     private fun chooseBestApkAsset(
         assets: List<GitHubAssetDto>,
         supportedAbis: List<String>,
+        tvApp: Boolean,
     ): GitHubAssetDto? {
         val apkAssets = assets.filter { asset ->
             asset.name.endsWith(".apk", ignoreCase = true) ||
                 asset.contentType == "application/vnd.android.package-archive"
-        }
+        }.filter { asset -> isTvApkAssetName(asset.name) == tvApp }
         for (abi in supportedAbis) {
             apkAssets.firstOrNull { it.name.contains(abi, ignoreCase = true) }?.let { return it }
         }
@@ -103,3 +106,12 @@ internal object AppUpdaterRepository {
         } ?: apkAssets.firstOrNull()
     }
 }
+
+private val tvApkNameToken = Regex("(?:^|[\\s._-])tv(?:[\\s._-]|$)", RegexOption.IGNORE_CASE)
+
+/**
+ * Android TV APKs carry a standalone `TV` token in the file name
+ * (e.g. `Nuvio-Enhanced-Alby-TV-0.5.16-arm64-v8a.apk`): the TV app only installs those,
+ * the phone app ignores them.
+ */
+internal fun isTvApkAssetName(name: String): Boolean = tvApkNameToken.containsMatchIn(name)
