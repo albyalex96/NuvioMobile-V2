@@ -24,6 +24,7 @@ import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.LiveTv
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.People
@@ -44,8 +45,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.nuvio.app.core.build.AppFeaturePolicy
+import com.nuvio.app.core.build.TrailerPlaybackMode
 import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.core.ui.nuvio
+import com.nuvio.app.features.p2p.P2pSettingsRepository
 import com.nuvio.app.isIos
 import com.nuvio.app.supportsPosterNavigationMotion
 import nuvio.composeapp.generated.resources.*
@@ -68,9 +72,9 @@ internal data class SettingsSearchEntry(
     val icon: ImageVector,
     val target: SettingsSearchTarget,
 ) {
-    val searchableText: String = listOf(title, description, page, section, category)
-        .joinToString(separator = " ")
-        .lowercase()
+    val searchableText: String = normalizeSettingsSearchText(
+        listOf(title, description, page, section, category).joinToString(separator = " "),
+    )
 
     val contextLabel: String = listOf(page, section)
         .filter { it.isNotBlank() }
@@ -998,8 +1002,357 @@ internal fun settingsSearchEntries(
             icon = Icons.Rounded.Link,
         )
     }
+    addRow(
+        page = SettingsPage.TraktAuthentication,
+        key = "simkl-anime-id",
+        title = stringResource(Res.string.settings_tracking_anime_id_title),
+        description = stringResource(Res.string.settings_tracking_anime_id_subtitle),
+        pageLabel = trackingPage,
+        section = stringResource(Res.string.settings_tracking_anime_section),
+        category = accountCategory,
+        icon = Icons.Rounded.Link,
+    )
+    addRow(
+        page = SettingsPage.TraktAuthentication,
+        key = "mdblist-library-lists",
+        title = stringResource(Res.string.settings_mdblist_library_lists),
+        description = stringResource(Res.string.settings_mdblist_library_lists_description),
+        pageLabel = trackingPage,
+        section = stringResource(Res.string.settings_tracking_mdblist_section),
+        category = accountCategory,
+        icon = Icons.Rounded.Link,
+    )
+
+    addAdditionalSearchEntries(
+        addPage = ::addPage,
+        addRow = ::addRow,
+        layoutPage = layoutPage,
+        playbackPage = playbackPage,
+        streamsPage = streamsPage,
+        continueWatchingPage = continueWatchingPage,
+        posterStylePage = posterStylePage,
+        detailPage = detailPage,
+        advancedCategory = advancedCategory,
+    )
 
     return entries
+}
+
+/**
+ * Settings rows that were missing from the search index. Every row shown in a settings page must have
+ * an entry here or above: `SettingsSearchIndexCoverageTest` fails when a row title is not indexed.
+ */
+@Composable
+private fun addAdditionalSearchEntries(
+    addPage: (
+        page: SettingsPage,
+        key: String,
+        title: String,
+        description: String,
+        category: String,
+        icon: ImageVector,
+    ) -> Unit,
+    addRow: (
+        page: SettingsPage,
+        key: String,
+        title: String,
+        description: String,
+        pageLabel: String,
+        section: String,
+        category: String,
+        icon: ImageVector,
+    ) -> Unit,
+    layoutPage: String,
+    playbackPage: String,
+    streamsPage: String,
+    continueWatchingPage: String,
+    posterStylePage: String,
+    detailPage: String,
+    advancedCategory: String,
+) {
+    val generalCategory = stringResource(SettingsCategory.General.labelRes)
+    fun row(
+        page: SettingsPage,
+        key: String,
+        title: String,
+        description: String = "",
+        pageLabel: String,
+        section: String,
+        category: String = generalCategory,
+        icon: ImageVector,
+    ) = addRow(page, key, title, description, pageLabel, section, category, icon)
+
+    // Appearance
+    val displaySection = stringResource(Res.string.settings_appearance_section_display)
+    listOf(
+        PlaybackSearchRow("app-icon", stringResource(Res.string.settings_appearance_app_icon)),
+        PlaybackSearchRow("date-format", stringResource(Res.string.settings_appearance_date_format)),
+        PlaybackSearchRow("episode-code-format", stringResource(Res.string.settings_appearance_episode_code_format)),
+    ).forEach { item ->
+        row(SettingsPage.Appearance, item.key, item.title, item.description, layoutPage, displaySection, icon = Icons.Rounded.Palette)
+    }
+    if (!isIos) {
+        row(
+            page = SettingsPage.Appearance,
+            key = "nav-bar-style",
+            title = stringResource(Res.string.settings_appearance_nav_bar_style),
+            pageLabel = layoutPage,
+            section = displaySection,
+            icon = Icons.Rounded.Palette,
+        )
+        row(
+            page = SettingsPage.Appearance,
+            key = "nav-bar-glow",
+            title = stringResource(Res.string.settings_nav_bar_glow),
+            description = stringResource(Res.string.settings_nav_bar_glow_description),
+            pageLabel = layoutPage,
+            section = stringResource(Res.string.settings_appearance_nav_bar_style),
+            icon = Icons.Rounded.Palette,
+        )
+    }
+
+    // Streams / Stream Parser
+    val streamParserSection = stringResource(Res.string.stream_parser_section_title)
+    listOf(
+        PlaybackSearchRow("stream-parser-enabled", stringResource(Res.string.stream_parser_enabled_title), stringResource(Res.string.stream_parser_enabled_description)),
+        PlaybackSearchRow("stream-parser-animations", stringResource(Res.string.stream_parser_animations_title), stringResource(Res.string.stream_parser_animations_description)),
+        PlaybackSearchRow("stream-parser-sort-quality", stringResource(Res.string.stream_parser_sort_by_quality_title), stringResource(Res.string.stream_parser_sort_by_quality_description)),
+    ).forEach { item ->
+        row(SettingsPage.Streams, item.key, item.title, item.description, streamsPage, streamParserSection, icon = Icons.Rounded.Style)
+    }
+
+    // Continue watching
+    row(
+        page = SettingsPage.ContinueWatching,
+        key = "continue-watching-sort-mode",
+        title = stringResource(Res.string.settings_continue_watching_sort_mode_title),
+        pageLabel = continueWatchingPage,
+        section = stringResource(Res.string.settings_continue_watching_section_sort_order),
+        icon = Icons.Rounded.Style,
+    )
+
+    // Poster customization
+    val cardDepthSection = stringResource(Res.string.settings_card_depth_title)
+    listOf(
+        PlaybackSearchRow("poster-card-depth-enabled", stringResource(Res.string.settings_card_depth_enabled), "", cardDepthSection),
+        PlaybackSearchRow("poster-card-depth-coverage", stringResource(Res.string.settings_card_depth_edge_coverage), "", cardDepthSection),
+        PlaybackSearchRow("poster-landscape-clearlogo", stringResource(Res.string.settings_poster_always_show_landscape_clearlogo), "", stringResource(Res.string.settings_poster_card_style)),
+    ).forEach { item ->
+        row(SettingsPage.PosterCustomization, item.key, item.title, item.description, posterStylePage, item.sectionOverride.orEmpty(), icon = Icons.Rounded.Tune)
+    }
+
+    // Detail page
+    if (AppFeaturePolicy.heroTrailerPlaybackSupported && AppFeaturePolicy.trailerPlaybackMode == TrailerPlaybackMode.IN_APP) {
+        row(
+            page = SettingsPage.MetaScreen,
+            key = "meta-hero-trailer-playback",
+            title = stringResource(Res.string.settings_meta_hero_trailer_playback),
+            description = stringResource(Res.string.settings_meta_hero_trailer_playback_description),
+            pageLabel = detailPage,
+            section = stringResource(Res.string.settings_meta_section_appearance),
+            icon = Icons.Rounded.Tune,
+        )
+    }
+
+    // Playback
+    val playerSection = stringResource(Res.string.settings_playback_section_player)
+    val playerRows = buildList {
+        add(PlaybackSearchRow("loading-status", stringResource(Res.string.playback_show_loading_status), stringResource(Res.string.playback_show_loading_status_sub)))
+        add(PlaybackSearchRow("parental-guide", stringResource(Res.string.settings_playback_parental_guide), stringResource(Res.string.settings_playback_parental_guide_description)))
+        add(PlaybackSearchRow("player-preference", stringResource(Res.string.settings_playback_player_preference)))
+        if (!isIos) {
+            add(PlaybackSearchRow("external-forward-subtitles", stringResource(Res.string.settings_playback_external_player_forward_subtitles), stringResource(Res.string.settings_playback_external_player_forward_subtitles_description)))
+            add(PlaybackSearchRow("external-skip-segments", stringResource(Res.string.settings_playback_external_player_send_skip_segments), stringResource(Res.string.settings_playback_external_player_send_skip_segments_description)))
+        }
+        add(PlaybackSearchRow("seek-interval", stringResource(Res.string.settings_playback_seek_interval)))
+    }
+    val subtitleAudioSection = stringResource(Res.string.settings_playback_section_subtitle_audio)
+    val subtitleAudioRows = buildList {
+        if (!isIos) {
+            add(PlaybackSearchRow("subtitle-strip-sdh", stringResource(Res.string.settings_playback_subtitle_strip_sdh), stringResource(Res.string.settings_playback_subtitle_strip_sdh_description)))
+            add(PlaybackSearchRow("subtitle-use-forced", stringResource(Res.string.settings_playback_subtitle_use_forced), stringResource(Res.string.settings_playback_subtitle_use_forced_description)))
+            add(PlaybackSearchRow("subtitle-preferred-only", stringResource(Res.string.settings_playback_subtitle_show_preferred_only), stringResource(Res.string.settings_playback_subtitle_show_preferred_only_description)))
+            add(PlaybackSearchRow("subtitle-auto-sync", stringResource(Res.string.settings_playback_subtitle_auto_sync), stringResource(Res.string.settings_playback_subtitle_auto_sync_description)))
+            add(
+                PlaybackSearchRow(
+                    "subtitle-auto-sync-mode",
+                    stringResource(Res.string.settings_playback_auto_sync_mode_aggressive),
+                    stringResource(Res.string.settings_playback_auto_sync_mode_aggressive_description) + " " +
+                        stringResource(Res.string.settings_playback_auto_sync_mode_passive) + " " +
+                        stringResource(Res.string.settings_playback_auto_sync_mode_passive_description),
+                ),
+            )
+            add(
+                PlaybackSearchRow(
+                    "subtitle-auto-sync-tolerance",
+                    stringResource(Res.string.settings_playback_auto_sync_tolerance, "").trimEnd(' ', ':'),
+                    stringResource(Res.string.settings_playback_auto_sync_tolerance_description),
+                ),
+            )
+        }
+    }
+    val subtitleRenderingSection = stringResource(Res.string.settings_playback_section_subtitle_rendering)
+    val subtitleRenderingRows = listOf(
+        PlaybackSearchRow("subtitle-size", stringResource(Res.string.settings_playback_subtitle_size)),
+        PlaybackSearchRow("subtitle-offset", stringResource(Res.string.settings_playback_subtitle_vertical_offset)),
+        PlaybackSearchRow("subtitle-bold", stringResource(Res.string.settings_playback_subtitle_bold), stringResource(Res.string.settings_playback_subtitle_bold_description)),
+        PlaybackSearchRow("subtitle-text-color", stringResource(Res.string.settings_playback_subtitle_text_color)),
+        PlaybackSearchRow("subtitle-background-color", stringResource(Res.string.settings_playback_subtitle_background_color)),
+        PlaybackSearchRow("subtitle-outline", stringResource(Res.string.settings_playback_subtitle_outline), stringResource(Res.string.settings_playback_subtitle_outline_description)),
+        PlaybackSearchRow("subtitle-outline-color", stringResource(Res.string.settings_playback_subtitle_outline_color)),
+    )
+    val p2pRows = if (P2pSettingsRepository.isVisible) {
+        listOf(
+            PlaybackSearchRow("p2p", stringResource(Res.string.settings_p2p_title), stringResource(Res.string.settings_p2p_subtitle)),
+            PlaybackSearchRow("p2p-hide-stats", stringResource(Res.string.settings_p2p_hide_stats_title), stringResource(Res.string.settings_p2p_hide_stats_subtitle)),
+            PlaybackSearchRow("p2p-profile", stringResource(Res.string.settings_p2p_profile_title)),
+            PlaybackSearchRow("p2p-cache-size", stringResource(Res.string.settings_p2p_cache_size_title)),
+            PlaybackSearchRow("p2p-clear-cache", stringResource(Res.string.settings_p2p_clear_cache_title)),
+        )
+    } else {
+        emptyList()
+    }
+    val decoderSection = stringResource(Res.string.settings_playback_section_decoder)
+    val decoderRows = if (isIos) {
+        emptyList()
+    } else {
+        listOf(
+            PlaybackSearchRow("playback-engine", stringResource(Res.string.settings_playback_engine)),
+            PlaybackSearchRow("libmpv-video-output", stringResource(Res.string.settings_playback_libmpv_video_output)),
+            PlaybackSearchRow("libmpv-hw-decoding", stringResource(Res.string.settings_playback_libmpv_hardware_decoding), stringResource(Res.string.settings_playback_libmpv_hardware_decoding_description)),
+            PlaybackSearchRow("libmpv-yuv420p", stringResource(Res.string.settings_playback_libmpv_yuv420p), stringResource(Res.string.settings_playback_libmpv_yuv420p_description)),
+            PlaybackSearchRow("buffer-min", stringResource(Res.string.settings_playback_buffer_min)),
+            PlaybackSearchRow("buffer-max", stringResource(Res.string.settings_playback_buffer_max)),
+            PlaybackSearchRow("buffer-initial", stringResource(Res.string.settings_playback_buffer_initial)),
+            PlaybackSearchRow("buffer-rebuffer", stringResource(Res.string.settings_playback_buffer_rebuffer)),
+            PlaybackSearchRow("buffer-back", stringResource(Res.string.settings_playback_buffer_back)),
+            PlaybackSearchRow("buffer-target", stringResource(Res.string.settings_playback_buffer_target)),
+            PlaybackSearchRow("vod-cache-auto-size", stringResource(Res.string.settings_playback_vod_cache_auto_size), stringResource(Res.string.settings_playback_vod_cache_auto_size_description)),
+            PlaybackSearchRow("vod-cache-size", stringResource(Res.string.settings_playback_vod_cache_size)),
+        )
+    }
+    val iosRows = if (isIos) {
+        val iosAudioSection = stringResource(Res.string.settings_playback_ios_audio_output_section)
+        val iosVideoSection = stringResource(Res.string.settings_playback_ios_video_output)
+        listOf(
+            PlaybackSearchRow("ios-audio-output", stringResource(Res.string.settings_playback_ios_audio_output), "", iosAudioSection),
+            PlaybackSearchRow("ios-hw-decoder", stringResource(Res.string.settings_playback_ios_hardware_decoder), "", iosVideoSection),
+            PlaybackSearchRow("ios-edr", stringResource(Res.string.settings_playback_ios_extended_dynamic_range), stringResource(Res.string.settings_playback_ios_extended_dynamic_range_desc), iosVideoSection),
+            PlaybackSearchRow("ios-color-hint", stringResource(Res.string.settings_playback_ios_display_color_hint), stringResource(Res.string.settings_playback_ios_display_color_hint_desc), iosVideoSection),
+            PlaybackSearchRow("ios-target-primaries", stringResource(Res.string.settings_playback_ios_target_primaries), "", iosVideoSection),
+            PlaybackSearchRow("ios-target-transfer", stringResource(Res.string.settings_playback_ios_target_transfer), "", iosVideoSection),
+        )
+    } else {
+        emptyList()
+    }
+    val skipSection = stringResource(Res.string.settings_playback_section_skip_segments)
+    val skipRows = listOf(
+        PlaybackSearchRow("auto-skip-segments", stringResource(Res.string.settings_playback_auto_skip_segments)),
+    )
+    val nextEpisodeSection = stringResource(Res.string.settings_playback_section_next_episode)
+    val nextEpisodeRows = listOf(
+        PlaybackSearchRow("auto-play-next-fallback", stringResource(Res.string.settings_playback_auto_play_next_episode_fallback), stringResource(Res.string.settings_playback_auto_play_next_episode_fallback_description)),
+        PlaybackSearchRow("reuse-binge", stringResource(Res.string.settings_playback_reuse_binge_group), stringResource(Res.string.settings_playback_reuse_binge_group_description)),
+        PlaybackSearchRow("preload-next", stringResource(Res.string.settings_playback_preload_next_episode), stringResource(Res.string.settings_playback_preload_next_episode_description)),
+        PlaybackSearchRow("still-watching", stringResource(Res.string.settings_playback_still_watching), stringResource(Res.string.settings_playback_still_watching_description)),
+        PlaybackSearchRow("still-watching-night", stringResource(Res.string.settings_playback_still_watching_night_only), stringResource(Res.string.settings_playback_still_watching_night_only_description)),
+        PlaybackSearchRow("still-watching-live-tv", stringResource(Res.string.settings_playback_still_watching_live_tv), stringResource(Res.string.settings_playback_still_watching_live_tv_description)),
+    )
+    listOf(
+        playerSection to playerRows,
+        subtitleAudioSection to subtitleAudioRows,
+        subtitleRenderingSection to subtitleRenderingRows,
+        stringResource(Res.string.settings_playback_section_p2p) to p2pRows,
+        decoderSection to decoderRows,
+        "" to iosRows,
+        skipSection to skipRows,
+        nextEpisodeSection to nextEpisodeRows,
+    ).forEach { (section, rows) ->
+        rows.forEach { item ->
+            row(
+                page = SettingsPage.Playback,
+                key = "playback-${item.key}",
+                title = item.title,
+                description = item.description,
+                pageLabel = playbackPage,
+                section = item.sectionOverride ?: section,
+                icon = Icons.Rounded.PlayArrow,
+            )
+        }
+    }
+
+    // Integrations: connected services (debrid)
+    val debridPage = stringResource(Res.string.compose_settings_page_debrid)
+    addPage(
+        SettingsPage.Debrid,
+        "debrid",
+        debridPage,
+        stringResource(Res.string.settings_integrations_debrid_description),
+        generalCategory,
+        Icons.Rounded.Link,
+    )
+    val debridGeneral = stringResource(Res.string.settings_debrid_section_title)
+    val debridLinks = stringResource(Res.string.settings_debrid_section_instant_playback)
+    val debridResults = stringResource(Res.string.settings_debrid_section_result_management)
+    val debridFormatting = stringResource(Res.string.settings_debrid_section_formatting)
+    listOf(
+        PlaybackSearchRow("debrid-cloud-library", stringResource(Res.string.settings_debrid_cloud_library), stringResource(Res.string.settings_debrid_cloud_library_description), debridGeneral),
+        PlaybackSearchRow("debrid-enable", stringResource(Res.string.settings_debrid_enable), stringResource(Res.string.settings_debrid_enable_description), debridGeneral),
+        PlaybackSearchRow("debrid-resolve-with", stringResource(Res.string.settings_debrid_resolve_with), stringResource(Res.string.settings_debrid_resolve_with_description), debridGeneral),
+        PlaybackSearchRow("debrid-instant-playback", stringResource(Res.string.settings_debrid_prepare_instant_playback), stringResource(Res.string.settings_debrid_prepare_instant_playback_description), debridLinks),
+        PlaybackSearchRow("debrid-stream-count", stringResource(Res.string.settings_debrid_prepare_stream_count), "", debridLinks),
+        PlaybackSearchRow("debrid-max-results", stringResource(Res.string.settings_debrid_max_results), stringResource(Res.string.settings_debrid_max_results_desc), debridResults),
+        PlaybackSearchRow("debrid-sort-results", stringResource(Res.string.settings_debrid_sort_results), stringResource(Res.string.settings_debrid_sort_results_desc), debridResults),
+        PlaybackSearchRow("debrid-per-resolution", stringResource(Res.string.settings_debrid_per_resolution_limit), stringResource(Res.string.settings_debrid_per_resolution_limit_desc), debridResults),
+        PlaybackSearchRow("debrid-per-quality", stringResource(Res.string.settings_debrid_per_quality_limit), stringResource(Res.string.settings_debrid_per_quality_limit_desc), debridResults),
+        PlaybackSearchRow("debrid-size-range", stringResource(Res.string.settings_debrid_size_range), stringResource(Res.string.settings_debrid_size_range_desc), debridResults),
+        PlaybackSearchRow("debrid-name-template", stringResource(Res.string.settings_debrid_name_template), stringResource(Res.string.settings_debrid_name_template_description), debridFormatting),
+        PlaybackSearchRow("debrid-description-template", stringResource(Res.string.settings_debrid_description_template), stringResource(Res.string.settings_debrid_description_template_description), debridFormatting),
+        PlaybackSearchRow("debrid-formatter-reset", stringResource(Res.string.settings_debrid_formatter_reset_title), stringResource(Res.string.settings_debrid_formatter_reset_subtitle), debridFormatting),
+    ).forEach { item ->
+        row(SettingsPage.Debrid, item.key, item.title, item.description, debridPage, item.sectionOverride.orEmpty(), icon = Icons.Rounded.Link)
+    }
+
+    // Integrations: Live TV (custom layout, not covered by the coverage test)
+    val liveTvPage = stringResource(Res.string.compose_settings_page_live_tv)
+    addPage(
+        SettingsPage.LiveTv,
+        "live-tv",
+        liveTvPage,
+        stringResource(Res.string.settings_integrations_live_tv_description),
+        generalCategory,
+        Icons.Rounded.LiveTv,
+    )
+    val liveTvProviders = stringResource(Res.string.live_tv_settings_section_providers)
+    val liveTvEpg = stringResource(Res.string.live_tv_settings_section_epg)
+    listOf(
+        PlaybackSearchRow("live-tv-navigation", stringResource(Res.string.live_tv_settings_navigation_title), stringResource(Res.string.live_tv_settings_navigation_description), stringResource(Res.string.live_tv_settings_section_navigation)),
+        PlaybackSearchRow("live-tv-playlists", stringResource(Res.string.live_tv_settings_playlist_label), stringResource(Res.string.live_tv_settings_description), stringResource(Res.string.live_tv_settings_section_playlist)),
+        PlaybackSearchRow("live-tv-xtream", stringResource(Res.string.live_tv_xtream_title), stringResource(Res.string.live_tv_xtream_description), liveTvProviders),
+        PlaybackSearchRow("live-tv-stalker", stringResource(Res.string.live_tv_stalker_title), stringResource(Res.string.live_tv_stalker_description), liveTvProviders),
+        PlaybackSearchRow("live-tv-epg", stringResource(Res.string.live_tv_settings_epg_label), stringResource(Res.string.live_tv_settings_epg_description), liveTvEpg),
+        PlaybackSearchRow("live-tv-epg-auto", stringResource(Res.string.live_tv_settings_epg_auto_title), stringResource(Res.string.live_tv_settings_epg_auto_description), liveTvEpg),
+    ).forEach { item ->
+        row(SettingsPage.LiveTv, item.key, item.title, item.description, liveTvPage, item.sectionOverride.orEmpty(), icon = Icons.Rounded.LiveTv)
+    }
+
+    // Advanced: app logs
+    val appLogsPage = stringResource(Res.string.settings_app_logs_title)
+    val appLogsRecording = stringResource(Res.string.app_logs_section_recording)
+    val appLogsFilters = stringResource(Res.string.app_logs_section_filters)
+    val appLogsActions = stringResource(Res.string.app_logs_section_actions)
+    listOf(
+        PlaybackSearchRow("app-logs-enabled", stringResource(Res.string.app_logs_enabled_title), stringResource(Res.string.app_logs_enabled_description), appLogsRecording),
+        PlaybackSearchRow("app-logs-categories", stringResource(Res.string.app_logs_category_title), "", appLogsFilters),
+        PlaybackSearchRow("app-logs-levels", stringResource(Res.string.app_logs_levels_title), stringResource(Res.string.app_logs_levels_description), appLogsFilters),
+        PlaybackSearchRow("app-logs-live", stringResource(Res.string.app_logs_live_title), stringResource(Res.string.app_logs_live_description), appLogsFilters),
+        PlaybackSearchRow("app-logs-copy", stringResource(Res.string.app_logs_copy_title), stringResource(Res.string.app_logs_copy_description), appLogsActions),
+        PlaybackSearchRow("app-logs-share", stringResource(Res.string.app_logs_share_title), stringResource(Res.string.app_logs_share_description), appLogsActions),
+        PlaybackSearchRow("app-logs-import", stringResource(Res.string.app_logs_import_title), stringResource(Res.string.app_logs_import_description), appLogsActions),
+        PlaybackSearchRow("app-logs-clear", stringResource(Res.string.app_logs_clear_title), stringResource(Res.string.app_logs_clear_description), appLogsActions),
+    ).forEach { item ->
+        row(SettingsPage.AppLogs, item.key, item.title, item.description, appLogsPage, item.sectionOverride.orEmpty(), advancedCategory, Icons.Rounded.Tune)
+    }
 }
 
 private data class PlaybackSearchRow(
@@ -1231,9 +1584,7 @@ private fun settingsSearchResults(
     query: String,
     entries: List<SettingsSearchEntry>,
 ): List<SettingsSearchEntry> {
-    val terms = query
-        .trim()
-        .lowercase()
+    val terms = normalizeSettingsSearchText(query.trim())
         .split(Regex("\\s+"))
         .filter { it.isNotBlank() }
 
@@ -1246,4 +1597,39 @@ private fun settingsSearchResults(
 
 private fun SettingsSearchEntry.resultDescription(): String {
     return description.ifBlank { contextLabel }
+}
+
+private val settingsSearchDiacritics: Map<Char, String> = buildMap {
+    fun map(chars: String, replacement: String) = chars.forEach { put(it, replacement) }
+    map("àáâãäåāăą", "a")
+    map("çćĉċč", "c")
+    map("ďđ", "d")
+    map("èéêëēĕėęě", "e")
+    map("ĝğġģ", "g")
+    map("ĥħ", "h")
+    map("ìíîïĩīĭįı", "i")
+    map("ĵ", "j")
+    map("ķ", "k")
+    map("ĺļľŀł", "l")
+    map("ñńņňŉ", "n")
+    map("òóôõöøōŏő", "o")
+    map("ŕŗř", "r")
+    map("śŝşšș", "s")
+    map("ţťŧț", "t")
+    map("ùúûüũūŭůűų", "u")
+    map("ŵ", "w")
+    map("ýÿŷ", "y")
+    map("źżž", "z")
+    put('ß', "ss")
+    put('æ', "ae")
+    put('œ', "oe")
+}
+
+/** Lowercases [text] and strips the most common Latin diacritics, so "modalita" matches "modalità". */
+internal fun normalizeSettingsSearchText(text: String): String {
+    val lower = text.lowercase()
+    if (lower.none { it in settingsSearchDiacritics }) return lower
+    return buildString(lower.length) {
+        lower.forEach { char -> append(settingsSearchDiacritics[char] ?: char) }
+    }
 }
