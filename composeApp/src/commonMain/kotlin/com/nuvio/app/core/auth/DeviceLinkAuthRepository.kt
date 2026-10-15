@@ -31,6 +31,7 @@ import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import com.nuvio.app.tv.TvAppRuntime
 
 sealed interface DeviceLinkAuthState {
     data object Idle : DeviceLinkAuthState
@@ -107,7 +108,7 @@ object DeviceLinkAuthRepository {
             put("p_device_nonce", nonce)
             put("p_redirect_base_url", configuration.deviceLinkUrl())
             put("p_device_name", deviceName)
-            put("p_device_type", "mobile")
+            put("p_device_type", if (TvAppRuntime.isTvApp) "tv" else "mobile")
         }
         return SupabaseProvider.client.postgrest
             .rpc("start_device_login_session", params)

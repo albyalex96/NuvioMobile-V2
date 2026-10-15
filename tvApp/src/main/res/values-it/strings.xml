@@ -40,4 +40,22 @@
     <string name="tv_details_cast">Cast</string>
     <string name="tv_details_unavailable">Non ancora disponibile</string>
     <string name="tv_details_hint_manual">Tieni premuto OK per scegliere la sorgente</string>
+    <string name="tv_auth_title">Accedi a Nuvio</string>
+    <string name="tv_auth_subtitle">Profili, libreria, addon e progressi ti seguono anche sulla TV.</string>
+    <string name="tv_auth_step_scan">Inquadra il QR col telefono, oppure apri %1$s</string>
+    <string name="tv_auth_step_sign_in">Accedi dal telefono e approva questa TV</string>
+    <string name="tv_auth_step_done">La TV si collega da sola</string>
+    <string name="tv_auth_code_label">Codice</string>
+    <string name="tv_auth_preparing">Preparazione del codice…</string>
+    <string name="tv_auth_waiting">In attesa dell\'approvazione dal telefono…</string>
+    <string name="tv_auth_completing">Approvato. Accesso in corso…</string>
+    <string name="tv_auth_failed_start">Impossibile creare il codice di accesso. Controlla la connessione e riprova.</string>
+    <string name="tv_auth_failed_expired">Il codice è scaduto.</string>
+    <string name="tv_auth_failed_complete">Impossibile completare l\'accesso. Riprova.</string>
+    <string name="tv_auth_new_code">Genera un nuovo codice</string>
+    <string name="tv_auth_use_email">Usa email e password</string>
+    <string name="tv_auth_continue_without_account">Continua senza account</string>
+    <string name="tv_auth_unsupported">Questo server non supporta l\'accesso con QR: usa email e password.</string>
+    <string name="tv_auth_custom_server">Server: %1$s</string>
+    <string name="tv_auth_qr_description">Codice QR per accedere dal telefono</string>
 </resources>

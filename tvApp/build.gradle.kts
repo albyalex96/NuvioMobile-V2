@@ -132,6 +132,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtimeCompose)
     implementation(libs.coil.compose)
     implementation(libs.kermit)
+    implementation("com.google.zxing:core:3.5.3")
     coreLibraryDesugaring(libs.desugar.jdk.libs)
     debugImplementation(libs.compose.uiTooling)
 }

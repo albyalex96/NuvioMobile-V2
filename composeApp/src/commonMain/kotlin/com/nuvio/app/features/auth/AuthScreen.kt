@@ -111,6 +111,7 @@ import nuvio.composeapp.generated.resources.compose_auth_terms_link
 import nuvio.composeapp.generated.resources.compose_auth_terms_prefix
 import nuvio.composeapp.generated.resources.compose_auth_welcome_back
 import org.jetbrains.compose.resources.stringResource
+import com.nuvio.app.tv.TvAuthHook
 
 internal val AuthTextPrimary = Color(0xFFF5F7F8)
 internal val AuthTextSecondary = Color(0xFF969CA3)
@@ -188,6 +189,7 @@ private fun largeAuthFormMetrics(scale: Float): AuthFormMetrics = LargeAuthFormM
 fun AuthScreen(
     modifier: Modifier = Modifier,
 ) {
+    if (TvAuthHook()) return
     val authError by AuthRepository.error.collectAsStateWithLifecycle()
     val deviceLinkAuthState by DeviceLinkAuthRepository.state.collectAsStateWithLifecycle()
     val serverConnectionState by ServerConnectionController.state.collectAsStateWithLifecycle()

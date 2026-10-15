@@ -6,6 +6,7 @@ import androidx.compose.runtime.remember
 import com.nuvio.app.App
 import com.nuvio.app.tv.LocalTvShell
 import com.nuvio.app.tv.TvShell
+import com.nuvio.tv.auth.TvAuthScreen
 import com.nuvio.tv.details.TvDetailsScreen
 import com.nuvio.tv.home.TvHomeScreen
 import com.nuvio.tv.shell.TvSidebarChrome
@@ -21,6 +22,7 @@ fun TvApp() {
             tabsChrome = { chrome, content -> TvSidebarChrome(chrome, content) },
             home = { model -> TvHomeScreen(model) },
             details = { model -> TvDetailsScreen(model) },
+            auth = { model -> TvAuthScreen(model) },
         )
     }
     CompositionLocalProvider(LocalTvShell provides shell) {

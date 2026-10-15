@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import com.nuvio.app.AppScreenTab
+import com.nuvio.app.core.auth.DeviceLinkAuthState
 import com.nuvio.app.features.collection.Collection
 import com.nuvio.app.features.details.MetaDetails
 import com.nuvio.app.features.details.MetaVideo
@@ -28,6 +29,8 @@ class TvShell(
     val tabsChrome: @Composable (chrome: TvTabsChrome, content: @Composable () -> Unit) -> Unit,
     val home: @Composable (model: TvHomeModel) -> Unit,
     val details: @Composable (model: TvDetailsModel) -> Unit,
+    /** Sign-in screen (QR / device link). Null keeps the shared email sign-in screen. */
+    val auth: (@Composable (model: TvAuthModel) -> Unit)? = null,
 )
 
 val LocalTvShell = staticCompositionLocalOf<TvShell?> { null }
@@ -110,6 +113,22 @@ class TvDetailsModel(
     val onShuffleClick: (() -> Unit)?,
     val onOpenMeta: (MetaPreview) -> Unit,
     val onBack: () -> Unit,
+)
+
+/** State of the TV sign-in screen, backed by `DeviceLinkAuthRepository` (QR login). */
+@Immutable
+class TvAuthModel(
+    val deviceLinkState: DeviceLinkAuthState,
+    /** False when the active server does not support device/QR login. */
+    val deviceLinkEnabled: Boolean,
+    val serverUrl: String,
+    val isCustomServer: Boolean,
+    val authError: String?,
+    val onStartDeviceLink: () -> Unit,
+    val onCancelDeviceLink: () -> Unit,
+    /** Shows the shared email/password screen; the Back key returns to the QR screen. */
+    val onUseEmail: () -> Unit,
+    val onContinueWithoutAccount: () -> Unit,
 )
 
 @Immutable

@@ -6,8 +6,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import com.nuvio.app.core.auth.AuthRepository
+import com.nuvio.app.core.auth.DeviceLinkAuthRepository
+import com.nuvio.app.features.auth.ServerConnectionController
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.unit.dp
@@ -267,6 +273,55 @@ internal fun buildTvDetailsModel(
         onOpenMeta = onOpenMeta ?: {},
         onBack = onBack,
     )
+}
+
+/**
+ * TV sign-in: renders the QR / device-link screen instead of the shared email form.
+ * Returns false when the shared [com.nuvio.app.features.auth.AuthScreen] must be drawn
+ * (no TV shell, or the user chose email sign-in; Back returns to the QR screen).
+ */
+@Composable
+internal fun TvAuthHook(): Boolean {
+    val auth = LocalTvShell.current?.auth ?: return false
+    var useEmail by rememberSaveable { mutableStateOf(false) }
+    if (useEmail) {
+        PlatformBackHandler(enabled = true) {
+            AuthRepository.clearError()
+            useEmail = false
+        }
+        return false
+    }
+    val deviceLinkState by DeviceLinkAuthRepository.state.collectAsStateWithLifecycle()
+    val serverState by ServerConnectionController.state.collectAsStateWithLifecycle()
+    val authError by AuthRepository.error.collectAsStateWithLifecycle()
+    val activeServer = serverState.activeServer
+    DisposableEffect(Unit) {
+        onDispose(DeviceLinkAuthRepository::cancel)
+    }
+    auth(
+        TvAuthModel(
+            deviceLinkState = deviceLinkState,
+            deviceLinkEnabled = activeServer.capabilities.tvLogin,
+            serverUrl = activeServer.backendUrl,
+            isCustomServer = activeServer.isCustom,
+            authError = authError,
+            onStartDeviceLink = {
+                AuthRepository.clearError()
+                DeviceLinkAuthRepository.start()
+            },
+            onCancelDeviceLink = DeviceLinkAuthRepository::cancel,
+            onUseEmail = {
+                log.i { "Switching to email sign-in" }
+                DeviceLinkAuthRepository.cancel()
+                useEmail = true
+            },
+            onContinueWithoutAccount = {
+                DeviceLinkAuthRepository.cancel()
+                AuthRepository.signInAnonymously()
+            },
+        ),
+    )
+    return true
 }
 
 /** Exposes the player runtime to the TV remote while the player is on screen (TV shell only). */
