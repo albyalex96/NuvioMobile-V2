@@ -60,10 +60,12 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -1230,10 +1232,16 @@ private fun EpisodeListCard(
     val dateFormat = ThemeSettingsRepository.dateFormatState.value
     val formattedDate = remember(video.released, dateFormat) { video.released?.let { formatReleaseDateForDisplay(it) } }
     var overviewExpanded by remember(video.id) { mutableStateOf(false) }
+    val expandProgress by animateFloatAsState(
+        targetValue = if (overviewExpanded) 1f else 0f,
+        animationSpec = tween(EPISODE_LIST_CARD_EXPAND_ANIMATION_MS),
+        label = "episode_list_card_expand",
+    )
+    // Side-by-side layout only when fully collapsed; while animating the content wraps its height.
+    val collapsedLayout = !overviewExpanded && expandProgress == 0f
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .animateContentSize(animationSpec = tween(EPISODE_OVERVIEW_ANIMATION_MS))
             .clip(cardShape)
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
             .border(
@@ -1247,151 +1255,196 @@ private fun EpisodeListCard(
                 onLongClick = onLongPress,
             ),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-        ) {
-            // Image area - fixed size so the artwork keeps its proportions when the card expands
-            Box(
-                modifier = Modifier
-                    .width(sizing.imageWidth)
-                    .height(sizing.cardHeight)
-                    .clip(RoundedCornerShape(topStart = cornerRadius, bottomStart = cornerRadius)),
-            ) {
-                val imageUrl = video.thumbnail ?: fallbackImage
-                val shouldBlurArtwork = blurUnwatchedEpisodes && !isWatched
-                if (imageUrl != null) {
-                    AsyncImage(
-                        model = imageUrl,
-                        contentDescription = video.title,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .then(if (shouldBlurArtwork) Modifier.blur(18.dp) else Modifier),
-                        contentScale = ContentScale.Crop,
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(MaterialTheme.colorScheme.surface),
-                    )
-                }
-
-                EpisodeCodeBadge(
-                    text = video.episodeBadge(),
-                    textSize = sizing.badgeTextSize,
-                    radius = sizing.badgeRadius,
-                    horizontalPadding = sizing.badgeHorizontalPadding,
-                    verticalPadding = sizing.badgeVerticalPadding,
-                    backgroundAlpha = 0.85f,
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(start = 8.dp, top = 8.dp),
-                )
-
-                NuvioAnimatedWatchedBadge(
-                    isVisible = isWatched,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp),
-                )
-
-                progressEntry
-                    ?.takeIf { it.durationMs > 0L && !it.isCompleted }
-                    ?.let { entry ->
-                        NuvioProgressBar(
-                            progress = entry.progressFraction,
+        EpisodeListCardLayout(
+            progress = expandProgress,
+            collapsedImageWidth = sizing.imageWidth,
+            collapsedHeight = sizing.cardHeight,
+            image = {
+                // Image area: beside the text when collapsed, full card width (16:9) when expanded.
+                Box(modifier = Modifier.fillMaxSize()) {
+                    val imageUrl = video.thumbnail ?: fallbackImage
+                    val shouldBlurArtwork = blurUnwatchedEpisodes && !isWatched
+                    if (imageUrl != null) {
+                        AsyncImage(
+                            model = imageUrl,
+                            contentDescription = video.title,
                             modifier = Modifier
-                                .align(Alignment.BottomStart)
-                                .fillMaxWidth()
-                                .padding(start = 12.dp, end = 12.dp, bottom = 10.dp),
-                            height = 5.dp,
-                            trackColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.14f),
-                            fillColor = MaterialTheme.colorScheme.primary,
+                                .fillMaxSize()
+                                .then(if (shouldBlurArtwork) Modifier.blur(18.dp) else Modifier),
+                            contentScale = ContentScale.Crop,
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(MaterialTheme.colorScheme.surface),
                         )
                     }
-            }
 
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .then(
-                        if (overviewExpanded) {
-                            Modifier.heightIn(min = sizing.cardHeight)
-                        } else {
-                            Modifier.height(sizing.cardHeight)
-                        },
+                    EpisodeCodeBadge(
+                        text = video.episodeBadge(),
+                        textSize = sizing.badgeTextSize,
+                        radius = sizing.badgeRadius,
+                        horizontalPadding = sizing.badgeHorizontalPadding,
+                        verticalPadding = sizing.badgeVerticalPadding,
+                        backgroundAlpha = 0.85f,
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(start = 8.dp, top = 8.dp),
                     )
-                    .padding(
-                        start = sizing.contentHorizontalPadding,
-                        end = sizing.contentHorizontalPadding,
-                        top = sizing.contentVerticalPadding,
-                        bottom = sizing.contentVerticalPadding,
-                    ),
-                verticalArrangement = Arrangement.spacedBy(sizing.contentSpacing),
-            ) {
-                Text(
-                    text = video.title,
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontSize = sizing.titleTextSize,
-                        fontWeight = FontWeight.Bold,
-                        lineHeight = sizing.titleLineHeight,
-                        letterSpacing = 0.sp,
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = sizing.titleMaxLines,
-                    overflow = TextOverflow.Ellipsis,
-                )
 
-                if (formattedDate != null || ratingLabel != null) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        formattedDate?.let { date ->
-                            Text(
-                                text = date,
-                                style = MaterialTheme.typography.labelMedium.copy(
-                                    fontSize = sizing.metaTextSize,
-                                    fontWeight = FontWeight.Medium,
-                                ),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
+                    NuvioAnimatedWatchedBadge(
+                        isVisible = isWatched,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(8.dp),
+                    )
+
+                    progressEntry
+                        ?.takeIf { it.durationMs > 0L && !it.isCompleted }
+                        ?.let { entry ->
+                            NuvioProgressBar(
+                                progress = entry.progressFraction,
+                                modifier = Modifier
+                                    .align(Alignment.BottomStart)
+                                    .fillMaxWidth()
+                                    .padding(start = 12.dp, end = 12.dp, bottom = 10.dp),
+                                height = 5.dp,
+                                trackColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.14f),
+                                fillColor = MaterialTheme.colorScheme.primary,
                             )
                         }
-                        ratingLabel?.let { rating ->
-                            ImdbEpisodeRatingBadge(
-                                rating = rating,
-                                logoWidth = 24.dp,
-                                logoHeight = 12.dp,
-                                textSize = sizing.metaTextSize,
-                            )
+                }
+            },
+            content = {
+                Column(
+                    modifier = Modifier
+                        .padding(
+                            start = sizing.contentHorizontalPadding,
+                            end = sizing.contentHorizontalPadding,
+                            top = sizing.contentVerticalPadding,
+                            bottom = sizing.contentVerticalPadding,
+                        ),
+                    verticalArrangement = Arrangement.spacedBy(sizing.contentSpacing),
+                ) {
+                    Text(
+                        text = video.title,
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontSize = sizing.titleTextSize,
+                            fontWeight = FontWeight.Bold,
+                            lineHeight = sizing.titleLineHeight,
+                            letterSpacing = 0.sp,
+                        ),
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = sizing.titleMaxLines,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+
+                    if (formattedDate != null || ratingLabel != null) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            formattedDate?.let { date ->
+                                Text(
+                                    text = date,
+                                    style = MaterialTheme.typography.labelMedium.copy(
+                                        fontSize = sizing.metaTextSize,
+                                        fontWeight = FontWeight.Medium,
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                            ratingLabel?.let { rating ->
+                                ImdbEpisodeRatingBadge(
+                                    rating = rating,
+                                    logoWidth = 24.dp,
+                                    logoHeight = 12.dp,
+                                    textSize = sizing.metaTextSize,
+                                )
+                            }
                         }
                     }
-                }
 
-                if (!video.overview.isNullOrBlank()) {
-                    ExpandableEpisodeOverview(
-                        text = video.overview,
-                        expanded = overviewExpanded,
-                        onToggle = { overviewExpanded = !overviewExpanded },
-                        collapsedMaxLines = sizing.overviewMaxLines,
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            fontSize = sizing.bodyTextSize,
-                            lineHeight = sizing.bodyLineHeight,
-                        ),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        toggleContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
-                        toggleContentColor = MaterialTheme.colorScheme.onSurface,
-                        toggleSize = 24.dp,
-                    )
+                    if (!video.overview.isNullOrBlank()) {
+                        ExpandableEpisodeOverview(
+                            text = video.overview,
+                            expanded = overviewExpanded,
+                            onToggle = { overviewExpanded = !overviewExpanded },
+                            collapsedMaxLines = sizing.overviewMaxLines,
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontSize = sizing.bodyTextSize,
+                                lineHeight = sizing.bodyLineHeight,
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            toggleContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
+                            toggleContentColor = MaterialTheme.colorScheme.onSurface,
+                            toggleSize = 24.dp,
+                            // Collapsed: fill the remaining height so the arrow sits on the bottom margin.
+                            modifier = if (collapsedLayout) Modifier.weight(1f) else Modifier,
+                        )
+                    }
                 }
-            }
-        }
+            },
+        )
     }
 }
 
 private const val EPISODE_OVERVIEW_ANIMATION_MS = 280
+private const val EPISODE_LIST_CARD_EXPAND_ANIMATION_MS = 380
+
+/**
+ * Lays out the episode list card for an expand [progress] between 0 and 1.
+ *
+ * - 0: artwork of [collapsedImageWidth] × [collapsedHeight] on the left, text on the right.
+ * - 1: artwork spanning the whole card width at 16:9, text (with the full overview) below it.
+ *
+ * Every value is interpolated, so the artwork grows and the text slides under it in one fluid
+ * motion. The text fades out and back in around the midpoint, where it crosses the artwork.
+ */
+@Composable
+private fun EpisodeListCardLayout(
+    progress: Float,
+    collapsedImageWidth: Dp,
+    collapsedHeight: Dp,
+    image: @Composable () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    Layout(contents = listOf(image, content)) { (imageMeasurables, contentMeasurables), constraints ->
+        val fullWidth = constraints.maxWidth
+        val collapsedImageW = collapsedImageWidth.roundToPx().coerceAtMost(fullWidth)
+        val collapsedH = collapsedHeight.roundToPx()
+        val expandedImageH = (fullWidth * 9f / 16f).roundToInt()
+
+        val imageW = lerpPx(collapsedImageW, fullWidth, progress)
+        val imageH = lerpPx(collapsedH, expandedImageH, progress)
+        val contentX = lerpPx(collapsedImageW, 0, progress)
+        val contentY = lerpPx(0, expandedImageH, progress)
+        val contentW = lerpPx(fullWidth - collapsedImageW, fullWidth, progress)
+
+        val imagePlaceable = imageMeasurables.first().measure(Constraints.fixed(imageW, imageH))
+        val contentPlaceable = contentMeasurables.first().measure(
+            if (progress == 0f) {
+                Constraints.fixed(contentW, collapsedH)
+            } else {
+                Constraints(minWidth = contentW, maxWidth = contentW)
+            },
+        )
+        val expandedHeight = maxOf(imageH, contentY + contentPlaceable.height)
+        val height = maxOf(imageH, lerpPx(collapsedH, expandedHeight, progress))
+        val contentAlpha = (kotlin.math.abs(progress - 0.5f) * 2f).coerceIn(0f, 1f)
+
+        layout(fullWidth, height) {
+            imagePlaceable.place(0, 0)
+            contentPlaceable.placeWithLayer(contentX, contentY) { alpha = contentAlpha }
+        }
+    }
+}
+
+private fun lerpPx(start: Int, stop: Int, fraction: Float): Int =
+    (start + (stop - start) * fraction).roundToInt()
 
 /**
  * Episode overview clamped to [collapsedMaxLines], with an arrow button overlaid on its
