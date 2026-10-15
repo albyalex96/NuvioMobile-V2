@@ -4,6 +4,8 @@ name: Manual Build (branch)
 # Pick the branch to build in the "Use workflow from" dropdown, which lists every branch
 # of the repository; the selected branch is checked out and built. The APKs are uploaded
 # as workflow artifacts (no GitHub release is created).
+# Tick "Mobile" and/or "TV" to choose which apps to build (GitHub forms have no multi-select:
+# each ticked app is built in its own parallel job and uploaded as its own artifact).
 
 on:
   workflow_dispatch:
@@ -16,6 +18,14 @@ on:
           - debug
           - release
         default: debug
+      build_mobile:
+        description: Mobile (phone/tablet) APK
+        type: boolean
+        default: true
+      build_tv:
+        description: TV APK
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -25,11 +35,39 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: Build ${{ inputs.build_type }} from ${{ github.ref_name }}
+  select:
+    name: Select apps to build
     runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+    steps:
+      - name: Build matrix from the ticked apps
+        id: matrix
+        env:
+          BUILD_MOBILE: ${{ inputs.build_mobile }}
+          BUILD_TV: ${{ inputs.build_tv }}
+        run: |
+          entries=()
+          [[ "${BUILD_MOBILE}" == "true" ]] && entries+=('{"app":"mobile","module":"androidApp"}')
+          [[ "${BUILD_TV}" == "true" ]] && entries+=('{"app":"tv","module":"tvApp"}')
+          if (( ${#entries[@]} == 0 )); then
+            echo "Tick at least one app to build (Mobile and/or TV)." >&2
+            exit 1
+          fi
+          matrix="{\"include\":[$(IFS=,; echo "${entries[*]}")]}"
+          echo "matrix=${matrix}" >> "${GITHUB_OUTPUT}"
+          echo "Building: ${matrix}"
+
+  build:
+    name: Build ${{ matrix.app }} ${{ inputs.build_type }} from ${{ github.ref_name }}
+    needs: select
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.select.outputs.matrix) }}
     env:
       BUILD_TYPE: ${{ inputs.build_type }}
+      GRADLE_MODULE: ${{ matrix.module }}
       RELEASE_PROPERTIES_BASE64: ${{ secrets.NUVIO_LOCAL_PROPERTIES_BASE64 }}
       RELEASE_KEYSTORE_BASE64: ${{ secrets.NUVIO_RELEASE_KEYSTORE_BASE64 }}
 
@@ -39,14 +77,23 @@ jobs:
         with:
           ref: ${{ github.ref }}
 
+      - name: Check that the app exists on this branch
+        run: |
+          if [[ ! -f "${GRADLE_MODULE}/build.gradle.kts" ]]; then
+            echo "Module ${GRADLE_MODULE} does not exist on branch ${GITHUB_REF_NAME}." >&2
+            exit 1
+          fi
+
       - name: Read version.json
         id: version
+        env:
+          APP: ${{ matrix.app }}
         run: |
           version="$(jq -er '.version' version.json)"
           short_sha="$(git rev-parse --short HEAD)"
           branch_slug="$(printf '%s' "${GITHUB_REF_NAME}" | tr -c '[:alnum:]._-' '-')"
           echo "version=${version}" >> "${GITHUB_OUTPUT}"
-          echo "artifact=nuvio-${version}-${branch_slug}-${short_sha}-${BUILD_TYPE}" >> "${GITHUB_OUTPUT}"
+          echo "artifact=nuvio-${APP}-${version}-${branch_slug}-${short_sha}-${BUILD_TYPE}" >> "${GITHUB_OUTPUT}"
 
       - name: Set up Java
         uses: actions/setup-java@v5
@@ -80,14 +127,14 @@ jobs:
       - name: Build full ${{ inputs.build_type }} APK
         run: |
           if [[ "${BUILD_TYPE}" == "release" ]]; then
-            ./gradlew :androidApp:assembleFullRelease --stacktrace
+            ./gradlew ":${GRADLE_MODULE}:assembleFullRelease" --stacktrace
           else
-            ./gradlew :androidApp:assembleFullDebug --stacktrace
+            ./gradlew ":${GRADLE_MODULE}:assembleFullDebug" --stacktrace
           fi
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.version.outputs.artifact }}
-          path: androidApp/build/outputs/apk/full/${{ inputs.build_type }}/*.apk
+          path: ${{ matrix.module }}/build/outputs/apk/full/${{ inputs.build_type }}/*.apk
           if-no-files-found: error
