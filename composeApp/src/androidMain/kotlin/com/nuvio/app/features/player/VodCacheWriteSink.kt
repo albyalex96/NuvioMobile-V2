@@ -1,7 +1,7 @@
 ﻿package com.nuvio.app.features.player
 
 import android.os.SystemClock
-import android.util.Log
+import co.touchlab.kermit.Logger
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSink
 import androidx.media3.datasource.DataSpec
@@ -134,7 +134,7 @@ internal class VodCacheWriteSink(
         }
         if (!drained) {
             failed = true
-            Log.w(TAG, "VOD_CACHE: close gave up on the rest of this span (interrupted=$interrupted)")
+            Logger.w(TAG) { "VOD_CACHE: close gave up on the rest of this span (interrupted=$interrupted)" }
             while (true) {
                 try {
                     done.await()
@@ -150,7 +150,7 @@ internal class VodCacheWriteSink(
             delegate.close()
         } catch (e: IOException) {
             counters.errors.incrementAndGet()
-            Log.w(TAG, "VOD_CACHE: sink close failed", e)
+            Logger.w(TAG, e) { "VOD_CACHE: sink close failed" }
             throw e
         } finally {
             if (interrupted) Thread.currentThread().interrupt()
@@ -166,7 +166,7 @@ internal class VodCacheWriteSink(
                 counters.bytesWritten.addAndGet(length.toLong())
             } catch (e: IOException) {
                 counters.errors.incrementAndGet()
-                Log.w(TAG, "VOD_CACHE: sink write failed", e)
+                Logger.w(TAG, e) { "VOD_CACHE: sink write failed" }
                 failed = true
             }
         }

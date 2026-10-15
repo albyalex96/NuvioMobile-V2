@@ -7,7 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.IBinder
-import android.util.Log
+import co.touchlab.kermit.Logger
 import androidx.core.content.IntentCompat
 import com.nuvio.app.core.build.AppFeaturePolicy
 import com.nuvio.app.core.concurrent.ConflatedTaskDispatcher
@@ -39,7 +39,7 @@ class PlayerNowPlayingService : Service() {
         val started = runCatching {
             startForeground(NOW_PLAYING_NOTIFICATION_ID, startNotification)
         }.onFailure { error ->
-            Log.w(NOW_PLAYING_TAG, "Unable to promote playback service", error)
+            Logger.w(NOW_PLAYING_TAG, error) { "Unable to promote playback service" }
         }.isSuccess
         if (!started) {
             stopSelf(startId)
@@ -135,7 +135,7 @@ private object PlayerNowPlayingServiceController {
                     command.context.startService(intent)
                 }
             }.onFailure { error ->
-                Log.w(NOW_PLAYING_TAG, "Unable to start playback service", error)
+                Logger.w(NOW_PLAYING_TAG, error) { "Unable to start playback service" }
             }.isSuccess
             if (!started) {
                 startRequested.set(false)
@@ -147,7 +147,7 @@ private object PlayerNowPlayingServiceController {
             command.context.getSystemService(NotificationManager::class.java)
                 ?.notify(NOW_PLAYING_NOTIFICATION_ID, command.notification)
         }.onFailure { error ->
-            Log.w(NOW_PLAYING_TAG, "Unable to publish playback notification", error)
+            Logger.w(NOW_PLAYING_TAG, error) { "Unable to publish playback notification" }
         }
     }
 
@@ -157,13 +157,13 @@ private object PlayerNowPlayingServiceController {
         runCatching {
             command.context.stopService(Intent(command.context, PlayerNowPlayingService::class.java))
         }.onFailure { error ->
-            Log.w(NOW_PLAYING_TAG, "Unable to stop playback service", error)
+            Logger.w(NOW_PLAYING_TAG, error) { "Unable to stop playback service" }
         }
         runCatching {
             command.context.getSystemService(NotificationManager::class.java)
                 ?.cancel(NOW_PLAYING_NOTIFICATION_ID)
         }.onFailure { error ->
-            Log.w(NOW_PLAYING_TAG, "Unable to hide playback notification", error)
+            Logger.w(NOW_PLAYING_TAG, error) { "Unable to hide playback notification" }
         }
     }
 }

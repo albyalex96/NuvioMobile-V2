@@ -4,7 +4,7 @@ package com.nuvio.app.features.player
 
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
+import co.touchlab.kermit.Logger
 import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.MimeTypes
@@ -128,10 +128,7 @@ internal class SidecarSubtitleController(
                 if (!isCurrent()) return@launch
 
                 if (parseResult.cues.isEmpty()) {
-                    Log.w(
-                        SIDECAR_TAG,
-                        "Sidecar subtitle parse empty for url=$url urlMime=$urlMimeHint sniffed=$resolvedMime (buffer preserved; no media reload)"
-                    )
+                    Logger.w(SIDECAR_TAG) { "Sidecar subtitle parse empty for url=$url urlMime=$urlMimeHint sniffed=$resolvedMime (buffer preserved; no media reload)" }
                     activeSidecarSubtitleKey = null
                     activeSidecarGeneration = 0L
                     sidecarTimedCues = emptyList()
@@ -143,10 +140,7 @@ internal class SidecarSubtitleController(
                 }
 
                 sidecarTimedCues = parseResult.cues
-                Log.d(
-                    SIDECAR_TAG,
-                    "Sidecar subtitle ready url=$url cues=${parseResult.cues.size} mime=${parseResult.effectiveMime} source=${parseResult.source} (buffer preserved)"
-                )
+                Logger.d(SIDECAR_TAG) { "Sidecar subtitle ready url=$url cues=${parseResult.cues.size} mime=${parseResult.effectiveMime} source=${parseResult.source} (buffer preserved)" }
 
                 while (isActive && isCurrent()) {
                     renderSidecarCuesAtCurrentPosition()
@@ -156,10 +150,7 @@ internal class SidecarSubtitleController(
                 throw e
             } catch (e: Exception) {
                 if (!isCurrent()) return@launch
-                Log.w(
-                    SIDECAR_TAG,
-                    "Sidecar subtitle failed url=$url: ${e.message} (buffer preserved; no media reload)"
-                )
+                Logger.w(SIDECAR_TAG) { "Sidecar subtitle failed url=$url: ${e.message} (buffer preserved; no media reload)" }
                 activeSidecarSubtitleKey = null
                 activeSidecarGeneration = 0L
                 sidecarTimedCues = emptyList()
@@ -324,10 +315,7 @@ private fun parseSidecarTimedCuesWithMime(rawText: String, mimeType: String): Li
         out.sortBy { it.startTimeUs }
         out
     } catch (e: Exception) {
-        Log.d(
-            SIDECAR_TAG,
-            "Sidecar Media3 parse failed mime=$mimeType: ${e.message}"
-        )
+        Logger.d(SIDECAR_TAG) { "Sidecar Media3 parse failed mime=$mimeType: ${e.message}" }
         emptyList()
     }
 }

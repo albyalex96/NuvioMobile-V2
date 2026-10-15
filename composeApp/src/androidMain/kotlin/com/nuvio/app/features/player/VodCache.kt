@@ -2,7 +2,7 @@ package com.nuvio.app.features.player
 
 import android.content.Context
 import android.net.Uri
-import android.util.Log
+import co.touchlab.kermit.Logger
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.DataSink
@@ -67,11 +67,11 @@ internal object VodCache {
             reclaimableBytes = appContext.cacheDir.usableSpace.coerceAtLeast(0L) + currentSpaceBytes(),
         )
         if (maxBytes <= 0L || disabledForSession) {
-            Log.i(TAG, "inactive enabled=$enabled maxBytes=$maxBytes")
+            Logger.i(TAG) { "inactive enabled=$enabled maxBytes=$maxBytes" }
             return upstream
         }
         val cache = obtain(appContext, maxBytes) ?: return upstream
-        Log.i(TAG, "active capMb=${maxBytes / (1024L * 1024L)} mode=$sizeMode")
+        Logger.i(TAG) { "active capMb=${maxBytes / (1024L * 1024L)} mode=$sizeMode" }
         val cached = cacheFactory(upstream, cache)
         return DataSource.Factory { BufferedReadDataSource(cached.createDataSource()) }
     }
@@ -111,7 +111,7 @@ internal object VodCache {
                 }
 
                 override fun onCacheIgnored(reason: Int) {
-                    Log.w(TAG, "read bypassed the cache, reason=$reason")
+                    Logger.w(TAG) { "read bypassed the cache, reason=$reason" }
                 }
             })
     }
@@ -122,11 +122,8 @@ internal object VodCache {
             val existing = sharedCache
             if (existing != null) {
                 if (configuredMaxBytes != maxBytes) {
-                    Log.i(
-                        TAG,
-                        "keeping cap ${configuredMaxBytes / (1024L * 1024L)}MB, " +
-                            "${maxBytes / (1024L * 1024L)}MB applies next launch",
-                    )
+                    Logger.i(TAG) { "keeping cap ${configuredMaxBytes / (1024L * 1024L)}MB, " +
+                            "${maxBytes / (1024L * 1024L)}MB applies next launch" }
                 }
                 return existing
             }
@@ -139,7 +136,7 @@ internal object VodCache {
             }
             if (created == null) {
                 disabledForSession = true
-                Log.w(TAG, "unavailable for this session")
+                Logger.w(TAG) { "unavailable for this session" }
             } else {
                 configuredMaxBytes = maxBytes
                 bytesReadFromCache.set(0L)

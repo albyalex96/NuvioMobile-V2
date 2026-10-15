@@ -2,7 +2,7 @@ package com.nuvio.app.features.player
 
 import android.content.Context
 import android.net.Uri
-import android.util.Log
+import co.touchlab.kermit.Logger
 import androidx.core.content.FileProvider
 import com.nuvio.app.core.diagnostics.SentryNetworkBreadcrumbInterceptor
 import com.nuvio.app.features.streams.redactedForLogs
@@ -55,11 +55,11 @@ object SubtitleFileCache {
                 if (localUri != null) {
                     input.copy(url = localUri.toString())
                 } else {
-                    Log.w(TAG, "Failed to download subtitle: ${input.name}")
+                    Logger.w(TAG) { "Failed to download subtitle: ${input.name}" }
                     null
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "Error caching subtitle: ${input.name}", e)
+                Logger.w(TAG, e) { "Error caching subtitle: ${input.name}" }
                 null
             }
         }
@@ -85,7 +85,7 @@ object SubtitleFileCache {
                 val request = Request.Builder().url(input.url).build()
                 okHttpClient.newCall(request).execute().use { response ->
                     if (!response.isSuccessful) {
-                        Log.w(TAG, "HTTP ${response.code} downloading subtitle: ${input.url.redactedForLogs()}")
+                        Logger.w(TAG) { "HTTP ${response.code} downloading subtitle: ${input.url.redactedForLogs()}" }
                         return@withContext null
                     }
 
@@ -102,7 +102,7 @@ object SubtitleFileCache {
                     file
                 )
             } catch (e: Exception) {
-                Log.w(TAG, "Failed to download subtitle file: ${input.url.redactedForLogs()}", e)
+                Logger.w(TAG, e) { "Failed to download subtitle file: ${input.url.redactedForLogs()}" }
                 file.delete()
                 null
             }
@@ -115,7 +115,7 @@ object SubtitleFileCache {
         try {
             cacheDir?.listFiles()?.forEach { it.delete() }
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to clear subtitle cache", e)
+            Logger.w(TAG, e) { "Failed to clear subtitle cache" }
         }
     }
 

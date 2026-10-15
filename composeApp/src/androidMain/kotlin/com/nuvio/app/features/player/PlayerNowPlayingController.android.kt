@@ -16,7 +16,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
-import android.util.Log
+import co.touchlab.kermit.Logger
 import com.nuvio.app.R
 import com.nuvio.app.core.build.AppFeaturePolicy
 import java.io.ByteArrayOutputStream
@@ -304,7 +304,7 @@ internal class AndroidPlayerNowPlayingController(
 
         artworkExecutor.execute {
             val bitmap = runCatching { downloadArtwork(urlString) }
-                .onFailure { error -> Log.w(NOW_PLAYING_TAG, "Failed to load artwork", error) }
+                .onFailure { error -> Logger.w(NOW_PLAYING_TAG, error) { "Failed to load artwork" } }
                 .getOrNull()
 
             mainHandler.post {

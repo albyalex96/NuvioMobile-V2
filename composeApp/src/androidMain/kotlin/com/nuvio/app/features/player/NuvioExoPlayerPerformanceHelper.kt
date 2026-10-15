@@ -3,7 +3,7 @@ package com.nuvio.app.features.player
 import android.app.ActivityManager
 import android.content.Context
 import android.os.Build
-import android.util.Log
+import co.touchlab.kermit.Logger
 import androidx.media3.common.NuvioEngineConfig
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultLoadControl
@@ -132,7 +132,7 @@ internal object NuvioExoPlayerPerformanceHelper {
         val targetBytes = (settings.targetBufferSizeMb.toLong() * 1024L * 1024L)
             .coerceAtMost(Int.MAX_VALUE.toLong())
             .toInt()
-        Log.i(TAG, "heap load control targetMb=${settings.targetBufferSizeMb}")
+        Logger.i(TAG) { "heap load control targetMb=${settings.targetBufferSizeMb}" }
         return DefaultLoadControl.Builder()
             .setTargetBufferBytes(targetBytes)
             .setBufferDurationsMs(
@@ -158,13 +158,10 @@ internal object NuvioExoPlayerPerformanceHelper {
             .coerceAtMost(Int.MAX_VALUE.toLong())
             .toInt()
         if (ALLOCATOR_SEGMENT_SIZE != NATIVE_ARENA_CHUNK_SIZE) {
-            Log.w(
-                TAG,
-                "Allocator segment $ALLOCATOR_SEGMENT_SIZE does not match the native arena chunk " +
-                    "$NATIVE_ARENA_CHUNK_SIZE; native pooling is disabled",
-            )
+            Logger.w(TAG) { "Allocator segment $ALLOCATOR_SEGMENT_SIZE does not match the native arena chunk " +
+                    "$NATIVE_ARENA_CHUNK_SIZE; native pooling is disabled" }
         }
-        Log.i(TAG, "native load control targetMb=$targetBufferMb backBufferMs=$backBufferMs")
+        Logger.i(TAG) { "native load control targetMb=$targetBufferMb backBufferMs=$backBufferMs" }
         return DefaultLoadControl.Builder()
             .setAllocator(DefaultAllocator(true, ALLOCATOR_SEGMENT_SIZE, 64, true))
             .setTargetBufferBytes(targetBufferBytes)

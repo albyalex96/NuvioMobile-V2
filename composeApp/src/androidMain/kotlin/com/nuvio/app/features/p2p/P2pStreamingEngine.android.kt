@@ -2,7 +2,7 @@ package com.nuvio.app.features.p2p
 
 import android.content.Context
 import android.os.SystemClock
-import android.util.Log
+import co.touchlab.kermit.Logger
 import com.nuvio.app.core.i18n.localizedP2pUnknownTorrentError
 import com.nuvio.engine.NuvioEngine
 import com.nuvio.engine.NuvioEngineConfig
@@ -178,12 +178,9 @@ actual object P2pStreamingEngine {
         val requestSequence = nextDiagnosticRequestSequence()
         val startedAtMs = SystemClock.elapsedRealtime()
         val phase = AtomicReference("stop_previous")
-        Log.i(
-            DIAGNOSTIC_TAG,
-            "start request=$requestSequence phase=accepted hash=${diagnosticId(request.infoHash)} " +
+        Logger.i(DIAGNOSTIC_TAG) { "start request=$requestSequence phase=accepted hash=${diagnosticId(request.infoHash)} " +
                 "fileIndex=${request.fileIdx ?: -1} filenameHint=${!request.filename.isNullOrBlank()} " +
-                "requestTrackers=${request.trackers.size}",
-        )
+                "requestTrackers=${request.trackers.size}" }
         stopStreamNow(shutdownEngine = false)
         logPhase(requestSequence, startedAtMs, phase.get())
         val generation = beginStreamGeneration()
@@ -218,41 +215,29 @@ actual object P2pStreamingEngine {
             phase.set("add_magnet")
             val canonicalHash = canonicalP2pInfoHash(request.infoHash)
             val reusedTorrent = canonicalHash in knownTorrentIds
-            Log.i(
-                DIAGNOSTIC_TAG,
-                "start request=$requestSequence phase=${phase.get()} begin elapsedMs=${elapsedSince(startedAtMs)} " +
-                    "cached=$reusedTorrent hash=${diagnosticId(canonicalHash)}",
-            )
+            Logger.i(DIAGNOSTIC_TAG) { "start request=$requestSequence phase=${phase.get()} begin elapsedMs=${elapsedSince(startedAtMs)} " +
+                    "cached=$reusedTorrent hash=${diagnosticId(canonicalHash)}" }
             val torrentId = if (reusedTorrent) {
                 canonicalHash
             } else {
                 resolvedEngine.addMagnet(magnetUri).also { knownTorrentIds += it }
             }
             ensureCurrentGeneration(generation)
-            Log.i(
-                DIAGNOSTIC_TAG,
-                "start request=$requestSequence phase=${phase.get()} complete elapsedMs=${elapsedSince(startedAtMs)} " +
-                    "torrent=${diagnosticId(torrentId)} cached=$reusedTorrent",
-            )
+            Logger.i(DIAGNOSTIC_TAG) { "start request=$requestSequence phase=${phase.get()} complete elapsedMs=${elapsedSince(startedAtMs)} " +
+                    "torrent=${diagnosticId(torrentId)} cached=$reusedTorrent" }
 
             phase.set("prepare_stream")
-            Log.i(
-                DIAGNOSTIC_TAG,
-                "start request=$requestSequence phase=${phase.get()} begin elapsedMs=${elapsedSince(startedAtMs)} " +
-                    "fileIndex=${request.fileIdx ?: -1}",
-            )
+            Logger.i(DIAGNOSTIC_TAG) { "start request=$requestSequence phase=${phase.get()} begin elapsedMs=${elapsedSince(startedAtMs)} " +
+                    "fileIndex=${request.fileIdx ?: -1}" }
             val stream = resolvedEngine.prepareStream(
                 torrentId = torrentId,
                 fileIndex = request.fileIdx,
                 filenameHint = request.filename,
             )
             preparedStream = stream
-            Log.i(
-                DIAGNOSTIC_TAG,
-                "start request=$requestSequence phase=${phase.get()} complete elapsedMs=${elapsedSince(startedAtMs)} " +
+            Logger.i(DIAGNOSTIC_TAG) { "start request=$requestSequence phase=${phase.get()} complete elapsedMs=${elapsedSince(startedAtMs)} " +
                     "stream=${diagnosticId(stream.id)} selectedFile=${stream.fileIndex} fileBytes=${stream.fileSize} " +
-                    "url=${diagnosticLoopbackUrl(stream.url)}",
-            )
+                    "url=${diagnosticLoopbackUrl(stream.url)}" }
             currentCoroutineContext().ensureActive()
             phase.set("attach_route")
             if (!attachStreamIfCurrent(generation, torrentId, stream.id)) {
@@ -290,19 +275,13 @@ actual object P2pStreamingEngine {
                 )) {
                 throw CancellationException("P2P stream start was cancelled")
             }
-            Log.i(TAG, "Nuvio Engine stream ready: ${stream.url}")
-            Log.i(
-                DIAGNOSTIC_TAG,
-                "start request=$requestSequence phase=route_ready elapsedMs=${elapsedSince(startedAtMs)} " +
-                    "generation=$generation stream=${diagnosticId(stream.id)}",
-            )
+            Logger.i(TAG) { "Nuvio Engine stream ready: ${stream.url}" }
+            Logger.i(DIAGNOSTIC_TAG) { "start request=$requestSequence phase=route_ready elapsedMs=${elapsedSince(startedAtMs)} " +
+                    "generation=$generation stream=${diagnosticId(stream.id)}" }
             stream.url
         } catch (cancellation: CancellationException) {
-            Log.w(
-                DIAGNOSTIC_TAG,
-                "start request=$requestSequence phase=${phase.get()} cancelled elapsedMs=${elapsedSince(startedAtMs)} " +
-                    "generation=$generation",
-            )
+            Logger.w(DIAGNOSTIC_TAG) { "start request=$requestSequence phase=${phase.get()} cancelled elapsedMs=${elapsedSince(startedAtMs)} " +
+                    "generation=$generation" }
             withContext(NonCancellable) {
                 cleanupFailedStart(
                     generation = generation,
@@ -314,12 +293,8 @@ actual object P2pStreamingEngine {
             }
             throw cancellation
         } catch (error: Exception) {
-            Log.e(
-                DIAGNOSTIC_TAG,
-                "start request=$requestSequence phase=${phase.get()} failed elapsedMs=${elapsedSince(startedAtMs)} " +
-                    "generation=$generation error=${diagnosticMessage(error.message)}",
-                error,
-            )
+            Logger.e(DIAGNOSTIC_TAG, error) { "start request=$requestSequence phase=${phase.get()} failed elapsedMs=${elapsedSince(startedAtMs)} " +
+                    "generation=$generation error=${diagnosticMessage(error.message)}" }
             val terminalState = P2pStreamingState.Error(
                 error.message ?: localizedP2pUnknownTorrentError()
             )
@@ -349,19 +324,13 @@ actual object P2pStreamingEngine {
     private fun scheduleStop(shutdownEngine: Boolean) {
         val startedAtMs = SystemClock.elapsedRealtime()
         val detached = detachActiveStream()
-        Log.i(
-            DIAGNOSTIC_TAG,
-            "cleanup scheduled shutdownEngine=$shutdownEngine stream=${diagnosticId(detached.streamId)}",
-        )
+        Logger.i(DIAGNOSTIC_TAG) { "cleanup scheduled shutdownEngine=$shutdownEngine stream=${diagnosticId(detached.streamId)}" }
         val previousCleanup = cleanupJob
         cleanupJob = scope.launch {
             previousCleanup?.join()
             cleanupDetachedStream(detached, shutdownEngine)
-            Log.i(
-                DIAGNOSTIC_TAG,
-                "cleanup complete shutdownEngine=$shutdownEngine stream=${diagnosticId(detached.streamId)} " +
-                    "elapsedMs=${elapsedSince(startedAtMs)}",
-            )
+            Logger.i(DIAGNOSTIC_TAG) { "cleanup complete shutdownEngine=$shutdownEngine stream=${diagnosticId(detached.streamId)} " +
+                    "elapsedMs=${elapsedSince(startedAtMs)}" }
         }
     }
 
@@ -370,11 +339,8 @@ actual object P2pStreamingEngine {
         cleanupJob?.join()
         val detached = detachActiveStream()
         cleanupDetachedStream(detached, shutdownEngine)
-        Log.i(
-            DIAGNOSTIC_TAG,
-            "cleanup synchronous shutdownEngine=$shutdownEngine stream=${diagnosticId(detached.streamId)} " +
-                "elapsedMs=${elapsedSince(startedAtMs)}",
-        )
+        Logger.i(DIAGNOSTIC_TAG) { "cleanup synchronous shutdownEngine=$shutdownEngine stream=${diagnosticId(detached.streamId)} " +
+                "elapsedMs=${elapsedSince(startedAtMs)}" }
     }
 
     private fun detachActiveStream(): DetachedStream {
@@ -443,7 +409,7 @@ actual object P2pStreamingEngine {
         } catch (cancellation: CancellationException) {
             throw cancellation
         } catch (error: Exception) {
-            Log.w(TAG, "Error stopping Nuvio Engine stream route", error)
+            Logger.w(TAG, error) { "Error stopping Nuvio Engine stream route" }
         }
     }
 
@@ -457,17 +423,11 @@ actual object P2pStreamingEngine {
             diskCacheCapacityBytes = settings.cacheSize.bytes,
         )
         engine?.takeIf { engineConfigurationKey == configurationKey }?.let {
-            Log.i(
-                DIAGNOSTIC_TAG,
-                "engine reuse configuration=$configurationKey elapsedMs=${elapsedSince(startedAtMs)}",
-            )
+            Logger.i(DIAGNOSTIC_TAG) { "engine reuse configuration=$configurationKey elapsedMs=${elapsedSince(startedAtMs)}" }
             return it
         }
 
-        Log.i(
-            DIAGNOSTIC_TAG,
-            "engine create begin configuration=$configurationKey replacing=${engine != null}",
-        )
+        Logger.i(DIAGNOSTIC_TAG) { "engine create begin configuration=$configurationKey replacing=${engine != null}" }
         closeEngine(engine)
         currentCoroutineContext().ensureActive()
         val context = requireContext()
@@ -492,22 +452,16 @@ actual object P2pStreamingEngine {
             engine = created
             engineConfigurationKey = configurationKey
             observeEngineEvents(created)
-            Log.i(
-                TAG,
-                "Using Nuvio Engine ${NuvioEngine.version} (${NuvioEngine.protocolBackendVersion})"
-            )
-            Log.i(
-                DIAGNOSTIC_TAG,
-                "engine create complete configuration=$configurationKey elapsedMs=${elapsedSince(startedAtMs)} " +
-                    "version=${NuvioEngine.version} backend=${NuvioEngine.protocolBackendVersion}",
-            )
+            Logger.i(TAG) { "Using Nuvio Engine ${NuvioEngine.version} (${NuvioEngine.protocolBackendVersion})" }
+            Logger.i(DIAGNOSTIC_TAG) { "engine create complete configuration=$configurationKey elapsedMs=${elapsedSince(startedAtMs)} " +
+                    "version=${NuvioEngine.version} backend=${NuvioEngine.protocolBackendVersion}" }
         }
     }
 
     private suspend fun closeEngine(target: NuvioEngine?) {
         if (target == null) return
         val startedAtMs = SystemClock.elapsedRealtime()
-        Log.i(DIAGNOSTIC_TAG, "engine shutdown begin active=${engine === target}")
+        Logger.i(DIAGNOSTIC_TAG) { "engine shutdown begin active=${engine === target}" }
         if (engine === target) {
             engineEventsJob?.cancel()
             engineEventsJob = null
@@ -519,13 +473,10 @@ actual object P2pStreamingEngine {
             try {
                 target.shutdown()
             } catch (error: Exception) {
-                Log.w(TAG, "Error shutting down Nuvio Engine", error)
+                Logger.w(TAG, error) { "Error shutting down Nuvio Engine" }
             }
         }
-        Log.i(
-            DIAGNOSTIC_TAG,
-            "engine shutdown complete elapsedMs=${elapsedSince(startedAtMs)}",
-        )
+        Logger.i(DIAGNOSTIC_TAG) { "engine shutdown complete elapsedMs=${elapsedSince(startedAtMs)}" }
     }
 
     private fun observeEngineEvents(activeEngine: NuvioEngine) {
@@ -539,13 +490,10 @@ actual object P2pStreamingEngine {
                 }
             }
             activeEngine.events.collect { event ->
-                Log.i(
-                    DIAGNOSTIC_TAG,
-                    "event type=${event.type} sequence=${event.sequence} requestId=${event.requestId} " +
+                Logger.i(DIAGNOSTIC_TAG) { "event type=${event.type} sequence=${event.sequence} requestId=${event.requestId} " +
                         "dropped=${event.droppedEvents} torrent=${diagnosticId(event.torrentId)} " +
                         "stream=${diagnosticId(event.streamId)} fileIndex=${event.fileIndex ?: -1} " +
-                        "fileBytes=${event.fileSize} message=${diagnosticMessage(event.message)}",
-                )
+                        "fileBytes=${event.fileSize} message=${diagnosticMessage(event.message)}" }
                 if (engine !== activeEngine) return@collect
                 when (event.type) {
                     NuvioEventType.TorrentError -> {
@@ -611,16 +559,14 @@ actual object P2pStreamingEngine {
                     } catch (cancellation: CancellationException) {
                         throw cancellation
                     } catch (error: Exception) {
-                        Log.w(TAG, "Error sampling Nuvio Engine stream progress", error)
+                        Logger.w(TAG, error) { "Error sampling Nuvio Engine stream progress" }
                         null
                     }
                     val aggregate = activeEngine.stats.value
                     val nowMs = SystemClock.elapsedRealtime()
                     if (nowMs >= nextDiagnosticSampleAtMs) {
                         nextDiagnosticSampleAtMs = nowMs + DIAGNOSTIC_SAMPLE_INTERVAL_MS
-                        Log.i(
-                            DIAGNOSTIC_TAG,
-                            "sample request=$requestSequence elapsedMs=${elapsedSince(startedAtMs)} " +
+                        Logger.i(DIAGNOSTIC_TAG) { "sample request=$requestSequence elapsedMs=${elapsedSince(startedAtMs)} " +
                                 "generation=$generation stream=${diagnosticId(stream.id)} " +
                                 "http=${aggregate.activeHttpRequests} pendingReads=${aggregate.pendingPieceReads} " +
                                 "peers=${aggregate.connectedPeers} seeds=${aggregate.connectedSeeds} " +
@@ -664,8 +610,7 @@ actual object P2pStreamingEngine {
                                 "quiesced=${aggregate.quiescedTorrents} memUsed=${aggregate.memoryCacheUsedBytes} " +
                                 "memHits=${aggregate.memoryCacheHits} memMisses=${aggregate.memoryCacheMisses} " +
                                 "diskUsed=${aggregate.diskCacheUsedBytes} diskProtected=${aggregate.diskCacheProtectedBytes} " +
-                                "diskOverBudget=${aggregate.diskCacheOverBudget}",
-                        )
+                                "diskOverBudget=${aggregate.diskCacheOverBudget}" }
                     }
                     updateStreamingIfCurrent(generation) { latestState ->
                         latestState.copy(
@@ -712,9 +657,7 @@ actual object P2pStreamingEngine {
                 peers = aggregate.connectedPeers,
                 seeds = aggregate.connectedSeeds,
             )
-            Log.i(
-                DIAGNOSTIC_TAG,
-                "startupSample request=$requestSequence phase=${phase.get()} elapsedMs=${elapsedSince(startedAtMs)} " +
+            Logger.i(DIAGNOSTIC_TAG) { "startupSample request=$requestSequence phase=${phase.get()} elapsedMs=${elapsedSince(startedAtMs)} " +
                     "http=${aggregate.activeHttpRequests} pendingReads=${aggregate.pendingPieceReads} " +
                     "peers=${aggregate.connectedPeers} seeds=${aggregate.connectedSeeds} " +
                     "known=${aggregate.knownPeers} candidates=${aggregate.connectCandidates} " +
@@ -731,8 +674,7 @@ actual object P2pStreamingEngine {
                     "dhtPeers=${aggregate.dhtPeersReturned} peerConnects=${aggregate.peerConnectEvents} " +
                     "peerDisconnects=${aggregate.peerDisconnectEvents} " +
                     "activeStreams=${aggregate.activeStreams} warm=${aggregate.warmTorrents} " +
-                    "quiesced=${aggregate.quiescedTorrents}",
-            )
+                    "quiesced=${aggregate.quiescedTorrents}" }
             delay(DIAGNOSTIC_SAMPLE_INTERVAL_MS)
         }
     }
@@ -812,10 +754,7 @@ actual object P2pStreamingEngine {
         appContext ?: throw P2pStreamingException("P2P streaming engine is not initialized")
 
     private fun logPhase(requestSequence: Long, startedAtMs: Long, phase: String) {
-        Log.i(
-            DIAGNOSTIC_TAG,
-            "start request=$requestSequence phase=$phase complete elapsedMs=${elapsedSince(startedAtMs)}",
-        )
+        Logger.i(DIAGNOSTIC_TAG) { "start request=$requestSequence phase=$phase complete elapsedMs=${elapsedSince(startedAtMs)}" }
     }
 
     private fun elapsedSince(startedAtMs: Long): Long =

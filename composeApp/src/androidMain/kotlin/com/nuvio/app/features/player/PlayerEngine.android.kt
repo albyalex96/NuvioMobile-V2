@@ -5,7 +5,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.text.SpannableString
 import android.net.Uri
-import android.util.Log
+import co.touchlab.kermit.Logger
 import android.util.TypedValue
 import android.graphics.RectF
 import android.graphics.Typeface
@@ -157,7 +157,7 @@ actual fun PlatformPlayerSurface(
             onSnapshot = onSnapshot,
             onError = { message ->
                 if (message != null && requestedEngine == AndroidPlaybackEngine.Auto) {
-                    Log.w(TAG, "ExoPlayer failed; falling back to libmpv: $message")
+                    Logger.w(TAG) { "ExoPlayer failed; falling back to libmpv: $message" }
                     initialPositionRequestKey?.let { key ->
                         onInitialPositionHandled(key, false)
                     }
@@ -507,13 +507,10 @@ private fun ExoPlayerSurface(
             ?: initialPositionMs?.takeIf { it > 0L }
         playbackDiagnostics.attempt += 1
         playbackDiagnostics.prepareStartedAtMs = SystemClock.elapsedRealtime()
-        Log.i(
-            PLAYER_DIAGNOSTIC_TAG,
-            "prepare begin attempt=${playbackDiagnostics.attempt} " +
+        Logger.i(PLAYER_DIAGNOSTIC_TAG) { "prepare begin attempt=${playbackDiagnostics.attempt} " +
                 "source=${diagnosticPlaybackSource(sourceUrl)} audioSource=${!sourceAudioUrl.isNullOrBlank()} " +
                 "mime=${mediaItem.localConfiguration?.mimeType ?: "auto"} " +
-                "startPositionMs=${requestedStartPositionMs ?: 0L}",
-        )
+                "startPositionMs=${requestedStartPositionMs ?: 0L}" }
         exoPlayer.setPlaybackMediaItem(mediaItem, requestedStartPositionMs)
         if (fallbackStartPositionMs == null) {
             initialPositionRequestKey?.let { key ->
@@ -562,7 +559,7 @@ private fun ExoPlayerSurface(
         pendingAudioTrackSelection.clear()
         val selection = exoPlayer.captureSelectedTrack(C.TRACK_TYPE_AUDIO) ?: return
         pendingAudioTrackSelection.add(selection)
-        Log.d(TAG, "$reason: preserving audio track index=${selection.index} id=${selection.id}")
+        Logger.d(TAG) { "$reason: preserving audio track index=${selection.index} id=${selection.id}" }
     }
 
     DisposableEffect(exoPlayer) {
@@ -586,11 +583,7 @@ private fun ExoPlayerSurface(
                 effectiveDecoderPriority != DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER &&
                 error.isDecoderFailure()
             ) {
-                Log.w(
-                    TAG,
-                    "Decoder failure (${error.errorCodeName}); retrying with app decoders",
-                    error,
-                )
+                Logger.w(TAG, error) { "Decoder failure (${error.errorCodeName}); retrying with app decoders" }
                 fallbackStartPositionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
                 decoderPriorityOverride = DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER
                 latestOnError.value(null)
@@ -602,18 +595,14 @@ private fun ExoPlayerSurface(
         val listener = object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
                 syncPlayerViewKeepScreenOn()
-                Log.e(
-                    PLAYER_DIAGNOSTIC_TAG,
-                    "error attempt=${playbackDiagnostics.attempt} " +
+                Logger.e(PLAYER_DIAGNOSTIC_TAG, error) { "error attempt=${playbackDiagnostics.attempt} " +
                         "elapsedMs=${diagnosticElapsedSince(playbackDiagnostics.prepareStartedAtMs)} " +
                         "code=${error.errorCodeName} cause=${error.cause?.javaClass?.simpleName ?: "none"} " +
                         "positionMs=${exoPlayer.currentPosition.coerceAtLeast(0L)} " +
                         "bufferedMs=${exoPlayer.bufferedPosition.coerceAtLeast(0L)} " +
                         "durationMs=${exoPlayer.duration.coerceAtLeast(0L)} " +
                         "message=${diagnosticPlayerMessage(error.message)} " +
-                        "causeChain=${diagnosticThrowableChain(error)}",
-                    error,
-                )
+                        "causeChain=${diagnosticThrowableChain(error)}" }
 
                 val isSourceError = error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW ||
                         error.errorCode == PlaybackException.ERROR_CODE_IO_UNSPECIFIED ||
@@ -626,7 +615,7 @@ private fun ExoPlayerSurface(
                             probeMimeType(sourceUrl, sanitizedSourceHeaders)
                         }
                         if (probedMime != null) {
-                            Log.d(TAG, "Playback failed with source error. Probed MIME type: $probedMime. Retrying...")
+                            Logger.d(TAG) { "Playback failed with source error. Probed MIME type: $probedMime. Retrying..." }
                             resolvedMediaItem = resolvedMediaItem.buildUpon()
                                 .setMimeType(probedMime)
                                 .build()
@@ -649,17 +638,14 @@ private fun ExoPlayerSurface(
                     Player.STATE_ENDED -> "ENDED"
                     else -> "UNKNOWN($playbackState)"
                 }
-                Log.d(TAG, "onPlaybackStateChanged: $stateName")
-                Log.i(
-                    PLAYER_DIAGNOSTIC_TAG,
-                    "state=$stateName attempt=${playbackDiagnostics.attempt} " +
+                Logger.d(TAG) { "onPlaybackStateChanged: $stateName" }
+                Logger.i(PLAYER_DIAGNOSTIC_TAG) { "state=$stateName attempt=${playbackDiagnostics.attempt} " +
                         "elapsedMs=${diagnosticElapsedSince(playbackDiagnostics.prepareStartedAtMs)} " +
                         "positionMs=${exoPlayer.currentPosition.coerceAtLeast(0L)} " +
                         "bufferedMs=${exoPlayer.bufferedPosition.coerceAtLeast(0L)} " +
                         "durationMs=${exoPlayer.duration.coerceAtLeast(0L)} " +
                         "playWhenReady=${exoPlayer.playWhenReady} " +
-                        "terminalError=${exoPlayer.playerError?.errorCodeName ?: "none"}",
-                )
+                        "terminalError=${exoPlayer.playerError?.errorCodeName ?: "none"}" }
                 if (playbackState == Player.STATE_READY) {
                     fallbackStartPositionMs = null
                     latestOnError.value(null)
@@ -670,23 +656,17 @@ private fun ExoPlayerSurface(
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
-                Log.i(
-                    PLAYER_DIAGNOSTIC_TAG,
-                    "isPlaying=$isPlaying attempt=${playbackDiagnostics.attempt} " +
+                Logger.i(PLAYER_DIAGNOSTIC_TAG) { "isPlaying=$isPlaying attempt=${playbackDiagnostics.attempt} " +
                         "elapsedMs=${diagnosticElapsedSince(playbackDiagnostics.prepareStartedAtMs)} " +
-                        "positionMs=${exoPlayer.currentPosition.coerceAtLeast(0L)}",
-                )
+                        "positionMs=${exoPlayer.currentPosition.coerceAtLeast(0L)}" }
                 syncPlayerViewKeepScreenOn()
                 dispatchExoPlayerSnapshot()
             }
 
             override fun onRenderedFirstFrame() {
-                Log.i(
-                    PLAYER_DIAGNOSTIC_TAG,
-                    "firstFrame attempt=${playbackDiagnostics.attempt} " +
+                Logger.i(PLAYER_DIAGNOSTIC_TAG) { "firstFrame attempt=${playbackDiagnostics.attempt} " +
                         "elapsedMs=${diagnosticElapsedSince(playbackDiagnostics.prepareStartedAtMs)} " +
-                        "positionMs=${exoPlayer.currentPosition.coerceAtLeast(0L)}",
-                )
+                        "positionMs=${exoPlayer.currentPosition.coerceAtLeast(0L)}" }
             }
 
             override fun onPlaybackParametersChanged(playbackParameters: androidx.media3.common.PlaybackParameters) {
@@ -701,18 +681,18 @@ private fun ExoPlayerSurface(
             }
 
             override fun onTracksChanged(tracks: androidx.media3.common.Tracks) {
-                Log.d(TAG, "onTracksChanged: ${tracks.groups.size} groups total")
+                Logger.d(TAG) { "onTracksChanged: ${tracks.groups.size} groups total" }
                 exoPlayer.logCurrentTracks("onTracksChanged")
                 pendingAudioTrackSelection.firstOrNull()?.let { selection ->
                     if (tracks.groups.any { it.type == C.TRACK_TYPE_AUDIO }) {
                         pendingAudioTrackSelection.clear()
                         val restored = exoPlayer.restoreTrackSelection(selection)
-                        Log.d(TAG, "onTracksChanged: restored pending audio selection=$restored")
+                        Logger.d(TAG) { "onTracksChanged: restored pending audio selection=$restored" }
                     }
                 }
                 if (pendingSubtitleTrackIndex.isNotEmpty() && tracks.groups.isNotEmpty()) {
                     val idx = pendingSubtitleTrackIndex.removeAt(0)
-                    Log.d(TAG, "onTracksChanged: applying pending subtitle selection index=$idx")
+                    Logger.d(TAG) { "onTracksChanged: applying pending subtitle selection index=$idx" }
                     exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
                         .buildUpon()
                         .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, idx < 0)
@@ -852,9 +832,9 @@ private fun ExoPlayerSurface(
 
                 override fun getSubtitleTracks(): List<SubtitleTrack> {
                     val tracks = exoPlayer.extractSubtitleTracks(context)
-                    Log.d(TAG, "getSubtitleTracks: found ${tracks.size} tracks")
+                    Logger.d(TAG) { "getSubtitleTracks: found ${tracks.size} tracks" }
                     tracks.forEach { t ->
-                        Log.d(TAG, "  track idx=${t.index} id=${t.id} label='${t.label}' lang=${t.language} selected=${t.isSelected}")
+                        Logger.d(TAG) { "  track idx=${t.index} id=${t.id} label='${t.label}' lang=${t.language} selected=${t.isSelected}" }
                     }
                     return tracks
                 }
@@ -872,10 +852,10 @@ private fun ExoPlayerSurface(
                 }
 
                 override fun selectSubtitleTrack(index: Int) {
-                    Log.d(TAG, "selectSubtitleTrack: index=$index")
+                    Logger.d(TAG) { "selectSubtitleTrack: index=$index" }
                     sidecarController.stopSidecarAddonSubtitle(clearView = true)
                     if (index < 0) {
-                        Log.d(TAG, "selectSubtitleTrack: disabling text tracks")
+                        Logger.d(TAG) { "selectSubtitleTrack: disabling text tracks" }
                         exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
                             .buildUpon()
                             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
@@ -887,15 +867,15 @@ private fun ExoPlayerSurface(
                         .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
                         .build()
                     exoPlayer.selectTrackByIndex(C.TRACK_TYPE_TEXT, index)
-                    Log.d(TAG, "selectSubtitleTrack: after selection, textDisabled=${exoPlayer.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT)}")
+                    Logger.d(TAG) { "selectSubtitleTrack: after selection, textDisabled=${exoPlayer.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT)}" }
                     exoPlayer.logCurrentTracks("after selectSubtitleTrack")
                 }
 
                 override fun setSubtitleUri(url: String) {
-                    Log.d(TAG, "setSubtitleUri: url=${url.redactedForLogs()}")
+                    Logger.d(TAG) { "setSubtitleUri: url=${url.redactedForLogs()}" }
                     subtitleSelectionJob?.cancel()
                     if (sidecarController.canAttachAddonSubtitleViaSidecar(url, useLibass)) {
-                        Log.d(TAG, "setSubtitleUri: using buffer-preserving sidecar for url=${url.redactedForLogs()}")
+                        Logger.d(TAG) { "setSubtitleUri: using buffer-preserving sidecar for url=${url.redactedForLogs()}" }
                         val headers = externalSubtitles.firstOrNull { it.url == url }?.headers.orEmpty()
                         val attached = sidecarController.startSidecarAddonSubtitle(
                             url = url,
@@ -914,42 +894,39 @@ private fun ExoPlayerSurface(
                         val currentPosition = exoPlayer.currentPosition
                         val wasPlaying = exoPlayer.isPlaying
                         val currentMediaItem = exoPlayer.currentMediaItem ?: run {
-                            Log.e(TAG, "setSubtitleUri: currentMediaItem is null, aborting")
+                            Logger.e(TAG) { "setSubtitleUri: currentMediaItem is null, aborting" }
                             return@launch
                         }
                         preserveAudioSelectionForReload("setSubtitleUri")
                         val resolvedMime = PlayerSubtitleUtils.mimeTypeFromUrl(url)
                         selectedExternalSubtitleMimeType = resolvedMime
-                        Log.d(TAG, "setSubtitleUri: currentPosition=$currentPosition, wasPlaying=$wasPlaying")
+                        Logger.d(TAG) { "setSubtitleUri: currentPosition=$currentPosition, wasPlaying=$wasPlaying" }
                         val subtitleConfig = MediaItem.SubtitleConfiguration.Builder(Uri.parse(url))
                             .setMimeType(resolvedMime)
                             .setSelectionFlags(C.SELECTION_FLAG_DEFAULT)
                             .setRoleFlags(C.ROLE_FLAG_SUBTITLE)
                             .build()
-                        Log.d(
-                            TAG,
-                            "setSubtitleUri: subtitleConfig built, uri=${subtitleConfig.uri}, mime=${subtitleConfig.mimeType}, selectionFlags=${subtitleConfig.selectionFlags}"
-                        )
+                        Logger.d(TAG) { "setSubtitleUri: subtitleConfig built, uri=${subtitleConfig.uri}, mime=${subtitleConfig.mimeType}, selectionFlags=${subtitleConfig.selectionFlags}" }
                         val newMediaItem = currentMediaItem.buildUpon()
                             .setSubtitleConfigurations(listOf(subtitleConfig))
                             .build()
-                        Log.d(TAG, "setSubtitleUri: newMediaItem subtitleConfigs count=${newMediaItem.localConfiguration?.subtitleConfigurations?.size}")
+                        Logger.d(TAG) { "setSubtitleUri: newMediaItem subtitleConfigs count=${newMediaItem.localConfiguration?.subtitleConfigurations?.size}" }
                         exoPlayer.trackSelectionParameters = exoPlayer.trackSelectionParameters
                             .buildUpon()
                             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
                             .clearOverridesOfType(C.TRACK_TYPE_TEXT)
                             .setPreferredTextRoleFlags(C.ROLE_FLAG_SUBTITLE)
                             .build()
-                        Log.d(TAG, "setSubtitleUri: track params set before prepare, textDisabled=${exoPlayer.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT)}")
+                        Logger.d(TAG) { "setSubtitleUri: track params set before prepare, textDisabled=${exoPlayer.trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT)}" }
                         exoPlayer.setPlaybackMediaItem(newMediaItem, currentPosition)
                         exoPlayer.prepare()
                         exoPlayer.playWhenReady = wasPlaying
-                        Log.d(TAG, "setSubtitleUri: prepare() called, waiting for STATE_READY")
+                        Logger.d(TAG) { "setSubtitleUri: prepare() called, waiting for STATE_READY" }
                     }
                 }
 
                 override fun clearExternalSubtitle() {
-                    Log.d(TAG, "clearExternalSubtitle called")
+                    Logger.d(TAG) { "clearExternalSubtitle called" }
                     subtitleSelectionJob?.cancel()
                     sidecarController.stopSidecarAddonSubtitle(clearView = true)
                     selectedExternalSubtitleMimeType = null
@@ -967,11 +944,11 @@ private fun ExoPlayerSurface(
                     } else {
                         selectSubtitleTrack(-1)
                     }
-                    Log.d(TAG, "clearExternalSubtitle: done, position=$currentPosition")
+                    Logger.d(TAG) { "clearExternalSubtitle: done, position=$currentPosition" }
                 }
 
                 override fun clearExternalSubtitleAndSelect(trackIndex: Int) {
-                    Log.d(TAG, "clearExternalSubtitleAndSelect: trackIndex=$trackIndex")
+                    Logger.d(TAG) { "clearExternalSubtitleAndSelect: trackIndex=$trackIndex" }
                     subtitleSelectionJob?.cancel()
                     sidecarController.stopSidecarAddonSubtitle(clearView = true)
                     selectedExternalSubtitleMimeType = null
@@ -992,7 +969,7 @@ private fun ExoPlayerSurface(
                         pendingSubtitleTrackIndex.clear()
                         selectSubtitleTrack(trackIndex)
                     }
-                    Log.d(TAG, "clearExternalSubtitleAndSelect: done, pending=$trackIndex position=$currentPosition")
+                    Logger.d(TAG) { "clearExternalSubtitleAndSelect: done, pending=$trackIndex position=$currentPosition" }
                 }
 
                 override fun applySubtitleStyle(style: SubtitleStyleState) {
@@ -1159,11 +1136,8 @@ private fun LibmpvPlayerSurface(
             }
             override fun eventProperty(property: String, value: Boolean) {
                 if (property == "eof-reached" && value) {
-                    Log.w(
-                        PLAYER_DIAGNOSTIC_TAG,
-                        "mpv_property=eof-reached value=true attempt=${playbackDiagnostics.attempt} " +
-                            "elapsedMs=${diagnosticElapsedSince(playbackDiagnostics.prepareStartedAtMs)}",
-                    )
+                    Logger.w(PLAYER_DIAGNOSTIC_TAG) { "mpv_property=eof-reached value=true attempt=${playbackDiagnostics.attempt} " +
+                            "elapsedMs=${diagnosticElapsedSince(playbackDiagnostics.prepareStartedAtMs)}" }
                 }
                 if (property == "eof-reached" || property == "pause" || property == "paused-for-cache" || property == "seeking") {
                     dispatchSnapshot(updateKeepScreenOn = true)
@@ -1184,11 +1158,8 @@ private fun LibmpvPlayerSurface(
             override fun event(eventId: Int, data: MPVNode) {
                 when (eventId) {
                     MPV.mpvEvent.MPV_EVENT_START_FILE -> {
-                        Log.i(
-                            PLAYER_DIAGNOSTIC_TAG,
-                            "mpv_event=START_FILE attempt=${playbackDiagnostics.attempt} " +
-                                "elapsedMs=${diagnosticElapsedSince(playbackDiagnostics.prepareStartedAtMs)}",
-                        )
+                        Logger.i(PLAYER_DIAGNOSTIC_TAG) { "mpv_event=START_FILE attempt=${playbackDiagnostics.attempt} " +
+                                "elapsedMs=${diagnosticElapsedSince(playbackDiagnostics.prepareStartedAtMs)}" }
                         coroutineScope.launch(Dispatchers.Main.immediate) {
                             latestOnError.value(null)
                             val snapshot = PlayerPlaybackSnapshot()
@@ -1201,14 +1172,11 @@ private fun LibmpvPlayerSurface(
                         coroutineScope.launch(Dispatchers.Main.immediate) {
                             latestOnError.value(null)
                             val snapshot = view.snapshot()
-                            Log.i(
-                                PLAYER_DIAGNOSTIC_TAG,
-                                "mpv_event=${if (eventId == MPV.mpvEvent.MPV_EVENT_FILE_LOADED) "FILE_LOADED" else "PLAYBACK_RESTART"} " +
+                            Logger.i(PLAYER_DIAGNOSTIC_TAG) { "mpv_event=${if (eventId == MPV.mpvEvent.MPV_EVENT_FILE_LOADED) "FILE_LOADED" else "PLAYBACK_RESTART"} " +
                                     "attempt=${playbackDiagnostics.attempt} " +
                                     "elapsedMs=${diagnosticElapsedSince(playbackDiagnostics.prepareStartedAtMs)} " +
                                     "positionMs=${snapshot.positionMs} bufferedMs=${snapshot.bufferedPositionMs} " +
-                                    "durationMs=${snapshot.durationMs}",
-                            )
+                                    "durationMs=${snapshot.durationMs}" }
                             latestOnSnapshot.value(snapshot)
                             nowPlayingController?.syncPlayback(snapshot)
                         }
@@ -1216,14 +1184,11 @@ private fun LibmpvPlayerSurface(
                     MPV.mpvEvent.MPV_EVENT_END_FILE -> {
                         coroutineScope.launch(Dispatchers.Main.immediate) {
                             val snapshot = view.snapshot()
-                            Log.w(
-                                PLAYER_DIAGNOSTIC_TAG,
-                                "mpv_event=END_FILE attempt=${playbackDiagnostics.attempt} " +
+                            Logger.w(PLAYER_DIAGNOSTIC_TAG) { "mpv_event=END_FILE attempt=${playbackDiagnostics.attempt} " +
                                     "elapsedMs=${diagnosticElapsedSince(playbackDiagnostics.prepareStartedAtMs)} " +
                                     "positionMs=${snapshot.positionMs} bufferedMs=${snapshot.bufferedPositionMs} " +
                                     "durationMs=${snapshot.durationMs} eof=${snapshot.isEnded} " +
-                                    "data=${diagnosticPlayerMessage(data.toJson())}",
-                            )
+                                    "data=${diagnosticPlayerMessage(data.toJson())}" }
                             latestOnSnapshot.value(snapshot)
                             nowPlayingController?.syncPlayback(snapshot)
                             view.keepScreenOn = snapshot.isPlaying || snapshot.isLoading
@@ -1234,11 +1199,8 @@ private fun LibmpvPlayerSurface(
         }
         val logObserver = object : MPV.LogObserver {
             override fun logMessage(prefix: String, level: Int, text: String) {
-                Log.w(
-                    PLAYER_DIAGNOSTIC_TAG,
-                    "mpv_log level=$level prefix=${diagnosticPlayerMessage(prefix)} " +
-                        "message=${diagnosticPlayerMessage(text)}",
-                )
+                Logger.w(PLAYER_DIAGNOSTIC_TAG) { "mpv_log level=$level prefix=${diagnosticPlayerMessage(prefix)} " +
+                        "message=${diagnosticPlayerMessage(text)}" }
             }
         }
         view.mpv.addObserver(observer)
@@ -1278,11 +1240,8 @@ private fun LibmpvPlayerSurface(
         val view = playerViewRef ?: return@LaunchedEffect
         playbackDiagnostics.attempt += 1
         playbackDiagnostics.prepareStartedAtMs = SystemClock.elapsedRealtime()
-        Log.i(
-            PLAYER_DIAGNOSTIC_TAG,
-            "mpv_prepare_begin attempt=${playbackDiagnostics.attempt} " +
-                "source=${diagnosticPlaybackSource(sourceUrl)} audioSource=${!sourceAudioUrl.isNullOrBlank()}",
-        )
+        Logger.i(PLAYER_DIAGNOSTIC_TAG) { "mpv_prepare_begin attempt=${playbackDiagnostics.attempt} " +
+                "source=${diagnosticPlaybackSource(sourceUrl)} audioSource=${!sourceAudioUrl.isNullOrBlank()}" }
         val snapshot = PlayerPlaybackSnapshot()
         latestOnSnapshot.value(snapshot)
         nowPlayingController?.syncPlayback(snapshot)
@@ -1339,7 +1298,7 @@ private fun LibmpvPlayerSurface(
                     Utils.copyAssets(viewContext)
                     initialize(viewContext.filesDir.path, viewContext.cacheDir.path)
                 }.onFailure { error ->
-                    Log.e(TAG, "Failed to initialize libmpv", error)
+                    Logger.e(TAG, error) { "Failed to initialize libmpv" }
                     latestOnError.value(error.localizedMessage ?: "libmpv unavailable")
                 }
                 playerViewRef = this
@@ -1752,7 +1711,7 @@ private class NuvioLibmpvView(
         mpvScope.launch {
             if (released.get()) return@launch
             runCatching(block).onFailure { error ->
-                Log.w(TAG, "libmpv operation failed", error)
+                Logger.w(TAG, error) { "libmpv operation failed" }
             }
         }
     }
@@ -1809,7 +1768,7 @@ private fun libmpvCacheBytes(): Int =
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) 64 * 1024 * 1024 else 32 * 1024 * 1024
 
 private fun Int.logIfMpvError(option: String) {
-    if (this < 0) Log.w(TAG, "libmpv option failed: $option status=$this")
+    if (this < 0) Logger.w(TAG) { "libmpv option failed: $option status=$this" }
 }
 
 private fun Double?.toMillis(): Long =
@@ -2190,7 +2149,7 @@ private fun ExoPlayer.selectTrackByPredicate(
     predicate: (index: Int, format: Format) -> Boolean,
 ): Boolean {
     val typeName = if (trackType == C.TRACK_TYPE_AUDIO) "AUDIO" else "TEXT"
-    Log.d(TAG, "selectTrack: type=$typeName target=$targetDescription")
+    Logger.d(TAG) { "selectTrack: type=$typeName target=$targetDescription" }
     var idx = 0
     for (group in currentTracks.groups) {
         if (group.type != trackType) continue
@@ -2199,23 +2158,23 @@ private fun ExoPlayer.selectTrackByPredicate(
             idx++
             continue
         }
-        Log.d(TAG, "selectTrack: found group at idx=$idx, format.id=${format.id}, lang=${format.language}, label=${format.label}")
+        Logger.d(TAG) { "selectTrack: found group at idx=$idx, format.id=${format.id}, lang=${format.language}, label=${format.label}" }
         trackSelectionParameters = trackSelectionParameters
             .buildUpon()
             .setOverrideForType(
                 TrackSelectionOverride(group.mediaTrackGroup, listOf(0))
             )
             .build()
-        Log.d(TAG, "selectTrack: override applied")
+        Logger.d(TAG) { "selectTrack: override applied" }
         return true
     }
-    Log.w(TAG, "selectTrack: no group found for type=$typeName target=$targetDescription (total groups scanned=$idx)")
+    Logger.w(TAG) { "selectTrack: no group found for type=$typeName target=$targetDescription (total groups scanned=$idx)" }
     return false
 }
 
 private fun ExoPlayer.logCurrentTracks(context: String) {
-    Log.d(TAG, "--- logCurrentTracks ($context) ---")
-    Log.d(TAG, "  textDisabled=${trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT)}")
+    Logger.d(TAG) { "--- logCurrentTracks ($context) ---" }
+    Logger.d(TAG) { "  textDisabled=${trackSelectionParameters.disabledTrackTypes.contains(C.TRACK_TYPE_TEXT)}" }
     for (group in currentTracks.groups) {
         val typeName = when (group.type) {
             C.TRACK_TYPE_AUDIO -> "AUDIO"
@@ -2225,9 +2184,9 @@ private fun ExoPlayer.logCurrentTracks(context: String) {
         }
         if (group.type != C.TRACK_TYPE_TEXT && group.type != C.TRACK_TYPE_AUDIO) continue
         val format = group.mediaTrackGroup.getFormat(0)
-        Log.d(TAG, "  group type=$typeName id=${format.id} lang=${format.language} label=${format.label} selected=${group.isSelected} supported=${group.isSupported}")
+        Logger.d(TAG) { "  group type=$typeName id=${format.id} lang=${format.language} label=${format.label} selected=${group.isSelected} supported=${group.isSupported}" }
     }
-    Log.d(TAG, "--- end logCurrentTracks ---")
+    Logger.d(TAG) { "--- end logCurrentTracks ---" }
 }
 
 @androidx.annotation.OptIn(UnstableApi::class)
