@@ -12,7 +12,7 @@ import kotlinx.serialization.json.put
 internal actual object StreamParserSettingsStorage {
     // Shares the stream badge preferences file so the account data cleaner already wipes it.
     private const val preferencesName = "nuvio_stream_badge_settings"
-    private val syncKeys = listOf(STREAM_PARSER_ENABLED_KEY, STREAM_PARSER_ANIMATIONS_ENABLED_KEY)
+    private val syncKeys = listOf(STREAM_PARSER_ENABLED_KEY, STREAM_PARSER_ANIMATIONS_ENABLED_KEY, STREAM_PARSER_SORT_BY_QUALITY_KEY)
 
     private var preferences: SharedPreferences? = null
 
@@ -30,6 +30,12 @@ internal actual object StreamParserSettingsStorage {
 
     actual fun saveAnimationsEnabled(enabled: Boolean) {
         saveBoolean(STREAM_PARSER_ANIMATIONS_ENABLED_KEY, enabled)
+    }
+
+    actual fun loadSortByQuality(): Boolean? = loadBoolean(STREAM_PARSER_SORT_BY_QUALITY_KEY)
+
+    actual fun saveSortByQuality(enabled: Boolean) {
+        saveBoolean(STREAM_PARSER_SORT_BY_QUALITY_KEY, enabled)
     }
 
     private fun loadBoolean(key: String): Boolean? =
@@ -52,6 +58,7 @@ internal actual object StreamParserSettingsStorage {
     actual fun exportToSyncPayload(): JsonObject = buildJsonObject {
         loadEnabled()?.let { put(STREAM_PARSER_ENABLED_KEY, encodeSyncBoolean(it)) }
         loadAnimationsEnabled()?.let { put(STREAM_PARSER_ANIMATIONS_ENABLED_KEY, encodeSyncBoolean(it)) }
+        loadSortByQuality()?.let { put(STREAM_PARSER_SORT_BY_QUALITY_KEY, encodeSyncBoolean(it)) }
     }
 
     actual fun replaceFromSyncPayload(payload: JsonObject) {
@@ -61,5 +68,6 @@ internal actual object StreamParserSettingsStorage {
 
         payload.decodeSyncBoolean(STREAM_PARSER_ENABLED_KEY)?.let(::saveEnabled)
         payload.decodeSyncBoolean(STREAM_PARSER_ANIMATIONS_ENABLED_KEY)?.let(::saveAnimationsEnabled)
+        payload.decodeSyncBoolean(STREAM_PARSER_SORT_BY_QUALITY_KEY)?.let(::saveSortByQuality)
     }
 }

@@ -8,6 +8,8 @@ import kotlinx.serialization.json.JsonObject
 data class StreamParserSettingsUiState(
     val enabled: Boolean = false,
     val animationsEnabled: Boolean = true,
+    /** Independent from [enabled]: also applies to the classic stream card. */
+    val sortByQuality: Boolean = false,
 )
 
 object StreamParserSettingsRepository {
@@ -44,6 +46,13 @@ object StreamParserSettingsRepository {
         StreamParserSettingsStorage.saveAnimationsEnabled(enabled)
     }
 
+    fun setSortByQuality(enabled: Boolean) {
+        ensureLoaded()
+        if (_uiState.value.sortByQuality == enabled) return
+        _uiState.value = _uiState.value.copy(sortByQuality = enabled)
+        StreamParserSettingsStorage.saveSortByQuality(enabled)
+    }
+
     /** Sync hooks: the keys travel inside the existing `stream_badge_settings` payload. */
     fun exportToSyncPayload(): JsonObject = StreamParserSettingsStorage.exportToSyncPayload()
 
@@ -57,6 +66,7 @@ object StreamParserSettingsRepository {
         _uiState.value = StreamParserSettingsUiState(
             enabled = StreamParserSettingsStorage.loadEnabled() ?: false,
             animationsEnabled = StreamParserSettingsStorage.loadAnimationsEnabled() ?: true,
+            sortByQuality = StreamParserSettingsStorage.loadSortByQuality() ?: false,
         )
     }
 }

@@ -81,6 +81,8 @@ import com.nuvio.app.features.debrid.toastMessage
 import com.nuvio.app.features.player.PlayerSettingsRepository
 import com.nuvio.app.features.streams.parser.StreamCardHost
 import com.nuvio.app.features.streams.parser.StreamParserContextEffect
+import com.nuvio.app.features.streams.parser.isQualitySortedGroup
+import com.nuvio.app.features.streams.parser.rememberQualitySortedGroups
 import com.nuvio.app.features.watchprogress.WatchProgressRepository
 import com.nuvio.app.features.watchprogress.WatchProgressEntry
 import com.nuvio.app.features.watched.WatchedRepository
@@ -734,7 +736,7 @@ internal fun StreamList(
     resumeProgressFraction: Float?,
     modifier: Modifier = Modifier,
 ) {
-    val filteredGroups = uiState.filteredGroups
+    val filteredGroups = rememberQualitySortedGroups(uiState.filteredGroups)
     val hasGroups = filteredGroups.isNotEmpty()
     val hasAnyStreams = filteredGroups.any { it.streams.isNotEmpty() }
     val anyLoading = filteredGroups.any { it.isLoading }
@@ -775,7 +777,7 @@ internal fun StreamList(
                     streamSection(
                         sectionKey = streamSectionRenderKey(groupIndex = groupIndex, group = group),
                         group = group,
-                        showHeader = uiState.selectedFilter == null,
+                        showHeader = uiState.selectedFilter == null && !group.isQualitySortedGroup,
                         debridEnabled = debridEnabled,
                         appendInstantServiceToDefaultName = appendInstantServiceToDefaultName,
                         showFileSizeBadges = streamBadgeSettings.showFileSizeBadges,
@@ -831,8 +833,13 @@ private fun LazyListScope.streamSection(
         }
     }
 
-    val streamsBySource = group.streams.groupBy { stream ->
-        stream.sourceName?.takeIf { it.isNotBlank() } ?: stream.addonName
+    val streamsBySource = if (group.isQualitySortedGroup) {
+        // Quality-sorted list: keep the sort order, no per-source sub-headers.
+        mapOf("" to group.streams)
+    } else {
+        group.streams.groupBy { stream ->
+            stream.sourceName?.takeIf { it.isNotBlank() } ?: stream.addonName
+        }
     }
     val sortedSources = streamsBySource.keys.sortedBy { it.lowercase() }
     val showSourceHeaders = sortedSources.size > 1

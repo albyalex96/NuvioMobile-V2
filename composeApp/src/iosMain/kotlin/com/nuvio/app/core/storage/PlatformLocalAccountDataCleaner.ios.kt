@@ -51,6 +51,7 @@ internal actual object PlatformLocalAccountDataCleaner {
         "stream_badge_placement",
         "stream_parser_enabled",
         "stream_parser_animations_enabled",
+        "stream_parser_sort_by_quality",
         "debrid_stream_badge_rules",
         "p2p_enabled",
         "enable_upload",

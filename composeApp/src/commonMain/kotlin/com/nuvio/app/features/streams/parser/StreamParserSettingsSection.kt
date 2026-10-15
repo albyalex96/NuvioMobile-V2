@@ -19,6 +19,8 @@ import nuvio.composeapp.generated.resources.stream_parser_animations_title
 import nuvio.composeapp.generated.resources.stream_parser_enabled_description
 import nuvio.composeapp.generated.resources.stream_parser_enabled_title
 import nuvio.composeapp.generated.resources.stream_parser_section_title
+import nuvio.composeapp.generated.resources.stream_parser_sort_by_quality_description
+import nuvio.composeapp.generated.resources.stream_parser_sort_by_quality_title
 import org.jetbrains.compose.resources.stringResource
 
 /** "Stream Parser" section of Settings → Streams. */
@@ -54,6 +56,14 @@ internal fun LazyListScope.streamParserSettingsSection(isTablet: Boolean) {
                     enabled = settings.enabled,
                     isTablet = isTablet,
                     onCheckedChange = StreamParserSettingsRepository::setAnimationsEnabled,
+                )
+                // Independent from the Stream Parser card: sorting also works with the classic card.
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.stream_parser_sort_by_quality_title),
+                    description = stringResource(Res.string.stream_parser_sort_by_quality_description),
+                    checked = settings.sortByQuality,
+                    isTablet = isTablet,
+                    onCheckedChange = StreamParserSettingsRepository::setSortByQuality,
                 )
             }
         }
