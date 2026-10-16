@@ -98,6 +98,7 @@ import com.nuvio.app.tv.buildTvHomeModel
 import com.nuvio.app.features.profiles.ProfileRepository
 import com.nuvio.app.features.home.components.HomeCollectionRowSection
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -1539,14 +1540,20 @@ private suspend fun resolveHomeNextUpCandidate(
         )
     }
 
-    val action = meta.seriesPrimaryAction(
-        content = completedEntry.content,
-        entries = resolvedProgressEntries,
-        watchedItems = resolvedWatchedItems,
-        todayIsoDate = todayIsoDate,
-        preferFurthestEpisode = preferFurthestEpisode,
-        showUnairedNextUp = showUnairedNextUp,
-    )
+    // The action label is read with a blocking getString (LocalizedUiText.resourceString). On
+    // Dispatchers.Default every candidate parked a worker, so the Compose resource loading (and the
+    // main thread waiting in stringResource) starved: ANR when opening Settings during this pass.
+    // Blocking on IO does not hold a Default worker.
+    val action = withContext(Dispatchers.IO) {
+        meta.seriesPrimaryAction(
+            content = completedEntry.content,
+            entries = resolvedProgressEntries,
+            watchedItems = resolvedWatchedItems,
+            todayIsoDate = todayIsoDate,
+            preferFurthestEpisode = preferFurthestEpisode,
+            showUnairedNextUp = showUnairedNextUp,
+        )
+    }
     if (action == null) {
         return HomeNextUpResolutionAttempt.conclusiveNone()
     }
