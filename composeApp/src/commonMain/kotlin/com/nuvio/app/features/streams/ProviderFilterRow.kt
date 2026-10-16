@@ -8,9 +8,11 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,12 +38,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.nuvio.app.tv.LocalTvShell
+import com.nuvio.app.tv.TvFocusRegions
+import com.nuvio.app.tv.rememberTvFocusRegion
+import com.nuvio.app.tv.tvEnterOn
+import com.nuvio.app.tv.tvFocusRegion
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.collections_tab_all
 import nuvio.composeapp.generated.resources.streams_refresh
@@ -77,9 +87,19 @@ internal fun ProviderFilterRow(
     }
     if (addonGroups.isEmpty() && onRefresh == null) return
 
+    // TV: the row is a focus region that takes the focus when it first appears, and entering it
+    // lands on the selected chip ("All" when the screen opens) instead of the refresh chip.
+    val selectedChipRequester = remember { FocusRequester() }
+    val filterRegion = rememberTvFocusRegion()
+    LaunchedEffect(filterRegion) {
+        TvFocusRegions.request(filterRegion, force = true)
+    }
+
     Row(
         modifier = modifier
             .fillMaxWidth()
+            .tvEnterOn(selectedChipRequester)
+            .tvFocusRegion(key = Unit, region = filterRegion, focusOnActivation = false)
             .horizontalScroll(rememberScrollState())
             .padding(contentPadding),
         horizontalArrangement = Arrangement.spacedBy(spacing),
@@ -87,10 +107,26 @@ internal fun ProviderFilterRow(
         if (onRefresh != null) {
             refreshChip(isRefreshing, onRefresh)
         }
-        filterChip(null, selectedFilter == null) { onFilterSelected(null) }
-        addonGroups.forEach { group ->
-            filterChip(group, selectedFilter == group.addonId) { onFilterSelected(group.addonId) }
+        FilterChipSlot(selected = selectedFilter == null, requester = selectedChipRequester) {
+            filterChip(null, selectedFilter == null) { onFilterSelected(null) }
         }
+        addonGroups.forEach { group ->
+            FilterChipSlot(selected = selectedFilter == group.addonId, requester = selectedChipRequester) {
+                filterChip(group, selectedFilter == group.addonId) { onFilterSelected(group.addonId) }
+            }
+        }
+    }
+}
+
+/** Attaches [requester] to the chip when it is the selected one (TV focus entry point). */
+@Composable
+private fun FilterChipSlot(
+    selected: Boolean,
+    requester: FocusRequester,
+    content: @Composable () -> Unit,
+) {
+    Box(modifier = if (selected) Modifier.focusRequester(requester) else Modifier) {
+        content()
     }
 }
 
@@ -146,8 +182,16 @@ private fun FilterChip(
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
+    // TV: the chip shows a focus ring (the clickable has no indication).
+    val isTv = LocalTvShell.current != null
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    val showFocus = isTv && isFocused
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.96f else 1f,
+        targetValue = when {
+            isPressed -> 0.96f
+            showFocus -> 1.08f
+            else -> 1f
+        },
         animationSpec = tween(durationMillis = 140),
         label = "filter_chip_scale",
     )
@@ -178,6 +222,12 @@ private fun FilterChip(
             .height(36.dp)
             .clip(RoundedCornerShape(16.dp))
             .background(containerColor)
+            .border(
+                width = if (showFocus) 2.dp else 0.dp,
+                // White: the theme focus color can match the filled "selected" chip.
+                color = if (showFocus) Color.White else Color.Transparent,
+                shape = RoundedCornerShape(16.dp),
+            )
             .clickable(
                 interactionSource = interactionSource,
                 indication = null,
