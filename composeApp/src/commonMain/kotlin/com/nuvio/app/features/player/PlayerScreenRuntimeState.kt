@@ -234,6 +234,9 @@ internal class PlayerScreenRuntime(
     var autoFetchedAddonSubtitlesForKey by mutableStateOf<String?>(null)
     var trackPreferenceRestoreApplied by mutableStateOf(false)
     var subtitleDelayMs by mutableStateOf(0)
+    // Per-device delay + current stream's behaviorHints.audioDelayMs + the user's tweak on that stream.
+    var audioDelayParts by mutableStateOf(AudioDelayParts())
+    var audioOutputRoute by mutableStateOf<AudioOutputRoute?>(null)
     var subtitleAutoSyncState by mutableStateOf(SubtitleAutoSyncUiState())
 
     var lastSyncedSettingsResizeMode: PlayerResizeMode? = null

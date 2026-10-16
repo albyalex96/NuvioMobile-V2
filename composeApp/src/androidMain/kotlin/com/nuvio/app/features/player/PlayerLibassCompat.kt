@@ -31,7 +31,8 @@ internal fun ExoPlayer.Builder.buildWithAssSupportCompat(
     renderType: AssRenderType = AssRenderType.CUES,
     dataSourceFactory: DataSource.Factory = DefaultDataSource.Factory(context),
     extractorsFactory: ExtractorsFactory = DefaultExtractorsFactory(),
-    renderersFactory: RenderersFactory = DefaultRenderersFactory(context)
+    renderersFactory: RenderersFactory = DefaultRenderersFactory(context),
+    audioDelayUsProvider: (() -> Long)? = null,
 ): ExoPlayer {
     val assHandler = AssHandler(renderType)
     val assSubtitleParserFactory = CompatAssSubtitleParserFactory(assHandler)
@@ -47,7 +48,11 @@ internal fun ExoPlayer.Builder.buildWithAssSupportCompat(
     mediaSourceFactory.setSubtitleParserFactory(assSubtitleParserFactory)
 
     val player = this
-        .setMediaSourceFactory(mediaSourceFactory)
+        .setMediaSourceFactory(
+            audioDelayUsProvider?.let { provider ->
+                AudioDelayMediaSourceFactory(delegate = mediaSourceFactory, audioDelayUsProvider = provider)
+            } ?: mediaSourceFactory,
+        )
         .setRenderersFactory(renderersFactory.withAssSupport(assHandler))
         .build()
 

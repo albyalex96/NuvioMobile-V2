@@ -30,6 +30,8 @@ interface PlayerEngineController {
         useCustomSubtitles: Boolean = false,
     ) {}
     fun setSubtitleDelayMs(delayMs: Int) {}
+    /** Total audio delay in ms (>0 = audio later), already clamped to the player range. */
+    fun setAudioDelayMs(delayMs: Int) {}
     fun configureIosVideoOutput(settings: PlayerSettingsUiState) {}
     fun updateNowPlayingMetadata(info: PlayerNowPlayingInfo) {}
     fun clearNowPlayingInfo() {}

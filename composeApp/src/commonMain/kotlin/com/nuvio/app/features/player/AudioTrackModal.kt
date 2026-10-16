@@ -43,6 +43,10 @@ fun AudioTrackModal(
     onTrackSelected: (Int) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    audioDelayMs: Int = 0,
+    streamAudioDelayMs: Int = 0,
+    audioDelaySavedForDeviceLabel: String? = null,
+    onAudioDelayChanged: ((Int) -> Unit)? = null,
 ) {
     PlayerOverlayScaffold(
         visible = visible,
@@ -52,7 +56,9 @@ fun AudioTrackModal(
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             val railWidth = minOf(maxWidth, 444.dp)
-            val railMaxHeight = (maxHeight - 64.dp).coerceAtLeast(120.dp).coerceAtMost(620.dp)
+            // Room left for the audio delay controls below the track list.
+            val delaySectionHeight = if (onAudioDelayChanged != null) 150.dp else 0.dp
+            val railMaxHeight = (maxHeight - 64.dp - delaySectionHeight).coerceAtLeast(120.dp).coerceAtMost(620.dp)
 
             Column(
                 modifier = Modifier
@@ -91,6 +97,16 @@ fun AudioTrackModal(
                             )
                         }
                     }
+                }
+
+                if (onAudioDelayChanged != null) {
+                    AudioDelayControls(
+                        audioDelayMs = audioDelayMs,
+                        streamDelayMs = streamAudioDelayMs,
+                        savedForDeviceLabel = audioDelaySavedForDeviceLabel,
+                        onAudioDelayChanged = onAudioDelayChanged,
+                        modifier = Modifier.padding(top = 12.dp),
+                    )
                 }
             }
         }

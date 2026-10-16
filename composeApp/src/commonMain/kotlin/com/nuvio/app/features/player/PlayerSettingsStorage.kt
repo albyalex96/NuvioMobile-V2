@@ -154,6 +154,8 @@ internal expect object PlayerSettingsStorage {
     fun saveStillWatchingEpisodeCount(count: Int)
     fun loadStillWatchingNightOnly(): Boolean?
     fun saveStillWatchingNightOnly(enabled: Boolean)
+    fun loadRememberAudioDelayPerDevice(): Boolean?
+    fun saveRememberAudioDelayPerDevice(enabled: Boolean)
     fun loadStillWatchingLiveTvEnabled(): Boolean?
     fun saveStillWatchingLiveTvEnabled(enabled: Boolean)
     fun loadStillWatchingLiveTvMinutes(): Int?

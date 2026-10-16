@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="compose_player_audio_delay">Ritardo audio</string>
+    <string name="compose_player_audio_delay_decrease">Riduci ritardo audio</string>
+    <string name="compose_player_audio_delay_increase">Aumenta ritardo audio</string>
+    <string name="compose_player_audio_delay_hint">I valori positivi riproducono l'audio più tardi. Tieni premuto − o + per cambiarlo più velocemente.</string>
+    <string name="compose_player_audio_delay_saved_for_device">Salvato per %1$s</string>
+    <string name="compose_player_audio_delay_session_only">Vale solo per questa riproduzione</string>
+    <string name="compose_player_audio_delay_from_stream">Include %1$s impostati dallo stream</string>
+    <string name="settings_playback_remember_audio_delay_per_device">Ricorda ritardo audio per dispositivo</string>
+    <string name="settings_playback_remember_audio_delay_per_device_description">Salva e ripristina il ritardo audio del player per l'uscita audio attuale (altoparlante, cuffie, Bluetooth, HDMI)</string>
+</resources>

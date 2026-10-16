@@ -163,6 +163,7 @@ final class MPVPlayerBridgeImpl: NSObject, NuvioPlayerBridge {
     func clearExternalSubtitle() { playerVC?.removeExternalSubtitles() }
     func clearExternalSubtitleAndSelect(trackId: Int32) { playerVC?.removeExternalSubtitlesAndSelect(Int(trackId)) }
     func setSubtitleDelayMs(delayMs: Int32) { playerVC?.setSubtitleDelayMs(Int(delayMs)) }
+    func setAudioDelayMs(delayMs: Int32) { playerVC?.setAudioDelayMs(Int(delayMs)) }
     func applySubtitleStyle(
         textColor: String,
         backgroundColor: String,
@@ -268,6 +269,8 @@ final class MPVPlayerViewController: UIViewController {
     private var pendingLoadRequest: PendingLoadRequest?
     private var pendingLoadRetryWorkItem: DispatchWorkItem?
     private var mpv: OpaquePointer?
+    /// Last audio delay requested by Kotlin, re-applied when mpv is (re)created.
+    private var audioDelaySeconds: Double = 0
     private var cachedNowPlayingMetadata: CachedNowPlayingMetadata?
     private lazy var nowPlayingController = PlayerNowPlayingController(owner: self)
     private lazy var audioSessionController: PlayerAudioSessionController = {
@@ -527,6 +530,10 @@ final class MPVPlayerViewController: UIViewController {
 
         checkError(mpv_initialize(mpv))
         applyAudioLanguagePreferences(preferredAudioLanguages)
+        if audioDelaySeconds != 0 {
+            var delaySeconds = audioDelaySeconds
+            checkError(mpv_set_property(mpv, "audio-delay", MPV_FORMAT_DOUBLE, &delaySeconds))
+        }
 
         // Observe properties
         mpv_observe_property(mpv, 0, "pause", MPV_FORMAT_FLAG)
@@ -874,6 +881,14 @@ final class MPVPlayerViewController: UIViewController {
         guard mpv != nil else { return }
         var delaySeconds = Double(max(-60_000, min(60_000, delayMs))) / 1000.0
         checkError(mpv_set_property(mpv, "sub-delay", MPV_FORMAT_DOUBLE, &delaySeconds))
+    }
+
+    /// Positive values play the audio later (mpv `audio-delay`, seconds).
+    func setAudioDelayMs(_ delayMs: Int) {
+        audioDelaySeconds = Double(max(-60_000, min(60_000, delayMs))) / 1000.0
+        guard mpv != nil else { return }
+        var delaySeconds = audioDelaySeconds
+        checkError(mpv_set_property(mpv, "audio-delay", MPV_FORMAT_DOUBLE, &delaySeconds))
     }
 
     func applySubtitleStyle(

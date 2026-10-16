@@ -25,4 +25,8 @@ internal expect object PlayerTrackPreferenceStorage {
     fun save(contentId: String, preference: PersistedPlayerTrackPreference)
     fun loadSubtitleDelayMs(videoId: String): Int?
     fun saveSubtitleDelayMs(videoId: String, delayMs: Int)
+    /** Per audio output delay ("remember audio delay per device"); local to this device. */
+    fun loadAudioDelayMs(routeKey: String): Int?
+    /** Zero removes the entry. */
+    fun saveAudioDelayMs(routeKey: String, delayMs: Int)
 }

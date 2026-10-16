@@ -24,6 +24,7 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import com.nuvio.app.features.player.streamAudioDelayMs
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -244,6 +245,7 @@ internal object PluginRuntime {
                     infoHash = item.stringOrNull("infoHash"),
                     headers = headers,
                     subtitles = subtitles,
+                    audioDelayMs = (item["behaviorHints"] as? JsonObject)?.streamAudioDelayMs(),
                 )
             }.filter { it.url.isNotBlank() }
         }.getOrElse { emptyList() }

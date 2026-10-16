@@ -206,6 +206,7 @@ internal fun StreamDestination(
                 fileIdx = stream.p2pFileIdx,
                 sources = stream.sources,
                 bingeGroup = stream.behaviorHints.bingeGroup,
+                audioDelayMs = stream.behaviorHints.audioDelayMs,
                 contentLanguage = resolveLaunchContentLanguage(),
             )
         }
@@ -320,6 +321,7 @@ internal fun StreamDestination(
                         filename = cached.filename,
                         videoSize = cached.videoSize,
                         bingeGroup = cached.bingeGroup,
+                        audioDelayMs = cached.audioDelayMs,
                     ),
                 )
                 requestOrOpenP2pStream(
@@ -372,6 +374,7 @@ internal fun StreamDestination(
                         filename = cached.filename,
                         videoSize = cached.videoSize,
                         bingeGroup = cached.bingeGroup,
+                        audioDelayMs = cached.audioDelayMs,
                     ),
                 ),
             )
@@ -505,6 +508,7 @@ internal fun StreamDestination(
                 filename = stream.behaviorHints.filename,
                 videoSize = stream.behaviorHints.videoSize,
                 bingeGroup = stream.behaviorHints.bingeGroup,
+                audioDelayMs = stream.behaviorHints.audioDelayMs,
                 streamType = stream.streamType,
                 contentLanguage = resolveLaunchContentLanguage(),
             )
@@ -701,6 +705,7 @@ internal fun StreamDestination(
                 filename = stream.behaviorHints.filename,
                 videoSize = stream.behaviorHints.videoSize,
                 bingeGroup = stream.behaviorHints.bingeGroup,
+                audioDelayMs = stream.behaviorHints.audioDelayMs,
                 streamType = stream.streamType,
                 contentLanguage = resolveLaunchContentLanguage(),
             )

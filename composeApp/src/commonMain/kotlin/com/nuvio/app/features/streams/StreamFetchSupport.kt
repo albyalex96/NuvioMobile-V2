@@ -117,11 +117,12 @@ internal fun PluginRuntimeResult.toStreamItem(
         addonId = addonId,
         streamType = normalizeStreamType(type),
         behaviorHints = if (requestHeaders.isEmpty()) {
-            StreamBehaviorHints()
+            StreamBehaviorHints(audioDelayMs = audioDelayMs)
         } else {
             StreamBehaviorHints(
                 notWebReady = true,
                 proxyHeaders = StreamProxyHeaders(request = requestHeaders),
+                audioDelayMs = audioDelayMs,
             )
         },
         externalSubtitles = subtitles?.map {

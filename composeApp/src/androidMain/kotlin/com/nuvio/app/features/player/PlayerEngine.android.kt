@@ -263,6 +263,9 @@ private fun ExoPlayerSurface(
     )
     val playbackDiagnostics = remember(playerSourceKey) { PlaybackDiagnostics() }
     var subtitleDelayMs by remember(playerSourceKey) { mutableStateOf(0) }
+    // Not keyed by source: the runtime re-applies the total delay to every new controller.
+    var audioDelayMs by remember { mutableStateOf(0) }
+    val latestAudioDelayMs = rememberUpdatedState(audioDelayMs)
     var selectedExternalSubtitleMimeType by remember(playerSourceKey) { mutableStateOf<String?>(null) }
     val latestSubtitleDelayMs = rememberUpdatedState(subtitleDelayMs)
     val latestExternalSubtitleMimeType = rememberUpdatedState(selectedExternalSubtitleMimeType)
@@ -351,7 +354,10 @@ private fun ExoPlayerSurface(
             val mediaSourceFactory = DefaultMediaSourceFactory(dataSourceFactory, extractorsFactory)
             val videoSource = mediaSourceFactory.createMediaSource(videoMediaItem)
             val audioSource = mediaSourceFactory.createMediaSource(playbackMediaItemFromUrl(sourceAudioUrl))
-            val mergedSource = MergingMediaSource(videoSource, audioSource)
+            val mergedSource = AudioDelayMediaSource(
+                mediaSource = MergingMediaSource(videoSource, audioSource),
+                audioDelayUsProvider = { latestAudioDelayMs.value.toLong() * 1_000L },
+            )
             if (startPositionMs != null) {
                 setMediaSource(mergedSource, startPositionMs.coerceAtLeast(0L))
             } else {
@@ -450,12 +456,16 @@ private fun ExoPlayerSurface(
                 renderType = libassRenderType.toAssRenderType(),
                 dataSourceFactory = dataSourceFactory,
                 extractorsFactory = extractorsFactory,
-                renderersFactory = renderersFactory
+                renderersFactory = renderersFactory,
+                audioDelayUsProvider = { latestAudioDelayMs.value.toLong() * 1_000L },
             )
         } else {
-            val mediaSourceFactory = DefaultMediaSourceFactory(
-                dataSourceFactory,
-                extractorsFactory,
+            val mediaSourceFactory = AudioDelayMediaSourceFactory(
+                delegate = DefaultMediaSourceFactory(
+                    dataSourceFactory,
+                    extractorsFactory,
+                ),
+                audioDelayUsProvider = { latestAudioDelayMs.value.toLong() * 1_000L },
             )
 
             playerBuilder
@@ -996,6 +1006,10 @@ private fun ExoPlayerSurface(
 
                 override fun setSubtitleDelayMs(delayMs: Int) {
                     subtitleDelayMs = delayMs.coerceIn(SUBTITLE_DELAY_MIN_MS, SUBTITLE_DELAY_MAX_MS)
+                }
+
+                override fun setAudioDelayMs(delayMs: Int) {
+                    audioDelayMs = delayMs.coerceIn(AUDIO_DELAY_MIN_MS, AUDIO_DELAY_MAX_MS)
                 }
             }),
         )
@@ -1692,6 +1706,16 @@ private class NuvioLibmpvView(
                     mpv.setPropertyDouble(
                         "sub-delay",
                         delayMs.coerceIn(SUBTITLE_DELAY_MIN_MS, SUBTITLE_DELAY_MAX_MS) / 1000.0,
+                    )
+                }
+            }
+
+            override fun setAudioDelayMs(delayMs: Int) {
+                executeMpv {
+                    // mpv: positive audio-delay = audio played later, same convention as the UI.
+                    mpv.setPropertyDouble(
+                        "audio-delay",
+                        delayMs.coerceIn(AUDIO_DELAY_MIN_MS, AUDIO_DELAY_MAX_MS) / 1000.0,
                     )
                 }
             }

@@ -555,6 +555,15 @@ private fun PlaybackSettingsSection(
                     onClick = { showSecondaryAudioDialog = true },
                 )
                 SettingsGroupDivider(isTablet = isTablet)
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.settings_playback_remember_audio_delay_per_device),
+                    description = stringResource(Res.string.settings_playback_remember_audio_delay_per_device_description),
+                    checked = autoPlayPlayerSettings.rememberAudioDelayPerDevice,
+                    enabled = audioLanguageEnabled,
+                    isTablet = isTablet,
+                    onCheckedChange = PlayerSettingsRepository::setRememberAudioDelayPerDevice,
+                )
+                SettingsGroupDivider(isTablet = isTablet)
                 SettingsNavigationRow(
                     title = stringResource(Res.string.settings_playback_preferred_subtitle_language),
                     description = when (preferredSubtitleLanguage) {

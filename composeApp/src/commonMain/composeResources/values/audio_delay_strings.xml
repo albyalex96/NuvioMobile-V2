@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="compose_player_audio_delay">Audio Delay</string>
+    <string name="compose_player_audio_delay_decrease">Decrease audio delay</string>
+    <string name="compose_player_audio_delay_increase">Increase audio delay</string>
+    <string name="compose_player_audio_delay_hint">Positive values play the audio later. Hold − or + to change it faster.</string>
+    <string name="compose_player_audio_delay_saved_for_device">Saved for %1$s</string>
+    <string name="compose_player_audio_delay_session_only">Applies to this playback only</string>
+    <string name="compose_player_audio_delay_from_stream">Includes %1$s set by the stream</string>
+    <string name="settings_playback_remember_audio_delay_per_device">Remember audio delay per device</string>
+    <string name="settings_playback_remember_audio_delay_per_device_description">Save and restore the in-player audio delay for the current audio output (speaker, headphones, Bluetooth, HDMI)</string>
+</resources>

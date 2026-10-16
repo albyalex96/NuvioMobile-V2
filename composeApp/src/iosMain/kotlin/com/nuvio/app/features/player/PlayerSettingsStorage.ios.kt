@@ -92,6 +92,7 @@ actual object PlayerSettingsStorage {
     private const val stillWatchingPromptEnabledKey = "still_watching_prompt_enabled"
     private const val stillWatchingEpisodeCountKey = "still_watching_episode_count"
     private const val stillWatchingNightOnlyKey = "still_watching_night_only"
+    private const val rememberAudioDelayPerDeviceKey = "remember_audio_delay_per_device"
     private const val stillWatchingLiveTvEnabledKey = "still_watching_live_tv_enabled"
     private const val stillWatchingLiveTvMinutesKey = "still_watching_live_tv_minutes"
     private const val seekIntervalSecondsKey = "seek_interval_seconds"
@@ -175,6 +176,7 @@ actual object PlayerSettingsStorage {
         stillWatchingPromptEnabledKey,
         stillWatchingEpisodeCountKey,
         stillWatchingNightOnlyKey,
+        rememberAudioDelayPerDeviceKey,
         stillWatchingLiveTvEnabledKey,
         stillWatchingLiveTvMinutesKey,
         seekIntervalSecondsKey,
@@ -1011,6 +1013,12 @@ actual object PlayerSettingsStorage {
         saveBoolean(stillWatchingNightOnlyKey, enabled)
     }
 
+    actual fun loadRememberAudioDelayPerDevice(): Boolean? = loadBoolean(rememberAudioDelayPerDeviceKey)
+
+    actual fun saveRememberAudioDelayPerDevice(enabled: Boolean) {
+        saveBoolean(rememberAudioDelayPerDeviceKey, enabled)
+    }
+
     actual fun loadStillWatchingLiveTvEnabled(): Boolean? = loadBoolean(stillWatchingLiveTvEnabledKey)
 
     actual fun saveStillWatchingLiveTvEnabled(enabled: Boolean) {
@@ -1223,6 +1231,7 @@ actual object PlayerSettingsStorage {
         loadStillWatchingPromptEnabled()?.let { put(stillWatchingPromptEnabledKey, encodeSyncBoolean(it)) }
         loadStillWatchingEpisodeCount()?.let { put(stillWatchingEpisodeCountKey, encodeSyncInt(it)) }
         loadStillWatchingNightOnly()?.let { put(stillWatchingNightOnlyKey, encodeSyncBoolean(it)) }
+        loadRememberAudioDelayPerDevice()?.let { put(rememberAudioDelayPerDeviceKey, encodeSyncBoolean(it)) }
         loadStillWatchingLiveTvEnabled()?.let { put(stillWatchingLiveTvEnabledKey, encodeSyncBoolean(it)) }
         loadStillWatchingLiveTvMinutes()?.let { put(stillWatchingLiveTvMinutesKey, encodeSyncInt(it)) }
         loadSeekIntervalSeconds()?.let { put(seekIntervalSecondsKey, encodeSyncInt(it)) }
@@ -1310,6 +1319,7 @@ actual object PlayerSettingsStorage {
         payload.decodeSyncBoolean(stillWatchingPromptEnabledKey)?.let(::saveStillWatchingPromptEnabled)
         payload.decodeSyncInt(stillWatchingEpisodeCountKey)?.let(::saveStillWatchingEpisodeCount)
         payload.decodeSyncBoolean(stillWatchingNightOnlyKey)?.let(::saveStillWatchingNightOnly)
+        payload.decodeSyncBoolean(rememberAudioDelayPerDeviceKey)?.let(::saveRememberAudioDelayPerDevice)
         payload.decodeSyncBoolean(stillWatchingLiveTvEnabledKey)?.let(::saveStillWatchingLiveTvEnabled)
         payload.decodeSyncInt(stillWatchingLiveTvMinutesKey)?.let(::saveStillWatchingLiveTvMinutes)
         payload.decodeSyncInt(seekIntervalSecondsKey)?.let(::saveSeekIntervalSeconds)

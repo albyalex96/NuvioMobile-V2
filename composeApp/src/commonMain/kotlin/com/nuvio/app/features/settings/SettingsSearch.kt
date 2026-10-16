@@ -1205,6 +1205,13 @@ private fun addAdditionalSearchEntries(
     }
     val subtitleAudioSection = stringResource(Res.string.settings_playback_section_subtitle_audio)
     val subtitleAudioRows = buildList {
+        add(
+            PlaybackSearchRow(
+                "remember-audio-delay-per-device",
+                stringResource(Res.string.settings_playback_remember_audio_delay_per_device),
+                stringResource(Res.string.settings_playback_remember_audio_delay_per_device_description),
+            ),
+        )
         if (!isIos) {
             add(PlaybackSearchRow("subtitle-strip-sdh", stringResource(Res.string.settings_playback_subtitle_strip_sdh), stringResource(Res.string.settings_playback_subtitle_strip_sdh_description)))
             add(PlaybackSearchRow("subtitle-use-forced", stringResource(Res.string.settings_playback_subtitle_use_forced), stringResource(Res.string.settings_playback_subtitle_use_forced_description)))

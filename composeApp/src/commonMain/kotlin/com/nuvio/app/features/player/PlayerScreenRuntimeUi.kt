@@ -133,6 +133,7 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
 
     BindAutoSyncRuntimeEffects() // AutoSync hook
     BindLiveTvStillWatchingTimer()
+    BindAudioDelay()
 
     Box(
         modifier = Modifier
@@ -630,6 +631,12 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
             }
         },
         onAudioModalDismissed = { showAudioModal = false },
+        audioDelayMs = audioDelayParts.totalMs,
+        streamAudioDelayMs = audioDelayParts.streamMs,
+        audioDelaySavedForDeviceLabel = audioOutputRoute?.label?.takeIf {
+            playerSettingsUiState.rememberAudioDelayPerDevice
+        },
+        onAudioDelayChanged = { delayMs -> setAudioDelay(delayMs) },
         showSubtitleModal = showSubtitleModal,
         subtitleTracks = serverSubtitleTracks.ifEmpty { subtitleTracks },
         selectedSubtitleIndex = if (serverSubtitleTracks.isEmpty()) {

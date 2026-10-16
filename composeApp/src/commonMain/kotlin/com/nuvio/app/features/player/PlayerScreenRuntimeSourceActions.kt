@@ -196,6 +196,7 @@ internal fun PlayerScreenRuntime.saveP2pStreamForReuse(
         fileIdx = stream.p2pFileIdx,
         sources = stream.sources,
         bingeGroup = stream.behaviorHints.bingeGroup,
+        audioDelayMs = stream.behaviorHints.audioDelayMs,
     )
 }
 
@@ -680,6 +681,7 @@ private fun PlayerScreenRuntime.saveDirectStreamForReuse(
         filename = stream.behaviorHints.filename,
         videoSize = stream.behaviorHints.videoSize,
         bingeGroup = stream.behaviorHints.bingeGroup,
+        audioDelayMs = stream.behaviorHints.audioDelayMs,
         streamType = stream.streamType,
         contentLanguage = contentLanguage,
     )

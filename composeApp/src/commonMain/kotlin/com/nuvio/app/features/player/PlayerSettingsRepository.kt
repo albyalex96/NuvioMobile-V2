@@ -103,6 +103,7 @@ data class PlayerSettingsUiState(
     val stillWatchingPromptEnabled: Boolean = false,
     val stillWatchingEpisodeCount: Int = DEFAULT_STILL_WATCHING_EPISODE_COUNT,
     val stillWatchingNightOnly: Boolean = false,
+    val rememberAudioDelayPerDevice: Boolean = true,
     val stillWatchingLiveTvEnabled: Boolean = false,
     val stillWatchingLiveTvMinutes: Int = DEFAULT_STILL_WATCHING_LIVE_TV_MINUTES,
     val seekIntervalSeconds: Int = DEFAULT_SEEK_INTERVAL_SECONDS,
@@ -191,6 +192,7 @@ object PlayerSettingsRepository {
     private var stillWatchingPromptEnabled = false
     private var stillWatchingEpisodeCount = DEFAULT_STILL_WATCHING_EPISODE_COUNT
     private var stillWatchingNightOnly = false
+    private var rememberAudioDelayPerDevice = true
     private var stillWatchingLiveTvEnabled = false
     private var stillWatchingLiveTvMinutes = DEFAULT_STILL_WATCHING_LIVE_TV_MINUTES
     private var seekIntervalSeconds = DEFAULT_SEEK_INTERVAL_SECONDS
@@ -285,6 +287,7 @@ object PlayerSettingsRepository {
         stillWatchingPromptEnabled = false
         stillWatchingEpisodeCount = DEFAULT_STILL_WATCHING_EPISODE_COUNT
         stillWatchingNightOnly = false
+        rememberAudioDelayPerDevice = true
         stillWatchingLiveTvEnabled = false
         stillWatchingLiveTvMinutes = DEFAULT_STILL_WATCHING_LIVE_TV_MINUTES
         seekIntervalSeconds = DEFAULT_SEEK_INTERVAL_SECONDS
@@ -446,6 +449,7 @@ object PlayerSettingsRepository {
         stillWatchingEpisodeCount = (PlayerSettingsStorage.loadStillWatchingEpisodeCount() ?: DEFAULT_STILL_WATCHING_EPISODE_COUNT)
             .coerceIn(STILL_WATCHING_EPISODE_COUNT_RANGE)
         stillWatchingNightOnly = PlayerSettingsStorage.loadStillWatchingNightOnly() ?: false
+        rememberAudioDelayPerDevice = PlayerSettingsStorage.loadRememberAudioDelayPerDevice() ?: true
         stillWatchingLiveTvEnabled = PlayerSettingsStorage.loadStillWatchingLiveTvEnabled() ?: false
         stillWatchingLiveTvMinutes = normalizeStillWatchingLiveTvMinutes(
             PlayerSettingsStorage.loadStillWatchingLiveTvMinutes() ?: DEFAULT_STILL_WATCHING_LIVE_TV_MINUTES,
@@ -1034,6 +1038,14 @@ object PlayerSettingsRepository {
         PlayerSettingsStorage.saveStillWatchingNightOnly(enabled)
     }
 
+    fun setRememberAudioDelayPerDevice(enabled: Boolean) {
+        ensureLoaded()
+        if (rememberAudioDelayPerDevice == enabled) return
+        rememberAudioDelayPerDevice = enabled
+        publish()
+        PlayerSettingsStorage.saveRememberAudioDelayPerDevice(enabled)
+    }
+
     fun setStillWatchingLiveTvEnabled(enabled: Boolean) {
         ensureLoaded()
         if (stillWatchingLiveTvEnabled == enabled) return
@@ -1304,6 +1316,7 @@ object PlayerSettingsRepository {
             stillWatchingPromptEnabled = stillWatchingPromptEnabled,
             stillWatchingEpisodeCount = stillWatchingEpisodeCount,
             stillWatchingNightOnly = stillWatchingNightOnly,
+            rememberAudioDelayPerDevice = rememberAudioDelayPerDevice,
             stillWatchingLiveTvEnabled = stillWatchingLiveTvEnabled,
             stillWatchingLiveTvMinutes = stillWatchingLiveTvMinutes,
             seekIntervalSeconds = seekIntervalSeconds,

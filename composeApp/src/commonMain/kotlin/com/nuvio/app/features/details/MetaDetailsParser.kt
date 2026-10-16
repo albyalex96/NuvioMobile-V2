@@ -5,6 +5,7 @@ import com.nuvio.app.features.streams.StreamItem
 import com.nuvio.app.features.streams.StreamProxyHeaders
 import com.nuvio.app.features.streams.normalizeStreamType
 import kotlinx.coroutines.runBlocking
+import com.nuvio.app.features.player.streamAudioDelayMs
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
@@ -354,6 +355,7 @@ internal object MetaDetailsParser {
                     videoSize = hintsObj?.long("videoSize"),
                     filename = hintsObj?.string("filename"),
                     proxyHeaders = proxyHeaders,
+                    audioDelayMs = hintsObj?.streamAudioDelayMs(),
                 ),
             )
         }

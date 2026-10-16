@@ -20,6 +20,7 @@ data class CachedStreamLink(
     val bingeGroup: String? = null,
     val streamType: String? = null,
     val contentLanguage: String? = null,
+    val audioDelayMs: Int? = null,
 )
 
 internal expect fun epochMs(): Long
@@ -58,6 +59,7 @@ object StreamLinkCacheRepository {
         bingeGroup: String? = null,
         streamType: String? = null,
         contentLanguage: String? = null,
+        audioDelayMs: Int? = null,
     ) {
         if (url.isNotBlank() && url.hasLikelyExpiringPlaybackCredentials()) {
             remove(contentKey)
@@ -80,6 +82,7 @@ object StreamLinkCacheRepository {
             bingeGroup = bingeGroup,
             streamType = streamType,
             contentLanguage = contentLanguage,
+            audioDelayMs = audioDelayMs,
         )
         val payload = json.encodeToString(CachedStreamLink.serializer(), entry)
         StreamLinkCacheStorage.saveEntry(hashedKey(contentKey), payload)
