@@ -44,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.network.NetworkCondition
 import com.nuvio.app.core.network.NetworkStatusRepository
 import com.nuvio.app.core.ui.NuvioInputField
+import com.nuvio.app.tv.TvSearchFieldRow
 import com.nuvio.app.core.ui.NuvioScreen
 import com.nuvio.app.core.ui.NuvioNetworkOfflineCard
 import com.nuvio.app.core.ui.NuvioScreenHeader
@@ -265,6 +266,7 @@ fun SearchScreen(
                     )
                     androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(6.dp))
                     androidx.compose.foundation.layout.Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                        TvSearchFieldRow(onVoiceQuery = { recognized -> query = recognized }) {
                         NuvioInputField(
                             value = query,
                             onValueChange = { query = it },
@@ -286,6 +288,7 @@ fun SearchScreen(
                                 null
                             },
                         )
+                        }
                     }
                     androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(14.dp))
                 }

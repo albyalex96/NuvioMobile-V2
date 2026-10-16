@@ -2,19 +2,27 @@ package com.nuvio.tv.shell
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.updateTransition
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -23,34 +31,56 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LiveTv
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import co.touchlab.kermit.Logger
 import com.nuvio.app.AppScreenTab
+import com.nuvio.app.core.ui.PlatformBackHandler
+import com.nuvio.app.core.ui.accentBrush
 import com.nuvio.app.core.ui.nuvio
+import com.nuvio.app.core.ui.themePalette
 import com.nuvio.app.features.profiles.NuvioProfile
 import com.nuvio.app.features.profiles.parseHexColor
 import com.nuvio.app.tv.TvFocusRegions
@@ -60,93 +90,253 @@ import com.nuvio.app.tv.tvEnterOn
 import com.nuvio.tv.R
 import com.nuvio.tv.ui.TvDimens
 import com.nuvio.tv.ui.TvRemoteImage
-import com.nuvio.tv.ui.tvFocusable
+import kotlinx.coroutines.delay
 
 private val log = Logger.withTag("TvSidebar")
-private val SidebarExpandedWidth = 236.dp
-private val SidebarItemShape = RoundedCornerShape(12.dp)
 
-/** Root tabs chrome for TV: a collapsible left rail replacing the phone navigation bars. */
+// Sizes and timings of NuvioTV's "modern sidebar" (ComponentTokens.sidebar, MainActivity).
+private val PanelWidth = 230.dp
+private val PanelRadius = 30.dp
+private val PillHeight = 52.dp
+private val LeadingVisual = 34.dp
+private val ItemIconSize = 22.dp
+private val ContentGap = 14.dp
+private val ChromeStart = 14.dp
+private val ChromeTop = 16.dp
+private const val PILL_AUTO_COLLAPSE_MS = 3_000L
+private const val PANEL_IN_MS = 345
+private const val PANEL_OUT_MS = 385
+private const val ITEM_ANIMATION_MS = 150
+
+/**
+ * Root tabs chrome for TV, ported from NuvioTV's modern sidebar: the page uses the whole screen,
+ * a floating pill shows the open section at the top left, and a rounded panel with the profile
+ * and the sections opens with D-pad left (from the first column) or Back.
+ */
 @Composable
 fun TvSidebarChrome(chrome: TvTabsChrome, content: @Composable () -> Unit) {
-    var sidebarFocused by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
+    var expanded by remember { mutableStateOf(false) }
+    var pillIconOnly by remember { mutableStateOf(false) }
+    var pillExpandRequests by remember { mutableIntStateOf(0) }
     val selectedRequester = remember { FocusRequester() }
-    val sidebarWidth by animateDpAsState(
-        targetValue = if (sidebarFocused) SidebarExpandedWidth else TvDimens.sidebarCollapsedWidth,
-        animationSpec = tween(220),
-        label = "tvSidebarWidth",
-    )
+    val showPill = chrome.selectedTab != AppScreenTab.Search
+
+    fun openSidebar(reason: String) {
+        if (expanded) return
+        log.d { "Sidebar opened ($reason)" }
+        expanded = true
+    }
+
+    fun closeSidebar(focusContent: Boolean) {
+        if (!expanded) return
+        expanded = false
+        // The panel leaves the composition: the content takes the focus back.
+        if (focusContent) TvFocusRegions.request(force = true)
+    }
+
+    // Back from the first level of a page (e.g. Settings categories) opens the sidebar.
+    DisposableEffect(Unit) {
+        TvFocusRegions.chromeOpener = { openSidebar("page back") }
+        onDispose { TvFocusRegions.chromeOpener = null }
+    }
+    // Back on a root page opens the sidebar; with the sidebar open it is the app's own Back.
+    PlatformBackHandler(enabled = !expanded, onBack = { openSidebar("back") })
+
+    LaunchedEffect(expanded) {
+        if (!expanded) return@LaunchedEffect
+        repeat(3) { withFrameNanos { } }
+        runCatching { selectedRequester.requestFocus() }
+    }
+    // The pill shows the label after a section change, then shrinks to the icon.
+    LaunchedEffect(chrome.selectedTab) {
+        pillIconOnly = false
+        pillExpandRequests++
+    }
+    LaunchedEffect(pillIconOnly, pillExpandRequests, expanded) {
+        if (pillIconOnly || expanded) return@LaunchedEffect
+        delay(PILL_AUTO_COLLAPSE_MS)
+        pillIconOnly = true
+    }
+
+    val transition = updateTransition(targetState = expanded, label = "tvSidebar")
+    val progress by transition.animateFloat(
+        transitionSpec = {
+            if (targetState) {
+                tween(PANEL_IN_MS, easing = FastOutSlowInEasing)
+            } else {
+                tween(PANEL_OUT_MS, easing = LinearOutSlowInEasing)
+            }
+        },
+        label = "tvSidebarProgress",
+    ) { if (it) 1f else 0f }
 
     Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.nuvio.colors.background)) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(start = TvDimens.sidebarCollapsedWidth),
+                // Pages other than Home keep their header below the floating pill.
+                .padding(
+                    top = if (showPill && chrome.selectedTab != AppScreenTab.Home) TvDimens.chromeTopInset else 0.dp,
+                )
+                .onPreviewKeyEvent { event ->
+                    if (event.type == KeyEventType.KeyDown && !expanded) {
+                        when (event.key) {
+                            Key.DirectionDown -> pillIconOnly = true
+                            Key.DirectionUp -> {
+                                pillIconOnly = false
+                                pillExpandRequests++
+                            }
+                        }
+                    }
+                    false
+                }
+                .onKeyEvent { event ->
+                    // Left that the page cannot use (first column) opens the sidebar.
+                    if (!expanded && event.type == KeyEventType.KeyDown && event.key == Key.DirectionLeft) {
+                        if (!focusManager.moveFocus(FocusDirection.Left)) openSidebar("left edge")
+                        true
+                    } else {
+                        false
+                    }
+                },
         ) {
             content()
         }
 
-        AnimatedVisibility(
-            visible = sidebarFocused,
-            enter = fadeIn(tween(200)),
-            exit = fadeOut(tween(200)),
-            modifier = Modifier.fillMaxSize().zIndex(1f),
-        ) {
-            Box(
+        if (showPill && progress < 0.98f) {
+            CollapsedSidebarPill(
+                tab = chrome.selectedTab,
+                iconOnly = pillIconOnly,
+                onExpand = { openSidebar("pill") },
                 modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.horizontalGradient(
-                            0f to Color.Black.copy(alpha = 0.85f),
-                            0.45f to Color.Black.copy(alpha = 0.55f),
-                            1f to Color.Transparent,
-                        ),
-                    ),
+                    .zIndex(1f)
+                    .align(Alignment.TopStart)
+                    .offset(x = ChromeStart, y = ChromeTop)
+                    .graphicsLayer {
+                        alpha = 1f - progress
+                        val scale = 0.9f + 0.1f * (1f - progress)
+                        scaleX = scale
+                        scaleY = scale
+                        transformOrigin = TransformOrigin(0f, 0f)
+                    },
             )
         }
 
+        if (expanded || progress > 0.01f) {
+            Box(
+                modifier = Modifier
+                    .zIndex(2f)
+                    .align(Alignment.TopStart)
+                    .width(PanelWidth)
+                    .fillMaxHeight()
+                    .padding(start = ChromeStart, top = ChromeTop, bottom = 12.dp, end = 8.dp)
+                    .graphicsLayer {
+                        alpha = progress
+                        val scale = 0.92f + 0.08f * progress
+                        scaleX = scale
+                        scaleY = scale
+                        transformOrigin = TransformOrigin(0f, 0f)
+                    }
+                    .onPreviewKeyEvent { event ->
+                        if (!expanded || event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                        when (event.key) {
+                            // Focus never escapes into the page behind the panel.
+                            Key.DirectionUp -> {
+                                focusManager.moveFocus(FocusDirection.Up)
+                                true
+                            }
+                            Key.DirectionDown -> {
+                                focusManager.moveFocus(FocusDirection.Down)
+                                true
+                            }
+                            Key.DirectionRight -> {
+                                closeSidebar(focusContent = true)
+                                true
+                            }
+                            Key.DirectionLeft -> true
+                            else -> false
+                        }
+                    }
+                    .tvEnterOn(selectedRequester)
+                    .tvChromeRegion(),
+            ) {
+                SidebarPanel(
+                    chrome = chrome,
+                    focusEnabled = expanded,
+                    selectedRequester = selectedRequester,
+                    onTabClick = { tab ->
+                        log.d { "Tab selected: $tab" }
+                        chrome.onTabSelected(tab)
+                        closeSidebar(focusContent = false)
+                        // Land on the first element of the opened page (also when re-selecting it).
+                        TvFocusRegions.request(force = true)
+                    },
+                    onProfileClick = {
+                        closeSidebar(focusContent = false)
+                        chrome.onSwitchProfile()
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SidebarPanel(
+    chrome: TvTabsChrome,
+    focusEnabled: Boolean,
+    selectedRequester: FocusRequester,
+    onTabClick: (AppScreenTab) -> Unit,
+    onProfileClick: () -> Unit,
+) {
+    val shape = RoundedCornerShape(PanelRadius)
+    Column(
+        modifier = Modifier
+            .fillMaxHeight()
+            .clip(shape)
+            .background(Color(0xFF161618).copy(alpha = 0.97f), shape)
+            .padding(horizontal = 12.dp, vertical = 14.dp),
+    ) {
         Box(
             modifier = Modifier
-                .zIndex(2f)
-                .width(sidebarWidth)
-                .fillMaxHeight()
-                .background(
-                    if (sidebarFocused) MaterialTheme.nuvio.colors.surface else MaterialTheme.nuvio.colors.background,
-                )
-                .padding(horizontal = 12.dp, vertical = 28.dp)
-                .onFocusChanged { sidebarFocused = it.hasFocus }
-                // Entering the rail (D-pad left from the page) always lands on the open tab.
-                .tvEnterOn(selectedRequester)
-                .tvChromeRegion(),
+                .fillMaxWidth()
+                .offset(y = 12.dp),
+            contentAlignment = Alignment.Center,
         ) {
-            // Profile pinned at the top, navigation centered on the screen's horizontal midline.
-            ProfileItem(
+            SidebarProfileItem(
                 profile = chrome.activeProfile,
-                expanded = sidebarFocused,
-                onClick = chrome.onSwitchProfile,
-                modifier = Modifier.align(Alignment.TopStart),
+                focusEnabled = focusEnabled,
+                onClick = onProfileClick,
+                modifier = Modifier.fillMaxWidth(0.92f),
             )
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
             Column(
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .fillMaxWidth(),
+                modifier = Modifier.offset(y = (-12).dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 chrome.tabs.forEach { tab ->
-                    val selected = tab == chrome.selectedTab
-                    SidebarItem(
-                        icon = tab.icon(),
-                        label = tab.label(),
-                        selected = selected,
-                        expanded = sidebarFocused,
-                        onClick = {
-                            log.d { "Tab selected: $tab" }
-                            chrome.onTabSelected(tab)
-                            // Leave the sidebar and land on the first element of the opened page.
-                            TvFocusRegions.request(force = true)
-                        },
-                        modifier = if (selected) Modifier.focusRequester(selectedRequester) else Modifier,
-                    )
+                    key(tab) {
+                        val selected = tab == chrome.selectedTab
+                        SidebarNavigationItem(
+                            label = tab.label(),
+                            icon = tab.painter(),
+                            selected = selected,
+                            focusEnabled = focusEnabled,
+                            onClick = { onTabClick(tab) },
+                            modifier = Modifier
+                                .fillMaxWidth(0.92f)
+                                .then(if (selected) Modifier.focusRequester(selectedRequester) else Modifier),
+                        )
+                    }
                 }
             }
         }
@@ -154,134 +344,192 @@ fun TvSidebarChrome(chrome: TvTabsChrome, content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun SidebarItem(
-    icon: ImageVector,
+private fun SidebarNavigationItem(
     label: String,
+    icon: Painter,
     selected: Boolean,
-    expanded: Boolean,
+    focusEnabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var focused by remember { mutableStateOf(false) }
-    val colors = MaterialTheme.nuvio.colors
+    val accent = MaterialTheme.nuvio.colors.accent
+    val textPrimary = MaterialTheme.nuvio.colors.textPrimary
+    val onOverlay = Color.White.copy(alpha = 0.78f)
     val background by animateColorAsState(
         targetValue = when {
-            focused -> Color.White
-            selected -> Color.White.copy(alpha = 0.12f)
+            focused && selected -> accent.copy(alpha = 0.28f)
+            focused -> Color.White.copy(alpha = 0.12f)
+            selected -> accent.copy(alpha = 0.15f)
             else -> Color.Transparent
         },
+        animationSpec = tween(ITEM_ANIMATION_MS),
         label = "tvSidebarItemBackground",
     )
-    val foreground = when {
-        focused -> Color.Black
-        selected -> colors.textPrimary
-        else -> colors.textMuted
-    }
-    Box(
+    val contentColor by animateColorAsState(
+        targetValue = when {
+            selected -> accent
+            focused -> textPrimary
+            else -> onOverlay
+        },
+        animationSpec = tween(ITEM_ANIMATION_MS),
+        label = "tvSidebarItemContent",
+    )
+    val scale by animateFloatAsState(
+        targetValue = if (focused) 1.1f else 1f,
+        animationSpec = tween(ITEM_ANIMATION_MS),
+        label = "tvSidebarItemScale",
+    )
+    val iconBrush = if (selected) MaterialTheme.themePalette.accentBrush() else null
+    val shape = CircleShape
+
+    Row(
         modifier = modifier
-            .fillMaxWidth()
-            .height(48.dp)
-            .tvFocusable(
-                shape = SidebarItemShape,
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .onFocusChanged { focused = it.hasFocus }
+            .focusProperties { canFocus = focusEnabled }
+            .clip(shape)
+            .background(background, shape)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
                 onClick = onClick,
-                focusedScale = 1.03f,
-                borderWidth = 0.dp,
-                onFocusChange = { focused = it },
             )
-            .background(background),
-        contentAlignment = Alignment.CenterStart,
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.padding(horizontal = 14.dp),
-        ) {
-            Icon(imageVector = icon, contentDescription = label, tint = foreground, modifier = Modifier.size(24.dp))
-            if (expanded) {
+        Box(modifier = Modifier.size(LeadingVisual), contentAlignment = Alignment.Center) {
+            Icon(
+                painter = icon,
+                contentDescription = null,
+                tint = if (iconBrush != null) Color.White else contentColor,
+                modifier = Modifier
+                    .size(ItemIconSize)
+                    .then(if (iconBrush != null) Modifier.brushTint(iconBrush) else Modifier),
+            )
+        }
+        Spacer(modifier = Modifier.width(ContentGap))
+        Text(
+            text = label,
+            color = contentColor,
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Medium),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun SidebarProfileItem(
+    profile: NuvioProfile?,
+    focusEnabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var focused by remember { mutableStateOf(false) }
+    val shape = CircleShape
+    Row(
+        modifier = modifier
+            .onFocusChanged { focused = it.hasFocus }
+            .focusProperties { canFocus = focusEnabled }
+            .clip(shape)
+            .background(if (focused) Color.White.copy(alpha = 0.12f) else Color.Transparent, shape)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+            )
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        ProfileAvatar(profile = profile, size = LeadingVisual)
+        Spacer(modifier = Modifier.width(ContentGap + 4.dp))
+        Column {
+            Text(
+                text = profile?.name.orEmpty(),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = Color.White.copy(alpha = 0.92f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (focused) {
                 Text(
-                    text = label,
-                    style = MaterialTheme.typography.titleSmall.copy(
-                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                    ),
-                    color = foreground,
+                    text = stringResource(R.string.tv_nav_profile),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.nuvio.colors.textMuted,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
                 )
             }
         }
-        if (selected && !focused && !expanded) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .width(3.dp)
-                    .height(20.dp)
-                    .clip(CircleShape)
-                    .background(colors.accent),
-            )
-        }
     }
 }
 
+/** Floating pill with the open section (NuvioTV `CollapsedSidebarPill`); not a D-pad target. */
 @Composable
-private fun ProfileItem(
-    profile: NuvioProfile?,
-    expanded: Boolean,
-    onClick: () -> Unit,
+private fun CollapsedSidebarPill(
+    tab: AppScreenTab,
+    iconOnly: Boolean,
+    onExpand: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var focused by remember { mutableStateOf(false) }
+    val shape = CircleShape
     Box(
         modifier = modifier
-            .fillMaxWidth()
-            .height(52.dp)
-            .tvFocusable(
-                shape = SidebarItemShape,
-                onClick = onClick,
-                focusedScale = 1.03f,
-                borderWidth = 0.dp,
-                onFocusChange = { focused = it },
-            )
-            .background(if (focused) Color.White.copy(alpha = 0.16f) else Color.Transparent),
-        contentAlignment = Alignment.CenterStart,
+            .focusProperties { canFocus = false }
+            .height(PillHeight)
+            .clip(shape)
+            .background(Color(0xFF1C1C1E).copy(alpha = 0.96f), shape)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onExpand,
+            ),
     ) {
         Row(
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .fillMaxHeight()
+                .padding(horizontal = 5.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            modifier = Modifier.padding(horizontal = 8.dp),
         ) {
-            ProfileAvatar(profile = profile, focused = focused)
-            if (expanded) {
-                Column {
-                    Text(
-                        text = profile?.name.orEmpty(),
-                        style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                        color = MaterialTheme.nuvio.colors.textPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = stringResource(R.string.tv_nav_profile),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.nuvio.colors.textMuted,
-                        maxLines = 1,
-                    )
-                }
+            Box(modifier = Modifier.size(LeadingVisual), contentAlignment = Alignment.Center) {
+                Icon(
+                    painter = tab.painter(),
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(LeadingVisual - 12.dp),
+                )
+            }
+            AnimatedVisibility(
+                visible = !iconOnly,
+                enter = expandHorizontally(tween(ITEM_ANIMATION_MS, easing = FastOutSlowInEasing), expandFrom = Alignment.Start),
+                exit = shrinkHorizontally(tween(ITEM_ANIMATION_MS, easing = FastOutSlowInEasing), shrinkTowards = Alignment.Start),
+            ) {
+                Text(
+                    text = tab.label(),
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleLarge.copy(lineHeight = 30.sp),
+                    maxLines = 1,
+                    modifier = Modifier.padding(start = 9.dp, end = 7.dp),
+                )
             }
         }
     }
 }
 
 @Composable
-private fun ProfileAvatar(profile: NuvioProfile?, focused: Boolean) {
+private fun ProfileAvatar(profile: NuvioProfile?, size: androidx.compose.ui.unit.Dp) {
     val avatarColor = remember(profile?.avatarColorHex) {
         profile?.avatarColorHex?.let(::parseHexColor) ?: Color(0xFF1E88E5)
     }
     Box(
         modifier = Modifier
-            .size(36.dp)
+            .size(size)
             .clip(CircleShape)
-            .background(avatarColor)
-            .then(if (focused) Modifier.background(Color.White.copy(alpha = 0.12f)) else Modifier),
+            .background(avatarColor),
         contentAlignment = Alignment.Center,
     ) {
         val avatarUrl = profile?.avatarUrl
@@ -290,19 +538,30 @@ private fun ProfileAvatar(profile: NuvioProfile?, focused: Boolean) {
         } else {
             Text(
                 text = profile?.name?.firstOrNull()?.uppercase().orEmpty(),
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                 color = Color.White,
             )
         }
     }
 }
 
-private fun AppScreenTab.icon(): ImageVector = when (this) {
-    AppScreenTab.Home -> Icons.Filled.Home
-    AppScreenTab.Search -> Icons.Filled.Search
-    AppScreenTab.Library -> Icons.Filled.VideoLibrary
-    AppScreenTab.LiveTv -> Icons.Filled.LiveTv
-    AppScreenTab.Settings -> Icons.Filled.Settings
+/** Paints the (white) icon with [brush], like NuvioTV's accent-gradient selected icon. */
+private fun Modifier.brushTint(brush: Brush): Modifier = this
+    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+    .drawWithCache {
+        onDrawWithContent {
+            drawContent()
+            drawRect(brush = brush, blendMode = BlendMode.SrcIn)
+        }
+    }
+
+@Composable
+private fun AppScreenTab.painter(): Painter = when (this) {
+    AppScreenTab.Home -> rememberVectorPainter(Icons.Filled.Home)
+    AppScreenTab.Search -> painterResource(R.drawable.tv_sidebar_search)
+    AppScreenTab.Library -> painterResource(R.drawable.tv_sidebar_library)
+    AppScreenTab.LiveTv -> rememberVectorPainter(Icons.Filled.LiveTv)
+    AppScreenTab.Settings -> painterResource(R.drawable.tv_sidebar_settings)
 }
 
 @Composable

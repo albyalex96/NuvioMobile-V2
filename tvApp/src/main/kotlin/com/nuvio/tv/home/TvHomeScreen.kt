@@ -298,7 +298,7 @@ private fun HeroInfoPanel(hero: HeroInfo?, modifier: Modifier = Modifier) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(start = TvDimens.screenPadding, top = 36.dp, end = TvDimens.screenPadding)
+                .padding(start = TvDimens.screenPadding, top = TvDimens.chromeTopInset, end = TvDimens.screenPadding)
                 .widthIn(max = 560.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {

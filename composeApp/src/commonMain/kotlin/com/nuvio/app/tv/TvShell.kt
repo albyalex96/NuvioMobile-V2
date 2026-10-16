@@ -31,6 +31,8 @@ class TvShell(
     val details: @Composable (model: TvDetailsModel) -> Unit,
     /** Sign-in screen (QR / device link). Null keeps the shared email sign-in screen. */
     val auth: (@Composable (model: TvAuthModel) -> Unit)? = null,
+    /** Voice search button shown next to the search field; it reports the recognized text. */
+    val voiceSearch: (@Composable (onQuery: (String) -> Unit) -> Unit)? = null,
 )
 
 val LocalTvShell = staticCompositionLocalOf<TvShell?> { null }

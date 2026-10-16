@@ -51,7 +51,8 @@ import com.nuvio.app.core.ui.nuvio
 /** Shared layout metrics of the TV screens (dp on a 960x540dp TV canvas). */
 object TvDimens {
     val screenPadding = 48.dp
-    val sidebarCollapsedWidth = 76.dp
+    /** Space kept free at the top of the pages for the floating sidebar pill. */
+    val chromeTopInset = 80.dp
     val rowSpacing = 14.dp
     val posterWidth = 124.dp
     val landscapeWidth = 248.dp

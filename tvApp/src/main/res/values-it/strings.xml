@@ -40,6 +40,13 @@
     <string name="tv_details_cast">Cast</string>
     <string name="tv_details_unavailable">Non ancora disponibile</string>
     <string name="tv_details_hint_manual">Tieni premuto OK per scegliere la sorgente</string>
+    <string name="tv_details_creator">Creata da %1$s</string>
+    <string name="tv_details_director">Regia di %1$s</string>
+    <string name="tv_details_writer">Scritto da %1$s</string>
+    <string name="tv_details_status_ended">Conclusa</string>
+    <string name="tv_details_status_continuing">In corso</string>
+    <string name="tv_details_status_cancelled">Cancellata</string>
+    <string name="tv_details_runtime_minutes">%1$d min</string>
     <string name="tv_auth_title">Accedi a Nuvio</string>
     <string name="tv_auth_subtitle">Profili, libreria, addon e progressi ti seguono anche sulla TV.</string>
     <string name="tv_auth_step_scan">Inquadra il QR col telefono, oppure apri %1$s</string>
@@ -58,4 +65,10 @@
     <string name="tv_auth_unsupported">Questo server non supporta l\'accesso con QR: usa email e password.</string>
     <string name="tv_auth_custom_server">Server: %1$s</string>
     <string name="tv_auth_qr_description">Codice QR per accedere dal telefono</string>
+
+    <string name="tv_voice_search">Ricerca vocale</string>
+    <string name="tv_voice_no_speech">Non ho sentito nulla. Riprova.</string>
+    <string name="tv_voice_mic_permission">Consenti l\'accesso al microfono per cercare con la voce.</string>
+    <string name="tv_voice_failed">Ricerca vocale non riuscita. Riprova.</string>
+    <string name="tv_voice_unavailable">La ricerca vocale non è disponibile su questo dispositivo.</string>
 </resources>

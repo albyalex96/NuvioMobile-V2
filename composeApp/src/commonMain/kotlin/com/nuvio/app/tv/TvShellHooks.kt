@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -338,12 +340,7 @@ internal fun PlayerScreenRuntime.BindTvPlayerRemote() {
                 get() = runtime.playbackSnapshot.isPlaying
 
             override val overlayOpen: Boolean
-                get() = with(runtime) {
-                    showSourcesPanel || showEpisodesPanel || showLiveChannelsPanel ||
-                        showSubmitIntroModal || showAudioModal || showSubtitleModal ||
-                        showVideoSettingsModal || showStillWatchingPrompt ||
-                        pendingP2pSwitch != null || errorMessage != null
-                }
+                get() = runtime.tvOverlayOpen()
 
             override fun togglePlayback() {
                 runtime.togglePlayback()
@@ -398,5 +395,58 @@ internal fun PlayerScreenRuntime.BindTvPlayerRemote() {
             }
             log.i { "Player remote released" }
         }
+    }
+    // Focus rules while the controls are on screen: they open on the timeline; when a panel or a
+    // prompt closes, the focus goes back to the last used control (e.g. the button that opened it).
+    LaunchedEffect(Unit) {
+        var wasVisible = false
+        var hadOverlay = false
+        var hadPrompt = false
+        snapshotFlow {
+            Triple(runtime.controlsVisible, runtime.tvOverlayOpen(), runtime.tvPromptVisible())
+        }.collect { (visible, overlay, prompt) ->
+            if (visible && !overlay) {
+                when {
+                    !wasVisible && !prompt -> TvPlayerFocus.focus(TvPlayerFocus.timeline, "controls shown")
+                    hadOverlay -> TvPlayerFocus.focus(TvPlayerFocus.controls, "panel closed")
+                    hadPrompt && !prompt -> TvPlayerFocus.focus(TvPlayerFocus.controls, "prompt closed")
+                }
+            }
+            wasVisible = visible
+            hadOverlay = overlay
+            hadPrompt = prompt
+        }
+    }
+}
+
+/** A panel, modal or blocking prompt of the player is open: it owns the remote keys. */
+private fun PlayerScreenRuntime.tvOverlayOpen(): Boolean =
+    showSourcesPanel || showEpisodesPanel || showLiveChannelsPanel ||
+        showSubmitIntroModal || showAudioModal || showSubtitleModal ||
+        showVideoSettingsModal || showStillWatchingPrompt ||
+        pendingP2pSwitch != null || errorMessage != null
+
+/** "Skip intro/recap/outro" or "next episode" is on screen (it takes the focus itself). */
+private fun PlayerScreenRuntime.tvPromptVisible(): Boolean =
+    (activeSkipInterval != null && !skipIntervalDismissed) || showNextEpisodeCard
+
+
+/** Search field row: on TV the shell's voice search button sits before the field. */
+@Composable
+internal fun TvSearchFieldRow(
+    onVoiceQuery: (String) -> Unit,
+    field: @Composable () -> Unit,
+) {
+    val voiceSearch = LocalTvShell.current?.voiceSearch
+    if (voiceSearch == null) {
+        field()
+        return
+    }
+    androidx.compose.foundation.layout.Row(
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp),
+    ) {
+        voiceSearch(onVoiceQuery)
+        Box(modifier = Modifier.weight(1f)) { field() }
     }
 }

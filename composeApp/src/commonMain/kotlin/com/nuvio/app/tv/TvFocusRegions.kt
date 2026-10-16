@@ -63,9 +63,20 @@ object TvFocusRegions {
     /** Navigation chrome of the TV shell (sidebar): target of [requestChrome], never primary. */
     var chrome: TvFocusRegion? = null
 
+    /**
+     * Opens the navigation chrome when it is collapsed (the sidebar sets it): the chrome then
+     * places the focus on the selected tab itself.
+     */
+    var chromeOpener: (() -> Unit)? = null
+
     /** Moves the focus to the navigation chrome (e.g. Back from the first level of a page). */
     fun requestChrome() {
-        chrome?.let { request(it, force = true) }
+        val opener = chromeOpener
+        if (opener != null) {
+            opener()
+        } else {
+            chrome?.let { request(it, force = true) }
+        }
     }
 
     val requests: SharedFlow<TvFocusRequest> = requestFlow.asSharedFlow()

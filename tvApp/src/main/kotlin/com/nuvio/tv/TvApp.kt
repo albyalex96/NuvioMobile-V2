@@ -6,9 +6,11 @@ import androidx.compose.runtime.remember
 import com.nuvio.app.App
 import com.nuvio.app.tv.LocalTvShell
 import com.nuvio.app.tv.TvShell
+import com.nuvio.app.tv.TvTextInputHost
 import com.nuvio.tv.auth.TvAuthScreen
 import com.nuvio.tv.details.TvDetailsScreen
 import com.nuvio.tv.home.TvHomeScreen
+import com.nuvio.tv.search.TvVoiceSearchButton
 import com.nuvio.tv.shell.TvSidebarChrome
 import com.nuvio.tv.ui.TvFocusCoordinator
 import com.nuvio.tv.ui.TvThemeOverlay
@@ -23,11 +25,15 @@ fun TvApp() {
             home = { model -> TvHomeScreen(model) },
             details = { model -> TvDetailsScreen(model) },
             auth = { model -> TvAuthScreen(model) },
+            voiceSearch = { onQuery -> TvVoiceSearchButton(onQuery) },
         )
     }
     CompositionLocalProvider(LocalTvShell provides shell) {
-        TvFocusCoordinator {
-            App()
+        // Text fields open the keyboard only on OK (the D-pad focus just highlights them).
+        TvTextInputHost {
+            TvFocusCoordinator {
+                App()
+            }
         }
     }
 }
