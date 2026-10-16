@@ -89,3 +89,20 @@ fun Modifier.tvFocusRegion(key: Any?): Modifier {
         .focusRequester(region.requester)
         .focusGroup()
 }
+
+/**
+ * Focus behavior of a root tab pane. Phone/iOS keep the original `canFocus = active`.
+ * On TV, visited tabs stay composed (hidden and unplaced) to keep their state: their elements
+ * must never take the D-pad focus, otherwise it "disappears" into an invisible tab. The visible
+ * tab is a [tvFocusRegion] and receives the focus when it is opened. The pane must stay a plain
+ * focus group: a `canFocus = true` above it would make the whole (invisible) pane focusable.
+ */
+@Composable
+internal fun Modifier.tvTabPaneFocus(tab: Any, active: Boolean): Modifier {
+    if (LocalTvShell.current == null) return this.focusProperties { canFocus = active }
+    return this
+        .focusProperties {
+            onEnter = { if (!active) cancelFocusChange() }
+        }
+        .tvFocusRegion(key = tab)
+}

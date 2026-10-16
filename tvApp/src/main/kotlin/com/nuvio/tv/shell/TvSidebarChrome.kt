@@ -7,6 +7,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,7 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -49,18 +50,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+import co.touchlab.kermit.Logger
 import com.nuvio.app.AppScreenTab
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.profiles.NuvioProfile
 import com.nuvio.app.features.profiles.parseHexColor
 import com.nuvio.app.tv.TvFocusRegions
 import com.nuvio.app.tv.TvTabsChrome
-import com.nuvio.app.tv.tvFocusRegion
 import com.nuvio.tv.R
 import com.nuvio.tv.ui.TvDimens
 import com.nuvio.tv.ui.TvRemoteImage
 import com.nuvio.tv.ui.tvFocusable
 
+private val log = Logger.withTag("TvSidebar")
 private val SidebarExpandedWidth = 236.dp
 private val SidebarItemShape = RoundedCornerShape(12.dp)
 
@@ -79,8 +81,7 @@ fun TvSidebarChrome(chrome: TvTabsChrome, content: @Composable () -> Unit) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(start = TvDimens.sidebarCollapsedWidth)
-                .tvFocusRegion(key = chrome.selectedTab),
+                .padding(start = TvDimens.sidebarCollapsedWidth),
         ) {
             content()
         }
@@ -114,7 +115,15 @@ fun TvSidebarChrome(chrome: TvTabsChrome, content: @Composable () -> Unit) {
                 )
                 .padding(horizontal = 12.dp, vertical = 28.dp)
                 .onFocusChanged { sidebarFocused = it.hasFocus }
-                .focusRestorer(selectedRequester),
+                // Entering the rail (D-pad left from the page) always lands on the open tab.
+                .focusProperties {
+                    onEnter = {
+                        if (runCatching { selectedRequester.requestFocus() }.getOrDefault(false)) {
+                            log.d { "Sidebar entered on the selected tab" }
+                        }
+                    }
+                }
+                .focusGroup(),
         ) {
             // Profile pinned at the top, navigation centered on the screen's horizontal midline.
             ProfileItem(

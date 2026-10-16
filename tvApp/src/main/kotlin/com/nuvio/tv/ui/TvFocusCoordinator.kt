@@ -17,12 +17,16 @@ import com.nuvio.app.tv.TvFocusRegion
 import com.nuvio.app.tv.TvFocusRegions
 import com.nuvio.app.tv.TvFocusRequest
 import com.nuvio.app.tv.TvPlayerRemoteRegistry
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 
 private val log = Logger.withTag("TvFocus")
 
 /** Frames left to the new page to compose and lay out before moving the focus into it. */
 private const val SETTLE_FRAMES = 3
+
+/** Interval of the "nothing is focused" check. */
+private const val IDLE_FOCUS_CHECK_MS = 500L
 
 /** Attempts (one per frame) while lazy content attaches its first focusable item. */
 private const val MAX_FOCUS_ATTEMPTS = 20
@@ -43,8 +47,23 @@ fun TvFocusCoordinator(content: @Composable () -> Unit) {
     LaunchedEffect(Unit) {
         TvFocusRegions.requests.collectLatest { request ->
             if (TvPlayerRemoteRegistry.active != null) return@collectLatest
-            repeat(SETTLE_FRAMES) { withFrameNanos { } }
-            moveFocus(request, rootRequester, rootFocus)
+            rootFocus.placing = true
+            try {
+                repeat(SETTLE_FRAMES) { withFrameNanos { } }
+                moveFocus(request, rootRequester, rootFocus)
+            } finally {
+                rootFocus.placing = false
+            }
+        }
+    }
+    // Screens that never place the focus (profile picker, dialogs-free pages…): when nothing is
+    // focused the remote would do nothing visible, so the first element of the screen gets it.
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(IDLE_FOCUS_CHECK_MS)
+            if (!rootFocus.hasFocus && !rootFocus.placing && TvPlayerRemoteRegistry.active == null) {
+                TvFocusRegions.request(region = null, force = false)
+            }
         }
     }
 
@@ -67,6 +86,7 @@ fun TvFocusCoordinator(content: @Composable () -> Unit) {
 
 private class RootFocusState {
     var hasFocus = false
+    var placing = false
 }
 
 private suspend fun moveFocus(
@@ -96,5 +116,6 @@ private suspend fun moveFocus(
             }
         }
     }
-    log.w { "Could not place the focus after a navigation change" }
+    // Idle checks retry on their own: only explicit navigations are worth a warning.
+    if (request.force) log.w { "Could not place the focus after a navigation change" }
 }
