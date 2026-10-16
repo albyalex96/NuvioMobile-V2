@@ -5,6 +5,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nuvio.app.features.streams.LocalStreamHighlight
 import com.nuvio.app.features.streams.StreamBadgePlacement
 import com.nuvio.app.features.streams.StreamCard
 import com.nuvio.app.features.streams.StreamItem
@@ -52,6 +53,8 @@ internal fun StreamCardHost(
 
     val context = StreamParserContextStore.current
     val info = remember(stream, context.title) { GenericStreamParser.parse(stream, context.title) }
+    // Same highlight the classic card applies (e.g. the watch party's source).
+    val highlightLabel = if (isCurrent) null else LocalStreamHighlight.current(stream)
     StreamParserCard(
         stream = stream,
         info = info,
@@ -61,7 +64,7 @@ internal fun StreamCardHost(
         onClick = onClick,
         onLongClick = onLongClick,
         modifier = modifier,
-        isCurrent = isCurrent,
-        currentLabel = currentLabel,
+        isCurrent = isCurrent || highlightLabel != null,
+        currentLabel = if (isCurrent) currentLabel else highlightLabel,
     )
 }

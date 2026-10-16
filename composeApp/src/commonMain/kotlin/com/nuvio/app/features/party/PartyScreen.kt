@@ -57,6 +57,8 @@ import nuvio.composeapp.generated.resources.party_join_description
 import nuvio.composeapp.generated.resources.party_join_title
 import nuvio.composeapp.generated.resources.party_joined_title
 import nuvio.composeapp.generated.resources.party_seats
+import nuvio.composeapp.generated.resources.party_links_action
+import nuvio.composeapp.generated.resources.party_links_description
 import nuvio.composeapp.generated.resources.party_title
 import nuvio.composeapp.generated.resources.party_watch_with_party
 import org.jetbrains.compose.resources.stringResource
@@ -127,6 +129,45 @@ fun PartyScreen(
                     }
                 }
             }
+        }
+        if (mode != PartyScreenMode.Joined) {
+            item {
+                PartyLinkSettingsHint()
+            }
+        }
+    }
+}
+
+/** Lets this app open invite links: they are verified for the official app only (Android 12+). */
+@Composable
+private fun PartyLinkSettingsHint() {
+    val openSettings = rememberPartyLinkSettingsAction() ?: return
+    val tokens = MaterialTheme.nuvio
+    Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        Column(
+            modifier = Modifier
+                .widthIn(max = 520.dp)
+                .fillMaxWidth()
+                .padding(bottom = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Text(
+                text = stringResource(Res.string.party_links_description, PARTY_INVITE_LINK_HOST),
+                style = MaterialTheme.typography.bodySmall,
+                color = tokens.colors.textMuted,
+                textAlign = TextAlign.Center,
+            )
+            DialogButton(
+                text = stringResource(Res.string.party_links_action),
+                onClick = openSettings,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+            )
         }
     }
 }

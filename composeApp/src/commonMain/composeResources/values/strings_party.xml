@@ -73,4 +73,6 @@
     <string name="party_share_description">Friends can play your link instead of picking their own. It can include your debrid key.</string>
     <string name="party_share_unavailable">This stream can't be shared.</string>
     <string name="party_shared_by">Shared by %1$s</string>
+    <string name="party_links_action">Open invite links in this app</string>
+    <string name="party_links_description">Invite links (%1$s/party/…) open in the browser until you allow this app to open them.</string>
 </resources>

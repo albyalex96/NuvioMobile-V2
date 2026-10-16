@@ -1,5 +1,6 @@
 package com.nuvio.app.features.party
 
+import com.nuvio.app.core.format.formatEpisodeCodeWithSelectedFormat
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
@@ -360,7 +361,8 @@ internal fun ActiveParty.statusRes(member: PartyMember): StringResource {
 internal fun PartyMedia.episodeLabel(): String? {
     val season = season ?: return null
     val episode = episode ?: return null
-    val label = stringResource(Res.string.party_episode_format, season, episode)
+    val label = formatEpisodeCodeWithSelectedFormat(season, episode)
+        ?: stringResource(Res.string.party_episode_format, season, episode)
     return episodeTitle?.takeIf { it.isNotBlank() }?.let { "$label · $it" } ?: label
 }
 
@@ -369,6 +371,7 @@ internal fun PartyMedia.displayTitle(): String {
     val season = season
     val episode = episode
     if (season == null || episode == null) return title
-    val label = stringResource(Res.string.party_episode_format, season, episode)
+    val label = formatEpisodeCodeWithSelectedFormat(season, episode)
+        ?: stringResource(Res.string.party_episode_format, season, episode)
     return if (title.isBlank()) label else "$title · $label"
 }

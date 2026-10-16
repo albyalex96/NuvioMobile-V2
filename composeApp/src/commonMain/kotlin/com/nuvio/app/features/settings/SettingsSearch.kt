@@ -16,6 +16,7 @@ import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.CollectionsBookmark
+import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Dns
 import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.Favorite
@@ -59,6 +60,7 @@ import org.jetbrains.compose.resources.stringResource
 internal sealed class SettingsSearchTarget {
     data class Page(val page: SettingsPage) : SettingsSearchTarget()
     object Collections : SettingsSearchTarget()
+    object WatchParty : SettingsSearchTarget()
     object SwitchProfile : SettingsSearchTarget()
     object CheckForUpdates : SettingsSearchTarget()
 }
@@ -93,6 +95,7 @@ internal fun settingsSearchEntries(
     liquidGlassNativeTabBarSupported: Boolean,
     switchProfileAvailable: Boolean,
     checkForUpdatesAvailable: Boolean,
+    watchPartyAvailable: Boolean = false,
 ): List<SettingsSearchEntry> {
     val accountCategory = stringResource(SettingsCategory.Account.labelRes)
     val generalCategory = stringResource(SettingsCategory.General.labelRes)
@@ -205,6 +208,18 @@ internal fun settingsSearchEntries(
         category = accountCategory,
         icon = Icons.Rounded.AccountCircle,
     )
+    if (watchPartyAvailable) {
+        add(
+            key = "watch-party",
+            title = stringResource(Res.string.party_title),
+            description = stringResource(Res.string.party_settings_description),
+            page = accountPage,
+            section = stringResource(Res.string.compose_settings_root_account_section),
+            category = accountCategory,
+            icon = Icons.Rounded.Groups,
+            target = SettingsSearchTarget.WatchParty,
+        )
+    }
     addPage(
         page = SettingsPage.TraktAuthentication,
         key = "tracking",

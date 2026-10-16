@@ -768,7 +768,7 @@ internal fun StreamList(
                         isLoading = false,
                         fetchingText = fetchingText,
                     )
-                    StreamCard(
+                    StreamCardHost(
                         stream = shared.stream,
                         enabled = true,
                         appendInstantServiceToDefaultName = false,

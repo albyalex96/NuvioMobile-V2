@@ -74,6 +74,18 @@
 
                 <data android:scheme="stremio" />
             </intent-filter>
+            <!-- Watch party invites (https://nuvio.tv/party/<code>), opened straight into the TV app. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="https"
+                    android:host="nuvio.tv"
+                    android:pathPrefix="/party/" />
+            </intent-filter>
         </activity>
 
         <service

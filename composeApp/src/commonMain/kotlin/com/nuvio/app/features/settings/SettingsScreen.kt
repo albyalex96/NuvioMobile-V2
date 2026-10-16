@@ -673,6 +673,7 @@ private fun MobileSettingsScreen(
                     else -> onPageChange(target.page)
                 }
                 SettingsSearchTarget.Collections -> onCollectionsClick()
+                SettingsSearchTarget.WatchParty -> onWatchPartyClick()
                 SettingsSearchTarget.SwitchProfile -> onSwitchProfile?.invoke()
                 SettingsSearchTarget.CheckForUpdates -> onCheckForUpdatesClick?.invoke()
             }
@@ -724,6 +725,7 @@ private fun MobileSettingsScreen(
                                 liquidGlassNativeTabBarSupported = liquidGlassNativeTabBarSupported,
                                 switchProfileAvailable = onSwitchProfile != null,
                                 checkForUpdatesAvailable = onCheckForUpdatesClick != null,
+                                watchPartyAvailable = watchPartyRowClick != null,
                             )
                         },
                         isTablet = false,
@@ -1109,6 +1111,8 @@ private fun TabletSettingsScreen(
                         }
                     }
                     SettingsSearchTarget.Collections -> onCollectionsClick()
+                    SettingsSearchTarget.WatchParty -> onWatchPartyClick()
+                SettingsSearchTarget.WatchParty -> onWatchPartyClick()
                     SettingsSearchTarget.SwitchProfile -> onSwitchProfile?.invoke()
                     SettingsSearchTarget.CheckForUpdates -> onCheckForUpdatesClick?.invoke()
                 }
@@ -1195,6 +1199,7 @@ private fun TabletSettingsScreen(
                                     liquidGlassNativeTabBarSupported = liquidGlassNativeTabBarSupported,
                                     switchProfileAvailable = onSwitchProfile != null,
                                     checkForUpdatesAvailable = onCheckForUpdatesClick != null,
+                                    watchPartyAvailable = watchPartyRowClick != null,
                                 )
                             },
                             isTablet = true,

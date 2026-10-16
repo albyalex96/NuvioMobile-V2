@@ -52,6 +52,10 @@ import com.nuvio.app.features.player.playNextEpisode
 import com.nuvio.app.features.player.scheduleProgressSyncAfterSeek
 import com.nuvio.app.features.player.skip.internalSkipAction
 import com.nuvio.app.features.player.togglePlayback
+import com.nuvio.app.features.player.isPartyControlLocked
+import com.nuvio.app.features.player.ownSeekTarget
+import com.nuvio.app.features.player.partyBlocksControl
+import com.nuvio.app.features.player.publishPartyPlayback
 import com.nuvio.app.features.profiles.NuvioProfile
 import com.nuvio.app.features.profiles.ProfileRepository
 import com.nuvio.app.features.watchprogress.ContinueWatchingItem
@@ -368,17 +372,24 @@ internal fun PlayerScreenRuntime.BindTvPlayerRemote() {
                     val durationMs = runtime.playbackSnapshot.durationMs
                     val action = interval.internalSkipAction(runtime.skipIntervals, durationMs)
                     if (action != null) {
-                        val seekMs = if (durationMs > 0L) action.targetMs.coerceAtMost(durationMs - 1) else action.targetMs
-                        runtime.playerController?.seekTo(seekMs)
-                        runtime.scheduleProgressSyncAfterSeek()
-                        runtime.skipIntervalDismissed = true
-                        log.d { "Remote skipped interval to ${seekMs}ms" }
+                        val requestedMs = if (durationMs > 0L) action.targetMs.coerceAtMost(durationMs - 1) else action.targetMs
+                        // Same watch party rules as the on-screen skip button.
+                        val seekMs = if (runtime.isPartyControlLocked) runtime.ownSeekTarget(requestedMs) else requestedMs
+                        if (seekMs != null) {
+                            runtime.playerController?.seekTo(seekMs)
+                            runtime.scheduleProgressSyncAfterSeek()
+                            runtime.publishPartyPlayback(positionMs = seekMs)
+                            runtime.skipIntervalDismissed = true
+                            log.d { "Remote skipped interval to ${seekMs}ms" }
+                        }
                         return true
                     }
                 }
                 if (runtime.showNextEpisodeCard && runtime.nextEpisodeInfo != null) {
-                    log.d { "Remote started next episode from prompt" }
-                    runtime.playNextEpisode()
+                    if (!runtime.partyBlocksControl()) {
+                        log.d { "Remote started next episode from prompt" }
+                        runtime.playNextEpisode()
+                    }
                     return true
                 }
                 return false
@@ -439,7 +450,7 @@ internal fun PlayerScreenRuntime.BindTvPlayerRemote() {
 private fun PlayerScreenRuntime.tvOverlayOpen(): Boolean =
     showSourcesPanel || showEpisodesPanel || showLiveChannelsPanel ||
         showSubmitIntroModal || showAudioModal || showSubtitleModal ||
-        showVideoSettingsModal || showStillWatchingPrompt ||
+        showVideoSettingsModal || showStillWatchingPrompt || showPartyPanel ||
         pendingP2pSwitch != null || errorMessage != null
 
 /** "Skip intro/recap/outro" or "next episode" is on screen (it takes the focus itself). */

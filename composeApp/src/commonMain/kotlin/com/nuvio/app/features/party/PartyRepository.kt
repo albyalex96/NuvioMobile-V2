@@ -135,6 +135,7 @@ object PartyRepository {
         scope.launch {
             mutex.withLock {
                 val party = _state.value.party ?: return@withLock
+                log.i { "Leaving the party" }
                 stopSession()
                 runRemote { PartyApi.leave(party.id, deviceId()) }
             }
@@ -146,7 +147,12 @@ object PartyRepository {
             mutex.withLock {
                 val party = _state.value.party ?: return@withLock
                 val result = runRemote { PartyApi.end(party.id, deviceId()) } ?: return@withLock
-                if (result.error == null) stopSession()
+                if (result.error == null) {
+                    log.i { "Party ended by the host" }
+                    stopSession()
+                } else {
+                    log.w { "Ending the party failed: ${result.error}" }
+                }
             }
         }
     }
@@ -163,6 +169,7 @@ object PartyRepository {
         scope.launch {
             val party = _state.value.party ?: return@launch
             if (!party.isHost || party.hostOnly == enabled) return@launch
+            log.i { "Host-only control ${if (enabled) "on" else "off"}" }
             updateParty { it.copy(hostOnly = enabled) }
             val snapshot = runRemote { PartyApi.setHostOnly(party.id, deviceId(), enabled) }
             if (snapshot?.party == null) updateParty { it.copy(hostOnly = party.hostOnly) }
@@ -174,6 +181,7 @@ object PartyRepository {
         scope.launch {
             val party = _state.value.party ?: return@launch
             if (!party.isHost || party.sharing == enabled) return@launch
+            log.i { "Stream sharing ${if (enabled) "on" else "off"}" }
             updateParty { it.copy(sharing = enabled) }
             if (!enabled) sendStream(null)
         }
@@ -236,6 +244,7 @@ object PartyRepository {
                     val sentAt = clock.mark()
                     val snapshot = request(identity())
                     partyErrorOf(snapshot.error)?.let { error ->
+                        log.w { "Watch party request refused: ${snapshot.error}" }
                         if (error == PartyError.Unavailable) _enabled.value = false
                         return@withLock error
                     }
@@ -270,6 +279,7 @@ object PartyRepository {
         resumedAt = null
         _playback.value = playback?.takeIf { it.mediaKey == null || it.mediaKey == party.media.key }
         _state.value = PartyUiState(party = party)
+        log.i { "Session started (host=${party.isHost}, members=${party.members.size}, media=${party.media.type})" }
         session.launch {
             runCatching {
                 partyChannel.open(
@@ -286,6 +296,7 @@ object PartyRepository {
     }
 
     private suspend fun stopSession() {
+        if (sessionJob != null) log.i { "Session stopped" }
         sessionJob?.cancel()
         sessionJob = null
         sessionScope = null
@@ -305,6 +316,7 @@ object PartyRepository {
         scope.launch {
             mutex.withLock {
                 if (_state.value.party?.id != partyId) return@withLock
+                log.i { "Party finished: ${event::class.simpleName}" }
                 stopSession()
                 _events.tryEmit(event)
             }
@@ -312,6 +324,7 @@ object PartyRepository {
     }
 
     private suspend fun onConnection(connected: Boolean) {
+        log.d { "Realtime channel ${if (connected) "connected" else "disconnected"}" }
         if (!connected) {
             updateParty { current -> current.copy(connected = false, presence = current.presence.filterKeys { it == current.memberId }) }
             return
@@ -460,6 +473,7 @@ object PartyRepository {
         val changed = media.key != party.media.key
         updateParty { it.copy(media = media) }
         if (changed) {
+            log.i { "Party media changed (${media.type}, season=${media.season}, episode=${media.episode})" }
             _playback.value = playback?.takeIf { it.mediaKey == null || it.mediaKey == media.key }
             if (_sharedStream.value?.mediaKey != media.key) _sharedStream.value = null
             ignoredWaiting.clear()
@@ -549,6 +563,7 @@ object PartyRepository {
     private suspend fun refreshEnabled() {
         if (!ServerConfigurationRepository.active.value.capabilities.watchParty) return
         val enabled = runRemote { PartyApi.enabled() } ?: return
+        if (_enabled.value != enabled) log.i { "Watch parties ${if (enabled) "enabled" else "disabled"} by the server" }
         _enabled.value = enabled
         if (!enabled) finish(PartyEvent.Ended)
     }
@@ -576,6 +591,7 @@ object PartyRepository {
             if (!playback.paused) {
                 val graceOver = resumedAt?.let { it.elapsedNow() > RESUME_GRACE } ?: true
                 if (waiting.isNotEmpty() && graceOver) {
+                    log.d { "Pausing the party for ${waiting.size} member(s) still loading" }
                     val position = PartySync.expectedPositionMs(playback, clock.nowMs())
                     publish(paused = true, positionMs = position, rate = playback.rate, waiting = true)
                     waitStartedAt = clock.mark()
@@ -583,6 +599,7 @@ object PartyRepository {
             } else if (playback.waiting) {
                 val started = waitStartedAt ?: clock.mark().also { waitStartedAt = it }
                 if (waiting.isEmpty() || started.elapsedNow() > WAIT_LIMIT) {
+                    if (waiting.isNotEmpty()) log.w { "Resuming without ${waiting.size} member(s) after the wait limit" }
                     ignoredWaiting += waiting
                     publish(paused = false, positionMs = playback.positionMs, rate = playback.rate, waiting = false)
                 }
@@ -594,6 +611,7 @@ object PartyRepository {
         val party = _state.value.party ?: return
         if (rejoining) return
         rejoining = true
+        log.w { "No longer a member, trying to rejoin" }
         scope.launch {
             try {
                 mutex.withLock {
@@ -601,6 +619,7 @@ object PartyRepository {
                     val snapshot = runRemote { PartyApi.join(party.code, identity()) }
                     val rejoined = snapshot?.takeIf { it.error == null }?.toActiveParty()
                     if (rejoined == null) {
+                        log.w { "Rejoin failed: ${snapshot?.error ?: "network"}" }
                         stopSession()
                         _events.tryEmit(if (snapshot?.error == "removed") PartyEvent.Removed else PartyEvent.Ended)
                         return@withLock

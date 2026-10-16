@@ -46,12 +46,18 @@ private fun currentLocalHour(): Int? {
     return ((nowMs - midnightMs) / MILLIS_PER_HOUR).toInt().coerceIn(0, 23)
 }
 
-internal fun PlayerScreenRuntime.shouldPromptStillWatching(): Boolean =
-    shouldPromptStillWatching(
+internal fun PlayerScreenRuntime.shouldPromptStillWatching(): Boolean {
+    // In a watch party others are watching too: pausing here would pause (or leave) the whole party.
+    if (isPartySynced) {
+        stillWatchingLog.d { "Skipping the prompt during a watch party" }
+        return false
+    }
+    return shouldPromptStillWatching(
         settings = playerSettingsUiState,
         consecutiveEpisodesPlayed = consecutiveEpisodesPlayed,
         localHour = ::currentLocalHour,
     )
+}
 
 /** Automatic advances extend the streak; any manual choice starts a new one. */
 internal fun PlayerScreenRuntime.recordEpisodeAdvance(automatic: Boolean) {
