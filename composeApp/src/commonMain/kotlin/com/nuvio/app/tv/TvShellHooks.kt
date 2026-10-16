@@ -2,6 +2,11 @@ package com.nuvio.app.tv
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material.icons.filled.Info
+import nuvio.composeapp.generated.resources.Res
+import nuvio.composeapp.generated.resources.tv_action_random_episode
+import nuvio.composeapp.generated.resources.tv_action_view_details
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -459,5 +464,60 @@ internal fun TvSearchFieldRow(
     ) {
         voiceSearch(onVoiceQuery)
         Box(modifier = Modifier.weight(1f)) { field() }
+    }
+}
+
+
+/**
+ * Card options on TV: renders the shell's menu instead of the phone overlay.
+ * Returns false (nothing drawn) without a TV shell.
+ */
+@Composable
+internal fun TvPosterMenuHook(
+    title: String,
+    subtitle: String?,
+    imageUrl: String?,
+    actions: List<com.nuvio.app.core.ui.PosterZoomOverlayAction>,
+    onDismiss: () -> Unit,
+): Boolean {
+    val render = LocalTvShell.current?.posterMenu ?: return false
+    render(TvPosterMenu(title = title, subtitle = subtitle, imageUrl = imageUrl, actions = actions, onDismiss = onDismiss))
+    return true
+}
+
+/** TV-only first options of a card menu: open the details and, for series, a random episode. */
+@Composable
+internal fun tvMetaShortcutActions(
+    type: String,
+    id: String,
+    includeDetails: Boolean,
+    onOpenDetails: () -> Unit,
+): List<com.nuvio.app.core.ui.PosterZoomOverlayAction> {
+    if (LocalTvShell.current == null) return emptyList()
+    val detailsLabel = org.jetbrains.compose.resources.stringResource(Res.string.tv_action_view_details)
+    val randomLabel = org.jetbrains.compose.resources.stringResource(Res.string.tv_action_random_episode)
+    return buildList {
+        if (includeDetails) {
+            add(
+                com.nuvio.app.core.ui.PosterZoomOverlayAction(
+                    icon = androidx.compose.material.icons.Icons.Default.Info,
+                    label = detailsLabel,
+                    onSelected = onOpenDetails,
+                ),
+            )
+        }
+        if (type == "series" || type == "tv") {
+            add(
+                com.nuvio.app.core.ui.PosterZoomOverlayAction(
+                    icon = androidx.compose.material.icons.Icons.Default.Shuffle,
+                    label = randomLabel,
+                    onSelected = {
+                        log.i { "Random episode requested from a card menu" }
+                        TvPendingDetailAction.requestRandomEpisode(id)
+                        onOpenDetails()
+                    },
+                ),
+            )
+        }
     }
 }

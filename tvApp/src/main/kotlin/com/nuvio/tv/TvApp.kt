@@ -13,6 +13,7 @@ import com.nuvio.tv.home.TvHomeScreen
 import com.nuvio.tv.search.TvVoiceSearchButton
 import com.nuvio.tv.shell.TvSidebarChrome
 import com.nuvio.tv.ui.TvFocusCoordinator
+import com.nuvio.tv.ui.TvPosterMenuDialog
 import com.nuvio.tv.ui.TvThemeOverlay
 
 /** The shared app, rendered through the TV shell. */
@@ -26,6 +27,7 @@ fun TvApp() {
             details = { model -> TvDetailsScreen(model) },
             auth = { model -> TvAuthScreen(model) },
             voiceSearch = { onQuery -> TvVoiceSearchButton(onQuery) },
+            posterMenu = { menu -> TvPosterMenuDialog(menu) },
         )
     }
     CompositionLocalProvider(LocalTvShell provides shell) {

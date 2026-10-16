@@ -78,6 +78,7 @@ import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.home.stableKey
 import com.nuvio.app.tv.TvDetailsModel
 import com.nuvio.app.tv.TvExternalRatingsRow
+import com.nuvio.app.tv.TvPendingDetailAction
 import com.nuvio.app.tv.TvSeason
 import com.nuvio.tv.R
 import com.nuvio.tv.ui.TvContentRow
@@ -107,6 +108,22 @@ fun TvDetailsScreen(model: TvDetailsModel) {
     val listState = rememberLazyListState()
     val scrolledPastHero by remember { derivedStateOf { listState.firstVisibleItemIndex > 0 } }
 
+    // "Watch a random episode" from a card menu: play one as soon as the episodes are loaded.
+    LaunchedEffect(meta.id, model.seasons) {
+        if (model.seasons.isEmpty()) return@LaunchedEffect
+        if (!TvPendingDetailAction.consumeRandomEpisode(meta.id)) return@LaunchedEffect
+        val episodes = model.seasons
+            .filter { it.number > 0 }
+            .flatMap { it.episodes }
+            .filter { it.available }
+        val pick = episodes.filterNot(model.isEpisodeWatched).randomOrNull() ?: episodes.randomOrNull()
+        if (pick == null) {
+            log.w { "No episode available for a random pick" }
+        } else {
+            log.i { "Playing a random episode: S${pick.season}E${pick.episode}" }
+            model.onEpisodeClick(pick)
+        }
+    }
     LaunchedEffect(meta.id) {
         repeat(10) {
             withFrameNanos { }

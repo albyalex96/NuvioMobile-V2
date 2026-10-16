@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android TV app (poster options menu). -->
+    <string name="tv_action_view_details">View details</string>
+    <string name="tv_action_random_episode">Watch a random episode</string>
+</resources>

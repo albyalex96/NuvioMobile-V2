@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App Android TV (menu opzioni delle locandine). -->
+    <string name="tv_action_view_details">Visualizza dettagli</string>
+    <string name="tv_action_random_episode">Guarda un episodio a caso</string>
+</resources>

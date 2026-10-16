@@ -33,7 +33,38 @@ class TvShell(
     val auth: (@Composable (model: TvAuthModel) -> Unit)? = null,
     /** Voice search button shown next to the search field; it reports the recognized text. */
     val voiceSearch: (@Composable (onQuery: (String) -> Unit) -> Unit)? = null,
+    /** Options menu of a poster / continue-watching card (long OK press), replacing the phone overlay. */
+    val posterMenu: (@Composable (menu: TvPosterMenu) -> Unit)? = null,
 )
+
+/** Options of a long-pressed card; [actions] are the shared ones (library, watched, resume…). */
+@Immutable
+class TvPosterMenu(
+    val title: String,
+    val subtitle: String?,
+    val imageUrl: String?,
+    val actions: List<com.nuvio.app.core.ui.PosterZoomOverlayAction>,
+    val onDismiss: () -> Unit,
+)
+
+/**
+ * One-shot action for the next detail page: "watch a random episode" from a card menu opens the
+ * series and plays a random episode as soon as its episodes are loaded.
+ */
+object TvPendingDetailAction {
+    private var randomEpisodeFor: String? = null
+
+    fun requestRandomEpisode(metaId: String) {
+        randomEpisodeFor = metaId
+    }
+
+    /** True once for [metaId] after [requestRandomEpisode]. */
+    fun consumeRandomEpisode(metaId: String): Boolean {
+        if (randomEpisodeFor != metaId) return false
+        randomEpisodeFor = null
+        return true
+    }
+}
 
 val LocalTvShell = staticCompositionLocalOf<TvShell?> { null }
 
