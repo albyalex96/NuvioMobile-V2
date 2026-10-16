@@ -40,6 +40,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.nuvio.app.tv.tvFocusOnAppear
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
@@ -143,6 +144,8 @@ fun NextEpisodeCard(
                 .semantics {
                     if (visible) dismiss { currentOnDismiss(); true }
                 }
+                // TV: the prompt takes the focus when it appears (OK plays the next episode).
+                .tvFocusOnAppear(onlyWithoutOverlay = true)
                 .clickable(enabled = visible) { if (isPlayable) onPlayNext() }
                 .padding(horizontal = 9.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,

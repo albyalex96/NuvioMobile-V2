@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -125,7 +126,9 @@ internal fun PlayerTimeline(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val isDragged by interactionSource.collectIsDraggedAsState()
-    val isInteracting = enabled && durationMs > 0L && (isPressed || isDragged)
+    // D-pad focus (TV, keyboard) highlights the timeline like a touch scrub.
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    val isInteracting = enabled && durationMs > 0L && (isPressed || isDragged || isFocused)
     val trackThickness by animateDpAsState(
         targetValue = if (isInteracting) 10.dp else 6.dp,
         animationSpec = tween(durationMillis = if (isInteracting) 140 else 180),
@@ -169,12 +172,20 @@ internal fun PlayerTimeline(
                                 size = Size(size.width * bufferedFraction, trackHeight),
                                 cornerRadius = radius,
                             )
+                            val progressWidth = size.width * (state.value / rangeEnd).coerceIn(0f, 1f)
                             drawRoundRect(
                                 brush = accentBrush,
                                 topLeft = trackOrigin,
-                                size = Size(size.width * (state.value / rangeEnd).coerceIn(0f, 1f), trackHeight),
+                                size = Size(progressWidth, trackHeight),
                                 cornerRadius = radius,
                             )
+                            if (isFocused) {
+                                drawCircle(
+                                    color = Color.White,
+                                    radius = trackHeight,
+                                    center = Offset(progressWidth, trackOrigin.y + trackHeight / 2),
+                                )
+                            }
                         },
                 )
             },

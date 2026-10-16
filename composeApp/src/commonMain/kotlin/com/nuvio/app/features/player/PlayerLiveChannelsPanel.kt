@@ -51,6 +51,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.nuvio.app.tv.tvFocusGroupOnAppear
+import com.nuvio.app.tv.tvNotFocusable
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -173,6 +175,8 @@ fun PlayerLiveChannelsPanel(
         Box(
             modifier = modifier
                 .fillMaxSize()
+                // Tap-outside-to-close: never a D-pad target (OK would close the panel).
+                .tvNotFocusable()
                 .clickable(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() },
@@ -194,6 +198,7 @@ fun PlayerLiveChannelsPanel(
                         .clip(RoundedCornerShape(24.dp))
                         .background(colorScheme.surface)
                         .border(1.dp, colorScheme.outlineVariant.copy(alpha = 0.8f), RoundedCornerShape(24.dp))
+                        .tvNotFocusable()
                         .clickable(
                             indication = null,
                             interactionSource = remember { MutableInteractionSource() },
@@ -262,7 +267,10 @@ fun PlayerLiveChannelsPanel(
                         Box(modifier = Modifier.weight(1f)) {
                             LazyColumn(
                                 state = listState,
-                                modifier = Modifier.padding(horizontal = 16.dp),
+                                modifier = Modifier
+                                    // TV: the channel list (not the search field) takes the focus.
+                                    .tvFocusGroupOnAppear()
+                                    .padding(horizontal = 16.dp),
                                 verticalArrangement = Arrangement.spacedBy(6.dp),
                                 contentPadding = PaddingValues(bottom = 16.dp),
                             ) {

@@ -33,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.nuvio.app.tv.tvFocusOnAppear
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -113,6 +114,8 @@ fun SkipIntroButton(
                 .width(IntrinsicSize.Max)
                 .clip(shape)
                 .background(Color(0xFF1E1E1E).copy(alpha = 0.85f))
+                // TV: the prompt takes the focus when it appears (OK skips).
+                .tvFocusOnAppear(onlyWithoutOverlay = true)
                 .clickable(enabled = canSkip) { onSkip() },
         ) {
             Row(

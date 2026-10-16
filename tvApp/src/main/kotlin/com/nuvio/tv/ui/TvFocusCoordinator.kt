@@ -17,6 +17,7 @@ import com.nuvio.app.tv.TvFocusRegion
 import com.nuvio.app.tv.TvFocusRegions
 import com.nuvio.app.tv.TvFocusRequest
 import com.nuvio.app.tv.TvPlayerRemoteRegistry
+import com.nuvio.app.tv.tvTextInputKeys
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 
@@ -77,6 +78,7 @@ fun TvFocusCoordinator(content: @Composable () -> Unit) {
                     TvFocusRegions.request(region = null, force = false)
                 }
             }
+            .tvTextInputKeys()
             .focusRequester(rootRequester)
             .focusGroup(),
     ) {

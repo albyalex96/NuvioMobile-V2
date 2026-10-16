@@ -34,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.nuvio.app.tv.tvFocusOnAppear
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -316,6 +317,8 @@ internal fun ErrorModal(
                 modifier = Modifier
                     .padding(top = 4.dp)
                     .widthIn(min = 180.dp, max = 260.dp)
+                    // TV: "Go back" takes the focus when the error appears.
+                    .tvFocusOnAppear()
                     .clickable(onClick = onDismiss),
                 color = MaterialTheme.colorScheme.primary,
                 shape = RoundedCornerShape(12.dp),

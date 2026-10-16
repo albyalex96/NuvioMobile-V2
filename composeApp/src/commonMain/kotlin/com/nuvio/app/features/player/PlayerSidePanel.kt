@@ -34,6 +34,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.nuvio.app.tv.tvFocusGroupOnAppear
+import com.nuvio.app.tv.tvNotFocusable
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -79,6 +81,8 @@ internal fun PlayerSidePanel(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.34f))
+                // Tap-outside-to-close: never a D-pad target (OK would close the panel).
+                .tvNotFocusable()
                 .clickable(
                     interactionSource = backgroundInteraction,
                     indication = null,
@@ -100,11 +104,14 @@ internal fun PlayerSidePanel(
                         .fillMaxHeight()
                         .clip(shape)
                         .background(tokens.colors.surfaceElevated)
+                        .tvNotFocusable()
                         .clickable(
                             interactionSource = panelInteraction,
                             indication = null,
                             onClick = {},
-                        ),
+                        )
+                        // TV: the panel takes the focus on its first element when it opens.
+                        .tvFocusGroupOnAppear(),
                     content = content,
                 )
             }

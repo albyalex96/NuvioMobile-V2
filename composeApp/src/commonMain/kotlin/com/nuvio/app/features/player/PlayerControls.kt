@@ -49,6 +49,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.nuvio.app.tv.tvPlayerControls
+import com.nuvio.app.tv.tvPlayerTimeline
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
@@ -165,6 +167,7 @@ internal fun PlayerControlsShell(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .tvPlayerControls()
                 .padding(horizontal = horizontalSafePadding),
         ) {
             if (useLegacyLayout) {
@@ -250,6 +253,8 @@ internal fun PlayerControlsShell(
                     displayedPositionMs = displayedPositionMs,
                     metrics = metrics,
                     resizeMode = resizeMode,
+                    seekIntervalSeconds = seekIntervalSeconds,
+                    onTogglePlayback = onTogglePlayback,
                     onScrubChange = onScrubChange,
                     onScrubFinished = onScrubFinished,
                     onResizeModeClick = onResizeModeClick,
@@ -296,6 +301,20 @@ internal fun PlayerControlsShell(
                             onInteraction()
                             onScrubFinished(it)
                         },
+                        modifier = Modifier.tvPlayerTimeline(
+                            seekIntervalSeconds = seekIntervalSeconds,
+                            positionMs = displayedPositionMs,
+                            durationMs = playbackSnapshot.durationMs,
+                            onScrubChange = onScrubChange,
+                            onScrubFinished = {
+                                onInteraction()
+                                onScrubFinished(it)
+                            },
+                            onTogglePlayback = {
+                                onInteraction()
+                                onTogglePlayback()
+                            },
+                        ),
                     )
                     PlayerControlActions(
                         playbackSnapshot = playbackSnapshot,
@@ -619,6 +638,8 @@ private fun ProgressControls(
     displayedPositionMs: Long,
     metrics: PlayerLayoutMetrics,
     resizeMode: PlayerResizeMode,
+    seekIntervalSeconds: Int,
+    onTogglePlayback: () -> Unit,
     onScrubChange: (Long) -> Unit,
     onScrubFinished: (Long) -> Unit,
     onResizeModeClick: () -> Unit,
@@ -643,6 +664,14 @@ private fun ProgressControls(
             metrics = metrics,
             onScrubChange = onScrubChange,
             onScrubFinished = onScrubFinished,
+            sliderModifier = Modifier.tvPlayerTimeline(
+                seekIntervalSeconds = seekIntervalSeconds,
+                positionMs = displayedPositionMs,
+                durationMs = playbackSnapshot.durationMs,
+                onScrubChange = onScrubChange,
+                onScrubFinished = onScrubFinished,
+                onTogglePlayback = onTogglePlayback,
+            ),
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -717,12 +746,13 @@ internal fun PlayerSeekBar(
     onScrubChange: (Long) -> Unit,
     onScrubFinished: (Long) -> Unit,
     modifier: Modifier = Modifier,
+    sliderModifier: Modifier = Modifier,
 ) {
     val seekDurationMs = durationMs.coerceAtLeast(1L)
     val seekDescription = stringResource(Res.string.player_seek_position)
     Column(modifier = modifier) {
         Slider(
-            modifier = Modifier
+            modifier = sliderModifier
                 .fillMaxWidth()
                 .height(metrics.sliderTouchHeight)
                 .graphicsLayer(scaleY = metrics.sliderScaleY)

@@ -28,6 +28,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.nuvio.app.tv.tvFocusGroupOnAppear
+import com.nuvio.app.tv.tvFocusOnAppear
+import com.nuvio.app.tv.tvTextInputKeys
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.semantics.Role
@@ -64,7 +67,12 @@ fun DialogSurface(
             border = BorderStroke(tokens.borders.thin, SurfaceEdge),
         ) {
             Column(
-                modifier = Modifier.padding(tokens.spacing.dialogPadding),
+                modifier = Modifier
+                    // TV: if no primary button takes the focus, the first element does.
+                    .tvFocusGroupOnAppear(asFallback = true)
+                    // TV: OK opens the keyboard of a focused text field in the dialog.
+                    .tvTextInputKeys()
+                    .padding(tokens.spacing.dialogPadding),
                 verticalArrangement = Arrangement.spacedBy(tokens.spacing.listGap),
             ) {
                 if (title != null) {
@@ -138,9 +146,13 @@ fun DialogButton(
         DialogButtonStyle.Destructive -> tokens.colors.danger
     }
     val contentColor = if (style == DialogButtonStyle.Secondary) tokens.colors.textPrimary else tokens.colors.onAccent
+    // TV: the primary action of a dialog takes the focus when the dialog opens.
+    val tvFocus = if (style == DialogButtonStyle.Primary && enabled) Modifier.tvFocusOnAppear() else Modifier
     Button(
         onClick = onClick,
-        modifier = modifier.heightIn(min = NuvioTokens.Space.s48),
+        modifier = modifier
+            .then(tvFocus)
+            .heightIn(min = NuvioTokens.Space.s48),
         enabled = enabled && !loading,
         shape = tokens.shapes.button,
         colors = ButtonDefaults.buttonColors(

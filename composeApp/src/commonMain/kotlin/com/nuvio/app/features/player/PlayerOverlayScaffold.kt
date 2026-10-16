@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import com.nuvio.app.tv.tvFocusGroupOnAppear
+import com.nuvio.app.tv.tvNotFocusable
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -41,11 +43,15 @@ internal fun PlayerOverlayScaffold(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                // Tap-outside-to-close: never a D-pad target (OK would close the overlay).
+                .tvNotFocusable()
                 .clickable(
                     interactionSource = interactionSource,
                     indication = null,
                     onClick = onDismiss,
-                ),
+                )
+                // TV: the overlay takes the focus on its first element when it opens.
+                .tvFocusGroupOnAppear(),
         ) {
             Box(
                 modifier = Modifier
