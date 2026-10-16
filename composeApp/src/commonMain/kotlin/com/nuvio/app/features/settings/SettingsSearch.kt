@@ -51,6 +51,7 @@ import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.p2p.P2pSettingsRepository
 import com.nuvio.app.isIos
+import com.nuvio.app.tv.TvAppRuntime
 import com.nuvio.app.supportsPosterNavigationMotion
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
@@ -1109,6 +1110,27 @@ private fun addAdditionalSearchEntries(
             section = stringResource(Res.string.settings_appearance_nav_bar_style),
             icon = Icons.Rounded.Palette,
         )
+        if (TvAppRuntime.isTvApp) {
+            row(
+                page = SettingsPage.Appearance,
+                key = "top-nav-bar",
+                title = stringResource(Res.string.settings_top_nav_bar),
+                description = stringResource(Res.string.settings_top_nav_bar_description),
+                pageLabel = layoutPage,
+                section = stringResource(Res.string.settings_appearance_nav_bar_style),
+                icon = Icons.Rounded.Palette,
+            )
+            row(
+                page = SettingsPage.Appearance,
+                key = "top-nav-bar-layout",
+                title = stringResource(Res.string.settings_top_nav_bar_layout),
+                description = stringResource(Res.string.settings_top_nav_bar_expanded_description) + " " +
+                    stringResource(Res.string.settings_top_nav_bar_compact_description),
+                pageLabel = layoutPage,
+                section = stringResource(Res.string.settings_appearance_nav_bar_style),
+                icon = Icons.Rounded.Palette,
+            )
+        }
     }
 
     // Streams / Stream Parser

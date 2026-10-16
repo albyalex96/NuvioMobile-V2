@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -39,27 +40,43 @@ import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
-internal fun NavigationBarPreview(style: NavBarStyle, isTablet: Boolean, glowEnabled: Boolean) {
+internal fun NavigationBarPreview(
+    style: NavBarStyle,
+    isTablet: Boolean,
+    glowEnabled: Boolean,
+    showLiveTv: Boolean,
+    // Non-null on TV: previews the glass top bar with this layout instead of the phone bar.
+    topBarStyle: TopNavBarStyle? = null,
+) {
     val tokens = MaterialTheme.nuvio
     val hazeState = rememberHazeState()
-    val barScrollState = remember(style, isTablet) {
+    val topBar = topBarStyle != null
+    val barScrollState = remember(style, isTablet, topBarStyle) {
         NuvioNavBarScrollState().apply {
-            if (isTablet || style == NavBarStyle.COMPACT) collapse()
+            val compact = if (topBarStyle != null) {
+                topBarStyle == TopNavBarStyle.COMPACT
+            } else {
+                isTablet || style == NavBarStyle.COMPACT
+            }
+            if (compact) collapse()
         }
     }
     var selectedIndex by remember { mutableIntStateOf(0) }
-    val items = listOf(
-        FloatingNavigationItem(stringResource(Res.string.compose_nav_home), selectedIndex == 0, { selectedIndex = 0 }, icon = Icons.Default.Home),
-        FloatingNavigationItem(stringResource(Res.string.compose_nav_search), selectedIndex == 1, { selectedIndex = 1 }, drawable = Res.drawable.sidebar_search),
-        FloatingNavigationItem(stringResource(Res.string.compose_nav_library), selectedIndex == 2, { selectedIndex = 2 }, drawable = Res.drawable.sidebar_library),
-        FloatingNavigationItem(stringResource(Res.string.compose_nav_profile), selectedIndex == 3, { selectedIndex = 3 }, icon = Icons.Default.Person),
-    )
+    val items = buildList {
+        add(FloatingNavigationItem(stringResource(Res.string.compose_nav_home), selectedIndex == 0, { selectedIndex = 0 }, icon = Icons.Default.Home))
+        add(FloatingNavigationItem(stringResource(Res.string.compose_nav_search), selectedIndex == 1, { selectedIndex = 1 }, drawable = Res.drawable.sidebar_search))
+        add(FloatingNavigationItem(stringResource(Res.string.compose_nav_library), selectedIndex == 2, { selectedIndex = 2 }, drawable = Res.drawable.sidebar_library))
+        if (showLiveTv) {
+            add(FloatingNavigationItem(stringResource(Res.string.compose_nav_live_tv), selectedIndex == 3, { selectedIndex = 3 }, drawable = Res.drawable.nav_live_tv))
+        }
+        add(FloatingNavigationItem(stringResource(Res.string.compose_nav_profile), selectedIndex == 4, { selectedIndex = 4 }, icon = Icons.Default.Person))
+    }
     Column(Modifier.padding(horizontal = 16.dp)) {
         Box(Modifier.fillMaxWidth().height(156.dp).clip(tokens.shapes.card)) {
             Column(
                 Modifier.matchParentSize()
                     .hazeSource(hazeState)
-                    .then(if (!isTablet && style == NavBarStyle.ADAPTIVE) Modifier.nestedScroll(barScrollState.nestedScrollConnection) else Modifier)
+                    .then(if (!isTablet && !topBar && style == NavBarStyle.ADAPTIVE) Modifier.nestedScroll(barScrollState.nestedScrollConnection) else Modifier)
                     .verticalScroll(rememberScrollState())
                     .background(tokens.colors.surfaceCard)
                     .padding(12.dp),
@@ -83,7 +100,7 @@ internal fun NavigationBarPreview(style: NavBarStyle, isTablet: Boolean, glowEna
                     }
                 }
             }
-            if (style == NavBarStyle.CLASSIC && !isTablet) {
+            if (style == NavBarStyle.CLASSIC && !isTablet && !topBar) {
                 NuvioClassicNavigationBar(
                     Modifier.align(Alignment.BottomCenter).background(tokens.colors.background),
                 ) {
@@ -96,26 +113,32 @@ internal fun NavigationBarPreview(style: NavBarStyle, isTablet: Boolean, glowEna
                     }
                 }
             } else {
+                val atTop = isTablet || topBar
                 FloatingNavigationBar(
                     items = items,
-                    modifier = Modifier.align(if (isTablet) Alignment.TopCenter else Alignment.BottomCenter)
-                        .then(if (isTablet) Modifier.widthIn(max = 416.dp) else Modifier),
+                    modifier = Modifier.align(if (atTop) Alignment.TopCenter else Alignment.BottomCenter)
+                        .then(if (atTop) Modifier.widthIn(max = 416.dp) else Modifier),
                     scrollState = barScrollState,
                     hazeState = hazeState,
                     contentPadding = PaddingValues(vertical = 16.dp),
-                    compactSize = isTablet,
+                    compactSize = atTop,
                     glowEnabled = glowEnabled,
                 )
             }
         }
-        Text(
-            text = stringResource(
-                if (!isTablet && style == NavBarStyle.ADAPTIVE) Res.string.settings_nav_bar_preview_hint
-                else Res.string.settings_nav_bar_preview_tap_hint,
-            ),
-            style = MaterialTheme.typography.bodySmall,
-            color = tokens.colors.textMuted,
-            modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp),
-        )
+        if (topBar) {
+            // TV: the preview is not a D-pad target, so no "tap the bar" hint.
+            Spacer(Modifier.height(12.dp))
+        } else {
+            Text(
+                text = stringResource(
+                    if (!isTablet && style == NavBarStyle.ADAPTIVE) Res.string.settings_nav_bar_preview_hint
+                    else Res.string.settings_nav_bar_preview_tap_hint,
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = tokens.colors.textMuted,
+                modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp),
+            )
+        }
     }
 }

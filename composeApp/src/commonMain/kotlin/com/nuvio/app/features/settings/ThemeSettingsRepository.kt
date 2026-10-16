@@ -50,6 +50,12 @@ object ThemeSettingsRepository {
     private val _navBarGlowEnabled = MutableStateFlow(true)
     val navBarGlowEnabled: StateFlow<Boolean> = _navBarGlowEnabled.asStateFlow()
 
+    private val _topNavBarEnabled = MutableStateFlow(false)
+    val topNavBarEnabled: StateFlow<Boolean> = _topNavBarEnabled.asStateFlow()
+
+    private val _topNavBarStyle = MutableStateFlow(TopNavBarStyle.EXPANDED)
+    val topNavBarStyle: StateFlow<TopNavBarStyle> = _topNavBarStyle.asStateFlow()
+
     private val _dateFormat = MutableStateFlow(DateFormatPreset.SYSTEM)
     val dateFormat: StateFlow<DateFormatPreset> = _dateFormat.asStateFlow()
 
@@ -92,6 +98,8 @@ object ThemeSettingsRepository {
         _selectedAppLanguage.value = AppLanguage.DEVICE
         _navBarGlowEnabled.value = true
         _navBarStyle.value = NavBarStyle.ADAPTIVE
+        _topNavBarEnabled.value = false
+        _topNavBarStyle.value = TopNavBarStyle.EXPANDED
         applyDateFormat(DateFormatPreset.SYSTEM)
         applyEpisodeCodeFormat(EpisodeCodeFormat.DEFAULT)
     }
@@ -122,6 +130,8 @@ object ThemeSettingsRepository {
         _selectedAppLanguage.value = appLanguage
         _navBarGlowEnabled.value = ThemeSettingsStorage.loadNavBarGlowEnabled() ?: true
         _navBarStyle.value = NavBarStyle.fromKey(ThemeSettingsStorage.loadNavBarStyle())
+        _topNavBarEnabled.value = ThemeSettingsStorage.loadTopNavBarEnabled() ?: false
+        _topNavBarStyle.value = TopNavBarStyle.fromKey(ThemeSettingsStorage.loadTopNavBarStyle())
         applyDateFormat(DateFormatPreset.fromKey(ThemeSettingsStorage.loadDateFormat()))
         applyEpisodeCodeFormat(EpisodeCodeFormat.fromKey(ThemeSettingsStorage.loadEpisodeCodeFormat()))
     }
@@ -194,6 +204,20 @@ object ThemeSettingsRepository {
         if (_navBarGlowEnabled.value == enabled) return
         _navBarGlowEnabled.value = enabled
         ThemeSettingsStorage.saveNavBarGlowEnabled(enabled)
+    }
+
+    fun setTopNavBarEnabled(enabled: Boolean) {
+        ensureLoaded()
+        if (_topNavBarEnabled.value == enabled) return
+        _topNavBarEnabled.value = enabled
+        ThemeSettingsStorage.saveTopNavBarEnabled(enabled)
+    }
+
+    fun setTopNavBarStyle(style: TopNavBarStyle) {
+        ensureLoaded()
+        if (_topNavBarStyle.value == style) return
+        _topNavBarStyle.value = style
+        ThemeSettingsStorage.saveTopNavBarStyle(style.key)
     }
 
     fun setDateFormat(preset: DateFormatPreset) {

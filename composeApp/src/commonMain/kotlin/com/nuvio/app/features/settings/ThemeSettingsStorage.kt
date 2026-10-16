@@ -20,6 +20,10 @@ internal expect object ThemeSettingsStorage {
     fun saveNavBarStyle(styleKey: String)
     fun loadNavBarGlowEnabled(): Boolean?
     fun saveNavBarGlowEnabled(enabled: Boolean)
+    fun loadTopNavBarEnabled(): Boolean?
+    fun saveTopNavBarEnabled(enabled: Boolean)
+    fun loadTopNavBarStyle(): String?
+    fun saveTopNavBarStyle(styleKey: String)
     fun loadDateFormat(): String?
     fun saveDateFormat(formatKey: String)
     fun loadEpisodeCodeFormat(): String?

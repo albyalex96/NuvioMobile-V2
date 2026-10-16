@@ -3,4 +3,12 @@
     <!-- App Android TV (menu opzioni delle locandine). -->
     <string name="tv_action_view_details">Visualizza dettagli</string>
     <string name="tv_action_random_episode">Guarda un episodio a caso</string>
+    <!-- Barra di navigazione vetrosa in alto al centro (per ora solo TV). -->
+    <string name="settings_top_nav_bar">Barra vetrosa in alto</string>
+    <string name="settings_top_nav_bar_description">Sostituisce la barra laterale con una barra vetrosa in alto al centro dello schermo.</string>
+    <string name="settings_top_nav_bar_layout">Aspetto della barra</string>
+    <string name="settings_top_nav_bar_expanded_description">Icone e nomi delle sezioni.</string>
+    <string name="settings_top_nav_bar_compact_description">Solo icone.</string>
+    <string name="settings_nav_bar_sidebar">Barra laterale</string>
+    <string name="settings_top_nav_bar_hint">Premi su dalla parte alta di una pagina, o Indietro, per raggiungere la barra.</string>
 </resources>

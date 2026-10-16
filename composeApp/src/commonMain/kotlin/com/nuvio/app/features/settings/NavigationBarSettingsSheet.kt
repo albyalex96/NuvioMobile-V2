@@ -12,7 +12,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nuvio.app.core.ui.nuvio
+import com.nuvio.app.tv.TvAppRuntime
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
@@ -39,6 +44,7 @@ internal fun NavigationBarSettingsSheet(
     onStyleSelected: (NavBarStyle) -> Unit,
     glowEnabled: Boolean,
     onGlowChanged: (Boolean) -> Unit,
+    showLiveTv: Boolean,
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -46,6 +52,9 @@ internal fun NavigationBarSettingsSheet(
     val dismiss: () -> Unit = {
         scope.launch { dismissNuvioBottomSheet(sheetState, onDismiss) }
     }
+    val isTv = TvAppRuntime.isTvApp
+    val topBarEnabled by ThemeSettingsRepository.topNavBarEnabled.collectAsStateWithLifecycle()
+    val topBarStyle by ThemeSettingsRepository.topNavBarStyle.collectAsStateWithLifecycle()
     NuvioModalBottomSheet(onDismissRequest = dismiss, sheetState = sheetState) {
         LazyColumn(Modifier.fillMaxWidth()) {
             item {
@@ -55,39 +64,43 @@ internal fun NavigationBarSettingsSheet(
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
                 )
-                NavigationBarPreview(selectedStyle, isTablet, glowEnabled)
-            }
-            if (!isTablet) {
-                NavBarStyle.entries.forEach { style ->
-                    item(key = style.key) {
-                        NuvioBottomSheetActionRow(
-                            title = stringResource(style.labelRes),
-                            onClick = { onStyleSelected(style) },
-                            selected = style == selectedStyle,
-                            modifier = Modifier.semantics {
-                                role = Role.RadioButton
-                                selected = style == selectedStyle
-                            },
-                            trailingContent = {
-                                if (style == selectedStyle) {
-                                    Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary)
-                                }
-                            },
-                        )
-                    }
+                if (!isTv) {
+                    NavigationBarPreview(selectedStyle, isTablet, glowEnabled, showLiveTv)
                 }
             }
-            item {
-                AnimatedVisibility(floatingNavigationGlowSupported && selectedStyle != NavBarStyle.CLASSIC) {
-                    Column {
-                        NuvioBottomSheetDivider()
-                        SettingsSwitchRow(
-                            title = stringResource(Res.string.settings_nav_bar_glow),
-                            description = stringResource(Res.string.settings_nav_bar_glow_description),
-                            checked = glowEnabled,
-                            isTablet = isTablet,
-                            onCheckedChange = onGlowChanged,
-                        )
+            if (isTv) {
+                tvNavigationBarOptions(
+                    isTablet = isTablet,
+                    topBarEnabled = topBarEnabled,
+                    topBarStyle = topBarStyle,
+                    glowEnabled = glowEnabled,
+                    onGlowChanged = onGlowChanged,
+                    showLiveTv = showLiveTv,
+                )
+            } else {
+                if (!isTablet) {
+                    NavBarStyle.entries.forEach { style ->
+                        item(key = style.key) {
+                            NavBarOptionRow(
+                                title = stringResource(style.labelRes),
+                                selected = style == selectedStyle,
+                                onClick = { onStyleSelected(style) },
+                            )
+                        }
+                    }
+                }
+                item {
+                    AnimatedVisibility(floatingNavigationGlowSupported && selectedStyle != NavBarStyle.CLASSIC) {
+                        Column {
+                            NuvioBottomSheetDivider()
+                            SettingsSwitchRow(
+                                title = stringResource(Res.string.settings_nav_bar_glow),
+                                description = stringResource(Res.string.settings_nav_bar_glow_description),
+                                checked = glowEnabled,
+                                isTablet = isTablet,
+                                onCheckedChange = onGlowChanged,
+                            )
+                        }
                     }
                 }
             }
@@ -100,4 +113,91 @@ internal fun NavigationBarSettingsSheet(
             }
         }
     }
+}
+
+/**
+ * TV options: the glass top bar replaces the sidebar when enabled; its layout (always expanded or
+ * always compact, mutually exclusive) and the glass glow only apply to that bar.
+ */
+private fun LazyListScope.tvNavigationBarOptions(
+    isTablet: Boolean,
+    topBarEnabled: Boolean,
+    topBarStyle: TopNavBarStyle,
+    glowEnabled: Boolean,
+    onGlowChanged: (Boolean) -> Unit,
+    showLiveTv: Boolean,
+) {
+    item {
+        AnimatedVisibility(topBarEnabled) {
+            NavigationBarPreview(
+                style = NavBarStyle.ADAPTIVE,
+                isTablet = isTablet,
+                glowEnabled = glowEnabled,
+                showLiveTv = showLiveTv,
+                topBarStyle = topBarStyle,
+            )
+        }
+    }
+    item {
+        SettingsSwitchRow(
+            title = stringResource(Res.string.settings_top_nav_bar),
+            description = stringResource(Res.string.settings_top_nav_bar_description),
+            checked = topBarEnabled,
+            isTablet = isTablet,
+            onCheckedChange = ThemeSettingsRepository::setTopNavBarEnabled,
+        )
+    }
+    item {
+        AnimatedVisibility(topBarEnabled) {
+            Column {
+                NuvioBottomSheetDivider()
+                Text(
+                    text = stringResource(Res.string.settings_top_nav_bar_layout),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.nuvio.colors.textMuted,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                )
+                TopNavBarStyle.entries.forEach { style ->
+                    NavBarOptionRow(
+                        title = stringResource(style.labelRes),
+                        selected = style == topBarStyle,
+                        onClick = { ThemeSettingsRepository.setTopNavBarStyle(style) },
+                    )
+                }
+                NuvioBottomSheetDivider()
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.settings_nav_bar_glow),
+                    description = stringResource(Res.string.settings_nav_bar_glow_description),
+                    checked = glowEnabled,
+                    isTablet = isTablet,
+                    onCheckedChange = onGlowChanged,
+                )
+                Text(
+                    text = stringResource(Res.string.settings_top_nav_bar_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.nuvio.colors.textMuted,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun NavBarOptionRow(title: String, selected: Boolean, onClick: () -> Unit) {
+    NuvioBottomSheetActionRow(
+        title = title,
+        onClick = onClick,
+        selected = selected,
+        modifier = Modifier.semantics {
+            role = Role.RadioButton
+            this.selected = selected
+        },
+        trailingContent = {
+            if (selected) {
+                Icon(Icons.Default.Check, null, tint = MaterialTheme.colorScheme.primary)
+            }
+        },
+    )
 }

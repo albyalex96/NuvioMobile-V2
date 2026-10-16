@@ -3,4 +3,12 @@
     <!-- Android TV app (poster options menu). -->
     <string name="tv_action_view_details">View details</string>
     <string name="tv_action_random_episode">Watch a random episode</string>
+    <!-- Glass navigation bar at the top center (TV for now). -->
+    <string name="settings_top_nav_bar">Glass top bar</string>
+    <string name="settings_top_nav_bar_description">Replaces the sidebar with a glass bar at the top center of the screen.</string>
+    <string name="settings_top_nav_bar_layout">Bar layout</string>
+    <string name="settings_top_nav_bar_expanded_description">Icons and section names.</string>
+    <string name="settings_top_nav_bar_compact_description">Icons only.</string>
+    <string name="settings_nav_bar_sidebar">Sidebar</string>
+    <string name="settings_top_nav_bar_hint">Press up from the top of a page, or Back, to reach the bar.</string>
 </resources>

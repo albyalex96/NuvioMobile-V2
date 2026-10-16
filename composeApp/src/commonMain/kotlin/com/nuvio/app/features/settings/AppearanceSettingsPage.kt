@@ -29,6 +29,8 @@ import com.nuvio.app.core.format.formatReleaseDate
 import com.nuvio.app.core.ui.floatingNavigationGlowSupported
 import com.nuvio.app.core.ui.AppTheme
 import com.nuvio.app.isIos
+import com.nuvio.app.features.livetv.LiveTvRepository
+import com.nuvio.app.tv.TvAppRuntime
 import com.nuvio.app.core.ui.NuvioBottomSheetActionRow
 import com.nuvio.app.core.ui.NuvioModalBottomSheet
 import com.nuvio.app.core.ui.NuvioStatusModal
@@ -59,6 +61,7 @@ import nuvio.composeapp.generated.resources.settings_appearance_nav_bar_style
 import nuvio.composeapp.generated.resources.settings_nav_bar_glow_on
 import nuvio.composeapp.generated.resources.settings_nav_bar_glow_off
 import nuvio.composeapp.generated.resources.settings_nav_bar_summary
+import nuvio.composeapp.generated.resources.settings_nav_bar_sidebar
 import nuvio.composeapp.generated.resources.settings_appearance_amoled_black
 import nuvio.composeapp.generated.resources.settings_appearance_amoled_description
 import nuvio.composeapp.generated.resources.settings_appearance_amoled_surfaces
@@ -133,6 +136,12 @@ internal fun LazyListScope.appearanceSettingsContent(
         val navBarStyleAvailable = !isIos
         val glowEnabled by ThemeSettingsRepository.navBarGlowEnabled.collectAsStateWithLifecycle()
         val effectiveNavBarStyle = if (isTablet) NavBarStyle.COMPACT else selectedNavBarStyle
+        val topNavBarEnabled by ThemeSettingsRepository.topNavBarEnabled.collectAsStateWithLifecycle()
+        val topNavBarStyle by ThemeSettingsRepository.topNavBarStyle.collectAsStateWithLifecycle()
+        val liveTvUiState by remember {
+            LiveTvRepository.ensureLoaded()
+            LiveTvRepository.uiState
+        }.collectAsStateWithLifecycle()
         SettingsSection(
             title = stringResource(Res.string.settings_appearance_section_display),
             isTablet = isTablet,
@@ -208,7 +217,17 @@ internal fun LazyListScope.appearanceSettingsContent(
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(
                         title = stringResource(Res.string.settings_appearance_nav_bar_style),
-                        description = if (floatingNavigationGlowSupported && effectiveNavBarStyle != NavBarStyle.CLASSIC) {
+                        description = if (TvAppRuntime.isTvApp) {
+                            if (topNavBarEnabled) {
+                                stringResource(
+                                    Res.string.settings_nav_bar_summary,
+                                    stringResource(topNavBarStyle.labelRes),
+                                    stringResource(if (glowEnabled) Res.string.settings_nav_bar_glow_on else Res.string.settings_nav_bar_glow_off),
+                                )
+                            } else {
+                                stringResource(Res.string.settings_nav_bar_sidebar)
+                            }
+                        } else if (floatingNavigationGlowSupported && effectiveNavBarStyle != NavBarStyle.CLASSIC) {
                             stringResource(
                                 Res.string.settings_nav_bar_summary,
                                 stringResource(effectiveNavBarStyle.labelRes),
@@ -285,6 +304,7 @@ internal fun LazyListScope.appearanceSettingsContent(
                 onStyleSelected = onNavBarStyleSelected,
                 glowEnabled = glowEnabled,
                 onGlowChanged = ThemeSettingsRepository::setNavBarGlowEnabled,
+                showLiveTv = liveTvUiState.showInNavigation,
                 onDismiss = { showNavBarStyleSheet = false },
             )
         }

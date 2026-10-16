@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Same drawing as composeApp nav_live_tv.xml (TV with antennas). -->
+<vector
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <path
+      android:pathData="M7.5,2.75L12,6.75L16.5,2.75"
+      android:strokeColor="#FFFFFFFF"
+      android:strokeWidth="1.7"
+      android:strokeLineCap="round"
+      android:strokeLineJoin="round"/>
+  <path
+      android:pathData="M5,7.5H19A3,3 0,0 1,22 10.5V17.5A3,3 0,0 1,19 20.5H5A3,3 0,0 1,2 17.5V10.5A3,3 0,0 1,5 7.5ZM6.25,9.75A1.5,1.5 0,0 0,4.75 11.25V16.75A1.5,1.5 0,0 0,6.25 18.25H14.25A1.5,1.5 0,0 0,15.75 16.75V11.25A1.5,1.5 0,0 0,14.25 9.75ZM18.75,10.6A1.1,1.1 0,1 0,18.75 12.8A1.1,1.1 0,1 0,18.75 10.6ZM18.75,14.6A1.1,1.1 0,1 0,18.75 16.8A1.1,1.1 0,1 0,18.75 14.6Z"
+      android:fillColor="#FFFFFFFF"
+      android:fillType="evenOdd"/>
+</vector>

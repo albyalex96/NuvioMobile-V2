@@ -195,6 +195,8 @@ object ProfileSettingsSync {
             ThemeSettingsRepository.liquidGlassNativeTabBarEnabled.map { "liquid_glass_tab_bar" },
             ThemeSettingsRepository.navBarGlowEnabled.map { "nav_bar_glow_enabled" },
             ThemeSettingsRepository.navBarStyle.map { "nav_bar_style" },
+            ThemeSettingsRepository.topNavBarEnabled.map { "top_nav_bar_enabled" },
+            ThemeSettingsRepository.topNavBarStyle.map { "top_nav_bar_style" },
             ThemeSettingsRepository.dateFormat.map { "date_format" },
             ThemeSettingsRepository.episodeCodeFormat.map { "episode_code_format" },
             PosterCardStyleRepository.uiState.map { "poster_card_style" },

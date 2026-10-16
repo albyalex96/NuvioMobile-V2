@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -44,6 +43,7 @@ import nuvio.composeapp.generated.resources.compose_nav_library
 import nuvio.composeapp.generated.resources.compose_nav_live_tv
 import nuvio.composeapp.generated.resources.compose_nav_profile
 import nuvio.composeapp.generated.resources.compose_nav_search
+import nuvio.composeapp.generated.resources.nav_live_tv
 import nuvio.composeapp.generated.resources.sidebar_library
 import nuvio.composeapp.generated.resources.sidebar_search
 import org.jetbrains.compose.resources.stringResource
@@ -105,7 +105,7 @@ internal fun MainTabsDestination(
                 add(FloatingNavigationItem(
                     selected = selectedTab == AppScreenTab.LiveTv,
                     onClick = { onTabSelected(AppScreenTab.LiveTv) },
-                    icon = Icons.Filled.Tv,
+                    drawable = Res.drawable.nav_live_tv,
                     label = stringResource(Res.string.compose_nav_live_tv),
                 ))
             }
@@ -157,7 +157,7 @@ internal fun MainTabsDestination(
                             NavItem(
                                 selected = selectedTab == AppScreenTab.LiveTv,
                                 onClick = { onTabSelected(AppScreenTab.LiveTv) },
-                                icon = Icons.Filled.Tv,
+                                icon = Res.drawable.nav_live_tv,
                                 contentDescription = stringResource(Res.string.compose_nav_live_tv),
                             )
                         }

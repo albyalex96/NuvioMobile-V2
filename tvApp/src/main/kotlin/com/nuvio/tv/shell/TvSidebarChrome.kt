@@ -30,7 +30,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.LiveTv
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -83,7 +82,14 @@ import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.core.ui.themePalette
 import com.nuvio.app.features.profiles.NuvioProfile
 import com.nuvio.app.features.profiles.parseHexColor
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nuvio.app.features.settings.ThemeSettingsRepository
+import com.nuvio.app.features.settings.TopNavBarStyle
 import com.nuvio.app.tv.TvFocusRegions
+import com.nuvio.app.tv.TvGlassNavItem
+import com.nuvio.app.tv.TvGlassNavigationBar
+import com.nuvio.app.tv.rememberTvGlassBackdrop
+import com.nuvio.app.tv.tvGlassBackdropSource
 import com.nuvio.app.tv.TvTabsChrome
 import com.nuvio.app.tv.tvChromeRegion
 import com.nuvio.app.tv.tvEnterOn
@@ -103,6 +109,7 @@ private val ItemIconSize = 22.dp
 private val ContentGap = 14.dp
 private val ChromeStart = 14.dp
 private val ChromeTop = 16.dp
+private val TopBarTop = 10.dp
 private const val PILL_AUTO_COLLAPSE_MS = 3_000L
 private const val PANEL_IN_MS = 345
 private const val PANEL_OUT_MS = 385
@@ -116,13 +123,35 @@ private const val ITEM_ANIMATION_MS = 150
 @Composable
 fun TvSidebarChrome(chrome: TvTabsChrome, content: @Composable () -> Unit) {
     val focusManager = LocalFocusManager.current
+    // Glass top bar (Appearance -> Navigation bar): replaces pill + sidebar while enabled.
+    val topBar by ThemeSettingsRepository.topNavBarEnabled.collectAsStateWithLifecycle()
+    val topBarStyle by ThemeSettingsRepository.topNavBarStyle.collectAsStateWithLifecycle()
+    val glowEnabled by ThemeSettingsRepository.navBarGlowEnabled.collectAsStateWithLifecycle()
     var expanded by remember { mutableStateOf(false) }
+    var topBarFocused by remember { mutableStateOf(false) }
     var pillIconOnly by remember { mutableStateOf(false) }
     var pillExpandRequests by remember { mutableIntStateOf(0) }
     val selectedRequester = remember { FocusRequester() }
-    val showPill = chrome.selectedTab != AppScreenTab.Search
+    val topBarRequester = remember { FocusRequester() }
+    val showPill = !topBar && chrome.selectedTab != AppScreenTab.Search
+    val glassBackdrop = rememberTvGlassBackdrop()
+
+    LaunchedEffect(topBar) {
+        log.i { "Navigation chrome: ${if (topBar) "glass top bar" else "sidebar"}" }
+        if (topBar) expanded = false
+    }
+
+    fun focusTopBar(reason: String) {
+        log.d { "Top bar focused ($reason)" }
+        runCatching { topBarRequester.requestFocus() }
+            .onFailure { log.w(it) { "Top bar not ready for focus" } }
+    }
 
     fun openSidebar(reason: String) {
+        if (topBar) {
+            focusTopBar(reason)
+            return
+        }
         if (expanded) return
         log.d { "Sidebar opened ($reason)" }
         expanded = true
@@ -141,7 +170,7 @@ fun TvSidebarChrome(chrome: TvTabsChrome, content: @Composable () -> Unit) {
         onDispose { TvFocusRegions.chromeOpener = null }
     }
     // Back on a root page opens the sidebar; with the sidebar open it is the app's own Back.
-    PlatformBackHandler(enabled = !expanded, onBack = { openSidebar("back") })
+    PlatformBackHandler(enabled = !expanded && !(topBar && topBarFocused), onBack = { openSidebar("back") })
 
     LaunchedEffect(expanded) {
         if (!expanded) return@LaunchedEffect
@@ -177,10 +206,11 @@ fun TvSidebarChrome(chrome: TvTabsChrome, content: @Composable () -> Unit) {
                 .fillMaxSize()
                 // Pages other than Home keep their header below the floating pill.
                 .padding(
-                    top = if (showPill && chrome.selectedTab != AppScreenTab.Home) TvDimens.chromeTopInset else 0.dp,
+                    top = if ((showPill || topBar) && chrome.selectedTab != AppScreenTab.Home) TvDimens.chromeTopInset else 0.dp,
                 )
+                .then(if (topBar) Modifier.tvGlassBackdropSource(glassBackdrop) else Modifier)
                 .onPreviewKeyEvent { event ->
-                    if (event.type == KeyEventType.KeyDown && !expanded) {
+                    if (event.type == KeyEventType.KeyDown && !expanded && !topBar) {
                         when (event.key) {
                             Key.DirectionDown -> pillIconOnly = true
                             Key.DirectionUp -> {
@@ -192,12 +222,19 @@ fun TvSidebarChrome(chrome: TvTabsChrome, content: @Composable () -> Unit) {
                     false
                 }
                 .onKeyEvent { event ->
-                    // Left that the page cannot use (first column) opens the sidebar.
-                    if (!expanded && event.type == KeyEventType.KeyDown && event.key == Key.DirectionLeft) {
-                        if (!focusManager.moveFocus(FocusDirection.Left)) openSidebar("left edge")
-                        true
-                    } else {
-                        false
+                    when {
+                        expanded || event.type != KeyEventType.KeyDown -> false
+                        // Up that the page cannot use (first row) reaches the glass top bar.
+                        topBar && event.key == Key.DirectionUp -> {
+                            if (!focusManager.moveFocus(FocusDirection.Up)) focusTopBar("top edge")
+                            true
+                        }
+                        // Left that the page cannot use (first column) opens the sidebar.
+                        !topBar && event.key == Key.DirectionLeft -> {
+                            if (!focusManager.moveFocus(FocusDirection.Left)) openSidebar("left edge")
+                            true
+                        }
+                        else -> false
                     }
                 },
         ) {
@@ -223,7 +260,59 @@ fun TvSidebarChrome(chrome: TvTabsChrome, content: @Composable () -> Unit) {
             )
         }
 
-        if (expanded || progress > 0.01f) {
+        if (topBar) {
+            val items = chrome.tabs.map { tab ->
+                TvGlassNavItem(
+                    key = tab.name,
+                    label = tab.label(),
+                    selected = tab == chrome.selectedTab,
+                    icon = tab.painter(),
+                    onClick = {
+                        log.d { "Tab selected from top bar: $tab" }
+                        chrome.onTabSelected(tab)
+                        // Land on the first element of the opened page (also when re-selecting it).
+                        TvFocusRegions.request(force = true)
+                    },
+                )
+            }
+            val profileItem = TvGlassNavItem(
+                key = "profile",
+                label = chrome.activeProfile?.name?.takeIf { it.isNotBlank() }
+                    ?: stringResource(R.string.tv_nav_profile),
+                selected = false,
+                leading = { ProfileAvatar(profile = chrome.activeProfile, size = 26.dp) },
+                onClick = {
+                    log.d { "Profile switch from top bar" }
+                    chrome.onSwitchProfile()
+                },
+            )
+            TvGlassNavigationBar(
+                items = listOf(profileItem) + items,
+                backdrop = glassBackdrop,
+                expanded = topBarStyle == TopNavBarStyle.EXPANDED,
+                glowEnabled = glowEnabled,
+                selectedRequester = selectedRequester,
+                modifier = Modifier
+                    .zIndex(1f)
+                    .align(Alignment.TopCenter)
+                    .padding(top = TopBarTop)
+                    .focusRequester(topBarRequester)
+                    .onFocusChanged { topBarFocused = it.hasFocus }
+                    .onPreviewKeyEvent { event ->
+                        if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionDown) {
+                            // Back to the page: its primary region takes the focus.
+                            TvFocusRegions.request(force = true)
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    .tvEnterOn(selectedRequester)
+                    .tvChromeRegion(),
+            )
+        }
+
+        if (!topBar && (expanded || progress > 0.01f)) {
             Box(
                 modifier = Modifier
                     .zIndex(2f)
@@ -560,7 +649,7 @@ private fun AppScreenTab.painter(): Painter = when (this) {
     AppScreenTab.Home -> rememberVectorPainter(Icons.Filled.Home)
     AppScreenTab.Search -> painterResource(R.drawable.tv_sidebar_search)
     AppScreenTab.Library -> painterResource(R.drawable.tv_sidebar_library)
-    AppScreenTab.LiveTv -> rememberVectorPainter(Icons.Filled.LiveTv)
+    AppScreenTab.LiveTv -> painterResource(R.drawable.tv_sidebar_live_tv)
     AppScreenTab.Settings -> painterResource(R.drawable.tv_sidebar_settings)
 }
 

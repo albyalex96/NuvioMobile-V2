@@ -19,6 +19,8 @@ actual object ThemeSettingsStorage {
     private const val selectedAppLanguageKey = "selected_app_language"
     private const val navBarStyleKey = "nav_bar_style"
     private const val navBarGlowEnabledKey = "nav_bar_glow_enabled"
+    private const val topNavBarEnabledKey = "top_nav_bar_enabled"
+    private const val topNavBarStyleKey = "top_nav_bar_style"
     private const val dateFormatKey = "date_format"
     private const val episodeCodeFormatKey = "episode_code_format"
     private val profileScopedSyncKeys = listOf(
@@ -27,6 +29,8 @@ actual object ThemeSettingsStorage {
         amoledEnabledKey,
         amoledSurfacesEnabledKey,
         navBarGlowEnabledKey,
+        topNavBarEnabledKey,
+        topNavBarStyleKey,
         liquidGlassNativeTabBarEnabledKey,
         navBarStyleKey,
         dateFormatKey,
@@ -87,6 +91,27 @@ actual object ThemeSettingsStorage {
 
     actual fun saveNavBarGlowEnabled(enabled: Boolean) {
         NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = ProfileScopedKey.of(navBarGlowEnabledKey))
+    }
+
+    actual fun loadTopNavBarEnabled(): Boolean? {
+        val defaults = NSUserDefaults.standardUserDefaults
+        val key = ProfileScopedKey.of(topNavBarEnabledKey)
+        return if (defaults.objectForKey(key) != null) {
+            defaults.boolForKey(key)
+        } else {
+            null
+        }
+    }
+
+    actual fun saveTopNavBarEnabled(enabled: Boolean) {
+        NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = ProfileScopedKey.of(topNavBarEnabledKey))
+    }
+
+    actual fun loadTopNavBarStyle(): String? =
+        NSUserDefaults.standardUserDefaults.stringForKey(ProfileScopedKey.of(topNavBarStyleKey))
+
+    actual fun saveTopNavBarStyle(styleKey: String) {
+        NSUserDefaults.standardUserDefaults.setObject(styleKey, forKey = ProfileScopedKey.of(topNavBarStyleKey))
     }
 
     actual fun loadLiquidGlassNativeTabBarEnabled(): Boolean? {
@@ -160,6 +185,8 @@ actual object ThemeSettingsStorage {
         loadSelectedTheme()?.let { put(selectedThemeKey, encodeSyncString(it)) }
         loadCustomThemeColors()?.let { put(customThemeColorsKey, encodeSyncString(it)) }
         loadNavBarGlowEnabled()?.let { put(navBarGlowEnabledKey, encodeSyncBoolean(it)) }
+        loadTopNavBarEnabled()?.let { put(topNavBarEnabledKey, encodeSyncBoolean(it)) }
+        loadTopNavBarStyle()?.let { put(topNavBarStyleKey, encodeSyncString(it)) }
         loadAmoledEnabled()?.let { put(amoledEnabledKey, encodeSyncBoolean(it)) }
         loadAmoledSurfacesEnabled()?.let { put(amoledSurfacesEnabledKey, encodeSyncBoolean(it)) }
         loadLiquidGlassNativeTabBarEnabled()?.let { put(liquidGlassNativeTabBarEnabledKey, encodeSyncBoolean(it)) }
@@ -176,6 +203,8 @@ actual object ThemeSettingsStorage {
         payload.decodeSyncString(selectedThemeKey)?.let(::saveSelectedTheme)
         payload.decodeSyncString(customThemeColorsKey)?.let(::saveCustomThemeColors)
         payload.decodeSyncBoolean(navBarGlowEnabledKey)?.let(::saveNavBarGlowEnabled)
+        payload.decodeSyncBoolean(topNavBarEnabledKey)?.let(::saveTopNavBarEnabled)
+        payload.decodeSyncString(topNavBarStyleKey)?.let(::saveTopNavBarStyle)
         payload.decodeSyncBoolean(amoledEnabledKey)?.let(::saveAmoledEnabled)
         payload.decodeSyncBoolean(amoledSurfacesEnabledKey)?.let(::saveAmoledSurfacesEnabled)
         payload.decodeSyncBoolean(liquidGlassNativeTabBarEnabledKey)?.let(::saveLiquidGlassNativeTabBarEnabled)
