@@ -2,6 +2,7 @@ package com.nuvio.app.features.profiles
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -10,6 +11,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -351,6 +353,13 @@ private fun ProfileAvatarCard(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val pressScale = if (isPressed) 0.95f else 1f
+    // D-pad / keyboard focus (TV): the clickable has no indication, so show it here.
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    val focusScale by animateFloatAsState(
+        targetValue = if (isFocused) 1.08f else 1f,
+        animationSpec = tween(150, easing = FastOutSlowInEasing),
+        label = "profileFocusScale",
+    )
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -358,8 +367,8 @@ private fun ProfileAvatarCard(
             .width(150.dp)
             .graphicsLayer {
                 alpha = animAlpha.value
-                scaleX = animScale.value * pressScale
-                scaleY = animScale.value * pressScale
+                scaleX = animScale.value * pressScale * focusScale
+                scaleY = animScale.value * pressScale * focusScale
                 translationY = animOffset.value
             }
             .clip(RoundedCornerShape(20.dp))
@@ -372,7 +381,9 @@ private fun ProfileAvatarCard(
             .padding(8.dp),
     ) {
         Box(
-            modifier = Modifier.size(110.dp),
+            modifier = Modifier
+                .size(110.dp)
+                .then(if (isFocused) Modifier.border(3.dp, Color.White, CircleShape) else Modifier),
             contentAlignment = Alignment.Center,
         ) {
             if (avatarImageUrl != null) {
@@ -501,6 +512,13 @@ private fun AddProfileCard(
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
     val pressScale = if (isPressed) 0.95f else 1f
+    // D-pad / keyboard focus (TV): the clickable has no indication, so show it here.
+    val isFocused by interactionSource.collectIsFocusedAsState()
+    val focusScale by animateFloatAsState(
+        targetValue = if (isFocused) 1.08f else 1f,
+        animationSpec = tween(150, easing = FastOutSlowInEasing),
+        label = "profileFocusScale",
+    )
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -508,8 +526,8 @@ private fun AddProfileCard(
             .width(150.dp)
             .graphicsLayer {
                 alpha = animAlpha.value
-                scaleX = animScale.value * pressScale
-                scaleY = animScale.value * pressScale
+                scaleX = animScale.value * pressScale * focusScale
+                scaleY = animScale.value * pressScale * focusScale
                 translationY = animOffset.value
             }
             .clip(RoundedCornerShape(20.dp))
@@ -522,7 +540,9 @@ private fun AddProfileCard(
             .padding(8.dp),
     ) {
         Box(
-            modifier = Modifier.size(110.dp),
+            modifier = Modifier
+                .size(110.dp)
+                .then(if (isFocused) Modifier.border(3.dp, Color.White, CircleShape) else Modifier),
             contentAlignment = Alignment.Center,
         ) {
             Box(
