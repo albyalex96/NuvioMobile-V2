@@ -150,9 +150,27 @@ fun Modifier.tvChromeRegion(): Modifier {
 @Composable
 fun Modifier.tvEnterOn(target: FocusRequester): Modifier {
     if (LocalTvShell.current == null) return this
+    val guard = remember { EnterRedirectGuard() }
     return focusProperties {
-        onEnter = { runCatching { target.requestFocus() } }
+        onEnter = {
+            // Focusing the target enters this same group again: without the guard the redirect
+            // would call itself until the main thread hangs (ANR).
+            if (!guard.redirecting) {
+                guard.redirecting = true
+                try {
+                    target.requestFocus()
+                } catch (error: IllegalStateException) {
+                    // Target not attached yet: keep the default enter (first element).
+                } finally {
+                    guard.redirecting = false
+                }
+            }
+        }
     }
+}
+
+private class EnterRedirectGuard {
+    var redirecting = false
 }
 
 /**

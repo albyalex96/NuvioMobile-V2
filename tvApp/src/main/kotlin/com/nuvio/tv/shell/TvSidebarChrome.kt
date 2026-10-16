@@ -39,7 +39,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -57,6 +56,7 @@ import com.nuvio.app.features.profiles.parseHexColor
 import com.nuvio.app.tv.TvFocusRegions
 import com.nuvio.app.tv.TvTabsChrome
 import com.nuvio.app.tv.tvChromeRegion
+import com.nuvio.app.tv.tvEnterOn
 import com.nuvio.tv.R
 import com.nuvio.tv.ui.TvDimens
 import com.nuvio.tv.ui.TvRemoteImage
@@ -116,13 +116,7 @@ fun TvSidebarChrome(chrome: TvTabsChrome, content: @Composable () -> Unit) {
                 .padding(horizontal = 12.dp, vertical = 28.dp)
                 .onFocusChanged { sidebarFocused = it.hasFocus }
                 // Entering the rail (D-pad left from the page) always lands on the open tab.
-                .focusProperties {
-                    onEnter = {
-                        if (runCatching { selectedRequester.requestFocus() }.getOrDefault(false)) {
-                            log.d { "Sidebar entered on the selected tab" }
-                        }
-                    }
-                }
+                .tvEnterOn(selectedRequester)
                 .tvChromeRegion(),
         ) {
             // Profile pinned at the top, navigation centered on the screen's horizontal midline.
@@ -146,6 +140,7 @@ fun TvSidebarChrome(chrome: TvTabsChrome, content: @Composable () -> Unit) {
                         selected = selected,
                         expanded = sidebarFocused,
                         onClick = {
+                            log.d { "Tab selected: $tab" }
                             chrome.onTabSelected(tab)
                             // Leave the sidebar and land on the first element of the opened page.
                             TvFocusRegions.request(force = true)
