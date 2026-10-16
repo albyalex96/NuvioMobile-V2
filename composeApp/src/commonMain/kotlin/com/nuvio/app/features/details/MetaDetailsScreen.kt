@@ -1028,6 +1028,7 @@ fun MetaDetailsScreen(
                             onShuffleClick = onShuffleClick,
                             onOpenMeta = onOpenMeta,
                             onBack = onBackFromDetails,
+                            showExternalRatings = mdbListSettings.isActive,
                         ),
                     )
                     return@Box

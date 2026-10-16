@@ -115,6 +115,8 @@ class TvDetailsModel(
     val onShuffleClick: (() -> Unit)?,
     val onOpenMeta: (MetaPreview) -> Unit,
     val onBack: () -> Unit,
+    /** MDBList is active: show `meta.externalRatings` (draw them with [TvExternalRatingsRow]). */
+    val showExternalRatings: Boolean = false,
 )
 
 /** State of the TV sign-in screen, backed by `DeviceLinkAuthRepository` (QR login). */

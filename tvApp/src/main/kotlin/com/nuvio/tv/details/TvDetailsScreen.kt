@@ -77,6 +77,7 @@ import com.nuvio.app.features.details.MetaVideo
 import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.home.stableKey
 import com.nuvio.app.tv.TvDetailsModel
+import com.nuvio.app.tv.TvExternalRatingsRow
 import com.nuvio.app.tv.TvSeason
 import com.nuvio.tv.R
 import com.nuvio.tv.ui.TvContentRow
@@ -325,6 +326,15 @@ private fun HeroSection(
                 Spacer(modifier = Modifier.height(12.dp))
             }
 
+            // MDBList ratings (NuvioTV `MDBListRatingsRow`), between the credits and the plot.
+            if (model.showExternalRatings && meta.externalRatings.isNotEmpty()) {
+                TvExternalRatingsRow(
+                    ratings = meta.externalRatings,
+                    modifier = Modifier.fillMaxWidth(0.6f),
+                )
+                Spacer(modifier = Modifier.height(14.dp))
+            }
+
             if (!meta.description.isNullOrBlank()) {
                 Text(
                     text = meta.description.orEmpty(),
@@ -447,10 +457,12 @@ private fun ActionIconButton(
 private fun MetaInfoRows(model: TvDetailsModel) {
     val meta = model.meta
     val secondary = MaterialTheme.nuvio.colors.textSecondary
+    // Like NuvioTV, the IMDb score is not repeated when the MDBList row already shows it.
+    val imdbInRatingsRow = model.showExternalRatings && meta.externalRatings.any { it.source == "imdb" }
     val primaryItems = buildList {
         meta.genres.take(3).takeIf { it.isNotEmpty() }?.let { add(it.joinToString(" • ")) }
         meta.releaseInfo?.takeIf { it.isNotBlank() }?.let { add(formatReleaseDateForDisplay(it)) }
-        meta.imdbRating?.takeIf { it.isNotBlank() }?.let { add("IMDb $it") }
+        if (!imdbInRatingsRow) meta.imdbRating?.takeIf { it.isNotBlank() }?.let { add("IMDb $it") }
     }
     val status = when (meta.status?.trim()?.lowercase()) {
         null, "" -> null

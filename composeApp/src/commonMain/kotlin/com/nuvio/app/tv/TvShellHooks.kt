@@ -241,6 +241,7 @@ internal fun buildTvDetailsModel(
     onShuffleClick: (() -> Unit)?,
     onOpenMeta: ((MetaPreview) -> Unit)?,
     onBack: () -> Unit,
+    showExternalRatings: Boolean,
 ): TvDetailsModel {
     val isSeries = meta.type == "series" || hasEpisodes
     val seasons = if (hasEpisodes) {
@@ -274,7 +275,17 @@ internal fun buildTvDetailsModel(
         onShuffleClick = onShuffleClick,
         onOpenMeta = onOpenMeta ?: {},
         onBack = onBack,
+        showExternalRatings = showExternalRatings,
     )
+}
+
+/** MDBList ratings row of the detail page (same logos and provider order as the phone app). */
+@Composable
+fun TvExternalRatingsRow(
+    ratings: List<com.nuvio.app.features.details.MetaExternalRating>,
+    modifier: Modifier = Modifier,
+) {
+    com.nuvio.app.features.details.components.DetailRatingsRow(ratings = ratings, modifier = modifier)
 }
 
 /**
