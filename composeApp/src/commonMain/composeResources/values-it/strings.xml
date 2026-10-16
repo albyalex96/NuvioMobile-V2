@@ -466,7 +466,7 @@
   <string name="settings_notifications_test_for_title">Invia una notifica di test locale per %1$s.</string>
   <string name="settings_notifications_test_requires_saved_show">Salva prima una serie nella tua libreria per testare le notifiche.</string>
   <string name="settings_notifications_test_title">Notifica di test</string>
-  <string name="community_section_title">Community</string>
+  <string name="community_section_title">Comunità</string>
   <string name="community_section_description">Scopri le persone che sviluppano e supportano Nuvio su Mobile, TV e Web.</string>
   <string name="community_supporters_not_configured">L'API dei sostenitori non è configurata. Aggiungi DONATIONS_BASE_URL a local.properties.</string>
   <string name="community_tab_contributors">Collaboratori</string>
@@ -1023,7 +1023,7 @@
   <string name="trakt_progress_load_failed">Impossibile caricare i progressi di Trakt</string>
   <string name="trakt_sign_in_complete_failed">Impossibile completare l'accesso a Trakt</string>
   <string name="trakt_user_fallback">Utente Trakt</string>
-  <string name="trakt_watchlist">Watchlist</string>
+  <string name="trakt_watchlist">Lista da guardare</string>
   <string name="generic_trailer">Trailer</string>
   <string name="generic_unknown">Sconosciuto</string>
   <string name="generic_addon">Addon</string>
@@ -1063,7 +1063,7 @@
   <string name="date_month_short_nov">Nov</string>
   <string name="date_month_short_dec">Dic</string>
   <string name="details_browse_kind_company">Casa di produzione</string>
-  <string name="details_browse_kind_network">Network</string>
+  <string name="details_browse_kind_network">Emittente</string>
   <string name="details_browse_load_failed">Impossibile caricare %1$s</string>
   <string name="details_browse_rail_popular">Popolari</string>
   <string name="details_browse_rail_recent">Recenti</string>
@@ -1125,7 +1125,7 @@
   <string name="collections_editor_tmdb_sources">Sorgenti TMDB</string>
   <string name="collections_editor_tmdb_public_list_mode">Lista pubblica</string>
   <string name="collections_editor_tmdb_production_mode">Produzione</string>
-  <string name="collections_editor_tmdb_network_mode">Network</string>
+  <string name="collections_editor_tmdb_network_mode">Emittente</string>
   <string name="collections_editor_tmdb_collection_mode">Collezione</string>
   <string name="collections_editor_tmdb_person_mode">Persona</string>
   <string name="collections_editor_tmdb_director_mode">Regista</string>
@@ -1245,7 +1245,7 @@
   <string name="collections_editor_tmdb_subtitle_list">Lista TMDB</string>
   <string name="collections_editor_tmdb_subtitle_movie_collection">Collezione film TMDB</string>
   <string name="collections_editor_tmdb_subtitle_production">Produzione</string>
-  <string name="collections_editor_tmdb_subtitle_network">Network</string>
+  <string name="collections_editor_tmdb_subtitle_network">Emittente</string>
   <string name="collections_editor_tmdb_subtitle_person">Persona</string>
   <string name="collections_editor_tmdb_subtitle_director">Regista</string>
   <string name="collections_editor_tmdb_subtitle_discover">TMDB Discover</string>
