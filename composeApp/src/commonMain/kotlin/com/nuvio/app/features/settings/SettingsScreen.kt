@@ -37,6 +37,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -101,6 +103,9 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
+import com.nuvio.app.tv.TvMenuBackHandler
+import com.nuvio.app.tv.rememberTvFocusRegion
+import com.nuvio.app.tv.tvEnterOn
 import com.nuvio.app.tv.tvFocusRegion
 
 private val SettingsSearchRevealThreshold = 28.dp
@@ -1019,6 +1024,14 @@ private fun TabletSettingsScreen(
     }
 
     val saveableStateHolder = rememberSaveableStateHolder()
+    val tvCategoriesRegion = rememberTvFocusRegion()
+    val tvContentRegion = rememberTvFocusRegion()
+    val tvSelectedCategoryRequester = remember { FocusRequester() }
+    TvMenuBackHandler(
+        menu = tvCategoriesRegion,
+        content = tvContentRegion,
+        contentAtRoot = page == SettingsPage.Root,
+    )
 
     Row(modifier = Modifier.fillMaxSize()) {
         Surface(
@@ -1030,6 +1043,8 @@ private fun TabletSettingsScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
+                    .tvEnterOn(tvSelectedCategoryRequester)
+                    .tvFocusRegion(key = "settings_categories", region = tvCategoriesRegion, priority = 1)
                     .padding(top = topOffset),
             ) {
                 Text(
@@ -1050,6 +1065,11 @@ private fun TabletSettingsScreen(
                         label = stringResource(category.labelRes),
                         icon = category.icon,
                         selected = category == activeCategory,
+                        modifier = if (category == activeCategory) {
+                            Modifier.focusRequester(tvSelectedCategoryRequester)
+                        } else {
+                            Modifier
+                        },
                         onClick = {
                             selectedCategory = category.name
                             if (page != SettingsPage.Root) {
@@ -1114,7 +1134,11 @@ private fun TabletSettingsScreen(
                 state = listState,
                 modifier = Modifier
                     .fillMaxSize()
-                    .tvFocusRegion(key = page.name to activeCategory.name)
+                    .tvFocusRegion(
+                        key = page.name to activeCategory.name,
+                        region = tvContentRegion,
+                        focusOnActivation = false,
+                    )
                     .nestedScroll(rootSearchRevealConnection),
                 contentPadding = PaddingValues(
                     start = 40.dp,

@@ -7,7 +7,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
-import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -57,6 +56,7 @@ import com.nuvio.app.features.profiles.NuvioProfile
 import com.nuvio.app.features.profiles.parseHexColor
 import com.nuvio.app.tv.TvFocusRegions
 import com.nuvio.app.tv.TvTabsChrome
+import com.nuvio.app.tv.tvChromeRegion
 import com.nuvio.tv.R
 import com.nuvio.tv.ui.TvDimens
 import com.nuvio.tv.ui.TvRemoteImage
@@ -123,7 +123,7 @@ fun TvSidebarChrome(chrome: TvTabsChrome, content: @Composable () -> Unit) {
                         }
                     }
                 }
-                .focusGroup(),
+                .tvChromeRegion(),
         ) {
             // Profile pinned at the top, navigation centered on the screen's horizontal midline.
             ProfileItem(

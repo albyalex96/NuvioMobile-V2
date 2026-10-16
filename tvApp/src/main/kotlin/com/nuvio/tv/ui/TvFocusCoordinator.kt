@@ -35,7 +35,7 @@ private const val MAX_FOCUS_ATTEMPTS = 20
  * Keeps the D-pad focus on the content the user just opened:
  * - a [TvFocusRegion] whose key changed (tab, settings page/category) receives the focus;
  * - when the focused element disappears (navigation to a new page, back), the focus moves to the
- *   primary region (last registered) or, if none, to the first element of the screen.
+ *   primary region (highest priority, then last registered) or, if none, to the first element of the screen.
  * Screens that place the focus themselves (home, details) win: non-forced requests are dropped
  * once something holds the focus.
  */
@@ -96,8 +96,9 @@ private suspend fun moveFocus(
 ) {
     if (!request.force && rootFocus.hasFocus) return
     repeat(MAX_FOCUS_ATTEMPTS) {
-        val region = request.region?.takeIf { it in TvFocusRegions.regions }
-            ?: TvFocusRegions.regions.lastOrNull()
+        val region = request.region
+            ?.takeIf { it in TvFocusRegions.regions || it == TvFocusRegions.chrome }
+            ?: TvFocusRegions.primary
         if (region != null) {
             if (region.hasFocus) return
             runCatching { region.requester.requestFocus(FocusDirection.Enter) }
