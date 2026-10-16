@@ -536,7 +536,7 @@ fun HomeScreen(
     val shuffledContinueWatchingItems = remember(rawShuffledContinueWatchingItems, cwPosterPattern) {
         rawShuffledContinueWatchingItems.withCustomPosterUrls(cwPosterPattern)
     }
-    val (continueWatchingItems, upcomingItems) = remember(
+    val (rowContinueWatchingItems, upcomingItems) = remember(
         shuffledContinueWatchingItems,
         continueWatchingPreferences.sortMode,
     ) {
@@ -545,6 +545,8 @@ fun HomeScreen(
             mode = continueWatchingPreferences.sortMode,
         )
     }
+    // A card marked as watched stays in place until the card of its next episode is ready.
+    val continueWatchingItems = ContinueWatchingHandoff.applyTo(rowContinueWatchingItems)
     val hasContinueWatchingRows = continueWatchingItems.isNotEmpty() || upcomingItems.isNotEmpty()
 
     ScreenActivityEffect(activeProfileId, continueWatchingItems.isNotEmpty(), hasUserScrolledContinueWatching) { active ->

@@ -11,6 +11,7 @@ import com.nuvio.app.features.watched.releasedMainSeasonEpisodes
 import com.nuvio.app.features.watched.toEpisodeWatchedItem
 import com.nuvio.app.features.watched.toSeriesWatchedItem
 import com.nuvio.app.features.watched.toWatchedItem
+import com.nuvio.app.features.watchprogress.ContinueWatchingItem
 import com.nuvio.app.features.watchprogress.CurrentDateProvider
 import com.nuvio.app.features.watchprogress.WatchProgressEntry
 import com.nuvio.app.features.watchprogress.WatchProgressRepository
@@ -85,6 +86,59 @@ object WatchingActions {
                 videoIds = releasedMainEpisodes.map(meta::episodePlaybackId),
                 parentMetaId = meta.id,
             )
+        }
+    }
+
+    /**
+     * Marks the movie or episode of a continue-watching card as watched and clears its progress,
+     * so the row moves on to the next episode. Returns true when the series has a released
+     * episode after the marked one (a next-up card is going to replace this one).
+     */
+    suspend fun markContinueWatchingItemWatched(item: ContinueWatchingItem): Boolean {
+        val season = item.seasonNumber
+        val episodeNumber = item.episodeNumber
+        if (season == null || episodeNumber == null) {
+            WatchedRepository.markWatched(
+                WatchedItem(
+                    id = item.parentMetaId,
+                    type = item.parentMetaType,
+                    name = item.title,
+                    poster = item.poster,
+                    markedAtEpochMs = 0L,
+                ),
+            )
+            WatchProgressRepository.clearProgress(videoId = item.videoId, parentMetaId = item.parentMetaId)
+            return false
+        }
+
+        val meta = runCatching {
+            MetaDetailsRepository.fetch(type = item.parentMetaType, id = item.parentMetaId)
+        }.getOrNull()
+        val episode = meta?.videos?.firstOrNull { video ->
+            video.season == season && video.episode == episodeNumber
+        }
+        if (meta == null || episode == null) {
+            WatchedRepository.markWatched(
+                WatchedItem(
+                    id = item.parentMetaId,
+                    type = item.parentMetaType,
+                    name = item.episodeTitle ?: item.title,
+                    poster = item.poster,
+                    season = season,
+                    episode = episodeNumber,
+                    videoId = item.videoId,
+                    markedAtEpochMs = 0L,
+                ),
+            )
+            WatchProgressRepository.clearProgress(videoId = item.videoId, parentMetaId = item.parentMetaId)
+            return false
+        }
+
+        toggleEpisodeWatched(meta = meta, episode = episode, isCurrentlyWatched = false)
+        return meta.releasedMainSeasonEpisodes(CurrentDateProvider.todayIsoDate()).any { video ->
+            val videoSeason = video.season ?: return@any false
+            val videoEpisode = video.episode ?: return@any false
+            videoSeason > season || (videoSeason == season && videoEpisode > episodeNumber)
         }
     }
 

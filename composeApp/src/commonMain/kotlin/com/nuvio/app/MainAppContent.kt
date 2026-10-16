@@ -175,6 +175,7 @@ import com.nuvio.app.features.watchprogress.nextUpDismissKey
 import com.nuvio.app.features.watchprogress.toContinueWatchingItem
 import com.nuvio.app.navigation.*
 import com.nuvio.app.tv.ShellTabsDestination
+import com.nuvio.app.features.home.ContinueWatchingHandoff
 import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.tv.TvAppRuntime
 import com.nuvio.app.tv.tvMetaShortcutActions
@@ -1920,6 +1921,23 @@ internal fun MainAppContent(
                                             icon = Icons.Default.PlayArrow,
                                             label = stringResource(Res.string.play_manually),
                                             onSelected = { onContinueWatchingPlayManually(item) },
+                                        ),
+                                    )
+                                }
+                                if (!item.isReleaseAlert) {
+                                    add(
+                                        PosterZoomOverlayAction(
+                                            icon = Icons.Default.CheckCircleOutline,
+                                            label = stringResource(Res.string.hero_mark_watched),
+                                            onSelected = {
+                                                // Held before marking: the card must not leave the row
+                                                // before the next episode replaces it.
+                                                ContinueWatchingHandoff.hold(item)
+                                                coroutineScope.launch {
+                                                    val hasNextEpisode = WatchingActions.markContinueWatchingItemWatched(item)
+                                                    if (!hasNextEpisode) ContinueWatchingHandoff.release(item)
+                                                }
+                                            },
                                         ),
                                     )
                                 }
