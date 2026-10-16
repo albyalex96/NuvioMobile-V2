@@ -55,7 +55,12 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
+import com.nuvio.app.core.ui.PrimaryActionButton
 import com.nuvio.app.core.ui.heroStretchHeight
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import com.nuvio.app.core.ui.ScreenActivityEffect
 import com.nuvio.app.core.ui.heroStretchZoom
 import com.nuvio.app.features.home.MetaPreview
@@ -299,22 +304,15 @@ fun HomeHeroSection(
 
                     if (!layout.isTablet) {
                         Spacer(modifier = Modifier.height(14.dp))
-                        Surface(
-                            modifier = Modifier
-                                .clickable(enabled = onItemClick != null) {
-                                    onItemClick?.invoke(currentItem)
-                                },
-                            color = MaterialTheme.colorScheme.onBackground,
-                            contentColor = MaterialTheme.colorScheme.background,
-                            shape = RoundedCornerShape(40.dp),
-                        ) {
-                            Text(
-                                text = stringResource(Res.string.home_view_details),
-                                modifier = Modifier.padding(horizontal = 28.dp, vertical = 12.dp),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                            )
-                        }
+                        PrimaryActionButton(
+                            text = stringResource(Res.string.home_view_details),
+                            icon = rememberVectorPainter(Icons.Rounded.Info),
+                            onClick = { onItemClick?.invoke(currentItem) },
+                            enabled = onItemClick != null,
+                            textStyle = MaterialTheme.typography.titleMedium,
+                            iconSize = 20.dp,
+                            contentPadding = PaddingValues(horizontal = 26.dp, vertical = 12.dp),
+                        )
                     }
 
                     if (items.size > 1) {

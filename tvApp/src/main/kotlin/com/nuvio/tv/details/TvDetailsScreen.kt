@@ -1,5 +1,8 @@
 package com.nuvio.tv.details
 
+import com.nuvio.app.core.ui.primaryActionContentColor
+import com.nuvio.app.core.ui.primaryActionSurface
+import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -380,6 +383,9 @@ private fun PlayButton(
     onLongClick: (() -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
+    var focused by remember { mutableStateOf(false) }
+    val contentColor = primaryActionContentColor(enabled)
+    val resume = progress != null && progress > 0f
     Box(
         modifier = modifier
             .focusProperties { up = FocusRequester.Cancel }
@@ -389,8 +395,10 @@ private fun PlayButton(
                 onLongClick = onLongClick,
                 focusedScale = 1.05f,
                 enabled = enabled,
+                onFocusChange = { focused = it },
             )
-            .background(if (enabled) Color.White else Color.White.copy(alpha = 0.4f), PlayButtonShape),
+            // Same gradient as the phone's main buttons; the accent glow lights up with the focus.
+            .primaryActionSurface(shape = PlayButtonShape, enabled = enabled, glow = focused),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -398,15 +406,15 @@ private fun PlayButton(
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 13.dp),
         ) {
             Icon(
-                imageVector = Icons.Filled.PlayArrow,
+                imageVector = if (resume) Icons.Rounded.PlayCircle else Icons.Filled.PlayArrow,
                 contentDescription = null,
-                tint = Color.Black,
+                tint = contentColor,
                 modifier = Modifier.size(20.dp),
             )
             Text(
                 text = text,
-                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold, fontSize = 15.sp),
-                color = Color.Black,
+                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp),
+                color = contentColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.widthIn(max = 320.dp),

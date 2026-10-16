@@ -1,5 +1,11 @@
 package com.nuvio.app.features.shuffle
 
+import com.nuvio.app.core.ui.PrimaryActionButton
+import com.nuvio.app.core.ui.AppIconResource
+import com.nuvio.app.core.ui.appIconPainter
+import androidx.compose.material.icons.rounded.PlayCircle
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -41,7 +47,6 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.nuvio.app.core.i18n.localizedSeasonEpisodeCode
 import com.nuvio.app.core.ui.NuvioModalBottomSheet
-import com.nuvio.app.core.ui.NuvioPrimaryButton
 import com.nuvio.app.core.ui.NuvioToastController
 import com.nuvio.app.core.ui.dismissNuvioBottomSheet
 import com.nuvio.app.core.ui.nuvioSafeBottomPadding
@@ -184,13 +189,23 @@ internal fun EpisodeShuffleSheet(
                     !it.isEffectivelyCompleted && (it.lastPositionMs > 0 || it.progressFraction > 0)
                 } == true
                 val canPlay = availability.canPlay(meta.type, preview.id, meta.id, preview.season, preview.episode)
-                NuvioPrimaryButton(
+                PrimaryActionButton(
                     text = stringResource(when {
                         starting -> Res.string.shuffle_starting
                         !canPlay -> Res.string.playback_unavailable
                         resume -> Res.string.action_resume
                         else -> Res.string.shuffle_play_episode
-                    }), enabled = !starting && canPlay, onClick = { play(onPlay) },
+                    }),
+                    icon = if (resume) {
+                        rememberVectorPainter(Icons.Rounded.PlayCircle)
+                    } else {
+                        appIconPainter(AppIconResource.PlayerPlay)
+                    },
+                    enabled = !starting && canPlay,
+                    onClick = { play(onPlay) },
+                    textStyle = MaterialTheme.typography.titleMedium,
+                    iconSize = 20.dp,
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
                 )
                 if ((readyPicker?.count(includeWatched) ?: 0) > 1) {
                     OutlinedButton(enabled = !starting, onClick = { selected = readyPicker?.pick(includeWatched) },

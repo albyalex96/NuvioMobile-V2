@@ -1,5 +1,7 @@
 package com.nuvio.tv.ui
 
+import com.nuvio.app.core.ui.primaryActionContentColor
+import com.nuvio.app.core.ui.primaryActionSurface
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -325,8 +327,8 @@ fun TvActionButton(
         else -> Color.White.copy(alpha = 0.12f)
     }
     val foreground = when {
+        primary -> primaryActionContentColor(enabled)
         focused -> Color.Black
-        primary -> colors.onAccent
         else -> colors.textPrimary
     }
     Box(
@@ -342,7 +344,14 @@ fun TvActionButton(
                 enabled = enabled,
                 onFocusChange = { focused = it },
             )
-            .background(if (enabled) background else background.copy(alpha = 0.06f)),
+            .then(
+                if (primary) {
+                    // Main actions share the phone's gradient pill; the glow follows the focus.
+                    Modifier.primaryActionSurface(shape = TvPillShape, enabled = enabled, glow = focused)
+                } else {
+                    Modifier.background(if (enabled) background else background.copy(alpha = 0.06f))
+                },
+            ),
         contentAlignment = Alignment.CenterStart,
     ) {
         Row(

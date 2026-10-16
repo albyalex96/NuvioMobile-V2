@@ -44,6 +44,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.ui.AppIconResource
+import com.nuvio.app.core.ui.PrimaryActionButton
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.material.icons.rounded.PlayCircle
+import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import com.nuvio.app.core.ui.appIconPainter
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_play
@@ -56,6 +62,20 @@ import nuvio.composeapp.generated.resources.playback_unavailable
 import nuvio.composeapp.generated.resources.random_episode_title
 import nuvio.composeapp.generated.resources.shuffle_stop
 import org.jetbrains.compose.resources.stringResource
+
+/** What the main detail button does: picks its icon. */
+enum class DetailPlayButtonKind {
+    Play,
+    Resume,
+    ChooseEpisodes,
+}
+
+@Composable
+private fun DetailPlayButtonKind.iconPainter(): Painter = when (this) {
+    DetailPlayButtonKind.Play -> appIconPainter(AppIconResource.PlayerPlay)
+    DetailPlayButtonKind.Resume -> rememberVectorPainter(Icons.Rounded.PlayCircle)
+    DetailPlayButtonKind.ChooseEpisodes -> rememberVectorPainter(Icons.Rounded.Tune)
+}
 
 data class DetailSecondaryAction(
     val label: String,
@@ -70,6 +90,7 @@ data class DetailSecondaryAction(
 fun DetailActionButtons(
     modifier: Modifier = Modifier,
     playLabel: String = stringResource(Res.string.action_play),
+    playKind: DetailPlayButtonKind = DetailPlayButtonKind.Play,
     playEnabled: Boolean = true,
     pinnedAction: DetailSecondaryAction? = null,
     secondaryActions: List<DetailSecondaryAction> = emptyList(),
@@ -78,10 +99,9 @@ fun DetailActionButtons(
     onPlayClick: () -> Unit = {},
     onPlayLongClick: (() -> Unit)? = null,
 ) {
-    val playPainter = appIconPainter(AppIconResource.PlayerPlay)
+    val playPainter = playKind.iconPainter()
     val buttonHeight = if (isTablet) 56.dp else 52.dp
     val iconButtonSize = buttonHeight
-    val playShape = RoundedCornerShape(40.dp)
     val hapticFeedback = LocalHapticFeedback.current
     var actionsExpanded by remember { mutableStateOf(false) }
     val menuProgress by animateFloatAsState(
@@ -104,47 +124,19 @@ fun DetailActionButtons(
             horizontalArrangement = Arrangement.Start,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Surface(
+            PrimaryActionButton(
+                text = playLabel,
+                icon = playPainter,
+                onClick = onPlayClick,
+                onLongClick = onPlayLongClick,
+                enabled = playEnabled,
+                textStyle = if (isTablet) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleSmall,
+                iconSize = if (isTablet) 22.dp else 20.dp,
+                contentPadding = PaddingValues(horizontal = 16.dp),
                 modifier = Modifier
                     .weight(1f)
                     .height(buttonHeight),
-                shape = playShape,
-                color = if (playEnabled) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = if (playEnabled) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f),
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .combinedClickable(
-                            enabled = playEnabled,
-                            onClick = {
-                                onPlayClick()
-                            },
-                            onLongClick = onPlayLongClick,
-                            role = Role.Button,
-                        )
-                        .height(buttonHeight),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        painter = playPainter,
-                        contentDescription = null,
-                        modifier = Modifier.size(if (isTablet) 20.dp else 18.dp),
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = playLabel,
-                        style = if (isTablet) {
-                            MaterialTheme.typography.titleMedium
-                        } else {
-                            MaterialTheme.typography.titleSmall
-                        },
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
+            )
 
             if (pinnedAction != null) {
                 Spacer(modifier = Modifier.width(12.dp))
@@ -245,6 +237,7 @@ fun DetailActionButtons(
 @Composable
 fun DetailActions(
     playLabel: String,
+    playKind: DetailPlayButtonKind = DetailPlayButtonKind.Play,
     playEnabled: Boolean,
     isSaved: Boolean,
     isWatched: Boolean,
@@ -267,6 +260,7 @@ fun DetailActions(
     }
     DetailActionButtons(
         playLabel = if (playEnabled) playLabel else stringResource(Res.string.playback_unavailable),
+        playKind = playKind,
         playEnabled = playEnabled,
         pinnedAction = shuffleAction?.takeIf { shuffleEnabled },
         secondaryActions = buildList {

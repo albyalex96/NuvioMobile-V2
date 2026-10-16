@@ -93,6 +93,7 @@ import com.nuvio.app.core.ui.rememberHeroStretchState
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import com.nuvio.app.features.details.components.DetailActions
+import com.nuvio.app.features.details.components.DetailPlayButtonKind
 import com.nuvio.app.features.details.components.CommentDetailSheet
 import com.nuvio.app.features.details.components.DetailAdditionalInfoSection
 import com.nuvio.app.features.details.components.DetailCastSection
@@ -811,6 +812,13 @@ fun MetaDetailsScreen(
                         else -> playText
                     }
                 }
+                val playButtonKind = when {
+                    shufflePoolEmpty -> DetailPlayButtonKind.ChooseEpisodes
+                    (meta.type == "series" || hasEpisodes) && seriesAction != null ->
+                        if ((seriesAction.resumePositionMs ?: 0L) > 0L) DetailPlayButtonKind.Resume else DetailPlayButtonKind.Play
+                    meta.type != "series" && !hasEpisodes && movieProgress != null -> DetailPlayButtonKind.Resume
+                    else -> DetailPlayButtonKind.Play
+                }
                 val onPrimaryPlayClick: () -> Unit = {
                     when {
                         shufflePoolEmpty -> showShuffle = true
@@ -1220,6 +1228,7 @@ fun MetaDetailsScreen(
                                                 {
                                                     DetailActions(
                                                         playLabel = playButtonLabel,
+                                                        playKind = playButtonKind,
                                                         playEnabled = isPrimaryPlayEnabled,
                                                         isSaved = isSaved,
                                                         isWatched = isWatched,
@@ -1274,6 +1283,7 @@ fun MetaDetailsScreen(
                                     contentHorizontalPadding = contentHorizontalPadding,
                                     contentMaxWidth = if (isTablet && !useTabletLayout) contentMaxWidth else Dp.Unspecified,
                                     playButtonLabel = playButtonLabel,
+                                    playButtonKind = playButtonKind,
                                     isPrimaryPlayEnabled = isPrimaryPlayEnabled,
                                     isSaved = isSaved,
                                     isWatched = isWatched,
@@ -1961,6 +1971,7 @@ private fun LazyListScope.configuredMetaSectionItems(
     contentHorizontalPadding: Dp,
     contentMaxWidth: Dp,
     playButtonLabel: String,
+    playButtonKind: DetailPlayButtonKind,
     isPrimaryPlayEnabled: Boolean,
     isSaved: Boolean,
     isWatched: Boolean,
@@ -2046,6 +2057,7 @@ private fun LazyListScope.configuredMetaSectionItems(
                     isTablet = isTablet,
                     horizontalScrollPadding = contentHorizontalPadding,
                     playButtonLabel = playButtonLabel,
+                    playButtonKind = playButtonKind,
                     isPrimaryPlayEnabled = isPrimaryPlayEnabled,
                     isSaved = isSaved,
                     isWatched = isWatched,
@@ -2275,6 +2287,7 @@ private fun ConfiguredMetaSections(
     isTablet: Boolean,
     horizontalScrollPadding: Dp,
     playButtonLabel: String,
+    playButtonKind: DetailPlayButtonKind,
     isPrimaryPlayEnabled: Boolean,
     isSaved: Boolean,
     isWatched: Boolean,
@@ -2343,6 +2356,7 @@ private fun ConfiguredMetaSections(
             MetaScreenSectionKey.ACTIONS -> {
                 DetailActions(
                     playLabel = playButtonLabel,
+                    playKind = playButtonKind,
                     playEnabled = isPrimaryPlayEnabled,
                     isSaved = isSaved,
                     isWatched = isWatched,
