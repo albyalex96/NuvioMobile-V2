@@ -15,7 +15,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
@@ -202,7 +201,7 @@ object TmdbMetadataService {
                     originalName = person.originalName,
                     fallbackEnglishName = englishPerson?.name,
                     preferredLanguage = language,
-                ) ?: runBlocking { getString(Res.string.generic_unknown) },
+                ) ?: getString(Res.string.generic_unknown),
                 biography = biography,
                 birthday = person.birthday?.takeIf { it.isNotBlank() },
                 deathday = person.deathday?.takeIf { it.isNotBlank() },
@@ -447,7 +446,7 @@ object TmdbMetadataService {
             header = header ?: TmdbEntityHeader(
                 id = entityId,
                 kind = entityKind,
-                name = fallbackName?.takeIf { it.isNotBlank() } ?: runBlocking { getString(Res.string.generic_unknown) },
+                name = fallbackName?.takeIf { it.isNotBlank() } ?: getString(Res.string.generic_unknown),
                 logo = null,
                 originCountry = null,
                 secondaryLabel = null,
@@ -579,7 +578,7 @@ object TmdbMetadataService {
                             kind = entityKind,
                             name = it.name?.takeIf { n -> n.isNotBlank() }
                                 ?: fallbackName?.takeIf { n -> n.isNotBlank() }
-                                ?: runBlocking { getString(Res.string.generic_unknown) },
+                                ?: getString(Res.string.generic_unknown),
                             logo = buildImageUrl(it.logoPath, "w500"),
                             originCountry = it.originCountry?.takeIf { c -> c.isNotBlank() },
                             secondaryLabel = it.headquarters?.takeIf { h -> h.isNotBlank() },
@@ -595,7 +594,7 @@ object TmdbMetadataService {
                             kind = entityKind,
                             name = it.name?.takeIf { n -> n.isNotBlank() }
                                 ?: fallbackName?.takeIf { n -> n.isNotBlank() }
-                                ?: runBlocking { getString(Res.string.generic_unknown) },
+                                ?: getString(Res.string.generic_unknown),
                             logo = buildImageUrl(it.logoPath, "w500"),
                             originCountry = it.originCountry?.takeIf { c -> c.isNotBlank() },
                             secondaryLabel = it.headquarters?.takeIf { h -> h.isNotBlank() },
@@ -1319,13 +1318,11 @@ object TmdbMetadataService {
                     allVideos += videos.map { video ->
                         video.toMetaTrailer(
                             seasonNumber = seasonNumber,
-                            displayName = runBlocking {
-                                getString(
-                                    Res.string.trailer_season_label,
-                                    seasonNumber,
-                                    video.name.orEmpty(),
-                                )
-                            },
+                            displayName = getString(
+                                Res.string.trailer_season_label,
+                                seasonNumber,
+                                video.name.orEmpty(),
+                            ),
                         )
                     }
                 }
@@ -1343,7 +1340,7 @@ object TmdbMetadataService {
             .distinctBy { it.key }
             .forEach { trailer ->
                 byCategory.getOrPut(
-                    trailer.type.ifBlank { runBlocking { getString(Res.string.generic_trailer) } },
+                    trailer.type.ifBlank { getString(Res.string.generic_trailer) },
                 ) { mutableListOf() }
                     .add(trailer)
             }
@@ -1370,11 +1367,12 @@ object TmdbMetadataService {
             )
         }
 
+        val trailerCategory = getString(Res.string.generic_trailer)
         val sortedCategories = byCategory.keys.sortedWith(
             compareBy<String> { category ->
                 when {
                     category.equals(
-                        runBlocking { getString(Res.string.generic_trailer) },
+                        trailerCategory,
                         ignoreCase = true,
                     ) -> 0
                     byCategory[category].orEmpty().any { it.official } -> 1
@@ -1592,7 +1590,9 @@ private fun resolvedPersonDisplayName(
     preferredLanguage = preferredLanguage,
 )?.takeIf { it.isNotBlank() }
 
-private fun buildPeople(
+// Suspending on purpose: `runBlocking { getString(...) }` here blocked every Default worker while
+// many titles were enriched in parallel, starving the resource loader (app-wide ANR).
+private suspend fun buildPeople(
     details: TmdbDetailsResponse,
     credits: TmdbCreditsResponse?,
     mediaType: String,
@@ -1610,7 +1610,7 @@ private fun buildPeople(
             ) ?: return@mapNotNull null
             MetaPerson(
                 name = name,
-                role = runBlocking { getString(Res.string.person_role_creator) },
+                role = getString(Res.string.person_role_creator),
                 photo = buildImageUrl(creator.profilePath, "w500"),
                 tmdbId = creator.id,
             )
@@ -1631,7 +1631,7 @@ private fun buildPeople(
             ) ?: return@mapNotNull null
             MetaPerson(
                 name = name,
-                role = runBlocking { getString(Res.string.person_role_director) },
+                role = getString(Res.string.person_role_director),
                 photo = buildImageUrl(crew.profilePath, "w500"),
                 tmdbId = crew.id,
             )
@@ -1652,7 +1652,7 @@ private fun buildPeople(
             ) ?: return@mapNotNull null
             MetaPerson(
                 name = name,
-                role = runBlocking { getString(Res.string.person_role_writer) },
+                role = getString(Res.string.person_role_writer),
                 photo = buildImageUrl(crew.profilePath, "w500"),
                 tmdbId = crew.id,
             )
@@ -1862,12 +1862,12 @@ private data class TmdbVideoResult(
     @SerialName("iso_639_1") val iso6391: String? = null,
 )
 
-private fun TmdbVideoResult.toMetaTrailer(
+private suspend fun TmdbVideoResult.toMetaTrailer(
     seasonNumber: Int?,
     displayName: String?,
 ): MetaTrailer {
     val videoKey = key?.trim().orEmpty()
-    val videoName = name?.trim().takeUnless { it.isNullOrBlank() } ?: runBlocking { getString(Res.string.generic_trailer) }
+    val videoName = name?.trim().takeUnless { it.isNullOrBlank() } ?: getString(Res.string.generic_trailer)
     val trailerId = id?.trim().takeUnless { it.isNullOrBlank() } ?: videoKey
     return MetaTrailer(
         id = trailerId,
@@ -1875,7 +1875,7 @@ private fun TmdbVideoResult.toMetaTrailer(
         name = videoName,
         site = site?.trim().takeUnless { it.isNullOrBlank() } ?: "YouTube",
         size = size,
-        type = type?.trim().takeUnless { it.isNullOrBlank() } ?: runBlocking { getString(Res.string.generic_trailer) },
+        type = type?.trim().takeUnless { it.isNullOrBlank() } ?: getString(Res.string.generic_trailer),
         official = official == true,
         publishedAt = publishedAt,
         seasonNumber = seasonNumber,
