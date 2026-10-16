@@ -22,6 +22,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalGraphicsContext
 import androidx.compose.ui.unit.Dp
+import com.nuvio.app.tv.tvLongPressKeys
 
 internal val LocalPosterClickAnchor = staticCompositionLocalOf<((PosterZoomAnchor) -> Unit)?> { null }
 
@@ -91,32 +92,35 @@ internal fun Modifier.posterCardClickable(
         }
         .then(this)
     if (onClick == null && onLongClick == null) return posterModifier
+    val clickAction = {
+        if (onClick != null) {
+            source.bounds?.let { bounds ->
+                onPosterClickAnchor?.invoke(
+                    PosterZoomAnchor(bounds, zoomImageUrl, zoomCornerRadius).also { it.source = source },
+                )
+            }
+            onClick()
+        }
+    }
+    val longClickAction = onLongClick?.let { longClick ->
+        {
+            source.bounds?.let { cardBounds ->
+                PosterZoomAnchorHolder.stash(
+                    PosterZoomAnchor(cardBounds, zoomImageUrl, zoomCornerRadius).also {
+                        it.source = source
+                    },
+                )
+            }
+            longClick()
+        }
+    }
     return posterModifier
+        .tvLongPressKeys(onClick = clickAction, onLongClick = longClickAction)
         .combinedClickable(
             interactionSource = null,
             indication = if (onPosterClickAnchor == null) LocalIndication.current else null,
-            onClick = {
-                if (onClick != null) {
-                    source.bounds?.let { bounds ->
-                        onPosterClickAnchor?.invoke(
-                            PosterZoomAnchor(bounds, zoomImageUrl, zoomCornerRadius).also { it.source = source },
-                        )
-                    }
-                    onClick()
-                }
-            },
-            onLongClick = onLongClick?.let { longClick ->
-                {
-                    source.bounds?.let { cardBounds ->
-                        PosterZoomAnchorHolder.stash(
-                            PosterZoomAnchor(cardBounds, zoomImageUrl, zoomCornerRadius).also {
-                                it.source = source
-                            },
-                        )
-                    }
-                    longClick()
-                }
-            },
+            onClick = clickAction,
+            onLongClick = longClickAction,
         )
 }
 
