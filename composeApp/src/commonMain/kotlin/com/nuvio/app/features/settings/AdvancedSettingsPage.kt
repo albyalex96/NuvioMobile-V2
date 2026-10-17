@@ -15,6 +15,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nuvio.app.core.mediaproxy.LanMediaProxy
 import com.nuvio.app.core.ui.DialogButton
 import com.nuvio.app.core.ui.DialogButtons
 import com.nuvio.app.core.ui.DialogButtonStyle
@@ -27,6 +28,9 @@ import com.nuvio.app.features.watchprogress.WatchProgressRepository
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_cancel
+import nuvio.composeapp.generated.resources.media_proxy_entry_description
+import nuvio.composeapp.generated.resources.media_proxy_title
+import nuvio.composeapp.generated.resources.settings_advanced_section_network
 import nuvio.composeapp.generated.resources.settings_advanced_clear_cw_cache
 import nuvio.composeapp.generated.resources.settings_advanced_clear_cw_cache_done
 import nuvio.composeapp.generated.resources.settings_advanced_clear_cw_cache_subtitle
@@ -58,6 +62,7 @@ internal fun LazyListScope.advancedSettingsContent(
     isTablet: Boolean,
     rememberLastProfileEnabled: Boolean,
     onAppLogsClick: () -> Unit,
+    onMediaProxyClick: () -> Unit,
 ) {
     item {
         SettingsSection(
@@ -90,6 +95,23 @@ internal fun LazyListScope.advancedSettingsContent(
                 if (SentrySettingsRepository.isSupported) {
                     SettingsGroupDivider(isTablet = isTablet)
                     SentryReportsRow(isTablet = isTablet)
+                }
+            }
+        }
+    }
+    if (LanMediaProxy.isSupported) {
+        item {
+            SettingsSection(
+                title = stringResource(Res.string.settings_advanced_section_network),
+                isTablet = isTablet,
+            ) {
+                SettingsGroup(isTablet = isTablet) {
+                    SettingsNavigationRow(
+                        title = stringResource(Res.string.media_proxy_title),
+                        description = stringResource(Res.string.media_proxy_entry_description),
+                        isTablet = isTablet,
+                        onClick = onMediaProxyClick,
+                    )
                 }
             }
         }

@@ -54,6 +54,7 @@ import com.nuvio.app.features.p2p.P2pSettingsRepository
 import com.nuvio.app.isIos
 import com.nuvio.app.tv.TvAppRuntime
 import com.nuvio.app.supportsPosterNavigationMotion
+import com.nuvio.app.core.mediaproxy.LanMediaProxy
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
@@ -1396,6 +1397,39 @@ private fun addAdditionalSearchEntries(
         PlaybackSearchRow("app-logs-clear", stringResource(Res.string.app_logs_clear_title), stringResource(Res.string.app_logs_clear_description), appLogsActions),
     ).forEach { item ->
         row(SettingsPage.AppLogs, item.key, item.title, item.description, appLogsPage, item.sectionOverride.orEmpty(), advancedCategory, Icons.Rounded.Tune)
+    }
+
+    // Advanced: media proxy (only where the proxy exists)
+    if (LanMediaProxy.isSupported) {
+        addPage(
+            SettingsPage.MediaProxy,
+            "media-proxy",
+            stringResource(Res.string.media_proxy_title),
+            stringResource(Res.string.media_proxy_entry_description),
+            advancedCategory,
+            Icons.Rounded.Tune,
+        )
+        val mediaProxyPage = stringResource(Res.string.media_proxy_title)
+        val serverSection = stringResource(Res.string.media_proxy_section_server)
+        val requestsSection = stringResource(Res.string.media_proxy_section_requests)
+        val castSection = stringResource(Res.string.media_proxy_section_cast)
+        buildList {
+            add(PlaybackSearchRow("media-proxy-port", stringResource(Res.string.media_proxy_port_title), stringResource(Res.string.media_proxy_port_description), serverSection))
+            add(PlaybackSearchRow("media-proxy-address", stringResource(Res.string.media_proxy_address_title), stringResource(Res.string.media_proxy_address_description), serverSection))
+            add(PlaybackSearchRow("media-proxy-keep-awake", stringResource(Res.string.media_proxy_keep_awake_title), stringResource(Res.string.media_proxy_keep_awake_description), serverSection))
+            add(PlaybackSearchRow("media-proxy-user-agent", stringResource(Res.string.media_proxy_user_agent_title), stringResource(Res.string.media_proxy_user_agent_description), requestsSection))
+            add(PlaybackSearchRow("media-proxy-connect-timeout", stringResource(Res.string.media_proxy_connect_timeout_title), "", requestsSection))
+            add(PlaybackSearchRow("media-proxy-read-timeout", stringResource(Res.string.media_proxy_read_timeout_title), "", requestsSection))
+            add(PlaybackSearchRow("media-proxy-cors", stringResource(Res.string.media_proxy_cors_title), stringResource(Res.string.media_proxy_cors_description), requestsSection))
+            add(PlaybackSearchRow("media-proxy-rewrite", stringResource(Res.string.media_proxy_rewrite_title), stringResource(Res.string.media_proxy_rewrite_description), requestsSection))
+            if (mediaProxyCastOptionsVisible) {
+                add(PlaybackSearchRow("media-proxy-cast-always", stringResource(Res.string.media_proxy_cast_always_title), stringResource(Res.string.media_proxy_cast_always_description), castSection))
+                add(PlaybackSearchRow("media-proxy-cast-fallback", stringResource(Res.string.media_proxy_cast_fallback_title), stringResource(Res.string.media_proxy_cast_fallback_description), castSection))
+            }
+            add(PlaybackSearchRow("media-proxy-reset", stringResource(Res.string.media_proxy_reset_title), stringResource(Res.string.media_proxy_reset_description), stringResource(Res.string.media_proxy_section_reset)))
+        }.forEach { item ->
+            row(SettingsPage.MediaProxy, item.key, item.title, item.description, mediaProxyPage, item.sectionOverride.orEmpty(), advancedCategory, Icons.Rounded.Tune)
+        }
     }
 }
 

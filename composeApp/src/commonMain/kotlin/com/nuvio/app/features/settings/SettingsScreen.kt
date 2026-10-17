@@ -820,11 +820,13 @@ private fun MobileSettingsScreen(
                     isTablet = false,
                     rememberLastProfileEnabled = rememberLastProfileEnabled,
                     onAppLogsClick = { onPageChange(SettingsPage.AppLogs) },
+                    onMediaProxyClick = { onPageChange(SettingsPage.MediaProxy) },
                 )
                 SettingsPage.AppLogs -> appLogsSettingsContent(
                     isTablet = false,
                     viewer = requireNotNull(appLogsViewer),
                 )
+                SettingsPage.MediaProxy -> mediaProxySettingsContent(isTablet = false)
                 SettingsPage.Notifications -> notificationsSettingsContent(
                     isTablet = false,
                     uiState = episodeReleaseNotificationsUiState,
@@ -1298,11 +1300,13 @@ private fun TabletSettingsScreen(
                         isTablet = true,
                         rememberLastProfileEnabled = rememberLastProfileEnabled,
                         onAppLogsClick = { openInlinePage(SettingsPage.AppLogs) },
+                        onMediaProxyClick = { openInlinePage(SettingsPage.MediaProxy) },
                     )
                     SettingsPage.AppLogs -> appLogsSettingsContent(
                         isTablet = true,
                         viewer = requireNotNull(appLogsViewer),
                     )
+                    SettingsPage.MediaProxy -> mediaProxySettingsContent(isTablet = true)
                     SettingsPage.Notifications -> notificationsSettingsContent(
                         isTablet = true,
                         uiState = episodeReleaseNotificationsUiState,

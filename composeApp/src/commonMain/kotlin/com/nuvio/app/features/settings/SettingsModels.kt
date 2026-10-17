@@ -9,6 +9,7 @@ import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.ui.graphics.vector.ImageVector
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.compose_settings_category_about
+import nuvio.composeapp.generated.resources.media_proxy_title
 import nuvio.composeapp.generated.resources.compose_settings_category_general
 import nuvio.composeapp.generated.resources.compose_settings_page_account
 import nuvio.composeapp.generated.resources.compose_settings_page_addons
@@ -96,6 +97,11 @@ internal enum class SettingsPage(
     ),
     AppLogs(
         titleRes = Res.string.settings_app_logs_title,
+        category = SettingsCategory.Advanced,
+        parentPage = Advanced,
+    ),
+    MediaProxy(
+        titleRes = Res.string.media_proxy_title,
         category = SettingsCategory.Advanced,
         parentPage = Advanced,
     ),

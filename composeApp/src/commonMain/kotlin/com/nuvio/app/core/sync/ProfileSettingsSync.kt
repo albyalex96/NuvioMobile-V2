@@ -6,6 +6,7 @@ import co.touchlab.kermit.Logger
 import com.nuvio.app.core.auth.AuthRepository
 import com.nuvio.app.core.auth.AuthState
 import com.nuvio.app.core.logging.AppLoggerSettings
+import com.nuvio.app.core.mediaproxy.MediaProxySettingsRepository
 import com.nuvio.app.core.network.SupabaseProvider
 import com.nuvio.app.features.collection.CollectionMobileSettingsRepository
 import com.nuvio.app.features.collection.CollectionMobileSettingsStorage
@@ -208,6 +209,7 @@ object ProfileSettingsSync {
             StreamParserSettingsRepository.uiState.map { "stream_parser" },
             PluginRepository.uiState.map { "plugins_group_${it.groupStreamsByRepository}" },
             AppLoggerSettings.enabled.map { "app_logger_$it" },
+            MediaProxySettingsRepository.settings.map { "media_proxy_${it.hashCode()}" },
             LiveTvRepository.uiState.map { "live_tv_${LiveTvProfileSync.syncSignature(it)}" }.distinctUntilChanged(),
             DebridSettingsRepository.uiState.map { "debrid" },
             TmdbSettingsRepository.uiState.map { "tmdb" },
@@ -269,6 +271,7 @@ object ProfileSettingsSync {
                         StreamParserSettingsRepository.exportToSyncPayload() +
                         PluginGroupingSync.exportToSyncPayload() +
                         AppLoggerSettings.exportToSyncPayload() +
+                        MediaProxySettingsRepository.exportToSyncPayload() +
                         LiveTvProfileSync.exportToSyncPayload(),
                 ),
                 debridSettings = withoutProfileCredentials(
@@ -331,6 +334,7 @@ object ProfileSettingsSync {
         StreamParserSettingsRepository.replaceFromSyncPayload(blob.features.streamBadgeSettings)
         PluginGroupingSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
         AppLoggerSettings.applyFromSyncPayload(blob.features.streamBadgeSettings)
+        MediaProxySettingsRepository.applyFromSyncPayload(blob.features.streamBadgeSettings)
         LiveTvProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
 
         DebridSettingsStorage.replaceFromSyncPayload(
@@ -388,6 +392,7 @@ object ProfileSettingsSync {
         StreamBadgeSettingsRepository.ensureLoaded()
         StreamParserSettingsRepository.ensureLoaded()
         AppLoggerSettings.ensureLoaded()
+        MediaProxySettingsRepository.ensureLoaded()
         DebridSettingsRepository.ensureLoaded()
         TmdbSettingsRepository.ensureLoaded()
         MdbListSettingsRepository.ensureLoaded()

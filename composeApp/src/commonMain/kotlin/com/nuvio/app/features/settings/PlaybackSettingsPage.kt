@@ -229,7 +229,7 @@ fun ValueBox(
 }
 
 @Composable
-private fun SettingsSliderRow(
+internal fun SettingsSliderRow(
     title: String,
     value: Int,
     valueText: @Composable (Int) -> String,

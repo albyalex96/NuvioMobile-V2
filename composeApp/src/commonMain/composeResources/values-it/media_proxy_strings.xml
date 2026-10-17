@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_advanced_section_network">Rete</string>
+    <string name="media_proxy_title">Proxy multimediale</string>
+    <string name="media_proxy_entry_description">Server locale che serve flussi P2P, download e link con header ad altri dispositivi, come il Chromecast</string>
+
+    <string name="media_proxy_section_status">Stato</string>
+    <string name="media_proxy_status_server">Server</string>
+    <string name="media_proxy_status_running">Attivo</string>
+    <string name="media_proxy_status_idle">Inattivo (parte quando serve)</string>
+    <string name="media_proxy_status_address">Indirizzo di rete</string>
+    <string name="media_proxy_status_no_network">Nessuna rete locale</string>
+    <string name="media_proxy_status_manual_address">%1$s (manuale)</string>
+    <string name="media_proxy_status_port">Porta</string>
+    <string name="media_proxy_status_sources">Flussi attivi</string>
+    <string name="media_proxy_status_sources_value">%1$d (%2$s)</string>
+
+    <string name="media_proxy_section_server">Server</string>
+    <string name="media_proxy_port_title">Porta del server</string>
+    <string name="media_proxy_port_description">Porta fissa per firewall e regole del router. Automatica sceglie ogni volta una porta libera</string>
+    <string name="media_proxy_port_auto">Automatica</string>
+    <string name="media_proxy_port_hint">1024–65535, vuoto per automatica. Si applica al prossimo avvio del server.</string>
+    <string name="media_proxy_port_invalid">Inserisci un numero tra 1024 e 65535.</string>
+    <string name="media_proxy_address_title">Indirizzo di rete</string>
+    <string name="media_proxy_address_description">Indirizzo comunicato agli altri dispositivi. Impostalo a mano con più reti o con una VPN</string>
+    <string name="media_proxy_address_auto">Automatico (%1$s)</string>
+    <string name="media_proxy_address_auto_none">Automatico</string>
+    <string name="media_proxy_address_hint">Indirizzo IPv4 di questo dispositivo sulla rete del ricevitore (es. 192.168.1.20), vuoto per automatico.</string>
+    <string name="media_proxy_address_invalid">Inserisci un indirizzo IPv4 valido.</string>
+    <string name="media_proxy_keep_awake_title">Mantieni attivi Wi-Fi e CPU</string>
+    <string name="media_proxy_keep_awake_description">Evita interruzioni a schermo spento mentre servi altri dispositivi. Consuma un po\' più di batteria</string>
+
+    <string name="media_proxy_section_requests">Richieste</string>
+    <string name="media_proxy_user_agent_title">User-Agent predefinito</string>
+    <string name="media_proxy_user_agent_description">Inviato ai server quando il flusso non ne indica uno. Alcuni server bloccano i player sconosciuti</string>
+    <string name="media_proxy_user_agent_default">Integrato</string>
+    <string name="media_proxy_user_agent_hint">Vuoto per usare quello integrato. Gli header del flusso hanno sempre la precedenza.</string>
+    <string name="media_proxy_connect_timeout_title">Timeout di connessione</string>
+    <string name="media_proxy_read_timeout_title">Timeout di lettura</string>
+    <string name="media_proxy_seconds_value">%1$d s</string>
+    <string name="media_proxy_cors_title">Header CORS</string>
+    <string name="media_proxy_cors_description">Servono ai player web come il Chromecast per i flussi HLS/DASH. Disattivali solo per fare prove</string>
+    <string name="media_proxy_rewrite_title">Riscrivi le playlist HLS/DASH</string>
+    <string name="media_proxy_rewrite_description">Anche segmenti e chiavi passano dal proxy con gli stessi header. Disattiva solo per fare prove</string>
+
+    <string name="media_proxy_section_cast">Chromecast</string>
+    <string name="media_proxy_cast_always_title">Trasmetti sempre tramite proxy</string>
+    <string name="media_proxy_cast_always_description">Tutti i flussi passano da questo dispositivo, non solo quelli che ne hanno bisogno. Utile quando un server rifiuta il Chromecast; il dispositivo deve restare connesso alla rete</string>
+    <string name="media_proxy_cast_fallback_title">Ripiego automatico per HLS/DASH</string>
+    <string name="media_proxy_cast_fallback_description">Se il Chromecast non riesce a caricare direttamente un flusso adattivo, ritenta una volta tramite proxy</string>
+
+    <string name="media_proxy_section_reset">Ripristino</string>
+    <string name="media_proxy_reset_title">Ripristina i valori predefiniti</string>
+    <string name="media_proxy_reset_description">Riporta tutte le opzioni del proxy ai valori iniziali</string>
+    <string name="media_proxy_reset_done">Valori predefiniti ripristinati</string>
+    <string name="media_proxy_save">Salva</string>
+    <string name="media_proxy_cancel">Annulla</string>
+</resources>
