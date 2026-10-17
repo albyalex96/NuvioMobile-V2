@@ -39,4 +39,10 @@
     <string name="stream_parser_language_arabic">Arabic</string>
     <string name="stream_parser_language_hindi">Hindi</string>
     <string name="stream_parser_language_multi">Multi audio</string>
+    <string name="stream_parser_more_actions">More options</string>
+    <string name="stream_parser_original_description">Original description</string>
+    <string name="stream_parser_original_description_empty">This stream has no description.</string>
+    <string name="stream_parser_original_description_copy">Copy</string>
+    <string name="stream_parser_original_description_copied">Description copied</string>
+    <string name="stream_parser_original_description_close">Close</string>
 </resources>

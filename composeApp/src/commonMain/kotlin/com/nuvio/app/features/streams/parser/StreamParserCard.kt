@@ -2,6 +2,7 @@ package com.nuvio.app.features.streams.parser
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,9 +16,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.PlayCircle
 import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.VideoLibrary
@@ -43,10 +46,12 @@ import com.nuvio.app.core.i18n.localizedByteUnit
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.streams.StreamBadgeImage
 import com.nuvio.app.features.streams.StreamItem
+import com.nuvio.app.tv.tvNotFocusable
 import kotlin.math.round
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.stream_parser_direct
 import nuvio.composeapp.generated.resources.stream_parser_episode
+import nuvio.composeapp.generated.resources.stream_parser_more_actions
 import nuvio.composeapp.generated.resources.stream_parser_season
 import org.jetbrains.compose.resources.stringResource
 
@@ -133,6 +138,26 @@ internal fun StreamParserCard(
             if (isCurrent && !currentLabel.isNullOrBlank()) {
                 Spacer(Modifier.width(8.dp))
                 CurrentPill(currentLabel)
+            }
+            // Visible entry point to the long-press menu (external player, copy link,
+            // original description). On TV the menu opens by holding OK on the card.
+            if (onLongClick != null) {
+                Spacer(Modifier.width(4.dp))
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(CircleShape)
+                        .tvNotFocusable()
+                        .clickable(onClick = onLongClick),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.MoreVert,
+                        contentDescription = stringResource(Res.string.stream_parser_more_actions),
+                        tint = tokens.colors.textMuted,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
             }
         }
 

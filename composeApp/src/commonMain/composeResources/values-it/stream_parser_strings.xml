@@ -39,4 +39,10 @@
     <string name="stream_parser_language_arabic">Arabo</string>
     <string name="stream_parser_language_hindi">Hindi</string>
     <string name="stream_parser_language_multi">Multilingua</string>
+    <string name="stream_parser_more_actions">Altre opzioni</string>
+    <string name="stream_parser_original_description">Descrizione originale</string>
+    <string name="stream_parser_original_description_empty">Questo flusso non ha una descrizione.</string>
+    <string name="stream_parser_original_description_copy">Copia</string>
+    <string name="stream_parser_original_description_copied">Descrizione copiata</string>
+    <string name="stream_parser_original_description_close">Chiudi</string>
 </resources>

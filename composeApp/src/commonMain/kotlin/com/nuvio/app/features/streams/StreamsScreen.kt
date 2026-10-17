@@ -32,6 +32,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.SearchOff
 import androidx.compose.material3.Icon
@@ -80,7 +81,9 @@ import com.nuvio.app.features.debrid.DirectDebridPlaybackResolver
 import com.nuvio.app.features.debrid.toastMessage
 import com.nuvio.app.features.player.PlayerSettingsRepository
 import com.nuvio.app.features.streams.parser.StreamCardHost
+import com.nuvio.app.features.streams.parser.StreamOriginalDescriptionDialog
 import com.nuvio.app.features.streams.parser.StreamParserContextEffect
+import com.nuvio.app.features.streams.parser.StreamParserSettingsRepository
 import com.nuvio.app.features.streams.parser.isQualitySortedGroup
 import com.nuvio.app.features.streams.parser.rememberQualitySortedGroups
 import com.nuvio.app.features.watchprogress.WatchProgressRepository
@@ -161,6 +164,18 @@ fun StreamsScreen(
     val streamLinkCopiedText = stringResource(Res.string.streams_link_copied)
     val noDirectStreamLinkText = stringResource(Res.string.streams_no_direct_link)
     var streamActionsTarget by remember(videoId) { mutableStateOf<StreamItem?>(null) }
+    var originalDescriptionTarget by remember(videoId) { mutableStateOf<StreamItem?>(null) }
+    val streamParserSettings by remember {
+        StreamParserSettingsRepository.ensureLoaded()
+        StreamParserSettingsRepository.uiState
+    }.collectAsStateWithLifecycle()
+    // With the Stream Parser the menu also offers the original description, so it opens for
+    // every stream; the link actions stay limited to streams that have a link.
+    val onStreamLongPress: (StreamItem) -> Unit = { stream ->
+        if (streamParserSettings.enabled || stream.hasLinkActions) {
+            streamActionsTarget = stream
+        }
+    }
     val downloadScope = rememberCoroutineScope()
     var preferredFilterApplied by remember(videoId) { mutableStateOf(false) }
     val episodeProgress = watchProgressUiState.progressForVideo(
@@ -257,7 +272,7 @@ fun StreamsScreen(
                 onStreamSelected = { stream, positionMs, progressFraction ->
                     onStreamSelected(stream, positionMs, progressFraction)
                 },
-                onStreamLongPress = { stream -> streamActionsTarget = stream },
+                onStreamLongPress = onStreamLongPress,
                 onRefresh = reloadStreams,
             )
         } else {
@@ -279,7 +294,7 @@ fun StreamsScreen(
                 onStreamSelected = { stream, positionMs, progressFraction ->
                     onStreamSelected(stream, positionMs, progressFraction)
                 },
-                onStreamLongPress = { stream -> streamActionsTarget = stream },
+                onStreamLongPress = onStreamLongPress,
                 onRefresh = reloadStreams,
             )
         }
@@ -304,7 +319,9 @@ fun StreamsScreen(
         StreamActionsSheet(
             stream = streamActionsTarget,
             externalPlayerEnabled = playerSettings.externalPlayerEnabled,
+            showOriginalDescription = streamParserSettings.enabled,
             onDismiss = { streamActionsTarget = null },
+            onShowOriginalDescription = { stream -> originalDescriptionTarget = stream },
             onCopyLink = { stream ->
                 val directUrl = stream.playableDirectUrl ?: stream.externalOpenUrl
                 if (!directUrl.isNullOrBlank()) {
@@ -402,8 +419,18 @@ fun StreamsScreen(
                 )
             },
         )
+
+        originalDescriptionTarget?.let { stream ->
+            StreamOriginalDescriptionDialog(
+                stream = stream,
+                onDismiss = { originalDescriptionTarget = null },
+            )
+        }
     }
 }
+
+private val StreamItem.hasLinkActions: Boolean
+    get() = playableDirectUrl != null || shouldOpenExternally || isAddonDebridCandidate
 
 @Composable
 private fun MobileStreamsLayout(
@@ -905,11 +932,7 @@ private fun LazyListScope.streamSection(
                         NuvioToastController.show(torrentNotSupportedText)
                     }
                 },
-                onLongClick = {
-                    if (stream.playableDirectUrl != null || stream.shouldOpenExternally || stream.isAddonDebridCandidate) {
-                        onStreamLongPress(stream)
-                    }
-                },
+                onLongClick = { onStreamLongPress(stream) },
             )
             Spacer(modifier = Modifier.height(10.dp))
         }
@@ -999,7 +1022,9 @@ private fun StreamSourceHeader(
 private fun StreamActionsSheet(
     stream: StreamItem?,
     externalPlayerEnabled: Boolean,
+    showOriginalDescription: Boolean,
     onDismiss: () -> Unit,
+    onShowOriginalDescription: (StreamItem) -> Unit,
     onCopyLink: (StreamItem) -> Unit,
     onDownload: (StreamItem) -> Unit,
     onOpen: (StreamItem, openExternally: Boolean) -> Unit,
@@ -1050,42 +1075,57 @@ private fun StreamActionsSheet(
             }
 
             NuvioBottomSheetDivider()
-            NuvioBottomSheetActionRow(
-                icon = Icons.Rounded.ContentCopy,
-                title = stringResource(Res.string.streams_copy_link),
-                onClick = {
-                    onCopyLink(stream)
-                    coroutineScope.launch {
-                        dismissNuvioBottomSheet(sheetState = sheetState, onDismiss = onDismiss)
-                    }
-                },
-            )
-            NuvioBottomSheetActionRow(
-                icon = Icons.AutoMirrored.Rounded.OpenInNew,
-                title = stringResource(
-                    if (externalPlayerEnabled) {
-                        Res.string.streams_open_internal_player
-                    } else {
-                        Res.string.streams_open_external_player
+            if (showOriginalDescription) {
+                NuvioBottomSheetActionRow(
+                    icon = Icons.Rounded.Description,
+                    title = stringResource(Res.string.stream_parser_original_description),
+                    onClick = {
+                        // The dialog lives outside the sheet, so it can open right away.
+                        onShowOriginalDescription(stream)
+                        coroutineScope.launch {
+                            dismissNuvioBottomSheet(sheetState = sheetState, onDismiss = onDismiss)
+                        }
                     },
-                ),
-                onClick = {
-                    onOpen(stream, !externalPlayerEnabled)
-                    coroutineScope.launch {
-                        dismissNuvioBottomSheet(sheetState = sheetState, onDismiss = onDismiss)
-                    }
-                },
-            )
-            NuvioBottomSheetActionRow(
-                icon = Icons.Rounded.Download,
-                title = stringResource(Res.string.streams_download_file),
-                onClick = {
-                    onDownload(stream)
-                    coroutineScope.launch {
-                        dismissNuvioBottomSheet(sheetState = sheetState, onDismiss = onDismiss)
-                    }
-                },
-            )
+                )
+            }
+            if (stream.hasLinkActions) {
+                NuvioBottomSheetActionRow(
+                    icon = Icons.Rounded.ContentCopy,
+                    title = stringResource(Res.string.streams_copy_link),
+                    onClick = {
+                        onCopyLink(stream)
+                        coroutineScope.launch {
+                            dismissNuvioBottomSheet(sheetState = sheetState, onDismiss = onDismiss)
+                        }
+                    },
+                )
+                NuvioBottomSheetActionRow(
+                    icon = Icons.AutoMirrored.Rounded.OpenInNew,
+                    title = stringResource(
+                        if (externalPlayerEnabled) {
+                            Res.string.streams_open_internal_player
+                        } else {
+                            Res.string.streams_open_external_player
+                        },
+                    ),
+                    onClick = {
+                        onOpen(stream, !externalPlayerEnabled)
+                        coroutineScope.launch {
+                            dismissNuvioBottomSheet(sheetState = sheetState, onDismiss = onDismiss)
+                        }
+                    },
+                )
+                NuvioBottomSheetActionRow(
+                    icon = Icons.Rounded.Download,
+                    title = stringResource(Res.string.streams_download_file),
+                    onClick = {
+                        onDownload(stream)
+                        coroutineScope.launch {
+                            dismissNuvioBottomSheet(sheetState = sheetState, onDismiss = onDismiss)
+                        }
+                    },
+                )
+            }
         }
     }
 }
