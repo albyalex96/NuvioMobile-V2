@@ -68,6 +68,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import co.touchlab.kermit.Logger
@@ -85,6 +87,7 @@ import com.nuvio.app.tv.TvPendingDetailAction
 import com.nuvio.app.tv.TvSeason
 import com.nuvio.tv.R
 import com.nuvio.tv.ui.TvContentRow
+import com.nuvio.tv.ui.TvDimens
 import com.nuvio.tv.ui.TvPosterCard
 import com.nuvio.tv.ui.TvSectionTitle
 import com.nuvio.tv.ui.tvFocusable
@@ -95,12 +98,12 @@ private val log = Logger.withTag("TvDetails")
 // Layout of NuvioTV's detail page (HeroSection, EpisodesSection, CastSection) at 960dp width.
 private val HeroHorizontalPadding = 48.dp
 private val ActionButtonSize = 48.dp
-private val EpisodeCardWidth = 320.dp
-private val EpisodeCardHeight = 210.dp
 private val EpisodeCardShape = RoundedCornerShape(12.dp)
 private val SeasonTabShape = RoundedCornerShape(20.dp)
 private val PlayButtonShape = RoundedCornerShape(32.dp)
-private val CastPhotoSize = 92.dp
+// NuvioTV `CastSection`: 100dp photo in a 150dp column.
+private val CastPhotoSize = 100.dp
+private val CastItemWidth = 150.dp
 private const val SEASON_FOCUS_SELECT_DELAY_MS = 150L
 
 /** TV detail page, recreated from NuvioTV: full-screen backdrop, bottom-aligned hero, seasons and episodes below. */
@@ -648,6 +651,7 @@ private fun SeasonTabs(
 
 @Composable
 private fun EpisodesRow(model: TvDetailsModel, season: TvSeason) {
+    val metrics = rememberEpisodeCardMetrics()
     val listState = rememberLazyListState()
     val targetIndex = season.episodes.indexOfFirst { episode ->
         season.number == model.primaryActionSeason && episode.episode == model.primaryActionEpisode
@@ -657,19 +661,34 @@ private fun EpisodesRow(model: TvDetailsModel, season: TvSeason) {
     }
     LazyRow(
         state = listState,
-        contentPadding = PaddingValues(horizontal = HeroHorizontalPadding, vertical = 14.dp),
-        horizontalArrangement = Arrangement.spacedBy(18.dp),
+        contentPadding = PaddingValues(horizontal = metrics.rowPadding, vertical = 14.dp),
+        horizontalArrangement = Arrangement.spacedBy(metrics.spacing),
         modifier = Modifier.fillMaxWidth().focusRestorer(),
     ) {
         items(season.episodes, key = { episode -> "${episode.season}:${episode.episode}:${episode.id}" }) { episode ->
-            EpisodeCard(model = model, episode = episode)
+            EpisodeCard(model = model, episode = episode, metrics = metrics)
+        }
+    }
+}
+
+/** Episode card size of NuvioTV (`rememberEpisodeCardMetrics`), which grows on wider TV canvases. */
+private data class EpisodeCardMetrics(val width: Dp, val height: Dp, val spacing: Dp, val rowPadding: Dp)
+
+@Composable
+private fun rememberEpisodeCardMetrics(): EpisodeCardMetrics {
+    val screenWidthDp = LocalConfiguration.current.screenWidthDp
+    return remember(screenWidthDp) {
+        when {
+            screenWidthDp >= 1300 -> EpisodeCardMetrics(width = 400.dp, height = 263.dp, spacing = 20.dp, rowPadding = 56.dp)
+            screenWidthDp >= 1000 -> EpisodeCardMetrics(width = 360.dp, height = 235.dp, spacing = 18.dp, rowPadding = 52.dp)
+            else -> EpisodeCardMetrics(width = 320.dp, height = 207.dp, spacing = 16.dp, rowPadding = 48.dp)
         }
     }
 }
 
 /** Episode card of NuvioTV: artwork with a bottom scrim, episode badge, title, plot and info row. */
 @Composable
-private fun EpisodeCard(model: TvDetailsModel, episode: MetaVideo) {
+private fun EpisodeCard(model: TvDetailsModel, episode: MetaVideo, metrics: EpisodeCardMetrics) {
     var focused by remember { mutableStateOf(false) }
     val progress = model.episodeProgress(episode)
     val watched = model.isEpisodeWatched(episode)
@@ -687,8 +706,8 @@ private fun EpisodeCard(model: TvDetailsModel, episode: MetaVideo) {
 
     Box(
         modifier = Modifier
-            .width(EpisodeCardWidth)
-            .height(EpisodeCardHeight)
+            .width(metrics.width)
+            .height(metrics.height)
             .tvFocusable(
                 shape = EpisodeCardShape,
                 onClick = { model.onEpisodeClick(episode) },
@@ -874,7 +893,7 @@ private fun CastSection(cast: List<MetaPerson>) {
 private fun CastMemberItem(person: MetaPerson) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.width(CastPhotoSize + 20.dp),
+        modifier = Modifier.width(CastItemWidth),
     ) {
         Box(
             contentAlignment = Alignment.Center,
@@ -932,6 +951,7 @@ private fun PosterRow(
                 imageUrl = item.poster,
                 title = item.name,
                 watched = false,
+                width = TvDimens.basePosterWidth,
                 onClick = { onClick(item) },
             )
         }

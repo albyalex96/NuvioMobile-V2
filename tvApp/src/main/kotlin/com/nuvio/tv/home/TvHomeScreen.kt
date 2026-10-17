@@ -68,7 +68,9 @@ import com.nuvio.tv.ui.TvContentRow
 import com.nuvio.tv.ui.TvDimens
 import com.nuvio.tv.ui.TvLandscapeCard
 import com.nuvio.tv.ui.TvMessage
+import com.nuvio.tv.ui.TvPosterAspectRatio
 import com.nuvio.tv.ui.TvPosterCard
+import com.nuvio.tv.ui.TvSquareTileSize
 import com.nuvio.tv.ui.tvFocusable
 import kotlinx.coroutines.delay
 
@@ -76,6 +78,11 @@ private val log = Logger.withTag("TvHome")
 
 /** Delay before the hero follows the focused card, so fast scrolling does not flicker. */
 private const val HERO_FOLLOW_DELAY_MS = 220L
+
+// Hero text block of the NuvioTV modern home.
+private const val HERO_TEXT_WIDTH_FRACTION = 0.5f
+private val HERO_LOGO_HEIGHT = 100.dp
+private val HERO_LOGO_MAX_WIDTH = 220.dp
 
 private class HeroInfo(
     val key: String,
@@ -174,7 +181,8 @@ private fun TvHomeContent(model: TvHomeModel) {
     }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        val heroHeight = maxHeight * 0.44f
+        // NuvioTV keeps the rows in the bottom 52% of the screen.
+        val heroHeight = maxHeight * 0.48f
         HeroBackdrop(url = displayedHero?.backdrop)
 
         Column(modifier = Modifier.fillMaxSize()) {
@@ -190,7 +198,7 @@ private fun TvHomeContent(model: TvHomeModel) {
             LazyColumn(
                 state = rememberLazyListState(),
                 contentPadding = PaddingValues(bottom = 48.dp),
-                verticalArrangement = Arrangement.spacedBy(18.dp),
+                verticalArrangement = Arrangement.spacedBy(TvDimens.rowGap - TvDimens.rowVerticalPadding * 2),
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
@@ -297,9 +305,9 @@ private fun HeroInfoPanel(hero: HeroInfo?, modifier: Modifier = Modifier) {
         if (info == null) return@Crossfade
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(start = TvDimens.screenPadding, top = TvDimens.chromeTopInset, end = TvDimens.screenPadding)
-                .widthIn(max = 560.dp),
+                .fillMaxHeight()
+                .fillMaxWidth(HERO_TEXT_WIDTH_FRACTION)
+                .padding(start = TvDimens.rowPadding, top = TvDimens.chromeTopInset),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             if (!info.logo.isNullOrBlank()) {
@@ -309,13 +317,13 @@ private fun HeroInfoPanel(hero: HeroInfo?, modifier: Modifier = Modifier) {
                     contentScale = ContentScale.Fit,
                     alignment = Alignment.CenterStart,
                     modifier = Modifier
-                        .height(72.dp)
-                        .widthIn(max = 340.dp),
+                        .height(HERO_LOGO_HEIGHT)
+                        .widthIn(max = HERO_LOGO_MAX_WIDTH),
                 )
             } else {
                 Text(
                     text = info.title,
-                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold, fontSize = 32.sp),
+                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold, fontSize = 28.sp),
                     color = MaterialTheme.nuvio.colors.textPrimary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
@@ -337,7 +345,6 @@ private fun HeroInfoPanel(hero: HeroInfo?, modifier: Modifier = Modifier) {
                     color = MaterialTheme.nuvio.colors.textSecondary,
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.widthIn(max = 520.dp),
                 )
             }
         }
@@ -405,7 +412,8 @@ private fun CatalogRow(
                     imageUrl = item.poster,
                     title = item.name,
                     watched = model.isPosterWatched(item),
-                    width = if (item.posterShape == PosterShape.Square) TvDimens.posterWidth * 1.5f else TvDimens.posterWidth,
+                    width = if (item.posterShape == PosterShape.Square) TvSquareTileSize else TvDimens.posterWidth,
+                    aspectRatio = if (item.posterShape == PosterShape.Square) 1f else TvPosterAspectRatio,
                     onClick = { model.onPosterClick(item) },
                     onLongClick = model.onPosterLongClick?.let { longClick -> { longClick(item) } },
                     onFocused = { onFocused(key, heroOf(item)) },
@@ -436,11 +444,14 @@ private fun FoldersRow(
         items(row.collection.folders, key = { folder -> "${row.key}:${folder.id}" }) { folder ->
             val key = "${row.key}:${folder.id}"
             val modifier = Modifier.focusRequester(requesterFor(key))
-            if (folder.isPosterTile()) {
+            val square = folder.tileShape.equals("square", ignoreCase = true)
+            if (folder.isPosterTile() || square) {
                 TvPosterCard(
                     imageUrl = folder.coverImageUrl,
                     title = folder.title,
                     watched = false,
+                    width = if (square) TvSquareTileSize else TvDimens.posterWidth,
+                    aspectRatio = if (square) 1f else TvPosterAspectRatio,
                     onClick = { onFolderClick(row.collection.id, folder.id) },
                     modifier = modifier,
                 )
@@ -449,7 +460,6 @@ private fun FoldersRow(
                     imageUrl = folder.coverImageUrl,
                     title = folder.title,
                     subtitle = null,
-                    width = if (folder.tileShape.equals("square", ignoreCase = true)) TvDimens.posterWidth * 1.5f else TvDimens.landscapeWidth,
                     onClick = { onFolderClick(row.collection.id, folder.id) },
                     modifier = modifier,
                 )

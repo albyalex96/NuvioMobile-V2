@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
+import com.nuvio.app.core.ui.DefaultPosterCardWidthDp
 import com.nuvio.app.core.ui.NuvioCardDepthSurface
 import com.nuvio.app.core.ui.NuvioPosterWatchedOverlay
 import com.nuvio.app.core.ui.SkeletonPoster
@@ -35,15 +36,34 @@ import com.nuvio.app.core.ui.rememberPosterCardStyleUiState
 import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.home.PosterShape
 import com.nuvio.app.features.watching.application.WatchingState
+import com.nuvio.app.tv.TvAppRuntime
 
-internal fun posterGridColumnCountForWidth(screenWidth: Dp): Int =
+internal fun posterGridColumnCountForWidth(
+    screenWidth: Dp,
+    posterWidthDp: Int = DefaultPosterCardWidthDp,
+): Int =
     when {
+        TvAppRuntime.isTvApp -> tvPosterGridColumnCountForWidth(screenWidth, posterWidthDp)
         screenWidth >= 1400.dp -> 7
         screenWidth >= 1200.dp -> 6
         screenWidth >= 1000.dp -> 5
         screenWidth >= 840.dp -> 4
         else -> 3
     }
+
+/**
+ * TV grids fit as many columns as cards at least as wide as the poster width setting, like the
+ * `GridCells.Adaptive(posterWidth)` grids of NuvioTV. The phone breakpoints give a 960dp TV
+ * 4 columns, i.e. posters taller than the screen.
+ */
+internal fun tvPosterGridColumnCountForWidth(screenWidth: Dp, posterWidthDp: Int): Int {
+    val contentWidth = screenWidth.value - 2 * TvPosterGridHorizontalPaddingDp
+    val columns = ((contentWidth + PosterGridSpacingDp) / (posterWidthDp + PosterGridSpacingDp)).toInt()
+    return columns.coerceAtLeast(3)
+}
+
+private const val TvPosterGridHorizontalPaddingDp = 24f
+private const val PosterGridSpacingDp = 12f
 
 @Composable
 internal fun PosterGridRow(

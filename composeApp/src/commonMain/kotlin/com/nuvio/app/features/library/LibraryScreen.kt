@@ -86,6 +86,7 @@ import com.nuvio.app.features.servers.ServerRepository
 import com.nuvio.app.features.home.components.HomePosterCard
 import com.nuvio.app.features.home.components.HomeSkeletonRow
 import com.nuvio.app.features.home.components.posterGridColumnCountForWidth
+import com.nuvio.app.core.ui.rememberPosterCardStyleUiState
 import com.nuvio.app.features.profiles.ProfileRepository
 import com.nuvio.app.features.tracking.TrackingRefreshIntent
 import com.nuvio.app.features.watched.WatchedRepository
@@ -293,7 +294,8 @@ fun LibraryScreen(
     }
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-        val gridColumns = remember(maxWidth) { posterGridColumnCountForWidth(maxWidth) }
+        val posterWidthDp = rememberPosterCardStyleUiState().widthDp
+        val gridColumns = remember(maxWidth, posterWidthDp) { posterGridColumnCountForWidth(maxWidth, posterWidthDp) }
 
         NuvioScreen(
             modifier = Modifier.fillMaxSize(),

@@ -50,18 +50,34 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.nuvio.app.core.ui.nuvio
 
-/** Shared layout metrics of the TV screens (dp on a 960x540dp TV canvas). */
+/**
+ * Shared layout metrics of the TV screens (dp on a 960x540dp TV canvas), taken from the modern
+ * home of NuvioTV: portrait cards = 126x189 base poster * 0.84 * 1.08, landscape and
+ * "continue watching" cards = 126 * 1.24 * 1.34 at 16:9, rows inset 52dp and 12dp apart.
+ */
 object TvDimens {
     val screenPadding = 48.dp
+    /** Start/end inset of the home and details rows (NuvioTV `rowHorizontalPadding`). */
+    val rowPadding = 52.dp
     /** Space kept free at the top of the pages for the floating sidebar pill. */
     val chromeTopInset = 80.dp
-    val rowSpacing = 14.dp
-    val posterWidth = 124.dp
-    val landscapeWidth = 248.dp
-    val cardRadius = 10.dp
+    val rowSpacing = 12.dp
+    /** Vertical gap between the rows of a page. */
+    val rowGap = 24.dp
+    /** Space above and below the cards of a row, room for the focus scale. */
+    val rowVerticalPadding = 10.dp
+    val posterWidth = 114.dp
+    /** Posters outside the home rows (details "more like this", collections). */
+    val basePosterWidth = 126.dp
+    val landscapeWidth = 210.dp
+    val cardRadius = 12.dp
 }
 
 val TvCardShape = RoundedCornerShape(TvDimens.cardRadius)
+const val TvPosterAspectRatio = 2f / 3f
+
+/** Square tiles are as tall as the posters of the same row. */
+val TvSquareTileSize: Dp get() = TvDimens.posterWidth / TvPosterAspectRatio
 val TvPillShape = RoundedCornerShape(50)
 
 @Composable
@@ -88,11 +104,12 @@ fun TvRemoteImage(
 fun TvSectionTitle(text: String, modifier: Modifier = Modifier) {
     Text(
         text = text,
-        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold, fontSize = 19.sp),
+        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold, fontSize = 16.sp),
         color = MaterialTheme.nuvio.colors.textPrimary,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
-        modifier = modifier.padding(start = TvDimens.screenPadding, bottom = 10.dp),
+        // 14dp to the cards (NuvioTV `rowTitleBottom`), including the row's vertical padding.
+        modifier = modifier.padding(start = TvDimens.rowPadding, bottom = 14.dp - TvDimens.rowVerticalPadding),
     )
 }
 
@@ -109,7 +126,7 @@ fun TvContentRow(
         }
         LazyRow(
             state = rememberLazyListState(),
-            contentPadding = PaddingValues(horizontal = TvDimens.screenPadding, vertical = 10.dp),
+            contentPadding = PaddingValues(horizontal = TvDimens.rowPadding, vertical = TvDimens.rowVerticalPadding),
             horizontalArrangement = Arrangement.spacedBy(TvDimens.rowSpacing),
             modifier = Modifier
                 .fillMaxWidth()
@@ -146,6 +163,7 @@ fun TvPosterCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     width: Dp = TvDimens.posterWidth,
+    aspectRatio: Float = TvPosterAspectRatio,
     onLongClick: (() -> Unit)? = null,
     onFocused: () -> Unit = {},
 ) {
@@ -154,7 +172,7 @@ fun TvPosterCard(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(2f / 3f)
+                .aspectRatio(aspectRatio)
                 .tvFocusable(
                     shape = TvCardShape,
                     onClick = onClick,
