@@ -88,6 +88,10 @@ import com.nuvio.app.tv.TvSeason
 import com.nuvio.tv.R
 import com.nuvio.tv.ui.TvContentRow
 import com.nuvio.tv.ui.TvDimens
+import com.nuvio.tv.ui.showsLandscape
+import com.nuvio.tv.ui.rememberTvPosterCardStyle
+import com.nuvio.tv.ui.landscapeArtwork
+import com.nuvio.tv.ui.TvLandscapeCard
 import com.nuvio.tv.ui.TvPosterCard
 import com.nuvio.tv.ui.TvSectionTitle
 import com.nuvio.tv.ui.tvFocusable
@@ -945,15 +949,28 @@ private fun PosterRow(
     items: List<MetaPreview>,
     onClick: (MetaPreview) -> Unit,
 ) {
+    val posterStyle = rememberTvPosterCardStyle()
+    val landscape = posterStyle.showsLandscape(items)
     TvContentRow(title = title, modifier = Modifier.padding(top = 18.dp)) {
         items(items, key = MetaPreview::stableKey) { item ->
-            TvPosterCard(
-                imageUrl = item.poster,
-                title = item.name,
-                watched = false,
-                width = TvDimens.basePosterWidth,
-                onClick = { onClick(item) },
-            )
+            if (landscape) {
+                val artwork = posterStyle.landscapeArtwork(item)
+                TvLandscapeCard(
+                    imageUrl = artwork.imageUrl,
+                    logoUrl = artwork.logoUrl,
+                    title = item.name,
+                    subtitle = null,
+                    onClick = { onClick(item) },
+                )
+            } else {
+                TvPosterCard(
+                    imageUrl = item.poster,
+                    title = item.name,
+                    watched = false,
+                    width = TvDimens.basePosterWidth,
+                    onClick = { onClick(item) },
+                )
+            }
         }
     }
 }

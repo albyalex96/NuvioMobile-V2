@@ -30,6 +30,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,7 +49,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import com.nuvio.app.core.ui.PosterCardStyleRepository
+import com.nuvio.app.core.ui.PosterCardStyleUiState
 import com.nuvio.app.core.ui.nuvio
+import com.nuvio.app.features.home.MetaPreview
+import com.nuvio.app.features.home.PosterShape
 
 /**
  * Shared layout metrics of the TV screens (dp on a 960x540dp TV canvas), taken from the modern
@@ -79,6 +84,30 @@ const val TvPosterAspectRatio = 2f / 3f
 /** Square tiles are as tall as the posters of the same row. */
 val TvSquareTileSize: Dp get() = TvDimens.posterWidth / TvPosterAspectRatio
 val TvPillShape = RoundedCornerShape(50)
+
+/** Poster settings of the profile (Settings → Appearance → Posters), shared with the phone. */
+@Composable
+fun rememberTvPosterCardStyle(): PosterCardStyleUiState {
+    PosterCardStyleRepository.ensureLoaded()
+    val style by PosterCardStyleRepository.uiState.collectAsState()
+    return style
+}
+
+/** "Landscape posters" setting, or a catalog whose addon declares landscape artwork. */
+fun PosterCardStyleUiState.showsLandscape(items: List<MetaPreview>): Boolean =
+    catalogLandscapeModeEnabled || items.firstOrNull()?.posterShape == PosterShape.Landscape
+
+/** Artwork of a landscape card, picked like the phone's `HomePosterCard`. */
+data class TvLandscapeArtwork(val imageUrl: String?, val logoUrl: String?)
+
+fun PosterCardStyleUiState.landscapeArtwork(item: MetaPreview): TvLandscapeArtwork {
+    val customLandscape = if (alwaysShowLandscapeClearlogo) null else item.landscapePoster?.takeIf { it.isNotBlank() }
+    return TvLandscapeArtwork(
+        imageUrl = customLandscape ?: item.banner ?: item.poster,
+        // A custom landscape poster already carries the title; plain backdrops get the clearlogo.
+        logoUrl = if (customLandscape == null) item.logo?.takeIf { it.isNotBlank() } else null,
+    )
+}
 
 @Composable
 fun TvRemoteImage(
@@ -214,6 +243,7 @@ fun TvLandscapeCard(
     badge: String? = null,
     watched: Boolean = false,
     dimmed: Boolean = false,
+    logoUrl: String? = null,
     onLongClick: (() -> Unit)? = null,
     onFocused: () -> Unit = {},
 ) {
@@ -248,6 +278,19 @@ fun TvLandscapeCard(
                     .align(Alignment.BottomCenter)
                     .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.75f)))),
             )
+            if (!logoUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = logoUrl,
+                    contentDescription = title,
+                    contentScale = ContentScale.Fit,
+                    alignment = Alignment.BottomStart,
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .fillMaxWidth(0.62f)
+                        .fillMaxHeight(0.34f)
+                        .padding(start = 10.dp, bottom = 10.dp),
+                )
+            }
             if (badge != null) {
                 TvBadge(text = badge, modifier = Modifier.align(Alignment.TopStart).padding(8.dp))
             }

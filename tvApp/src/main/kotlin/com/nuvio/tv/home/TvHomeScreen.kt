@@ -71,6 +71,9 @@ import com.nuvio.tv.ui.TvMessage
 import com.nuvio.tv.ui.TvPosterAspectRatio
 import com.nuvio.tv.ui.TvPosterCard
 import com.nuvio.tv.ui.TvSquareTileSize
+import com.nuvio.tv.ui.landscapeArtwork
+import com.nuvio.tv.ui.rememberTvPosterCardStyle
+import com.nuvio.tv.ui.showsLandscape
 import com.nuvio.tv.ui.tvFocusable
 import kotlinx.coroutines.delay
 
@@ -391,14 +394,17 @@ private fun CatalogRow(
     requesterFor: (String) -> FocusRequester,
     onFocused: (String, HeroInfo) -> Unit,
 ) {
-    val landscape = row.items.firstOrNull()?.posterShape == PosterShape.Landscape
+    val posterStyle = rememberTvPosterCardStyle()
+    val landscape = posterStyle.showsLandscape(row.items)
     TvContentRow(title = row.section.title) {
         items(row.items, key = { item -> "${row.key}:${item.stableKey()}" }) { item ->
             val key = "${row.key}:${item.stableKey()}"
             val focusModifier = Modifier.focusRequester(requesterFor(key))
             if (landscape) {
+                val artwork = posterStyle.landscapeArtwork(item)
                 TvLandscapeCard(
-                    imageUrl = item.landscapePoster ?: item.banner ?: item.poster,
+                    imageUrl = artwork.imageUrl,
+                    logoUrl = artwork.logoUrl,
                     title = item.name,
                     subtitle = null,
                     watched = model.isPosterWatched(item),
@@ -440,12 +446,13 @@ private fun FoldersRow(
     requesterFor: (String) -> FocusRequester,
 ) {
     val onFolderClick = model.onFolderClick ?: return
+    val landscapeMode = rememberTvPosterCardStyle().catalogLandscapeModeEnabled
     TvContentRow(title = row.collection.title) {
         items(row.collection.folders, key = { folder -> "${row.key}:${folder.id}" }) { folder ->
             val key = "${row.key}:${folder.id}"
             val modifier = Modifier.focusRequester(requesterFor(key))
             val square = folder.tileShape.equals("square", ignoreCase = true)
-            if (folder.isPosterTile() || square) {
+            if (!landscapeMode && (folder.isPosterTile() || square)) {
                 TvPosterCard(
                     imageUrl = folder.coverImageUrl,
                     title = folder.title,
