@@ -448,6 +448,8 @@ kotlin {
                 implementation("androidx.media3:media3-database:1.8.0")
                 implementation("androidx.annotation:annotation-experimental:1.3.1")
                 implementation(libs.mpv.android.lib)
+                implementation(libs.androidx.mediarouter)
+                implementation(libs.play.services.cast.framework)
                 implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("lib-*.aar"))))
                 if (androidDistribution == "full") {
                     implementation(files("libs/quickjs-kt-android-1.0.5-nuvio.aar"))

@@ -29,6 +29,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.rounded.Build
+import androidx.compose.material.icons.rounded.Cast
+import androidx.compose.material.icons.rounded.CastConnected
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Lock
@@ -105,6 +107,8 @@ internal fun PlayerControlsShell(
     onBack: () -> Unit,
     onPartyClick: (() -> Unit)? = null,
     partyActive: Boolean = false,
+    onCastClick: (() -> Unit)? = null,
+    castActive: Boolean = false,
     onTogglePlayback: () -> Unit,
     seekIntervalSeconds: Int = DEFAULT_SEEK_INTERVAL_SECONDS,
     onSeekBack: () -> Unit,
@@ -193,6 +197,8 @@ internal fun PlayerControlsShell(
                     onOpenInExternalPlayer = onOpenInExternalPlayer,
                     onPartyClick = onPartyClick,
                     partyActive = partyActive,
+                    onCastClick = onCastClick,
+                    castActive = castActive,
                     onBack = onBack,
                     modifier = Modifier
                         .align(Alignment.TopStart)
@@ -212,6 +218,8 @@ internal fun PlayerControlsShell(
                         onBack = onBack,
                         onPartyClick = onPartyClick,
                         partyActive = partyActive,
+                        onCastClick = onCastClick,
+                        castActive = castActive,
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .windowInsetsPadding(WindowInsets.safeContent.only(WindowInsetsSides.Top))
@@ -371,6 +379,8 @@ private fun PlayerHeader(
     onOpenInExternalPlayer: (() -> Unit)?,
     onPartyClick: (() -> Unit)?,
     partyActive: Boolean,
+    onCastClick: (() -> Unit)?,
+    castActive: Boolean,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -480,6 +490,16 @@ private fun PlayerHeader(
                             buttonSize = metrics.headerIconSize + 16.dp,
                             iconSize = metrics.headerIconSize,
                             onClick = onOpenInExternalPlayer,
+                        )
+                    }
+                    if (onCastClick != null) {
+                        PlayerHeaderIconButton(
+                            icon = if (castActive) Icons.Rounded.CastConnected else Icons.Rounded.Cast,
+                            contentDescription = stringResource(Res.string.cast_action),
+                            buttonSize = metrics.headerIconSize + 16.dp,
+                            iconSize = metrics.headerIconSize,
+                            onClick = onCastClick,
+                            tint = if (castActive) MaterialTheme.colorScheme.primary else Color.White,
                         )
                     }
                     if (onPartyClick != null) {

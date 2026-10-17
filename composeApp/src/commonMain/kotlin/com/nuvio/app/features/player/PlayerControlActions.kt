@@ -18,6 +18,8 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Build
+import androidx.compose.material.icons.rounded.Cast
+import androidx.compose.material.icons.rounded.CastConnected
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Info
@@ -64,9 +66,19 @@ internal fun PlayerToolbar(
     modifier: Modifier = Modifier,
     onPartyClick: (() -> Unit)? = null,
     partyActive: Boolean = false,
+    onCastClick: (() -> Unit)? = null,
+    castActive: Boolean = false,
 ) {
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.weight(1f))
+        if (onCastClick != null) {
+            PlayerAction(
+                description = stringResource(Res.string.cast_action),
+                icon = if (castActive) Icons.Rounded.CastConnected else Icons.Rounded.Cast,
+                onClick = onCastClick,
+                tint = if (castActive) MaterialTheme.colorScheme.primary else Color.White,
+            )
+        }
         if (onPartyClick != null) {
             PlayerAction(
                 description = stringResource(Res.string.party_title),

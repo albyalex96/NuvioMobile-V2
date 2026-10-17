@@ -20,7 +20,7 @@ internal fun playbackMediaItemFromUrl(
     return builder.build()
 }
 
-private fun inferPlaybackMimeType(
+internal fun inferPlaybackMimeType(
     url: String,
     responseHeaders: Map<String, String>,
     streamType: String?,

@@ -215,6 +215,15 @@ internal class PlayerScreenRuntime(
     var pendingSeekTarget: Pair<Long, TimeMark>? = null
     var streamMediaInfo by mutableStateOf(PlayerMediaInfo())
     var playbackEngineOverride by mutableStateOf<AndroidPlaybackEngine?>(null)
+    // Cast: session the current stream is sent to (null = local playback), see PlayerScreenRuntimeCast.
+    var castSessionId by mutableStateOf<String?>(null)
+    var castDeviceName by mutableStateOf<String?>(null)
+    var showCastPicker by mutableStateOf(false)
+    var castInitialSyncDone = false
+    var castHandoffPlayWhenReady: Boolean? = null
+    var castIssueNotifiedFor: String? = null
+    var castCompatibilityIssues: List<String> = emptyList()
+    var castCompatibilityNotifiedFor: String? = null
     var audioTracks by mutableStateOf<List<AudioTrack>>(emptyList())
     var serverAudioTracks by mutableStateOf<List<AudioTrack>>(emptyList())
     var serverSubtitleTracks by mutableStateOf<List<SubtitleTrack>>(emptyList())

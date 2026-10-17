@@ -395,9 +395,12 @@ private fun PlayerScreenRuntime.BindPlayerUiVisibilityEffects() {
         playbackSnapshot.isLoading,
         showParentalGuide,
         errorMessage,
+        castSessionId,
     ) {
         if (
             !controlsVisible ||
+            // While casting there is no video to uncover: the controls stay on screen.
+            castSessionId != null ||
             isScrubbingTimeline ||
             !playbackSnapshot.isPlaying ||
             playbackSnapshot.isLoading ||
@@ -422,9 +425,10 @@ private fun PlayerScreenRuntime.BindPlayerUiVisibilityEffects() {
         playbackSnapshot.isLoading,
         playbackSnapshot.durationMs,
         errorMessage,
+        castSessionId,
     ) {
         pausedOverlayVisible = false
-        if (!playerSettingsUiState.pauseOverlayEnabled || playbackSnapshot.isPlaying || playbackSnapshot.isLoading || playbackSnapshot.durationMs <= 0L || errorMessage != null) {
+        if (castSessionId != null || !playerSettingsUiState.pauseOverlayEnabled || playbackSnapshot.isPlaying || playbackSnapshot.isLoading || playbackSnapshot.durationMs <= 0L || errorMessage != null) {
             return@LaunchedEffect
         }
         delay(5000)

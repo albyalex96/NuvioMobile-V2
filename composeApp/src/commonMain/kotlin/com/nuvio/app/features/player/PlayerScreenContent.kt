@@ -140,6 +140,7 @@ internal fun PlayerScreenContent(args: PlayerScreenArgs) {
             runtime.resizeMode = playerSettingsUiState.resizeMode
             runtime.lastSyncedSettingsResizeMode = playerSettingsUiState.resizeMode
         }
+        runtime.BindCastHandoff()
         runtime.resetIdentityStateIfNeeded()
 
         val keepScreenAwake = runtime.errorMessage == null &&
@@ -147,7 +148,8 @@ internal fun PlayerScreenContent(args: PlayerScreenArgs) {
                 (runtime.shouldPlay && runtime.playbackSnapshot.isLoading))
         EnterImmersivePlayerMode(keepScreenAwake = keepScreenAwake)
         ManagePlayerPictureInPicture(
-            isPlaying = runtime.playbackSnapshot.isPlaying,
+            // Nothing to show in picture-in-picture while the video plays on a cast receiver.
+            isPlaying = runtime.playbackSnapshot.isPlaying && runtime.castSessionId == null,
             videoSize = IntSize(
                 runtime.playbackSnapshot.videoWidth,
                 runtime.playbackSnapshot.videoHeight,

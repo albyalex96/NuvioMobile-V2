@@ -31,6 +31,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
+import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Download
@@ -70,6 +71,13 @@ import com.nuvio.app.core.ui.dismissNuvioBottomSheet
 import com.nuvio.app.features.downloads.DownloadsRepository
 import com.nuvio.app.features.details.MetaScreenSettingsRepository
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import co.touchlab.kermit.Logger
+import com.nuvio.app.features.cast.CastDevicePickerDialog
+import com.nuvio.app.features.cast.CastPlatform
+import com.nuvio.app.features.cast.CastSessionState
+import com.nuvio.app.features.cast.castCompatibilityIssues
+import com.nuvio.app.features.cast.isAvailable
+import com.nuvio.app.tv.TvAppRuntime
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.rememberModalBottomSheetState
 import coil3.compose.AsyncImage
@@ -177,6 +185,10 @@ fun StreamsScreen(
         }
     }
     val downloadScope = rememberCoroutineScope()
+    val castState by CastPlatform.state.collectAsStateWithLifecycle()
+    val castAvailable = castState.isAvailable && !TvAppRuntime.isTvApp
+    // Stream waiting for a cast session: it opens in the player (on the receiver) once connected.
+    var pendingCastStream by remember(videoId) { mutableStateOf<StreamItem?>(null) }
     var preferredFilterApplied by remember(videoId) { mutableStateOf(false) }
     val episodeProgress = watchProgressUiState.progressForVideo(
         videoId = videoId,
@@ -320,7 +332,17 @@ fun StreamsScreen(
             stream = streamActionsTarget,
             externalPlayerEnabled = playerSettings.externalPlayerEnabled,
             showOriginalDescription = streamParserSettings.enabled,
+            castAvailable = castAvailable,
             onDismiss = { streamActionsTarget = null },
+            onCast = { stream ->
+                if (castState is CastSessionState.Connected) {
+                    streamCastLog.i { "Casting the selected stream" }
+                    onStreamActionOpen(stream, false, effectiveResumePositionMs, effectiveResumeProgressFraction)
+                } else {
+                    streamCastLog.i { "No cast session: opening the device picker" }
+                    pendingCastStream = stream
+                }
+            },
             onShowOriginalDescription = { stream -> originalDescriptionTarget = stream },
             onCopyLink = { stream ->
                 val directUrl = stream.playableDirectUrl ?: stream.externalOpenUrl
@@ -426,11 +448,30 @@ fun StreamsScreen(
                 onDismiss = { originalDescriptionTarget = null },
             )
         }
+
+        pendingCastStream?.let { stream ->
+            CastDevicePickerDialog(
+                onDismiss = { pendingCastStream = null },
+                onConnected = {
+                    pendingCastStream = null
+                    onStreamActionOpen(stream, false, effectiveResumePositionMs, effectiveResumeProgressFraction)
+                },
+            )
+        }
     }
 }
 
 private val StreamItem.hasLinkActions: Boolean
     get() = playableDirectUrl != null || shouldOpenExternally || isAddonDebridCandidate
+
+/**
+ * Streams the player can hand to the receiver: HTTP links (direct or through debrid) and
+ * torrents, which the P2P engine serves through the LAN proxy.
+ */
+private val StreamItem.canCast: Boolean
+    get() = playableDirectUrl != null || isAddonDebridCandidate || p2pInfoHash != null
+
+private val streamCastLog = Logger.withTag("Cast")
 
 @Composable
 private fun MobileStreamsLayout(
@@ -1023,7 +1064,9 @@ private fun StreamActionsSheet(
     stream: StreamItem?,
     externalPlayerEnabled: Boolean,
     showOriginalDescription: Boolean,
+    castAvailable: Boolean,
     onDismiss: () -> Unit,
+    onCast: (StreamItem) -> Unit,
     onShowOriginalDescription: (StreamItem) -> Unit,
     onCopyLink: (StreamItem) -> Unit,
     onDownload: (StreamItem) -> Unit,
@@ -1120,6 +1163,23 @@ private fun StreamActionsSheet(
                     title = stringResource(Res.string.streams_download_file),
                     onClick = {
                         onDownload(stream)
+                        coroutineScope.launch {
+                            dismissNuvioBottomSheet(sheetState = sheetState, onDismiss = onDismiss)
+                        }
+                    },
+                )
+            }
+            if (castAvailable && stream.canCast) {
+                val compatibilityIssues = remember(stream) { stream.castCompatibilityIssues() }
+                NuvioBottomSheetActionRow(
+                    icon = Icons.Rounded.Cast,
+                    title = stringResource(Res.string.cast_stream_action),
+                    subtitle = compatibilityIssues.takeIf { it.isNotEmpty() }?.let {
+                        stringResource(Res.string.cast_compatibility_warning, it.joinToString(", "))
+                    },
+                    onClick = {
+                        // The device picker lives outside the sheet, so it can open right away.
+                        onCast(stream)
                         coroutineScope.launch {
                             dismissNuvioBottomSheet(sheetState = sheetState, onDismiss = onDismiss)
                         }

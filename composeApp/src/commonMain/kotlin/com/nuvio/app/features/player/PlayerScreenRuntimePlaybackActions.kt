@@ -63,6 +63,7 @@ internal val PlayerScreenRuntime.activePlaybackKey: PlaybackKey
         seasonNumber = activeSeasonNumber,
         episodeNumber = activeEpisodeNumber,
         playbackEngine = playbackEngineOverride,
+        castSessionId = castSessionId,
     )
 
 internal val PlayerScreenRuntime.playbackSession: WatchProgressPlaybackSession
@@ -129,7 +130,8 @@ internal fun PlayerScreenRuntime.resetIdentityStateIfNeeded() {
     val identity = activePlaybackKey
     if (lastResetPlaybackIdentity != identity) {
         lastResetPlaybackIdentity = identity
-        shouldPlay = true
+        shouldPlay = castHandoffPlayWhenReady ?: true
+        castHandoffPlayWhenReady = null
         initialLoadCompleted = false
         speedBoostRestoreSpeed = null
         isHoldToSpeedGestureActive = false

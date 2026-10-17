@@ -23,7 +23,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nuvio.app.features.cast.CastDevicePickerDialog
+import com.nuvio.app.features.cast.CastPlatform
+import com.nuvio.app.features.cast.CastPlayerSurface
+import com.nuvio.app.features.cast.CastingBackdrop
+import com.nuvio.app.features.cast.isAvailable
 import com.nuvio.app.features.p2p.P2pStreamingState
+import com.nuvio.app.tv.TvAppRuntime
 import com.nuvio.app.features.party.PartyRepository
 import com.nuvio.app.features.p2p.formatP2pMegabytes
 import com.nuvio.app.features.p2p.formatP2pSpeed
@@ -168,7 +174,7 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
                 commitHorizontalSeekState = gestureCallbacks.commitHorizontalSeek,
             ),
     ) {
-        val playerSurfaceSourceUrl = if (isP2pPlaybackActive) p2pResolvedSourceUrl else activeSourceUrl
+        val playerSurfaceSourceUrl = runtime.playerSurfaceSourceUrl
         val playbackKey = activePlaybackKey
         val initialPositionRequestKey = currentInitialPositionRequestKey()
         if (playerSurfaceSourceUrl != null) {
@@ -177,52 +183,77 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
                 DisposableEffect(Unit) {
                     onDispose { active.value = false }
                 }
-                PlatformPlayerSurface(
-                    sourceUrl = playerSurfaceSourceUrl,
-                    sourceAudioUrl = activeSourceAudioUrl,
-                    sourceHeaders = activeSourceHeaders,
-                    sourceResponseHeaders = activeSourceResponseHeaders,
-                    externalSubtitles = externalSubtitles,
-                    streamType = activeStreamType,
-                    modifier = Modifier.fillMaxSize(),
-                    playWhenReady = shouldPlay,
-                    initialPositionMs = activeInitialPositionMs.takeIf { it > 0L },
-                    initialPositionRequestKey = initialPositionRequestKey,
-                    resizeMode = resizeMode,
-                    playbackEngine = playbackEngineOverride,
-                    onInitialPositionHandled = { key, handled ->
-                        if (active.value && playbackKey == activePlaybackKey && key == currentInitialPositionRequestKey()) {
-                            initialSeekApplied = handled
-                        }
-                    },
-                    onControllerReady = { controller ->
-                        if (active.value && playbackKey == activePlaybackKey) {
-                            playerController = controller
-                            playerControllerSourceUrl = activeSourceUrl
-                        }
-                    },
-                    onSnapshot = { snapshot ->
-                        if (!active.value || !updatePlaybackSnapshot(snapshot, playbackKey)) return@PlatformPlayerSurface
-                        refreshAudioTracksIfChanged()
-                        if (!snapshot.isLoading) initialLoadCompleted = true
-                        if (snapshot.isEnded) {
-                            shouldPlay = false
-                            controlsVisible = !playerControlsLocked
-                        }
-                    },
-                    onError = { message ->
-                        if (!active.value || playbackKey != activePlaybackKey) return@PlatformPlayerSurface
-                        if (message != null && tryRefreshCredentialedSourceAfterError(message)) {
-                            return@PlatformPlayerSurface
-                        }
-                        errorMessage = message
-                        if (message != null) {
-                            scrubbingPositionMs = null
-                            controlsVisible = !playerControlsLocked
-                            removeFailedStreamFromCache()
-                        }
-                    },
-                )
+                val onInitialPositionHandled: (String, Boolean) -> Unit = { key, handled ->
+                    if (active.value && playbackKey == activePlaybackKey && key == currentInitialPositionRequestKey()) {
+                        initialSeekApplied = handled
+                    }
+                }
+                val onControllerReady: (PlayerEngineController) -> Unit = { controller ->
+                    if (active.value && playbackKey == activePlaybackKey) {
+                        playerController = controller
+                        playerControllerSourceUrl = activeSourceUrl
+                    }
+                }
+                val onSnapshot: (PlayerPlaybackSnapshot) -> Unit = onSnapshot@{ snapshot ->
+                    if (!active.value || !updatePlaybackSnapshot(snapshot, playbackKey)) return@onSnapshot
+                    refreshAudioTracksIfChanged()
+                    if (!snapshot.isLoading) initialLoadCompleted = true
+                    if (snapshot.isEnded) {
+                        shouldPlay = false
+                        controlsVisible = !playerControlsLocked
+                    }
+                }
+                val onError: (String?) -> Unit = onError@{ message ->
+                    if (!active.value || playbackKey != activePlaybackKey) return@onError
+                    // A receiver failure says nothing about the link (usually format/codec), so the
+                    // credential refresh and the reuse cache only react to local playback errors.
+                    val castError = castSessionId != null
+                    if (message != null && !castError && tryRefreshCredentialedSourceAfterError(message)) {
+                        return@onError
+                    }
+                    errorMessage = message
+                    if (message != null) {
+                        scrubbingPositionMs = null
+                        controlsVisible = !playerControlsLocked
+                        if (!castError) removeFailedStreamFromCache()
+                    }
+                }
+                if (castSessionId != null) {
+                    CastingBackdrop(
+                        artworkUrl = castBackdropUrl,
+                        deviceName = castDeviceName,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                    CastPlayerSurface(
+                        request = castMediaRequest(playerSurfaceSourceUrl),
+                        playWhenReady = shouldPlay,
+                        initialPositionMs = activeInitialPositionMs.takeIf { it > 0L },
+                        initialPositionRequestKey = initialPositionRequestKey,
+                        onInitialPositionHandled = onInitialPositionHandled,
+                        onControllerReady = onControllerReady,
+                        onSnapshot = onSnapshot,
+                        onError = onError,
+                    )
+                } else {
+                    PlatformPlayerSurface(
+                        sourceUrl = playerSurfaceSourceUrl,
+                        sourceAudioUrl = activeSourceAudioUrl,
+                        sourceHeaders = activeSourceHeaders,
+                        sourceResponseHeaders = activeSourceResponseHeaders,
+                        externalSubtitles = externalSubtitles,
+                        streamType = activeStreamType,
+                        modifier = Modifier.fillMaxSize(),
+                        playWhenReady = shouldPlay,
+                        initialPositionMs = activeInitialPositionMs.takeIf { it > 0L },
+                        initialPositionRequestKey = initialPositionRequestKey,
+                        resizeMode = resizeMode,
+                        playbackEngine = playbackEngineOverride,
+                        onInitialPositionHandled = onInitialPositionHandled,
+                        onControllerReady = onControllerReady,
+                        onSnapshot = onSnapshot,
+                        onError = onError,
+                    )
+                }
             }
         }
 
@@ -260,6 +291,9 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
         RenderPlayerModals(displayedPositionMs = displayedPositionMs)
         RenderParty(runtime = runtime)
         RenderStillWatchingPrompt()
+        if (showCastPicker) {
+            CastDevicePickerDialog(onDismiss = { showCastPicker = false })
+        }
     }
 }
 
@@ -362,6 +396,7 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
     val partyState by PartyRepository.state.collectAsStateWithLifecycle()
     val partyActive = partyState.party != null
     val partyAvailable by PartyRepository.available.collectAsStateWithLifecycle()
+    val castState by CastPlatform.state.collectAsStateWithLifecycle()
     AnimatedVisibility(
         visible = (controlsVisible || showParentalGuide) && !playerControlsLocked && !isInPip,
         enter = fadeIn(),
@@ -409,6 +444,12 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
                 null
             },
             partyActive = partyActive,
+            onCastClick = if (castState.isAvailable && !TvAppRuntime.isTvApp) {
+                { showCastPicker = true }
+            } else {
+                null
+            },
+            castActive = castSessionId != null,
             onTogglePlayback = { togglePlayback() },
             seekIntervalSeconds = playerSettingsUiState.seekIntervalSeconds,
             onSeekBack = { seekBy(-playerSettingsUiState.seekIntervalSeconds * 1_000L) },

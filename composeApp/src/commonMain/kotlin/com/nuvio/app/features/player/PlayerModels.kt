@@ -222,6 +222,8 @@ internal data class PlaybackKey(
     val seasonNumber: Int?,
     val episodeNumber: Int?,
     val playbackEngine: AndroidPlaybackEngine? = null,
+    /** Cast session the stream is sent to; null = played on this device. */
+    val castSessionId: String? = null,
 )
 
 data class PlayerPlaybackSnapshot(

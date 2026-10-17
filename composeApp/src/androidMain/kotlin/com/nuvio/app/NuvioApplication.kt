@@ -13,6 +13,7 @@ import coil3.request.crossfade
 import coil3.svg.SvgDecoder
 import com.nuvio.app.core.logging.AppLogPlatform
 import com.nuvio.app.core.logging.AppLogger
+import com.nuvio.app.core.mediaproxy.LanMediaProxy
 import com.nuvio.app.core.poster.CustomPosterFallbackInterceptor
 
 /**
@@ -27,6 +28,7 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
         super.onCreate()
         AppLogPlatform.initialize(this)
         AppLogger.install()
+        LanMediaProxy.initialize(this)
     }
 
     override fun newImageLoader(context: android.content.Context): ImageLoader {

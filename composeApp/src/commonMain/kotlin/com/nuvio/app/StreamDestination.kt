@@ -19,6 +19,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.ui.NuvioLoadingIndicator
 import com.nuvio.app.core.ui.NuvioToastController
 import com.nuvio.app.core.ui.nuvio
+import com.nuvio.app.features.cast.CastPlatform
+import com.nuvio.app.features.cast.CastSessionState
 import com.nuvio.app.features.debrid.DirectDebridPlayableResult
 import com.nuvio.app.features.debrid.DirectDebridPlaybackResolver
 import com.nuvio.app.features.debrid.toastMessage
@@ -378,7 +380,7 @@ internal fun StreamDestination(
                     ),
                 ),
             )
-            if (playerSettings.externalPlayerEnabled) {
+            if (playerSettings.externalPlayerEnabled && !isCastSessionConnected()) {
                 openExternalPlayback(playerLaunch)
                 StreamsRepository.cancelLoading()
                 StreamsRepository.setOverlayVisible(false)
@@ -544,7 +546,7 @@ internal fun StreamDestination(
             sourceFilename = stream.behaviorHints.filename,
             stream = stream,
         )
-        if (playerSettings.externalPlayerEnabled && stream.serverTarget == null) {
+        if (playerSettings.externalPlayerEnabled && stream.serverTarget == null && !isCastSessionConnected()) {
             openExternalPlayback(playerLaunch)
             StreamsRepository.consumeAutoPlay()
             StreamsRepository.cancelLoading()
@@ -742,7 +744,7 @@ internal fun StreamDestination(
             stream = stream,
         )
 
-        if (!forceInternal && (forceExternal || playerSettings.externalPlayerEnabled)) {
+        if (!forceInternal && (forceExternal || (playerSettings.externalPlayerEnabled && !isCastSessionConnected()))) {
             streamRouteScope.launch {
                 openExternalPlayback(playerLaunch)
                 StreamsRepository.cancelLoading()
@@ -865,3 +867,7 @@ internal fun StreamDestination(
         }
     }
 }
+
+// While casting, streams go to the receiver through the internal player even when an
+// external player is the default.
+private fun isCastSessionConnected(): Boolean = CastPlatform.state.value is CastSessionState.Connected

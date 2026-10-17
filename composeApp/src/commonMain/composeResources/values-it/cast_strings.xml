@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cast_action">Trasmetti</string>
+    <string name="cast_stream_action">Trasmetti su Chromecast</string>
+    <string name="cast_picker_title">Trasmetti su un dispositivo</string>
+    <string name="cast_picker_searching">Ricerca dei dispositivi sulla rete…</string>
+    <string name="cast_picker_empty_hint">Assicurati che questo dispositivo e il Chromecast siano connessi alla stessa rete Wi-Fi.</string>
+    <string name="cast_connecting">Connessione a %1$s…</string>
+    <string name="cast_connected_to">Connesso a %1$s</string>
+    <string name="cast_playing_on">In riproduzione su %1$s</string>
+    <string name="cast_unknown_device">Chromecast</string>
+    <string name="cast_stop">Interrompi trasmissione</string>
+    <string name="cast_close">Chiudi</string>
+    <string name="cast_source_local_only">Questo flusso viene servito da questo dispositivo: per trasmetterlo connettiti alla stessa rete Wi-Fi del Chromecast. La riproduzione continua qui.</string>
+    <string name="cast_source_separate_audio">Questo flusso usa una traccia audio separata e non può essere trasmesso. La riproduzione continua qui.</string>
+    <string name="cast_load_failed">Il Chromecast non è riuscito a riprodurre questo flusso. Il formato o il codec potrebbero non essere supportati.</string>
+    <string name="cast_session_lost">Trasmissione interrotta. La riproduzione continua su questo dispositivo.</string>
+    <string name="cast_load_failed_with_issues">Il Chromecast non è riuscito a riprodurre questo flusso. Usa %1$s, che molti Chromecast non supportano: prova un altro flusso.</string>
+    <string name="cast_lan_unavailable">Per trasmettere questo flusso il dispositivo deve essere connesso alla stessa rete Wi-Fi del Chromecast.</string>
+    <string name="cast_compatibility_warning">Potrebbe non funzionare su tutti i Chromecast: %1$s</string>
+    <string name="cast_compatibility_toast">Questo flusso usa %1$s: alcuni Chromecast non riescono a riprodurlo. Se non parte o manca l\'audio, prova un altro flusso.</string>
+</resources>
