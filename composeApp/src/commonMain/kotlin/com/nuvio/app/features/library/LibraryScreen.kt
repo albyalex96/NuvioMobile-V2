@@ -294,8 +294,10 @@ fun LibraryScreen(
     }
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-        val posterWidthDp = rememberPosterCardStyleUiState().widthDp
-        val gridColumns = remember(maxWidth, posterWidthDp) { posterGridColumnCountForWidth(maxWidth, posterWidthDp) }
+        val posterCardStyle = rememberPosterCardStyleUiState()
+        val gridColumns = remember(maxWidth, posterCardStyle.widthDp, posterCardStyle.catalogLandscapeModeEnabled) {
+            posterGridColumnCountForWidth(maxWidth, posterCardStyle.widthDp, posterCardStyle.catalogLandscapeModeEnabled)
+        }
 
         NuvioScreen(
             modifier = Modifier.fillMaxSize(),

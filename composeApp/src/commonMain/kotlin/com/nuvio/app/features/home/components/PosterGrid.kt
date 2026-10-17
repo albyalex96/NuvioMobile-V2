@@ -30,6 +30,7 @@ import com.nuvio.app.core.ui.DefaultPosterCardWidthDp
 import com.nuvio.app.core.ui.NuvioCardDepthSurface
 import com.nuvio.app.core.ui.NuvioPosterWatchedOverlay
 import com.nuvio.app.core.ui.SkeletonPoster
+import com.nuvio.app.core.ui.landscapePosterWidth
 import com.nuvio.app.core.ui.nuvioCardDepth
 import com.nuvio.app.core.ui.posterCardClickable
 import com.nuvio.app.core.ui.rememberPosterCardStyleUiState
@@ -38,12 +39,20 @@ import com.nuvio.app.features.home.PosterShape
 import com.nuvio.app.features.watching.application.WatchingState
 import com.nuvio.app.tv.TvAppRuntime
 
+/** Columns of the poster grids; [landscape] = "Landscape posters" setting (wider cards, fewer columns). */
 internal fun posterGridColumnCountForWidth(
     screenWidth: Dp,
     posterWidthDp: Int = DefaultPosterCardWidthDp,
+    landscape: Boolean = false,
 ): Int =
     when {
-        TvAppRuntime.isTvApp -> tvPosterGridColumnCountForWidth(screenWidth, posterWidthDp)
+        TvAppRuntime.isTvApp -> tvPosterGridColumnCountForWidth(screenWidth, posterWidthDp, landscape)
+        landscape -> when {
+            screenWidth >= 1400.dp -> 5
+            screenWidth >= 1200.dp -> 4
+            screenWidth >= 840.dp -> 3
+            else -> 2
+        }
         screenWidth >= 1400.dp -> 7
         screenWidth >= 1200.dp -> 6
         screenWidth >= 1000.dp -> 5
@@ -56,10 +65,11 @@ internal fun posterGridColumnCountForWidth(
  * `GridCells.Adaptive(posterWidth)` grids of NuvioTV. The phone breakpoints give a 960dp TV
  * 4 columns, i.e. posters taller than the screen.
  */
-internal fun tvPosterGridColumnCountForWidth(screenWidth: Dp, posterWidthDp: Int): Int {
+internal fun tvPosterGridColumnCountForWidth(screenWidth: Dp, posterWidthDp: Int, landscape: Boolean = false): Int {
+    val cardWidth = if (landscape) landscapePosterWidth(posterWidthDp).value else posterWidthDp.toFloat()
     val contentWidth = screenWidth.value - 2 * TvPosterGridHorizontalPaddingDp
-    val columns = ((contentWidth + PosterGridSpacingDp) / (posterWidthDp + PosterGridSpacingDp)).toInt()
-    return columns.coerceAtLeast(3)
+    val columns = ((contentWidth + PosterGridSpacingDp) / (cardWidth + PosterGridSpacingDp)).toInt()
+    return columns.coerceAtLeast(if (landscape) 2 else 3)
 }
 
 private const val TvPosterGridHorizontalPaddingDp = 24f
@@ -83,6 +93,21 @@ internal fun PosterGridRow(
         verticalAlignment = Alignment.Top,
     ) {
         items.forEach { item ->
+            if (posterCardStyle.catalogLandscapeModeEnabled) {
+                // Same landscape card as the home rows (backdrop, clearlogo overlay).
+                HomePosterCard(
+                    item = item,
+                    modifier = Modifier.weight(1f),
+                    isWatched = WatchingState.isPosterWatched(
+                        watchedKeys = watchedKeys,
+                        item = item,
+                        fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
+                    ),
+                    onClick = onPosterClick?.let { { it(item) } },
+                    onLongClick = onPosterLongClick?.let { { it(item) } },
+                )
+                return@forEach
+            }
             PosterGridTile(
                 item = item,
                 cornerRadiusDp = posterCardStyle.cornerRadiusDp,

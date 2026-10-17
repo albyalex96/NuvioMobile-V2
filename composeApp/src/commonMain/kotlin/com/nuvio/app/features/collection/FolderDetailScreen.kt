@@ -54,6 +54,7 @@ import com.nuvio.app.core.ui.NuvioPosterCard
 import com.nuvio.app.core.ui.NuvioPosterShape
 import com.nuvio.app.core.ui.NuvioScreenHeader
 import com.nuvio.app.core.ui.nuvioSafeBottomPadding
+import com.nuvio.app.core.ui.rememberPosterCardStyleUiState
 import com.nuvio.app.core.ui.withDuplicateSafeLazyKeys
 import com.nuvio.app.features.home.HomeCatalogSection
 import com.nuvio.app.features.home.MetaPreview
@@ -61,6 +62,8 @@ import com.nuvio.app.features.home.PosterShape
 import com.nuvio.app.features.home.canOpenCatalog
 import com.nuvio.app.features.home.stableKey
 import com.nuvio.app.features.home.components.HomeCatalogRowSection
+import com.nuvio.app.features.home.components.HomePosterCard
+import com.nuvio.app.features.home.components.posterGridColumnCountForWidth
 import com.nuvio.app.features.watched.WatchedRepository
 import com.nuvio.app.features.watching.application.WatchingState
 import com.nuvio.app.navigation.LocalUseNativeNavigation
@@ -270,7 +273,11 @@ private fun TabbedGridContent(
         if (selectedTab == null) return
 
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val columns = remember(maxWidth) { folderDetailGridColumnsForWidth(maxWidth) }
+            val posterCardStyle = rememberPosterCardStyleUiState()
+            val landscapeMode = posterCardStyle.catalogLandscapeModeEnabled
+            val columns = remember(maxWidth, posterCardStyle.widthDp, landscapeMode) {
+                posterGridColumnCountForWidth(maxWidth, posterCardStyle.widthDp, landscapeMode)
+            }
 
             when {
                 selectedTab.isLoading && selectedTab.items.isEmpty() -> LoadingIndicator()
@@ -294,6 +301,17 @@ private fun TabbedGridContent(
                             key = { item -> item.lazyKey },
                         ) { keyedItem ->
                             val item = keyedItem.value
+                            if (landscapeMode) {
+                                HomePosterCard(
+                                    item = item,
+                                    isWatched = WatchingState.isPosterWatched(
+                                        watchedKeys = watchedKeys,
+                                        item = item,
+                                    ),
+                                    onClick = { onPosterClick(item) },
+                                )
+                                return@items
+                            }
                             NuvioPosterCard(
                                 title = item.name,
                                 imageUrl = item.poster,
@@ -381,14 +399,6 @@ private fun PaginationLoadingFooter() {
     }
 }
 
-private fun folderDetailGridColumnsForWidth(screenWidth: Dp): Int =
-    when {
-        screenWidth >= 1400.dp -> 7
-        screenWidth >= 1200.dp -> 6
-        screenWidth >= 1000.dp -> 5
-        screenWidth >= 840.dp -> 4
-        else -> 3
-    }
 
 @Composable
 private fun LoadingIndicator() {

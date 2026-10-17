@@ -233,9 +233,9 @@ fun SearchScreen(
     BoxWithConstraints(
         modifier = modifier.fillMaxSize(),
     ) {
-        val posterWidthDp = rememberPosterCardStyleUiState().widthDp
-        val discoverColumns = remember(maxWidth, posterWidthDp) {
-            posterGridColumnCountForWidth(maxWidth, posterWidthDp)
+        val posterCardStyle = rememberPosterCardStyleUiState()
+        val discoverColumns = remember(maxWidth, posterCardStyle.widthDp, posterCardStyle.catalogLandscapeModeEnabled) {
+            posterGridColumnCountForWidth(maxWidth, posterCardStyle.widthDp, posterCardStyle.catalogLandscapeModeEnabled)
         }
         val homeSectionPadding = remember(maxWidth) {
             homeSectionHorizontalPaddingForWidth(maxWidth.value)

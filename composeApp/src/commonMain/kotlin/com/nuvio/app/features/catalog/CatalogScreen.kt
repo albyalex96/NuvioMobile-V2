@@ -62,8 +62,8 @@ import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.home.HomeCatalogSettingsRepository
 import com.nuvio.app.features.home.PosterShape
 import com.nuvio.app.features.home.components.HomeEmptyStateCard
-import com.nuvio.app.features.home.components.tvPosterGridColumnCountForWidth
-import com.nuvio.app.tv.TvAppRuntime
+import com.nuvio.app.features.home.components.HomePosterCard
+import com.nuvio.app.features.home.components.posterGridColumnCountForWidth
 import com.nuvio.app.features.home.stableKey
 import com.nuvio.app.features.watched.WatchedRepository
 import com.nuvio.app.features.watching.application.WatchingState
@@ -167,8 +167,9 @@ fun CatalogScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background),
     ) {
-        val columns = remember(maxWidth, posterCardStyle.widthDp) {
-            catalogGridColumnsForWidth(maxWidth, posterCardStyle.widthDp)
+        val landscapeMode = posterCardStyle.catalogLandscapeModeEnabled
+        val columns = remember(maxWidth, posterCardStyle.widthDp, landscapeMode) {
+            posterGridColumnCountForWidth(maxWidth, posterCardStyle.widthDp, landscapeMode)
         }
 
         Box(modifier = Modifier.fillMaxSize()) {
@@ -213,6 +214,19 @@ fun CatalogScreen(
                         key = { item -> item.lazyKey },
                     ) { keyedItem ->
                         val item = keyedItem.value
+                        if (landscapeMode) {
+                            HomePosterCard(
+                                item = item,
+                                isWatched = WatchingState.isPosterWatched(
+                                    watchedKeys = watchedUiState.watchedKeys,
+                                    item = item,
+                                    fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
+                                ),
+                                onClick = onPosterClick?.let { { it(item) } },
+                                onLongClick = onPosterLongClick?.let { { it(item) } },
+                            )
+                            return@items
+                        }
                         CatalogPosterTile(
                             item = item,
                             cornerRadiusDp = posterCardStyle.cornerRadiusDp,
@@ -424,12 +438,3 @@ private fun PosterShape.catalogAspectRatio(): Float =
         PosterShape.Landscape -> 1.78f
     }
 
-private fun catalogGridColumnsForWidth(screenWidth: Dp, posterWidthDp: Int): Int =
-    when {
-        TvAppRuntime.isTvApp -> tvPosterGridColumnCountForWidth(screenWidth, posterWidthDp)
-        screenWidth >= 1400.dp -> 7
-        screenWidth >= 1200.dp -> 6
-        screenWidth >= 1000.dp -> 5
-        screenWidth >= 840.dp -> 4
-        else -> 3
-    }
