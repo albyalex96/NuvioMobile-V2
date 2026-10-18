@@ -22,8 +22,11 @@ fun HomePosterCard(
     val posterCardStyle = rememberPosterCardStyleUiState()
     val isLandscapeMode = useLandscapeBackdropMode || posterCardStyle.catalogLandscapeModeEnabled
     val effectiveLandscapePoster = if (posterCardStyle.alwaysShowLandscapeClearlogo) null else item.landscapePoster
+    val landscapeArtwork = item.landscapeArtworkUrl(posterCardStyle.alwaysShowLandscapeClearlogo)
+    // Without 16:9 artwork the portrait/square poster is letterboxed in the frame instead of cropped.
+    val fitPosterInLandscape = isLandscapeMode && landscapeArtwork == null
     val imageUrl = if (isLandscapeMode) {
-        effectiveLandscapePoster ?: item.banner ?: item.poster
+        landscapeArtwork ?: item.poster
     } else item.poster
     val fallbackImageUrl = if (isLandscapeMode && !effectiveLandscapePoster.isNullOrBlank()) {
         // Landscape custom poster -> fall back to original backdrop, then portrait
@@ -31,6 +34,8 @@ fun HomePosterCard(
     } else {
         item.rawPosterUrl
     }
+    // A custom landscape poster already carries the title, a letterboxed poster too.
+    val showOverlay = isLandscapeMode && showLandscapeOverlay && !fitPosterInLandscape && effectiveLandscapePoster.isNullOrBlank()
 
     NuvioPosterCard(
         title = item.name,
@@ -38,14 +43,26 @@ fun HomePosterCard(
         modifier = modifier,
         fallbackImageUrl = fallbackImageUrl,
         shape = if (isLandscapeMode) NuvioPosterShape.Landscape else item.posterShape.toNuvioPosterShape(),
+        fitImage = fitPosterInLandscape,
         detailLine = if (isLandscapeMode || posterCardStyle.hideLabelsEnabled) null else item.releaseInfo?.let { formatReleaseDateForDisplay(it) },
         showTitleBelow = !posterCardStyle.hideLabelsEnabled,
-        bottomLeftLogoUrl = if (isLandscapeMode && showLandscapeOverlay && effectiveLandscapePoster.isNullOrBlank()) item.logo else null,
-        bottomLeftText = if (isLandscapeMode && showLandscapeOverlay && effectiveLandscapePoster.isNullOrBlank() && item.logo.isNullOrBlank() && !posterCardStyle.hideLabelsEnabled) item.name else null,
+        bottomLeftLogoUrl = if (showOverlay) item.logo else null,
+        bottomLeftText = if (showOverlay && item.logo.isNullOrBlank() && !posterCardStyle.hideLabelsEnabled) item.name else null,
         isWatched = isWatched,
         onClick = onClick,
         onLongClick = onLongClick,
     )
+}
+
+/**
+ * Artwork made for a 16:9 frame (custom landscape poster, backdrop, or the poster of a landscape
+ * catalog), or null when the item only has portrait/square art, which must not be cropped to 16:9.
+ */
+fun MetaPreview.landscapeArtworkUrl(alwaysShowLandscapeClearlogo: Boolean): String? {
+    val customLandscape = if (alwaysShowLandscapeClearlogo) null else landscapePoster
+    return customLandscape?.takeIf { it.isNotBlank() }
+        ?: banner?.takeIf { it.isNotBlank() }
+        ?: poster?.takeIf { it.isNotBlank() && posterShape == PosterShape.Landscape }
 }
 
 private fun PosterShape.toNuvioPosterShape(): NuvioPosterShape =

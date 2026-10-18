@@ -37,6 +37,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.graphics.Brush
@@ -54,6 +56,7 @@ import com.nuvio.app.core.ui.PosterCardStyleUiState
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.home.PosterShape
+import com.nuvio.app.features.home.components.landscapeArtworkUrl
 
 /**
  * Shared layout metrics of the TV screens (dp on a 960x540dp TV canvas), taken from the modern
@@ -98,12 +101,15 @@ fun PosterCardStyleUiState.showsLandscape(items: List<MetaPreview>): Boolean =
     catalogLandscapeModeEnabled || items.firstOrNull()?.posterShape == PosterShape.Landscape
 
 /** Artwork of a landscape card, picked like the phone's `HomePosterCard`. */
-data class TvLandscapeArtwork(val imageUrl: String?, val logoUrl: String?)
+data class TvLandscapeArtwork(val imageUrl: String?, val logoUrl: String?, val fitImage: Boolean = false)
 
 fun PosterCardStyleUiState.landscapeArtwork(item: MetaPreview): TvLandscapeArtwork {
+    val landscape = item.landscapeArtworkUrl(alwaysShowLandscapeClearlogo)
+        // Only portrait/square art: letterboxed in the 16:9 frame instead of cropped.
+        ?: return TvLandscapeArtwork(imageUrl = item.poster, logoUrl = null, fitImage = true)
     val customLandscape = if (alwaysShowLandscapeClearlogo) null else item.landscapePoster?.takeIf { it.isNotBlank() }
     return TvLandscapeArtwork(
-        imageUrl = customLandscape ?: item.banner ?: item.poster,
+        imageUrl = landscape,
         // A custom landscape poster already carries the title; plain backdrops get the clearlogo.
         logoUrl = if (customLandscape == null) item.logo?.takeIf { it.isNotBlank() } else null,
     )
@@ -244,6 +250,7 @@ fun TvLandscapeCard(
     watched: Boolean = false,
     dimmed: Boolean = false,
     logoUrl: String? = null,
+    fitImage: Boolean = false,
     onLongClick: (() -> Unit)? = null,
     onFocused: () -> Unit = {},
 ) {
@@ -264,7 +271,18 @@ fun TvLandscapeCard(
                     },
                 ),
         ) {
-            TvRemoteImage(url = imageUrl, modifier = Modifier.fillMaxSize())
+            if (fitImage && !imageUrl.isNullOrBlank()) {
+                // Artwork not made for 16:9: blurred fill behind the whole, uncropped image.
+                TvRemoteImage(url = imageUrl, modifier = Modifier.fillMaxSize().blur(24.dp).alpha(0.45f))
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                TvRemoteImage(url = imageUrl, modifier = Modifier.fillMaxSize())
+            }
             if (imageUrl.isNullOrBlank()) {
                 CardFallbackTitle(title)
             }

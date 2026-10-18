@@ -98,8 +98,8 @@ private fun CollectionFolderCard(
     onClick: (() -> Unit)? = null,
 ) {
     val posterCardStyle = rememberPosterCardStyleUiState()
-    val isLandscapeMode = posterCardStyle.catalogLandscapeModeEnabled
-    val shape = if (isLandscapeMode) PosterShape.Landscape else folder.posterShape
+    // The folder's own tile shape (collection editor) wins over the global landscape posters setting.
+    val shape = folder.posterShape
     val cardWidth: Dp
     val aspectRatio: Float
 

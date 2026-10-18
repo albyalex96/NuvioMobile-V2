@@ -958,6 +958,7 @@ private fun PosterRow(
                 TvLandscapeCard(
                     imageUrl = artwork.imageUrl,
                     logoUrl = artwork.logoUrl,
+                    fitImage = artwork.fitImage,
                     title = item.name,
                     subtitle = null,
                     onClick = { onClick(item) },

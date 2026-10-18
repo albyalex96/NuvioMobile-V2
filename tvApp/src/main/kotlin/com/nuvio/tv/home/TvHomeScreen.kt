@@ -405,6 +405,7 @@ private fun CatalogRow(
                 TvLandscapeCard(
                     imageUrl = artwork.imageUrl,
                     logoUrl = artwork.logoUrl,
+                    fitImage = artwork.fitImage,
                     title = item.name,
                     subtitle = null,
                     watched = model.isPosterWatched(item),
@@ -446,13 +447,13 @@ private fun FoldersRow(
     requesterFor: (String) -> FocusRequester,
 ) {
     val onFolderClick = model.onFolderClick ?: return
-    val landscapeMode = rememberTvPosterCardStyle().catalogLandscapeModeEnabled
+    // The folder's own tile shape (collection editor) wins over the global landscape posters setting.
     TvContentRow(title = row.collection.title) {
         items(row.collection.folders, key = { folder -> "${row.key}:${folder.id}" }) { folder ->
             val key = "${row.key}:${folder.id}"
             val modifier = Modifier.focusRequester(requesterFor(key))
             val square = folder.tileShape.equals("square", ignoreCase = true)
-            if (!landscapeMode && (folder.isPosterTile() || square)) {
+            if (folder.isPosterTile() || square) {
                 TvPosterCard(
                     imageUrl = folder.coverImageUrl,
                     title = folder.title,

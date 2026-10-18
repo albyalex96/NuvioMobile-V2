@@ -30,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush
@@ -126,6 +127,7 @@ fun NuvioPosterCard(
     modifier: Modifier = Modifier,
     fallbackImageUrl: String? = null,
     shape: NuvioPosterShape = NuvioPosterShape.Poster,
+    fitImage: Boolean = false,
     detailLine: String? = null,
     showTitleBelow: Boolean = true,
     bottomLeftLogoUrl: String? = null,
@@ -181,11 +183,20 @@ fun NuvioPosterCard(
                         imageUrl
                     }
                 }
+                if (fitImage) {
+                    // Artwork not made for this frame: blurred fill behind the whole, uncropped image.
+                    AsyncImage(
+                        model = imageModel,
+                        contentDescription = null,
+                        modifier = Modifier.matchParentSize().blur(24.dp).alpha(0.45f),
+                        contentScale = ContentScale.Crop,
+                    )
+                }
                 AsyncImage(
                     model = imageModel,
                     contentDescription = title,
                     modifier = Modifier.matchParentSize(),
-                    contentScale = ContentScale.Crop,
+                    contentScale = if (fitImage) ContentScale.Fit else ContentScale.Crop,
                 )
             } else {
                 Text(
