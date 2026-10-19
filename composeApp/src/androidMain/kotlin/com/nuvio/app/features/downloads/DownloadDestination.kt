@@ -28,6 +28,12 @@ internal interface DownloadDestination {
     fun completePartial(): CompletedDownloadFile
 
     fun deletePartial()
+
+    /** The final file saved under another name ([name], e.g. an HLS download that became MKV). */
+    fun completedFile(name: String): CompletedDownloadFile?
+
+    /** Moves (or copies) the finished [source] file here as [name], replacing a file with that name. */
+    fun adoptFile(source: File, name: String): CompletedDownloadFile
 }
 
 internal class FileDownloadDestination(
@@ -54,6 +60,20 @@ internal class FileDownloadDestination(
 
     override fun deletePartial() {
         partialFile.delete()
+    }
+
+    override fun completedFile(name: String): CompletedDownloadFile? =
+        File(directory, name).takeIf(File::isFile)?.let { CompletedDownloadFile(it.toURI().toString(), it.length()) }
+
+    override fun adoptFile(source: File, name: String): CompletedDownloadFile {
+        check(directory.isDirectory || directory.mkdirs()) { "Cannot create downloads directory" }
+        val target = File(directory, name)
+        target.delete()
+        if (!source.renameTo(target)) {
+            source.copyTo(target, overwrite = true)
+            source.delete()
+        }
+        return CompletedDownloadFile(target.toURI().toString(), target.length())
     }
 }
 
@@ -99,5 +119,29 @@ internal class TreeDownloadDestination(
 
     override fun deletePartial() {
         tree.find(partialName)?.let { SafDownloadTree.deleteDocument(context, it.uri) }
+    }
+
+    override fun completedFile(name: String): CompletedDownloadFile? =
+        tree.find(name)?.let { CompletedDownloadFile(it.uri.toString(), it.sizeBytes) }
+
+    override fun adoptFile(source: File, name: String): CompletedDownloadFile {
+        val partial = "$name.part"
+        val uri = tree.find(partial)?.uri ?: tree.createFile(partial)
+        val descriptor = context.contentResolver.openFileDescriptor(uri, "rw")
+            ?: throw FileNotFoundException("Cannot open the download file")
+        ParcelFileDescriptor.AutoCloseOutputStream(descriptor).use { output ->
+            output.channel.truncate(0L)
+            source.inputStream().use { input -> input.copyTo(output, 1024 * 1024) }
+            output.fd.sync()
+        }
+        tree.find(name)?.let { SafDownloadTree.deleteDocument(context, it.uri) }
+        val renamed = try {
+            tree.rename(uri, name)
+        } catch (error: Exception) {
+            throw IOException("Could not finalize the downloaded file", error)
+        }
+        val size = source.length()
+        source.delete()
+        return CompletedDownloadFile(renamed.toString(), size)
     }
 }

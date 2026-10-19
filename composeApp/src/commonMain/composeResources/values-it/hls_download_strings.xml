@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="hls_download_title">Scarica flusso HLS</string>
+    <string name="hls_download_loading">Lettura della playlist…</string>
+    <string name="hls_download_quality">Qualità video</string>
+    <string name="hls_download_audio">Tracce audio</string>
+    <string name="hls_download_subtitles">Sottotitoli</string>
+    <string name="hls_download_audio_muxed_only">Audio incluso nel video</string>
+    <string name="hls_download_audio_required">Seleziona almeno una traccia audio</string>
+    <string name="hls_download_subtitles_none">Nessuno</string>
+    <string name="hls_download_subtitles_unavailable">Nessun sottotitolo disponibile</string>
+    <string name="hls_download_more">%1$s +%2$d</string>
+    <string name="hls_download_estimate">Durata %1$s · circa %2$s</string>
+    <string name="hls_download_mkv_hint">Questo flusso contiene audio %1$s, che l&apos;MP4 non può contenere: se scegli quelle tracce il file viene salvato in MKV.</string>
+    <string name="hls_download_mp4_subtitles_hint">Nei file MP4 i sottotitoli vengono salvati accanto al video e caricati in automatico dal player.</string>
+    <string name="hls_download_start">Scarica</string>
+    <string name="hls_download_track">Traccia %1$d</string>
+    <string name="hls_download_forced">forzati</string>
+    <string name="hls_download_audio_description">Audiodescrizione</string>
+    <string name="hls_download_hearing_impaired">Non udenti</string>
+    <string name="hls_download_single_quality">Qualità unica</string>
+    <string name="hls_download_bitrate">%1$s Mbps</string>
+    <string name="hls_download_problem_live">È un flusso in diretta: non ha una fine, quindi non si può scaricare.</string>
+    <string name="hls_download_problem_drm">Questo flusso è protetto (DRM) e non si può scaricare.</string>
+    <string name="hls_download_problem_unreadable">Impossibile leggere la playlist HLS di questo flusso.</string>
+    <string name="hls_download_problem_empty">La playlist HLS di questo flusso è vuota.</string>
+    <string name="hls_download_error_space">Spazio libero insufficiente per convertire il video (servono circa %1$s).</string>
+    <string name="hls_download_error_convert">Impossibile convertire il video: %1$s</string>
+    <string name="hls_download_error_key">Impossibile ottenere la chiave di decifratura del flusso.</string>
+    <string name="hls_download_error_changed">Il flusso è cambiato dall&apos;inizio del download. Eliminalo e scaricalo di nuovo.</string>
+    <string name="downloads_status_converting">Conversione del video… %1$d%</string>
+    <string name="downloads_live_converting">%1$s · conversione del video…</string>
+</resources>

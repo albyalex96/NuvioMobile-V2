@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="hls_download_title">Download HLS stream</string>
+    <string name="hls_download_loading">Reading the playlist…</string>
+    <string name="hls_download_quality">Video quality</string>
+    <string name="hls_download_audio">Audio tracks</string>
+    <string name="hls_download_subtitles">Subtitles</string>
+    <string name="hls_download_audio_muxed_only">Audio included in the video</string>
+    <string name="hls_download_audio_required">Select at least one audio track</string>
+    <string name="hls_download_subtitles_none">None</string>
+    <string name="hls_download_subtitles_unavailable">No subtitles available</string>
+    <string name="hls_download_more">%1$s +%2$d</string>
+    <string name="hls_download_estimate">Duration %1$s · about %2$s</string>
+    <string name="hls_download_mkv_hint">This stream contains %1$s audio, which MP4 can&apos;t store: if you pick those tracks the file is saved as MKV.</string>
+    <string name="hls_download_mp4_subtitles_hint">In MP4 files the subtitles are saved next to the video and loaded automatically by the player.</string>
+    <string name="hls_download_start">Download</string>
+    <string name="hls_download_track">Track %1$d</string>
+    <string name="hls_download_forced">forced</string>
+    <string name="hls_download_audio_description">Audio description</string>
+    <string name="hls_download_hearing_impaired">SDH</string>
+    <string name="hls_download_single_quality">Single quality</string>
+    <string name="hls_download_bitrate">%1$s Mbps</string>
+    <string name="hls_download_problem_live">This is a live stream: it has no end, so it can&apos;t be downloaded.</string>
+    <string name="hls_download_problem_drm">This stream is protected (DRM) and can&apos;t be downloaded.</string>
+    <string name="hls_download_problem_unreadable">Couldn&apos;t read the HLS playlist of this stream.</string>
+    <string name="hls_download_problem_empty">The HLS playlist of this stream is empty.</string>
+    <string name="hls_download_error_space">Not enough free space to convert the video (about %1$s needed).</string>
+    <string name="hls_download_error_convert">Couldn&apos;t convert the video: %1$s</string>
+    <string name="hls_download_error_key">Couldn&apos;t get the decryption key of the stream.</string>
+    <string name="hls_download_error_changed">The stream changed since the download started. Delete it and download it again.</string>
+    <string name="downloads_status_converting">Converting the video… %1$d%</string>
+    <string name="downloads_live_converting">%1$s · converting the video…</string>
+</resources>

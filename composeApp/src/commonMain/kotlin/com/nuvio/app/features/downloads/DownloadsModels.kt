@@ -1,5 +1,6 @@
 package com.nuvio.app.features.downloads
 
+import com.nuvio.app.features.downloads.hls.HlsDownloadSpec
 import com.nuvio.app.features.player.SubtitleAddonRequest
 import com.nuvio.app.features.streams.StreamSubtitle
 import kotlinx.serialization.Serializable
@@ -47,6 +48,10 @@ data class DownloadItem(
     /** Folder picked by the user (Android SAF tree URI) this download is saved in; null = app storage. */
     val storageTreeUri: String? = null,
     val fileName: String,
+    /** Set for HLS streams: the tracks to download and merge into one file. */
+    val hls: HlsDownloadSpec? = null,
+    /** 0..1 while an HLS download is being merged into its final file, null otherwise. */
+    val conversionProgress: Float? = null,
     val status: DownloadStatus,
     val downloadedBytes: Long = 0L,
     val totalBytes: Long? = null,
@@ -63,8 +68,12 @@ data class DownloadItem(
     val displaySubtitle: String
         get() = episodeTitle.orEmpty()
 
+    val isConverting: Boolean
+        get() = status == DownloadStatus.Downloading && conversionProgress != null
+
     val progressFraction: Float
         get() {
+            if (isConverting) return conversionProgress!!.coerceIn(0f, 1f)
             val total = totalBytes?.takeIf { it > 0L } ?: return 0f
             return (downloadedBytes.toDouble() / total.toDouble())
                 .toFloat()

@@ -66,13 +66,16 @@ fun pauseDownloadsForAppBackground() {
 
 @OptIn(ExperimentalForeignApi::class)
 internal actual object DownloadsPlatformDownloader {
+    actual val supportsHls: Boolean = false
+
     actual fun start(
         request: DownloadPlatformRequest,
-        onProgress: (downloadedBytes: Long, totalBytes: Long?) -> Unit,
+        onProgress: (downloadedBytes: Long, totalBytes: Long?, conversionProgress: Float?) -> Unit,
         onSuccess: (localFileUri: String, totalBytes: Long?) -> Unit,
         onFailure: (message: String) -> Unit,
         onPaused: () -> Unit,
     ): DownloadsTaskHandle {
+        val reportProgress: (Long, Long?) -> Unit = { downloaded, total -> onProgress(downloaded, total, null) }
         val job = SupervisorJob()
         val scope = CoroutineScope(job + Dispatchers.Default)
         val handle = IosDownloadsTaskHandle(job)
@@ -93,7 +96,7 @@ internal actual object DownloadsPlatformDownloader {
                     resumeFromBytes = resumeFromBytes,
                     tempPath = tempPath,
                     handle = handle,
-                    onProgress = onProgress,
+                    onProgress = reportProgress,
                 )
 
                 if (attemptedRangeRequest && result.statusCode == 416) {
@@ -106,7 +109,7 @@ internal actual object DownloadsPlatformDownloader {
                         resumeFromBytes = 0L,
                         tempPath = tempPath,
                         handle = handle,
-                        onProgress = onProgress,
+                        onProgress = reportProgress,
                     )
                 }
 

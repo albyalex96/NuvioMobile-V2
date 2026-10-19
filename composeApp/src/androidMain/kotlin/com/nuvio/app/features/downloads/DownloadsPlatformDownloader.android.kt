@@ -38,9 +38,11 @@ internal actual object DownloadsPlatformDownloader {
     actual fun restoreItem(item: DownloadItem): DownloadItem = downloadScheduler?.restore(item)
         ?: if (item.status == DownloadStatus.Downloading) item.copy(status = DownloadStatus.Paused) else item
 
+    actual val supportsHls: Boolean = true
+
     actual fun start(
         request: DownloadPlatformRequest,
-        onProgress: (downloadedBytes: Long, totalBytes: Long?) -> Unit,
+        onProgress: (downloadedBytes: Long, totalBytes: Long?, conversionProgress: Float?) -> Unit,
         onSuccess: (localFileUri: String, totalBytes: Long?) -> Unit,
         onFailure: (message: String) -> Unit,
         onPaused: () -> Unit,
@@ -54,7 +56,7 @@ internal actual object DownloadsPlatformDownloader {
                     if (current == null || current.generation != transfer.generation) return@takeWhile false
                     val item = current.item
                     when (item.status) {
-                        DownloadStatus.Downloading -> onProgress(item.downloadedBytes, item.totalBytes)
+                        DownloadStatus.Downloading -> onProgress(item.downloadedBytes, item.totalBytes, item.conversionProgress)
                         DownloadStatus.Completed -> onSuccess(checkNotNull(item.localFileUri), item.totalBytes)
                         DownloadStatus.Failed -> onFailure(item.errorMessage ?: "Download failed")
                         DownloadStatus.Paused -> onPaused()
@@ -89,12 +91,10 @@ internal actual object DownloadsPlatformDownloader {
         return true
     }
 
+    // Always derived from the download file name: an HLS download can end with another extension
+    // (MKV instead of MP4) than the name its subtitles were saved under.
     actual fun subtitleAnchorUri(item: DownloadItem, localFileUri: String): String =
-        if (localFileUri.isContentUri()) {
-            downloadScheduler?.subtitleAnchorUri(item.fileName) ?: localFileUri
-        } else {
-            localFileUri
-        }
+        downloadScheduler?.subtitleAnchorUri(item.fileName) ?: localFileUri
 
     // Files in a user folder are checked through the provider: cache the answer briefly because
     // the download list asks for every item while it renders.

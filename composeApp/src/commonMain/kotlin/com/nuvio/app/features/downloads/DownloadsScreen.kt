@@ -506,6 +506,9 @@ private fun statusText(item: DownloadItem): String {
         formatDownloadBytes(item.downloadedBytes)
     }
 
+    if (item.isConverting) {
+        return stringResource(Res.string.downloads_status_converting, (item.progressFraction * 100f).toInt())
+    }
     return when (item.status) {
         DownloadStatus.Downloading -> stringResource(Res.string.downloads_status_downloading, size)
         DownloadStatus.Paused -> stringResource(Res.string.downloads_status_paused, size)

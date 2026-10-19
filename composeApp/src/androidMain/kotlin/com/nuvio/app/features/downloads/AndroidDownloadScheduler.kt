@@ -34,7 +34,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import com.nuvio.app.features.downloads.hls.HlsDownloadTask
+import com.nuvio.app.features.downloads.hls.HlsOutputContainer
 import okhttp3.ConnectionPool
+import okhttp3.OkHttpClient
 
 internal class AndroidDownloadScheduler(val context: Context) {
     val store = AndroidDownloadStore(File(context.filesDir, "download-transfers"))
@@ -111,7 +114,7 @@ internal class AndroidDownloadScheduler(val context: Context) {
         val transfer = store.get(fileName) ?: return
         if (transfer.item.status != DownloadStatus.Downloading) return
         val paused = store.update(fileName, transfer.generation) {
-            it.copy(item = it.item.copy(status = DownloadStatus.Paused, errorMessage = null))
+            it.copy(item = it.item.copy(status = DownloadStatus.Paused, errorMessage = null, conversionProgress = null))
         }
         cancelScheduled(transfer)
         paused?.let { DownloadsLiveStatusPlatform.notifyTransfer(it.item) }
@@ -127,6 +130,7 @@ internal class AndroidDownloadScheduler(val context: Context) {
             lock(fileName).withLock {
                 if (store.get(fileName) == null) {
                     runCatching { destinationFor(fileName, treeUri).deletePartial() }
+                    runCatching { hlsWorkDir(fileName).deleteRecursively() }
                     DownloadSubtitleStorage(subtitleAnchorUri(fileName)).remove()
                 }
             }
@@ -166,6 +170,22 @@ internal class AndroidDownloadScheduler(val context: Context) {
             if (!isActive(transfer)) return@withLock false
             var lastProgressAt = 0L
             val existing = withContext(Dispatchers.IO) { destination.completedFile() }
+            if (existing == null && transfer.item.hls != null) {
+                val completed = executeHls(transfer, destination, client, onProgress)
+                currentCoroutineContext().ensureActive()
+                if (!isActive(transfer)) return@withLock false
+                updateActive(transfer) { current ->
+                    current.copy(item = current.item.copy(
+                        status = DownloadStatus.Completed,
+                        localFileUri = completed.uri,
+                        downloadedBytes = completed.sizeBytes,
+                        totalBytes = completed.sizeBytes,
+                        conversionProgress = null,
+                        errorMessage = null,
+                    ))
+                }
+                return@withLock false
+            }
             if (existing == null) transferAndroidDownload(
                 item = transfer.item,
                 destination = destination,
@@ -212,6 +232,63 @@ internal class AndroidDownloadScheduler(val context: Context) {
         }
     }
 
+    /** Downloads the HLS segments, merges them and moves the result into [destination]. */
+    private suspend fun executeHls(
+        transfer: AndroidDownloadTransfer,
+        destination: DownloadDestination,
+        client: OkHttpClient,
+        onProgress: (AndroidDownloadTransfer) -> Unit,
+    ): CompletedDownloadFile {
+        val item = transfer.item
+        val baseName = item.fileName.substringBeforeLast('.')
+        val otherNames = HlsOutputContainer.entries.map { "$baseName.${it.extension}" }
+        // A previous run may have finished the file under the other container's name.
+        withContext(Dispatchers.IO) { otherNames.firstNotNullOfOrNull { destination.completedFile(it) } }?.let { return it }
+
+        val workDir = hlsWorkDir(item.fileName)
+        var lastUpdateAt = 0L
+        fun throttled(force: Boolean, update: (AndroidDownloadTransfer) -> AndroidDownloadTransfer) {
+            val now = SystemClock.elapsedRealtime()
+            if (!force && now - lastUpdateAt < 1_000L) return
+            lastUpdateAt = now
+            updateActive(transfer, update)?.let(onProgress)
+        }
+        val result = HlsDownloadTask(item, workDir, client).run(
+            onProgress = { bytes, total ->
+                throttled(force = false) {
+                    it.copy(item = it.item.copy(downloadedBytes = bytes, totalBytes = total, conversionProgress = null))
+                }
+            },
+            onConverting = { fraction ->
+                throttled(force = fraction <= 0f || fraction >= 1f) {
+                    it.copy(item = it.item.copy(conversionProgress = fraction))
+                }
+            },
+        )
+        val finalName = "$baseName.${result.container.extension}"
+        if (finalName != item.fileName) Logger.withTag("HlsDownload").i { "Saved as ${result.container} instead of the predicted format" }
+        val completed = withContext(Dispatchers.IO) { destination.adoptFile(result.file, finalName) }
+        // MP4 cannot hold the subtitles: they go next to the video, like the addon subtitles.
+        result.sidecarSubtitles.forEach { (track, text) ->
+            runCatching {
+                DownloadSubtitles.saveStreamTrack(
+                    anchorUri = subtitleAnchorUri(item.fileName),
+                    sourceKey = "hls:${track.playlistUrl}",
+                    text = text,
+                    extension = "srt",
+                    language = track.language ?: "und",
+                    name = track.name ?: track.label,
+                )
+            }.onFailure { error -> Logger.withTag("HlsDownload").w(error) { "Could not save the subtitle ${track.label}" } }
+        }
+        withContext(Dispatchers.IO) { workDir.deleteRecursively() }
+        Logger.withTag("HlsDownload").i { "HLS download ${item.id} completed (${completed.sizeBytes} bytes, ${result.container})" }
+        return completed
+    }
+
+    /** Segments and state of an HLS download while it is in progress. */
+    private fun hlsWorkDir(fileName: String): File = File(File(context.filesDir, "download-hls"), fileName.substringBeforeLast('.'))
+
     fun isActive(transfer: AndroidDownloadTransfer): Boolean = store.get(transfer.item.fileName)?.let {
         it.generation == transfer.generation && it.item.status == DownloadStatus.Downloading
     } == true
@@ -224,7 +301,7 @@ internal class AndroidDownloadScheduler(val context: Context) {
         }
         Logger.withTag("Downloads").e(error) { "Download ${transfer.item.id} failed" }
         updateActive(transfer) {
-            it.copy(item = it.item.copy(status = DownloadStatus.Failed, errorMessage = message))
+            it.copy(item = it.item.copy(status = DownloadStatus.Failed, errorMessage = message, conversionProgress = null))
         }
     }
 

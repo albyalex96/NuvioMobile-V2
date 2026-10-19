@@ -23,7 +23,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
+import androidx.compose.material.icons.rounded.BatteryAlert
+import androidx.compose.material.icons.rounded.BatteryChargingFull
 import androidx.compose.material.icons.rounded.Cast
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Folder
@@ -40,6 +44,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -95,6 +100,7 @@ import com.nuvio.app.features.downloads.downloadDisplaySubtitle
 import com.nuvio.app.features.downloads.findExternalVideos
 import com.nuvio.app.features.downloads.formatDownloadBytes
 import com.nuvio.app.features.downloads.rememberDownloadsFolderPicker
+import com.nuvio.app.features.downloads.rememberDownloadsPowerState
 import com.nuvio.app.features.watchprogress.WatchProgressRepository
 import com.nuvio.app.tv.TvAppRuntime
 import com.nuvio.app.tv.tvLongPressKeys
@@ -196,6 +202,8 @@ private fun DownloadsSettingsBody(isTablet: Boolean) {
                 onUseAppStorage = DownloadsFolderPlatform::clearFolder,
             )
         }
+
+        DownloadsBackgroundSection(isTablet = isTablet)
 
         SettingsSection(
             title = stringResource(Res.string.downloads_settings_section_summary),
@@ -349,6 +357,61 @@ private fun DownloadsFolderSection(
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.nuvio.colors.textMuted,
         )
+    }
+}
+
+/**
+ * Battery optimization status and the system pages that keep background downloads running:
+ * some manufacturers stop background work much more aggressively than stock Android.
+ */
+@Composable
+private fun DownloadsBackgroundSection(isTablet: Boolean) {
+    val power = rememberDownloadsPowerState() ?: return
+    val tokens = MaterialTheme.nuvio
+    SettingsSection(
+        title = stringResource(Res.string.downloads_settings_section_background),
+        isTablet = isTablet,
+    ) {
+        SettingsGroup(isTablet = isTablet) {
+            SettingsNavigationRow(
+                title = stringResource(Res.string.downloads_settings_battery_title),
+                description = if (power.restricted) {
+                    stringResource(Res.string.downloads_settings_battery_restricted)
+                } else {
+                    stringResource(Res.string.downloads_settings_battery_unrestricted)
+                },
+                icon = if (power.restricted) Icons.Rounded.BatteryAlert else Icons.Rounded.BatteryChargingFull,
+                isTablet = isTablet,
+                trailingContent = {
+                    if (!power.restricted) {
+                        Icon(
+                            imageVector = Icons.Rounded.CheckCircle,
+                            contentDescription = null,
+                            tint = tokens.colors.accent,
+                        )
+                    }
+                },
+                onClick = power.openBatteryOptimization,
+            )
+        }
+        Text(
+            text = stringResource(Res.string.downloads_settings_battery_hint),
+            modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = tokens.colors.textMuted,
+        )
+        OutlinedButton(
+            onClick = power.openAppSettings,
+            modifier = Modifier.padding(top = 8.dp).fillMaxWidth(),
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Settings,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(text = stringResource(Res.string.downloads_settings_battery_open_app_settings))
+        }
     }
 }
 
@@ -605,6 +668,9 @@ private fun downloadStatusLine(item: DownloadItem): String {
         "${formatDownloadBytes(item.downloadedBytes)} / ${formatDownloadBytes(item.totalBytes)}"
     } else {
         formatDownloadBytes(item.downloadedBytes)
+    }
+    if (item.isConverting) {
+        return stringResource(Res.string.downloads_status_converting, (item.progressFraction * 100f).toInt())
     }
     return when (item.status) {
         DownloadStatus.Downloading -> stringResource(Res.string.downloads_status_downloading, progress)

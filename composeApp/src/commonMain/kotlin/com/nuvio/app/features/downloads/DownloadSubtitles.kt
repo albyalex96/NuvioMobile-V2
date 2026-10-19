@@ -72,17 +72,40 @@ internal object DownloadSubtitles {
         Unit
     }
 
+    /**
+     * Adds a subtitle taken from the stream itself (an HLS subtitle rendition) to the subtitles
+     * saved for the video at [anchorUri]. [sourceKey] identifies the track, so saving it again
+     * replaces the previous copy.
+     */
+    fun saveStreamTrack(
+        anchorUri: String,
+        sourceKey: String,
+        text: String,
+        extension: String,
+        language: String,
+        name: String?,
+    ) {
+        val storage = DownloadSubtitleStorage(anchorUri)
+        val manifest = readManifest(storage)
+        val existing = manifest.tracks.firstOrNull { it.sourceUrl == sourceKey }
+        val fileName = existing?.fileName?.substringBeforeLast('.')?.let { "$it.$extension" } ?: run {
+            val nextIndex = (manifest.tracks.maxOfOrNull { it.fileName.substringBefore('.').toIntOrNull() ?: -1 } ?: -1) + 1
+            "$nextIndex.$extension"
+        }
+        storage.write(fileName, text)
+        val tracks = manifest.tracks.filterNot { it.sourceUrl == sourceKey } +
+            DownloadedSubtitle(sourceKey, fileName, language, name)
+        storage.write("manifest.json", json.encodeToString(manifest.copy(tracks = tracks)))
+    }
+
     fun localSubtitles(localVideoUri: String): List<StreamSubtitle> {
         // Videos in a user folder keep their subtitles in the app storage (see subtitleAnchorUri).
-        val anchorUri = if (localVideoUri.startsWith("file:")) {
-            localVideoUri
-        } else {
-            DownloadsRepository.uiState.value.items
-                .firstOrNull { it.localFileUri == localVideoUri }
-                ?.let { DownloadsPlatformDownloader.subtitleAnchorUri(it, localVideoUri) }
-                ?.takeIf { it.startsWith("file:") }
-                ?: return emptyList()
-        }
+        val anchorUri = DownloadsRepository.uiState.value.items
+            .firstOrNull { it.localFileUri == localVideoUri }
+            ?.let { DownloadsPlatformDownloader.subtitleAnchorUri(it, localVideoUri) }
+            ?.takeIf { it.startsWith("file:") }
+            ?: localVideoUri.takeIf { it.startsWith("file:") }
+            ?: return emptyList()
         val storage = DownloadSubtitleStorage(anchorUri)
         return readManifest(storage).tracks.mapNotNull { track ->
             val uri = storage.localFileUri(track.fileName) ?: return@mapNotNull null

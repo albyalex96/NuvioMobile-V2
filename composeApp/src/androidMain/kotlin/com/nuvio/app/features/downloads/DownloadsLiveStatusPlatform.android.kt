@@ -184,6 +184,9 @@ internal actual object DownloadsLiveStatusPlatform {
 
     private fun buildSubtitle(item: DownloadItem): String {
         val detail = item.displaySubtitle
+        if (item.isConverting) {
+            return runBlocking { getString(Res.string.downloads_live_converting, detail) }
+        }
         return when (item.status) {
             DownloadStatus.Downloading -> {
                 val downloaded = formatBytes(item.downloadedBytes)
@@ -226,6 +229,7 @@ internal actual object DownloadsLiveStatusPlatform {
     }
 
     private fun progressPercent(item: DownloadItem): Int {
+        if (item.isConverting) return (item.progressFraction * 100f).toInt().coerceIn(0, 100)
         val total = item.totalBytes?.takeIf { it > 0L } ?: return -1
         return ((item.downloadedBytes.toDouble() / total.toDouble()) * 100.0)
             .toInt()

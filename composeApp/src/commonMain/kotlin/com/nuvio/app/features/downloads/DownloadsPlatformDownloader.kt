@@ -13,9 +13,12 @@ internal interface DownloadsTaskHandle {
 }
 
 internal expect object DownloadsPlatformDownloader {
+    /** Whether HLS streams can be downloaded (segments fetched and merged into one file). */
+    val supportsHls: Boolean
+
     fun start(
         request: DownloadPlatformRequest,
-        onProgress: (downloadedBytes: Long, totalBytes: Long?) -> Unit,
+        onProgress: (downloadedBytes: Long, totalBytes: Long?, conversionProgress: Float?) -> Unit,
         onSuccess: (localFileUri: String, totalBytes: Long?) -> Unit,
         onFailure: (message: String) -> Unit,
         onPaused: () -> Unit,

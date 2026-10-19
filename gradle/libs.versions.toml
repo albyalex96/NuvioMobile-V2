@@ -88,6 +88,7 @@ androidx-mediarouter = { module = "androidx.mediarouter:mediarouter", version.re
 play-services-cast-framework = { module = "com.google.android.gms:play-services-cast-framework", version.ref = "play-services-cast-framework" }
 androidx-media3-container = { module = "androidx.media3:media3-container", version.ref = "androidx-media3" }
 androidx-media3-extractor = { module = "androidx.media3:media3-extractor", version.ref = "androidx-media3" }
+androidx-media3-muxer = { module = "androidx.media3:media3-muxer", version.ref = "androidx-media3" }
 mpv-android-lib = { module = "io.github.abdallahmehiz:mpv-android-lib", version.ref = "mpv-android-lib" }
 supabase-postgrest = { module = "io.github.jan-tennert.supabase:postgrest-kt", version.ref = "supabase" }
 supabase-auth = { module = "io.github.jan-tennert.supabase:auth-kt", version.ref = "supabase" }

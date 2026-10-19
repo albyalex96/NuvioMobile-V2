@@ -40,4 +40,11 @@
     <string name="downloads_info_status">Stato</string>
     <string name="downloads_info_origin">Origine</string>
     <string name="downloads_info_origin_app">Scaricato dall&apos;app</string>
+    <string name="downloads_settings_section_background">Download in background</string>
+    <string name="downloads_settings_battery_title">Ottimizzazione batteria</string>
+    <string name="downloads_settings_battery_description">Mantieni attivi i download con lo schermo spento o l&apos;app chiusa</string>
+    <string name="downloads_settings_battery_restricted">Android può mettere in pausa i download a schermo spento. Tocca per togliere Nuvio dall&apos;ottimizzazione della batteria</string>
+    <string name="downloads_settings_battery_unrestricted">Nuvio non è limitato: i download continuano anche a schermo spento</string>
+    <string name="downloads_settings_battery_hint">Alcuni telefoni (Xiaomi, Redmi, POCO, Huawei, Honor, Oppo, Realme, Vivo, OnePlus, Samsung…) hanno un risparmio energetico proprio, più aggressivo, che può fermare comunque i download. Se i download si interrompono quando esci dall&apos;app, apri le impostazioni del telefono per Nuvio e imposta l&apos;uso della batteria su “Senza restrizioni”, consenti l&apos;attività in background e, se presente, l&apos;avvio automatico.</string>
+    <string name="downloads_settings_battery_open_app_settings">Apri impostazioni del telefono</string>
 </resources>

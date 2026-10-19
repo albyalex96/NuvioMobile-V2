@@ -1,6 +1,8 @@
 package com.nuvio.app.features.downloads
 
 import co.touchlab.kermit.Logger
+import com.nuvio.app.features.downloads.hls.HlsDownloadSpec
+import com.nuvio.app.features.downloads.hls.HlsStreamAnalyzer
 import com.nuvio.app.features.player.addonSubtitleRequests
 import com.nuvio.app.features.streams.StreamItem
 import kotlinx.coroutines.runBlocking
@@ -125,6 +127,7 @@ object DownloadsRepository {
         episodeTitle: String?,
         episodeThumbnail: String?,
         stream: StreamItem,
+        hls: HlsDownloadSpec? = null,
     ): DownloadEnqueueResult {
         ensureLoaded()
 
@@ -133,7 +136,12 @@ object DownloadsRepository {
             ?.takeIf { it.isNotBlank() }
             ?: return DownloadEnqueueResult.MissingUrl
 
-        if (!sourceUrl.isSupportedDownloadUrl()) {
+        val supported = if (hls != null) {
+            DownloadsPlatformDownloader.supportsHls && sourceUrl.isHttpUrl()
+        } else {
+            sourceUrl.isSupportedDownloadUrl()
+        }
+        if (!supported) {
             return DownloadEnqueueResult.UnsupportedFormat
         }
 
@@ -157,14 +165,17 @@ object DownloadsRepository {
 
         val downloadId = nextDownloadId(now)
         val storageTreeUri = DownloadsFolderPlatform.treeUriForNewDownload()
-        log.i { "Enqueue download $downloadId in ${if (storageTreeUri != null) "the selected folder" else "app storage"}" }
+        log.i {
+            "Enqueue ${if (hls != null) "HLS " else ""}download $downloadId in " +
+                if (storageTreeUri != null) "the selected folder" else "app storage"
+        }
         val fileName = buildFileName(
             title = title,
             seasonNumber = seasonNumber,
             episodeNumber = episodeNumber,
             episodeTitle = episodeTitle,
             fallbackTitle = stream.streamLabel,
-            sourceUrl = sourceUrl,
+            extension = hls?.container?.extension ?: sourceUrl.fileExtensionFromUrl(),
             downloadId = downloadId,
         )
 
@@ -194,6 +205,7 @@ object DownloadsRepository {
             localFileUri = null,
             storageTreeUri = storageTreeUri,
             fileName = fileName,
+            hls = hls,
             status = DownloadStatus.Downloading,
             downloadedBytes = 0L,
             totalBytes = null,
@@ -213,6 +225,20 @@ object DownloadsRepository {
             DownloadEnqueueResult.Started
         }
     }
+
+    /**
+     * Whether [stream] must go through the HLS download dialog: an HLS playlist on a platform
+     * that can download it. URLs without a telling extension are probed.
+     */
+    suspend fun isHlsStreamDownload(stream: StreamItem): Boolean {
+        if (!DownloadsPlatformDownloader.supportsHls) return false
+        val url = stream.playableDirectUrl?.trim()?.takeIf { it.isHttpUrl() } ?: return false
+        return HlsStreamAnalyzer.isHlsStream(url, sanitizeRequestHeaders(stream.behaviorHints.proxyHeaders?.request))
+    }
+
+    /** Request headers of [stream] as the downloader sends them. */
+    fun downloadRequestHeaders(stream: StreamItem): Map<String, String> =
+        sanitizeRequestHeaders(stream.behaviorHints.proxyHeaders?.request)
 
     fun pauseDownload(downloadId: String) {
         ensureLoaded()
@@ -246,6 +272,7 @@ object DownloadsRepository {
             status = DownloadStatus.Downloading,
             errorMessage = null,
             localFileUri = null,
+            conversionProgress = null,
             updatedAtEpochMs = DownloadsClock.nowEpochMs(),
         )
 
@@ -317,7 +344,7 @@ object DownloadsRepository {
 
         val handle = DownloadsPlatformDownloader.start(
             request = request,
-            onProgress = { downloadedBytes, totalBytes ->
+            onProgress = { downloadedBytes, totalBytes, conversionProgress ->
                 mutateItem(item.id) { current ->
                     if (current.status != DownloadStatus.Downloading) {
                         current
@@ -325,6 +352,7 @@ object DownloadsRepository {
                         current.copy(
                             downloadedBytes = downloadedBytes.coerceAtLeast(0L),
                             totalBytes = totalBytes?.takeIf { it > 0L },
+                            conversionProgress = conversionProgress,
                             updatedAtEpochMs = DownloadsClock.nowEpochMs(),
                             errorMessage = null,
                         )
@@ -338,6 +366,7 @@ object DownloadsRepository {
                     current.copy(
                         status = DownloadStatus.Completed,
                         localFileUri = localFileUri,
+                        conversionProgress = null,
                         downloadedBytes = if (totalBytes != null && totalBytes > 0L) {
                             totalBytes
                         } else {
@@ -357,6 +386,7 @@ object DownloadsRepository {
                     } else {
                         current.copy(
                             status = DownloadStatus.Failed,
+                            conversionProgress = null,
                             errorMessage = message.ifBlank { runBlocking { getString(Res.string.download_failed) } },
                             updatedAtEpochMs = DownloadsClock.nowEpochMs(),
                         )
@@ -367,7 +397,7 @@ object DownloadsRepository {
                 activeHandles.remove(item.id)
                 mutateItem(item.id) { current ->
                     if (current.status != DownloadStatus.Downloading) return@mutateItem current
-                    current.copy(status = DownloadStatus.Paused, errorMessage = null)
+                    current.copy(status = DownloadStatus.Paused, errorMessage = null, conversionProgress = null)
                 }
             },
         )
@@ -525,7 +555,7 @@ private fun buildFileName(
     episodeNumber: Int?,
     episodeTitle: String?,
     fallbackTitle: String,
-    sourceUrl: String,
+    extension: String,
     downloadId: String,
 ): String {
     val baseTitle = if (seasonNumber != null && episodeNumber != null) {
@@ -544,7 +574,6 @@ private fun buildFileName(
         title.ifBlank { fallbackTitle }
     }
 
-    val extension = sourceUrl.fileExtensionFromUrl()
     return buildString {
         append(baseTitle.sanitizeFileName().ifBlank { "download" }.take(92))
         append('_')
@@ -568,6 +597,11 @@ private fun String.fileExtensionFromUrl(): String {
     } else {
         "mp4"
     }
+}
+
+private fun String.isHttpUrl(): Boolean {
+    val normalized = trim().lowercase()
+    return normalized.startsWith("http://") || normalized.startsWith("https://")
 }
 
 private fun String.isSupportedDownloadUrl(): Boolean {

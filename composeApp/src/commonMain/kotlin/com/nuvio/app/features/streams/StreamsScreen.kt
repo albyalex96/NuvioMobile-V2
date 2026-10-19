@@ -69,6 +69,8 @@ import com.nuvio.app.core.ui.NuvioModalBottomSheet
 import com.nuvio.app.core.ui.NuvioToastController
 import com.nuvio.app.core.ui.dismissNuvioBottomSheet
 import com.nuvio.app.features.downloads.DownloadsRepository
+import com.nuvio.app.features.downloads.hls.HlsDownloadDialog
+import com.nuvio.app.features.downloads.hls.HlsDownloadSpec
 import com.nuvio.app.features.details.MetaScreenSettingsRepository
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import co.touchlab.kermit.Logger
@@ -185,6 +187,34 @@ fun StreamsScreen(
         }
     }
     val downloadScope = rememberCoroutineScope()
+    // HLS stream waiting for the user to pick quality, audio and subtitles.
+    var pendingHlsDownload by remember(videoId) { mutableStateOf<StreamItem?>(null) }
+    val enqueueDownload: (StreamItem, HlsDownloadSpec?) -> Unit = { stream, hls ->
+        val result = DownloadsRepository.enqueueFromStream(
+            contentType = type,
+            videoId = videoId,
+            parentMetaId = parentMetaId,
+            parentMetaType = parentMetaType,
+            title = title,
+            logo = logo,
+            poster = poster,
+            background = background,
+            seasonNumber = seasonNumber,
+            episodeNumber = episodeNumber,
+            episodeTitle = episodeTitle,
+            episodeThumbnail = episodeThumbnail,
+            stream = stream,
+            hls = hls,
+        )
+        NuvioToastController.show(result.toastMessage())
+    }
+    val startDownload: suspend (StreamItem) -> Unit = { stream ->
+        if (DownloadsRepository.isHlsStreamDownload(stream)) {
+            pendingHlsDownload = stream
+        } else {
+            enqueueDownload(stream, null)
+        }
+    }
     val castState by CastPlatform.state.collectAsStateWithLifecycle()
     val castAvailable = castState.isAvailable && !TvAppRuntime.isTvApp
     // Stream waiting for a cast session: it opens in the player (on the receiver) once connected.
@@ -379,57 +409,21 @@ fun StreamsScreen(
                 }
             },
             onDownload = { stream ->
-                if (DirectDebridPlaybackResolver.shouldResolveToPlayableStream(stream)) {
-                    downloadScope.launch {
-                        val resolved = DirectDebridPlaybackResolver.resolveToPlayableStream(
-                            stream = stream,
-                            season = seasonNumber,
-                            episode = episodeNumber,
-                        )
-                        when (resolved) {
-                            is DirectDebridPlayableResult.Success -> {
-                                val result = DownloadsRepository.enqueueFromStream(
-                                    contentType = type,
-                                    videoId = videoId,
-                                    parentMetaId = parentMetaId,
-                                    parentMetaType = parentMetaType,
-                                    title = title,
-                                    logo = logo,
-                                    poster = poster,
-                                    background = background,
-                                    seasonNumber = seasonNumber,
-                                    episodeNumber = episodeNumber,
-                                    episodeTitle = episodeTitle,
-                                    episodeThumbnail = episodeThumbnail,
-                                    stream = resolved.stream,
-                                )
-                                NuvioToastController.show(result.toastMessage())
-                            }
-                            else -> {
-                                val message = resolved.toastMessage()
-                                if (message != null) {
-                                    NuvioToastController.show(message)
-                                }
-                            }
+                downloadScope.launch {
+                    if (DirectDebridPlaybackResolver.shouldResolveToPlayableStream(stream)) {
+                        when (
+                            val resolved = DirectDebridPlaybackResolver.resolveToPlayableStream(
+                                stream = stream,
+                                season = seasonNumber,
+                                episode = episodeNumber,
+                            )
+                        ) {
+                            is DirectDebridPlayableResult.Success -> startDownload(resolved.stream)
+                            else -> resolved.toastMessage()?.let { NuvioToastController.show(it) }
                         }
+                    } else {
+                        startDownload(stream)
                     }
-                } else {
-                    val result = DownloadsRepository.enqueueFromStream(
-                        contentType = type,
-                        videoId = videoId,
-                        parentMetaId = parentMetaId,
-                        parentMetaType = parentMetaType,
-                        title = title,
-                        logo = logo,
-                        poster = poster,
-                        background = background,
-                        seasonNumber = seasonNumber,
-                        episodeNumber = episodeNumber,
-                        episodeTitle = episodeTitle,
-                        episodeThumbnail = episodeThumbnail,
-                        stream = stream,
-                    )
-                    NuvioToastController.show(result.toastMessage())
                 }
             },
             onOpen = { stream, openExternally ->
@@ -447,6 +441,21 @@ fun StreamsScreen(
                 stream = stream,
                 onDismiss = { originalDescriptionTarget = null },
             )
+        }
+
+        pendingHlsDownload?.let { stream ->
+            val url = stream.playableDirectUrl
+            if (url != null) {
+                HlsDownloadDialog(
+                    url = url,
+                    headers = DownloadsRepository.downloadRequestHeaders(stream),
+                    onDismiss = { pendingHlsDownload = null },
+                    onConfirm = { spec ->
+                        pendingHlsDownload = null
+                        enqueueDownload(stream, spec)
+                    },
+                )
+            }
         }
 
         pendingCastStream?.let { stream ->

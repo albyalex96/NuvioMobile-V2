@@ -47,6 +47,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.nuvio.app.features.downloads.downloadsPowerSettingsSupported
 import com.nuvio.app.core.build.AppFeaturePolicy
 import com.nuvio.app.core.build.TrailerPlaybackMode
 import com.nuvio.app.core.ui.NuvioTokens
@@ -1399,6 +1400,11 @@ private fun addAdditionalSearchEntries(
         if (downloadsFolderOptionsVisible) {
             add(PlaybackSearchRow("downloads-folder", stringResource(Res.string.downloads_settings_folder_title), stringResource(Res.string.downloads_settings_folder_description), downloadsFolderSection))
             add(PlaybackSearchRow("downloads-use-app-storage", stringResource(Res.string.downloads_settings_use_internal_title), stringResource(Res.string.downloads_settings_use_internal_description), downloadsFolderSection))
+        }
+        if (downloadsPowerSettingsSupported) {
+            val backgroundSection = stringResource(Res.string.downloads_settings_section_background)
+            add(PlaybackSearchRow("downloads-battery", stringResource(Res.string.downloads_settings_battery_title), stringResource(Res.string.downloads_settings_battery_description), backgroundSection))
+            add(PlaybackSearchRow("downloads-phone-settings", stringResource(Res.string.downloads_settings_battery_open_app_settings), stringResource(Res.string.downloads_settings_battery_hint), backgroundSection))
         }
         add(PlaybackSearchRow("downloads-storage", downloadsSummarySection, stringResource(Res.string.downloads_settings_summary_description), downloadsSummarySection))
         add(PlaybackSearchRow("downloads-files", downloadsFilesSection, stringResource(Res.string.downloads_settings_files_description), downloadsFilesSection))
