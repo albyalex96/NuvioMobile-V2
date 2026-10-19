@@ -13,6 +13,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.BookmarkAdd
+import androidx.compose.material.icons.filled.BookmarkRemove
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.CheckCircleOutline
 import androidx.compose.material.icons.filled.DeleteOutline
@@ -1359,7 +1362,7 @@ internal fun MainAppContent(
         val onContinueWatchingLongPress: (ContinueWatchingItem) -> Unit = { item ->
             hapticFeedback.performHapticFeedback(HapticFeedbackType.LongPress)
             val zoomAnchor = PosterZoomAnchorHolder.consume()
-            selectedContinueWatchingZoomAnchor = zoomAnchor
+            selectedContinueWatchingZoomAnchor = zoomAnchor.takeUnless { TvAppRuntime.isTvApp }
             selectedContinueWatchingForActions = item
         }
 
@@ -2024,17 +2027,32 @@ internal fun MainAppContent(
                                 DetailRoute(type = item.parentMetaType, id = item.parentMetaId, title = item.title),
                             )
                         }
+                        val canPlayItem = canPlayContinueWatching(item)
+                        val resumes = !item.isNextUp && item.progressFraction > 0f
                         TvPosterMenuHook(
                             title = item.title,
                             subtitle = localizedContinueWatchingSubtitle(item),
                             imageUrl = item.poster ?: item.imageUrl,
-                            actions = tvMetaShortcutActions(
-                                type = item.parentMetaType,
-                                id = item.parentMetaId,
-                                includeDetails = !item.isCloudLibraryContinueWatchingItem(),
-                                onOpenDetails = openCwDetails,
-                            ) + buildList {
-                                if (!item.isNextUp && canPlayContinueWatching(item)) {
+                            actions = buildList {
+                                if (canPlayItem) {
+                                    add(
+                                        PosterZoomOverlayAction(
+                                            icon = Icons.Default.PlayArrow,
+                                            label = stringResource(if (resumes) Res.string.action_resume else Res.string.action_play),
+                                            onSelected = { onContinueWatchingClick(item) },
+                                        ),
+                                    )
+                                }
+                                if (!item.isCloudLibraryContinueWatchingItem()) {
+                                    add(
+                                        PosterZoomOverlayAction(
+                                            icon = Icons.Default.Info,
+                                            label = stringResource(Res.string.cw_action_go_to_details),
+                                            onSelected = openCwDetails,
+                                        ),
+                                    )
+                                }
+                                if (resumes && canPlayItem) {
                                     add(
                                         PosterZoomOverlayAction(
                                             icon = Icons.Default.Replay,
@@ -2043,17 +2061,25 @@ internal fun MainAppContent(
                                         ),
                                     )
                                 }
-                                if (StreamAutoPlayPolicy.isEffectivelyEnabled(playerSettingsUiState) &&
-                                    canSelectContinueWatchingStreams(item)
-                                ) {
+                                // On TV the source choice is always offered, not only with autoplay.
+                                if (canSelectContinueWatchingStreams(item)) {
                                     add(
                                         PosterZoomOverlayAction(
-                                            icon = Icons.Default.PlayArrow,
+                                            icon = Icons.Default.Tune,
                                             label = stringResource(Res.string.play_manually),
                                             onSelected = { onContinueWatchingPlayManually(item) },
                                         ),
                                     )
                                 }
+                                // "Watch a random episode" of the series (the details shortcut is above).
+                                addAll(
+                                    tvMetaShortcutActions(
+                                        type = item.parentMetaType,
+                                        id = item.parentMetaId,
+                                        includeDetails = false,
+                                        onOpenDetails = openCwDetails,
+                                    ),
+                                )
                                 if (!item.isReleaseAlert) {
                                     add(
                                         PosterZoomOverlayAction(
@@ -2074,13 +2100,12 @@ internal fun MainAppContent(
                                 if (!item.isCloudLibraryContinueWatchingItem()) {
                                     add(
                                         PosterZoomOverlayAction(
-                                            icon = if (cwSaved) Icons.Default.DeleteOutline else Icons.Default.Add,
+                                            icon = if (cwSaved) Icons.Default.BookmarkRemove else Icons.Default.BookmarkAdd,
                                             label = if (cwSaved) {
                                                 stringResource(Res.string.hero_remove_from_library)
                                             } else {
                                                 stringResource(Res.string.hero_add_to_library)
                                             },
-                                            isDestructive = cwRemovesFromLibrary,
                                             onSelected = {
                                                 onPosterLibraryAction(PosterActionTarget(cwPreview), cwRemovesFromLibrary)
                                             },
@@ -2090,7 +2115,7 @@ internal fun MainAppContent(
                                 add(
                                     PosterZoomOverlayAction(
                                         icon = Icons.Default.DeleteOutline,
-                                        label = stringResource(Res.string.cw_action_remove),
+                                        label = stringResource(Res.string.tv_cw_remove_from_row),
                                         isDestructive = true,
                                         onSelected = { onContinueWatchingRemove(item) },
                                     ),

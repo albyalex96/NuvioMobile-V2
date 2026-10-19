@@ -13,4 +13,5 @@
     <string name="settings_top_nav_bar_hint">Press up from the top of a page, or Back, to reach the bar.</string>
     <string name="tv_layout_settings_title">TV layout</string>
     <string name="tv_layout_settings_description">Card size and shape, home rows, continue watching and sidebar.</string>
+    <string name="tv_cw_remove_from_row">Remove from Continue Watching</string>
 </resources>

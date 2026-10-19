@@ -10,9 +10,13 @@
     <string name="tv_layout_increase">Increase</string>
 
     <string name="tv_layout_section_home">Home layout</string>
-    <string name="tv_layout_section_home_desc">Hero backdrop of the home.</string>
+    <string name="tv_layout_section_home_desc">Hero carousel and backdrop of the home.</string>
     <string name="tv_layout_fullscreen_hero_backdrop">Fullscreen hero backdrop</string>
     <string name="tv_layout_fullscreen_hero_backdrop_sub">Expand the hero backdrop to fill the entire screen.</string>
+    <string name="tv_layout_show_hero">Show hero section</string>
+    <string name="tv_layout_show_hero_sub">Display the hero carousel at the top of the home: left/right change title, OK opens it.</string>
+    <string name="tv_layout_hero_catalogs">Hero catalogs</string>
+    <string name="tv_layout_hero_catalogs_sub">Catalogs that fill the hero carousel (up to %1$d).</string>
 
     <string name="tv_layout_section_content">Home content</string>
     <string name="tv_layout_section_content_desc">Control what appears on the home rows.</string>
@@ -24,13 +28,6 @@
     <string name="tv_layout_hide_unreleased_sub">Hide movies and shows that haven\'t been released yet.</string>
     <string name="tv_layout_home_more_sub">Catalogs, order and hero sources (Settings → Home screen).</string>
 
-    <string name="tv_layout_section_sidebar">Sidebar &amp; navigation</string>
-    <string name="tv_layout_section_sidebar_desc">Floating pill and sidebar style.</string>
-    <string name="tv_layout_hide_floating_pill">Hide floating pill</string>
-    <string name="tv_layout_hide_floating_pill_sub">Hide the floating navigation indicator at the top left of the pages.</string>
-    <string name="tv_layout_sidebar_blur">Sidebar blur</string>
-    <string name="tv_layout_sidebar_blur_sub">Blur the page behind the sidebar and the floating pill.</string>
-    <string name="tv_layout_sidebar_top_bar_note">The glass top bar is active (Appearance → Navigation bar): these options apply to the sidebar only.</string>
 
     <string name="tv_layout_section_continue_watching">Continue watching</string>
     <string name="tv_layout_section_continue_watching_desc">Settings for the Continue Watching section.</string>

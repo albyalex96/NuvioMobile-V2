@@ -10,9 +10,13 @@
     <string name="tv_layout_increase">Aumenta</string>
 
     <string name="tv_layout_section_home">Layout Home</string>
-    <string name="tv_layout_section_home_desc">Sfondo hero della Home.</string>
+    <string name="tv_layout_section_home_desc">Carosello e sfondo hero della Home.</string>
     <string name="tv_layout_fullscreen_hero_backdrop">Sfondo hero a schermo intero</string>
     <string name="tv_layout_fullscreen_hero_backdrop_sub">Espandi lo sfondo hero per riempire tutto lo schermo.</string>
+    <string name="tv_layout_show_hero">Mostra sezione Hero</string>
+    <string name="tv_layout_show_hero_sub">Visualizza il carosello hero nella parte superiore della Home: sinistra/destra cambiano titolo, OK lo apre.</string>
+    <string name="tv_layout_hero_catalogs">Cataloghi Hero</string>
+    <string name="tv_layout_hero_catalogs_sub">Cataloghi che riempiono il carosello hero (massimo %1$d).</string>
 
     <string name="tv_layout_section_content">Contenuto Home</string>
     <string name="tv_layout_section_content_desc">Controlla cosa appare nelle righe della Home.</string>
@@ -24,13 +28,6 @@
     <string name="tv_layout_hide_unreleased_sub">Nascondi film e serie TV non ancora usciti.</string>
     <string name="tv_layout_home_more_sub">Cataloghi, ordine e sorgenti hero (Impostazioni → Schermata Home).</string>
 
-    <string name="tv_layout_section_sidebar">Barra laterale e navigazione</string>
-    <string name="tv_layout_section_sidebar_desc">Indicatore fluttuante e stile della barra laterale.</string>
-    <string name="tv_layout_hide_floating_pill">Nascondi l\'indicatore di navigazione</string>
-    <string name="tv_layout_hide_floating_pill_sub">Nascondi l\'indicatore di navigazione fluttuante in alto a sinistra delle pagine.</string>
-    <string name="tv_layout_sidebar_blur">Sfocatura barra laterale</string>
-    <string name="tv_layout_sidebar_blur_sub">Sfoca la pagina dietro la barra laterale e l\'indicatore fluttuante.</string>
-    <string name="tv_layout_sidebar_top_bar_note">È attiva la barra vetrosa in alto (Aspetto → Barra di navigazione): queste opzioni valgono solo per la barra laterale.</string>
 
     <string name="tv_layout_section_continue_watching">Continua a guardare</string>
     <string name="tv_layout_section_continue_watching_desc">Impostazioni per la sezione \"Continua a guardare\".</string>

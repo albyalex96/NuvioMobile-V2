@@ -33,6 +33,8 @@ import com.nuvio.app.features.streams.StreamBadgeSettingsRepository
 import com.nuvio.app.features.streams.StreamBadgeSettingsStorage
 import com.nuvio.app.features.streams.parser.StreamParserSettingsRepository
 import com.nuvio.app.features.plugins.PluginGroupingSync
+import com.nuvio.app.features.home.HomeCatalogSettingsRepository
+import com.nuvio.app.features.home.HomeHeroProfileSync
 import com.nuvio.app.features.plugins.PluginRepository
 import com.nuvio.app.features.tmdb.TmdbSettingsStorage
 import com.nuvio.app.features.tmdb.TmdbSettingsRepository
@@ -211,6 +213,7 @@ object ProfileSettingsSync {
             AppLoggerSettings.enabled.map { "app_logger_$it" },
             MediaProxySettingsRepository.settings.map { "media_proxy_${it.hashCode()}" },
             LiveTvRepository.uiState.map { "live_tv_${LiveTvProfileSync.syncSignature(it)}" }.distinctUntilChanged(),
+            HomeCatalogSettingsRepository.uiState.map(HomeHeroProfileSync::syncSignature).distinctUntilChanged(),
             DebridSettingsRepository.uiState.map { "debrid" },
             TmdbSettingsRepository.uiState.map { "tmdb" },
             MdbListSettingsRepository.uiState.map { "mdblist" },
@@ -272,7 +275,8 @@ object ProfileSettingsSync {
                         PluginGroupingSync.exportToSyncPayload() +
                         AppLoggerSettings.exportToSyncPayload() +
                         MediaProxySettingsRepository.exportToSyncPayload() +
-                        LiveTvProfileSync.exportToSyncPayload(),
+                        LiveTvProfileSync.exportToSyncPayload() +
+                        HomeHeroProfileSync.exportToSyncPayload(),
                 ),
                 debridSettings = withoutProfileCredentials(
                     PROFILE_DEBRID_SETTINGS_FEATURE,
@@ -336,6 +340,7 @@ object ProfileSettingsSync {
         AppLoggerSettings.applyFromSyncPayload(blob.features.streamBadgeSettings)
         MediaProxySettingsRepository.applyFromSyncPayload(blob.features.streamBadgeSettings)
         LiveTvProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
+        HomeHeroProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
 
         DebridSettingsStorage.replaceFromSyncPayload(
             preservingLocalProfileCredentials(

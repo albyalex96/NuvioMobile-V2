@@ -14,11 +14,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ViewList
-import androidx.compose.material.icons.automirrored.filled.ViewSidebar
 import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Dashboard
@@ -48,7 +54,6 @@ import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.ui.CardDepthStyleRepository
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.home.HomeCatalogSettingsRepository
-import com.nuvio.app.features.settings.ThemeSettingsRepository
 import com.nuvio.app.features.watchprogress.ContinueWatchingPreferencesRepository
 import com.nuvio.app.features.watchprogress.ContinueWatchingSectionStyle
 import com.nuvio.app.features.watchprogress.ContinueWatchingSortMode
@@ -63,7 +68,6 @@ import com.nuvio.tv.ui.tvFocusable
 private enum class TvLayoutSection(val title: Int, val description: Int, val icon: ImageVector) {
     HomeLayout(R.string.tv_layout_section_home, R.string.tv_layout_section_home_desc, Icons.Filled.Dashboard),
     HomeContent(R.string.tv_layout_section_content, R.string.tv_layout_section_content_desc, Icons.Filled.ViewAgenda),
-    Sidebar(R.string.tv_layout_section_sidebar, R.string.tv_layout_section_sidebar_desc, Icons.AutoMirrored.Filled.ViewSidebar),
     ContinueWatching(
         R.string.tv_layout_section_continue_watching,
         R.string.tv_layout_section_continue_watching_desc,
@@ -105,6 +109,7 @@ private fun SectionContent(section: TvLayoutSection, navigator: TvSettingsNaviga
     val repository = TvLayoutSettingsRepository
     when (section) {
         TvLayoutSection.HomeLayout -> {
+            HeroSettings()
             TvSettingsToggleRow(
                 title = stringResource(R.string.tv_layout_fullscreen_hero_backdrop),
                 subtitle = stringResource(R.string.tv_layout_fullscreen_hero_backdrop_sub),
@@ -139,23 +144,6 @@ private fun SectionContent(section: TvLayoutSection, navigator: TvSettingsNaviga
                 subtitle = stringResource(R.string.tv_layout_home_more_sub),
                 leadingIcon = Icons.Filled.Tune,
                 onClick = navigator.openHomescreen,
-            )
-        }
-
-        TvLayoutSection.Sidebar -> {
-            val topBar by ThemeSettingsRepository.topNavBarEnabled.collectAsState()
-            if (topBar) TvSettingsNote(stringResource(R.string.tv_layout_sidebar_top_bar_note))
-            TvSettingsToggleRow(
-                title = stringResource(R.string.tv_layout_hide_floating_pill),
-                subtitle = stringResource(R.string.tv_layout_hide_floating_pill_sub),
-                checked = settings.hideFloatingPill,
-                onCheckedChange = repository::setHideFloatingPill,
-            )
-            TvSettingsToggleRow(
-                title = stringResource(R.string.tv_layout_sidebar_blur),
-                subtitle = stringResource(R.string.tv_layout_sidebar_blur_sub),
-                checked = settings.sidebarBlur,
-                onCheckedChange = repository::setSidebarBlur,
             )
         }
 
@@ -242,6 +230,54 @@ private fun SectionContent(section: TvLayoutSection, navigator: TvSettingsNaviga
             onClick = navigator.openStreams,
         )
     }
+}
+
+/**
+ * Hero carousel (NuvioTV "Show hero section" + "Hero catalogs"): the shared home settings, synced
+ * with the profile. At most [HomeCatalogSettingsRepository.HERO_SOURCE_SELECTION_LIMIT] catalogs.
+ */
+@Composable
+private fun HeroSettings() {
+    val home by HomeCatalogSettingsRepository.uiState.collectAsState()
+    TvSettingsToggleRow(
+        title = stringResource(R.string.tv_layout_show_hero),
+        subtitle = stringResource(R.string.tv_layout_show_hero_sub),
+        checked = home.heroEnabled,
+        onCheckedChange = HomeCatalogSettingsRepository::setHeroEnabled,
+    )
+    val catalogs = home.items.filter { !it.isCollection }
+    if (!home.heroEnabled || catalogs.isEmpty()) return
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
+        Text(
+            text = stringResource(R.string.tv_layout_hero_catalogs),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.nuvio.colors.textSecondary,
+            modifier = Modifier.padding(start = 4.dp),
+        )
+        Text(
+            text = stringResource(R.string.tv_layout_hero_catalogs_sub, HomeCatalogSettingsRepository.HERO_SOURCE_SELECTION_LIMIT),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.nuvio.colors.textMuted,
+            modifier = Modifier.padding(start = 4.dp),
+        )
+        val firstChip = remember { FocusRequester() }
+        LazyRow(
+            modifier = Modifier.focusRestorer(firstChip).focusGroup(),
+            contentPadding = PaddingValues(end = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            itemsIndexed(catalogs, key = { _, item -> item.key }) { index, item ->
+                val title = item.customTitle.ifBlank { item.defaultTitle }
+                TvSettingsChoiceChip(
+                    label = if (item.addonName.isBlank()) title else "$title · ${item.addonName}",
+                    selected = item.heroSourceEnabled,
+                    onClick = { HomeCatalogSettingsRepository.setHeroSourceEnabled(item.key, !item.heroSourceEnabled) },
+                    modifier = if (index == 0) Modifier.focusRequester(firstChip) else Modifier,
+                )
+            }
+        }
+    }
+    TvSettingsNote(stringResource(R.string.tv_layout_profile_note))
 }
 
 @Composable
@@ -469,16 +505,14 @@ private fun tvLayoutSearchEntries(): List<TvSettingsSearchItem> {
         rows.map { (title, description) -> Triple(title, description, section) }
     val rows = entries(
         R.string.tv_layout_section_home,
+        R.string.tv_layout_show_hero to R.string.tv_layout_show_hero_sub,
+        R.string.tv_layout_hero_catalogs to null,
         R.string.tv_layout_fullscreen_hero_backdrop to R.string.tv_layout_fullscreen_hero_backdrop_sub,
     ) + entries(
         R.string.tv_layout_section_content,
         R.string.tv_layout_poster_labels to R.string.tv_layout_poster_labels_sub,
         R.string.tv_layout_catalog_type to R.string.tv_layout_catalog_type_sub,
         R.string.tv_layout_hide_unreleased to R.string.tv_layout_hide_unreleased_sub,
-    ) + entries(
-        R.string.tv_layout_section_sidebar,
-        R.string.tv_layout_hide_floating_pill to R.string.tv_layout_hide_floating_pill_sub,
-        R.string.tv_layout_sidebar_blur to R.string.tv_layout_sidebar_blur_sub,
     ) + entries(
         R.string.tv_layout_section_continue_watching,
         R.string.tv_layout_cw_enabled to R.string.tv_layout_cw_enabled_sub,

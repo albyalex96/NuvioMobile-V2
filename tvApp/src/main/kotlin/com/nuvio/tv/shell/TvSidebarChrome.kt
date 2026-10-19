@@ -86,8 +86,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.features.settings.ThemeSettingsRepository
 import com.nuvio.app.features.settings.TopNavBarStyle
 import com.nuvio.app.tv.TvFocusRegions
-import com.nuvio.app.tv.TvGlassBackdrop
-import com.nuvio.app.tv.tvGlassPanelBlur
 import com.nuvio.app.tv.TvGlassNavItem
 import com.nuvio.app.tv.TvGlassNavigationBar
 import com.nuvio.app.tv.rememberTvGlassBackdrop
@@ -96,7 +94,6 @@ import com.nuvio.app.tv.TvTabsChrome
 import com.nuvio.app.tv.tvChromeRegion
 import com.nuvio.app.tv.tvEnterOn
 import com.nuvio.tv.R
-import com.nuvio.tv.settings.rememberTvLayoutSettings
 import com.nuvio.tv.ui.TvDimens
 import com.nuvio.tv.ui.TvRemoteImage
 import kotlinx.coroutines.delay
@@ -130,16 +127,13 @@ fun TvSidebarChrome(chrome: TvTabsChrome, content: @Composable () -> Unit) {
     val topBar by ThemeSettingsRepository.topNavBarEnabled.collectAsStateWithLifecycle()
     val topBarStyle by ThemeSettingsRepository.topNavBarStyle.collectAsStateWithLifecycle()
     val glowEnabled by ThemeSettingsRepository.navBarGlowEnabled.collectAsStateWithLifecycle()
-    // TV layout: "hide floating pill" and "sidebar blur" (NuvioTV sidebar section).
-    val layout = rememberTvLayoutSettings()
     var expanded by remember { mutableStateOf(false) }
     var topBarFocused by remember { mutableStateOf(false) }
     var pillIconOnly by remember { mutableStateOf(false) }
     var pillExpandRequests by remember { mutableIntStateOf(0) }
     val selectedRequester = remember { FocusRequester() }
     val topBarRequester = remember { FocusRequester() }
-    val showPill = !topBar && chrome.selectedTab != AppScreenTab.Search && !layout.hideFloatingPill
-    val sidebarBlur = !topBar && layout.sidebarBlur
+    val showPill = !topBar && chrome.selectedTab != AppScreenTab.Search
     val glassBackdrop = rememberTvGlassBackdrop()
 
     LaunchedEffect(topBar) {
@@ -214,7 +208,7 @@ fun TvSidebarChrome(chrome: TvTabsChrome, content: @Composable () -> Unit) {
                 .padding(
                     top = if ((showPill || topBar) && chrome.selectedTab != AppScreenTab.Home) TvDimens.chromeTopInset else 0.dp,
                 )
-                .then(if (topBar || sidebarBlur) Modifier.tvGlassBackdropSource(glassBackdrop) else Modifier)
+                .then(if (topBar) Modifier.tvGlassBackdropSource(glassBackdrop) else Modifier)
                 .onPreviewKeyEvent { event ->
                     if (event.type == KeyEventType.KeyDown && !expanded && !topBar) {
                         when (event.key) {
@@ -251,7 +245,6 @@ fun TvSidebarChrome(chrome: TvTabsChrome, content: @Composable () -> Unit) {
             CollapsedSidebarPill(
                 tab = chrome.selectedTab,
                 iconOnly = pillIconOnly,
-                blurBackdrop = glassBackdrop.takeIf { sidebarBlur },
                 onExpand = { openSidebar("pill") },
                 modifier = Modifier
                     .zIndex(1f)
@@ -359,7 +352,6 @@ fun TvSidebarChrome(chrome: TvTabsChrome, content: @Composable () -> Unit) {
             ) {
                 SidebarPanel(
                     chrome = chrome,
-                    blurBackdrop = glassBackdrop.takeIf { sidebarBlur },
                     focusEnabled = expanded,
                     selectedRequester = selectedRequester,
                     onTabClick = { tab ->
@@ -382,7 +374,6 @@ fun TvSidebarChrome(chrome: TvTabsChrome, content: @Composable () -> Unit) {
 @Composable
 private fun SidebarPanel(
     chrome: TvTabsChrome,
-    blurBackdrop: TvGlassBackdrop?,
     focusEnabled: Boolean,
     selectedRequester: FocusRequester,
     onTabClick: (AppScreenTab) -> Unit,
@@ -393,9 +384,7 @@ private fun SidebarPanel(
         modifier = Modifier
             .fillMaxHeight()
             .clip(shape)
-            .then(if (blurBackdrop != null) Modifier.tvGlassPanelBlur(blurBackdrop) else Modifier)
-            // NuvioTV lowers the fill to 65% when the page behind is blurred.
-            .background(Color(0xFF161618).copy(alpha = if (blurBackdrop != null) 0.65f else 0.97f), shape)
+            .background(Color(0xFF161618).copy(alpha = 0.97f), shape)
             .padding(horizontal = 12.dp, vertical = 14.dp),
     ) {
         Box(
@@ -572,7 +561,6 @@ private fun SidebarProfileItem(
 private fun CollapsedSidebarPill(
     tab: AppScreenTab,
     iconOnly: Boolean,
-    blurBackdrop: TvGlassBackdrop?,
     onExpand: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -582,8 +570,7 @@ private fun CollapsedSidebarPill(
             .focusProperties { canFocus = false }
             .height(PillHeight)
             .clip(shape)
-            .then(if (blurBackdrop != null) Modifier.tvGlassPanelBlur(blurBackdrop) else Modifier)
-            .background(Color(0xFF1C1C1E).copy(alpha = if (blurBackdrop != null) 0.65f else 0.96f), shape)
+            .background(Color(0xFF1C1C1E).copy(alpha = 0.96f), shape)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,

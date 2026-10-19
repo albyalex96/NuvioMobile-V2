@@ -79,7 +79,11 @@ import com.nuvio.app.features.cast.CastPlatform
 import com.nuvio.app.features.cast.CastSessionState
 import com.nuvio.app.features.cast.castCompatibilityIssues
 import com.nuvio.app.features.cast.isAvailable
+import com.nuvio.app.tv.LocalTvShell
 import com.nuvio.app.tv.TvAppRuntime
+import com.nuvio.app.tv.TvPosterMenuHook
+import com.nuvio.app.core.ui.PosterZoomOverlayAction
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.rememberModalBottomSheetState
 import coil3.compose.AsyncImage
@@ -363,7 +367,9 @@ fun StreamsScreen(
             externalPlayerEnabled = playerSettings.externalPlayerEnabled,
             showOriginalDescription = streamParserSettings.enabled,
             castAvailable = castAvailable,
+            imageUrl = poster ?: background,
             onDismiss = { streamActionsTarget = null },
+            onPlay = { stream -> onStreamSelected(stream, effectiveResumePositionMs, effectiveResumeProgressFraction) },
             onCast = { stream ->
                 if (castState is CastSessionState.Connected) {
                     streamCastLog.i { "Casting the selected stream" }
@@ -1074,7 +1080,9 @@ private fun StreamActionsSheet(
     externalPlayerEnabled: Boolean,
     showOriginalDescription: Boolean,
     castAvailable: Boolean,
+    imageUrl: String?,
     onDismiss: () -> Unit,
+    onPlay: (StreamItem) -> Unit,
     onCast: (StreamItem) -> Unit,
     onShowOriginalDescription: (StreamItem) -> Unit,
     onCopyLink: (StreamItem) -> Unit,
@@ -1082,6 +1090,43 @@ private fun StreamActionsSheet(
     onOpen: (StreamItem, openExternally: Boolean) -> Unit,
 ) {
     if (stream == null) return
+
+    // TV: the card menu dialog of the TV shell (icons, D-pad). It also ignores the OK still held
+    // from the long press, which the bottom sheet turned into a click on its first row.
+    if (LocalTvShell.current?.posterMenu != null) {
+        val openLabel = stringResource(
+            if (externalPlayerEnabled) Res.string.streams_open_internal_player else Res.string.streams_open_external_player,
+        )
+        TvPosterMenuHook(
+            title = stream.streamLabel,
+            subtitle = stream.streamSubtitle?.takeIf { it.isNotBlank() },
+            imageUrl = imageUrl,
+            actions = buildList {
+                add(PosterZoomOverlayAction(Icons.Rounded.PlayArrow, stringResource(Res.string.action_play), onSelected = { onPlay(stream) }))
+                if (stream.hasLinkActions) {
+                    add(PosterZoomOverlayAction(Icons.AutoMirrored.Rounded.OpenInNew, openLabel, onSelected = { onOpen(stream, !externalPlayerEnabled) }))
+                }
+                if (showOriginalDescription) {
+                    add(
+                        PosterZoomOverlayAction(
+                            Icons.Rounded.Description,
+                            stringResource(Res.string.stream_parser_original_description),
+                            onSelected = { onShowOriginalDescription(stream) },
+                        ),
+                    )
+                }
+                if (stream.hasLinkActions) {
+                    add(PosterZoomOverlayAction(Icons.Rounded.Download, stringResource(Res.string.streams_download_file), onSelected = { onDownload(stream) }))
+                    add(PosterZoomOverlayAction(Icons.Rounded.ContentCopy, stringResource(Res.string.streams_copy_link), onSelected = { onCopyLink(stream) }))
+                }
+                if (castAvailable && stream.canCast) {
+                    add(PosterZoomOverlayAction(Icons.Rounded.Cast, stringResource(Res.string.cast_stream_action), onSelected = { onCast(stream) }))
+                }
+            },
+            onDismiss = onDismiss,
+        )
+        return
+    }
 
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val coroutineScope = rememberCoroutineScope()

@@ -112,9 +112,12 @@ object HomeCatalogSettingsRepository {
     private var heroEnabled = true
     private var showCatalogType = true
     private var hideUnreleasedContent = false
+    /** Hero sources received with the profile; default for catalogs that appear afterwards. */
+    private var remoteHeroSources: Set<String>? = null
 
     fun onProfileChanged() {
         hasLoaded = false
+        remoteHeroSources = null
         preferences = emptyMap()
         heroEnabled = true
         showCatalogType = true
@@ -128,6 +131,7 @@ object HomeCatalogSettingsRepository {
 
     fun clearLocalState() {
         hasLoaded = false
+        remoteHeroSources = null
         definitions = emptyList()
         collectionDefinitions = emptyList()
         lastCatalogSync = null
@@ -345,7 +349,7 @@ object HomeCatalogSettingsRepository {
             val heroSourceEnabled = if (entry.isCollection) {
                 false
             } else {
-                (stored?.heroSourceEnabled ?: true) &&
+                (stored?.heroSourceEnabled ?: defaultHeroSource(entry.key)) &&
                     enabledHeroSourceCount < HERO_SOURCE_SELECTION_LIMIT
             }
             if (heroSourceEnabled) {
@@ -434,6 +438,46 @@ object HomeCatalogSettingsRepository {
         if (pushRemote) {
             HomeCatalogSettingsSyncService.triggerPush()
         }
+    }
+
+    private fun defaultHeroSource(key: String): Boolean = remoteHeroSources?.contains(key) ?: true
+
+    /**
+     * Hero state for the profile settings blob (`HomeHeroProfileSync`). Sources are null while the
+     * catalogs are unknown, so an early push never overwrites the profile with a partial list.
+     */
+    internal fun heroSyncState(): Pair<Boolean, List<String>?> {
+        ensureLoaded()
+        val sources = definitions
+            .takeIf { it.isNotEmpty() }
+            ?.map { it.key }
+            ?.filter { key -> preferences[key]?.heroSourceEnabled == true }
+        return heroEnabled to sources
+    }
+
+    /** Applies the hero toggle and sources of the profile; null values keep the local ones. */
+    internal fun applyHeroFromRemote(enabled: Boolean?, sources: Set<String>?) {
+        ensureLoaded()
+        var changed = false
+        if (enabled != null && enabled != heroEnabled) {
+            heroEnabled = enabled
+            changed = true
+        }
+        if (sources != null) {
+            remoteHeroSources = sources
+            val updated = preferences.mapValues { (key, preference) ->
+                if (key.startsWith("collection_")) preference else preference.copy(heroSourceEnabled = key in sources)
+            }
+            if (updated != preferences) {
+                preferences = updated
+                changed = true
+            }
+            if (definitions.isNotEmpty() || collectionDefinitions.isNotEmpty()) normalizePreferences()
+        }
+        if (!changed) return
+        publish()
+        persist()
+        HomeRepository.applyCurrentSettings()
     }
 
     private fun selectedHeroSourceCount(excludingKey: String? = null): Int {
@@ -526,7 +570,7 @@ object HomeCatalogSettingsRepository {
                     key = key,
                     customTitle = item.customTitle,
                     enabled = item.enabled,
-                    heroSourceEnabled = existingHeroState[key] ?: true,
+                    heroSourceEnabled = existingHeroState[key] ?: defaultHeroSource(key),
                     order = item.order,
                 )
             }

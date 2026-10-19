@@ -40,8 +40,6 @@ data class TvLayoutSettings(
     val expandFocusedPoster: Boolean = true,
     val expandDelaySeconds: Int = DefaultTvExpandDelaySeconds,
     val heroFullScreenBackdrop: Boolean = false,
-    val hideFloatingPill: Boolean = false,
-    val sidebarBlur: Boolean = false,
 ) {
     /** Height of the base poster: NuvioTV keeps the 2:3 shape when the width changes. */
     val posterHeightDp: Int get() = posterWidthDp * 3 / 2
@@ -58,8 +56,6 @@ object TvLayoutSettingsRepository {
     private const val KEY_EXPAND_FOCUSED_POSTER = "expand_focused_poster"
     private const val KEY_EXPAND_DELAY = "expand_delay_seconds"
     private const val KEY_HERO_FULL_SCREEN = "hero_full_screen_backdrop"
-    private const val KEY_HIDE_FLOATING_PILL = "hide_floating_pill"
-    private const val KEY_SIDEBAR_BLUR = "sidebar_blur"
 
     private var preferences: SharedPreferences? = null
     private var loadedProfileId: Int? = null
@@ -90,8 +86,6 @@ object TvLayoutSettingsRepository {
             expandDelaySeconds = prefs.getInt(key(KEY_EXPAND_DELAY), DefaultTvExpandDelaySeconds)
                 .coerceIn(TvExpandDelayRange.first, TvExpandDelayRange.last),
             heroFullScreenBackdrop = prefs.getBoolean(key(KEY_HERO_FULL_SCREEN), false),
-            hideFloatingPill = prefs.getBoolean(key(KEY_HIDE_FLOATING_PILL), false),
-            sidebarBlur = prefs.getBoolean(key(KEY_SIDEBAR_BLUR), false),
         )
         log.d { "TV layout loaded for profile $profileId: ${_settings.value}" }
     }
@@ -112,8 +106,6 @@ object TvLayoutSettingsRepository {
     }
     fun setHeroFullScreenBackdrop(enabled: Boolean) =
         update(KEY_HERO_FULL_SCREEN, enabled) { copy(heroFullScreenBackdrop = enabled) }
-    fun setHideFloatingPill(enabled: Boolean) = update(KEY_HIDE_FLOATING_PILL, enabled) { copy(hideFloatingPill = enabled) }
-    fun setSidebarBlur(enabled: Boolean) = update(KEY_SIDEBAR_BLUR, enabled) { copy(sidebarBlur = enabled) }
 
     /** "Reset to default" of the poster card section (NuvioTV `ResetPosterCardStyle`). */
     fun resetPosterCardStyle() {

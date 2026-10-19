@@ -13,4 +13,5 @@
     <string name="settings_top_nav_bar_hint">Premi su dalla parte alta di una pagina, o Indietro, per raggiungere la barra.</string>
     <string name="tv_layout_settings_title">Layout TV</string>
     <string name="tv_layout_settings_description">Dimensione e forma delle card, righe della Home, Continua a guardare e barra laterale.</string>
+    <string name="tv_cw_remove_from_row">Rimuovi da Continua a guardare</string>
 </resources>

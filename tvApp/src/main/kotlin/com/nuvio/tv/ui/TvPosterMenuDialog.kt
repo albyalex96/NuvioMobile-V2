@@ -37,6 +37,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import co.touchlab.kermit.Logger
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import coil3.compose.AsyncImage
 import com.nuvio.app.core.ui.PosterZoomOverlayAction
 import com.nuvio.app.core.ui.nuvio
@@ -47,6 +50,7 @@ private val log = Logger.withTag("TvPosterMenu")
 private val PanelShape = RoundedCornerShape(24.dp)
 private val RowShape = RoundedCornerShape(14.dp)
 private val MenuConfirmKeys = setOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter)
+private val MenuActionsMaxHeight = 330.dp
 
 /**
  * Options of a long-pressed card (OK held or Menu): poster, title and a list of actions with
@@ -79,20 +83,23 @@ fun TvPosterMenuDialog(menu: TvPosterMenu) {
                 .background(MaterialTheme.nuvio.colors.surface, PanelShape)
                 .padding(28.dp),
         ) {
-            Box(
-                modifier = Modifier
-                    .width(150.dp)
-                    .height(225.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.nuvio.colors.surfaceCard),
-            ) {
-                if (!menu.imageUrl.isNullOrBlank()) {
-                    AsyncImage(
-                        model = menu.imageUrl,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
-                    )
+            // Menus without artwork (e.g. a stream) use the whole width for the actions.
+            if (!menu.imageUrl.isNullOrBlank()) {
+                Box(
+                    modifier = Modifier
+                        .width(150.dp)
+                        .height(225.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.nuvio.colors.surfaceCard),
+                ) {
+                    if (!menu.imageUrl.isNullOrBlank()) {
+                        AsyncImage(
+                            model = menu.imageUrl,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
                 }
             }
             Column(modifier = Modifier.weight(1f)) {
@@ -112,8 +119,14 @@ fun TvPosterMenuDialog(menu: TvPosterMenu) {
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                Spacer(modifier = Modifier.height(18.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Spacer(modifier = Modifier.height(14.dp))
+                // Long menus (e.g. continue watching) scroll instead of leaving the 540dp TV screen.
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier
+                        .heightIn(max = MenuActionsMaxHeight)
+                        .verticalScroll(rememberScrollState()),
+                ) {
                     menu.actions.forEachIndexed { index, action ->
                         MenuActionRow(
                             action = action,
@@ -158,7 +171,7 @@ private fun MenuActionRow(
                 onFocusChange = { focused = it },
             )
             .background(if (focused) Color.White else Color.Transparent, RowShape)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 10.dp),
     ) {
         Icon(
             imageVector = action.icon,

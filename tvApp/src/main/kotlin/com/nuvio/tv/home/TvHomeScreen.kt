@@ -29,6 +29,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -87,6 +98,14 @@ private val log = Logger.withTag("TvHome")
 
 /** Delay before the hero follows the focused card, so fast scrolling does not flicker. */
 private const val HERO_FOLLOW_DELAY_MS = 220L
+
+/** NuvioTV `HeroCarousel`: slides advance by themselves every 10 s. */
+private const val HERO_AUTO_ADVANCE_MS = 10_000L
+private const val HERO_FOCUS_KEY = "hero"
+private val HERO_DOTS_BOTTOM_PADDING = 6.dp
+/** Space kept free under the hero text for the carousel dots. */
+private val HERO_DOTS_BAND = 30.dp
+private val HERO_ROWS_GAP = 14.dp
 
 /** NuvioTV never expands a focused poster sooner than this, even with a 0 s delay. */
 private const val MIN_EXPAND_DELAY_MS = 150L
@@ -193,9 +212,27 @@ private fun TvHomeContent(model: TvHomeModel) {
     }
     if (displayedHero == null && defaultHero != null) displayedHero = defaultHero
 
+    // Hero carousel of NuvioTV (hero sources of Settings -> Home screen): shown while the hero has
+    // the focus or no card was focused yet; a focused card replaces it with its own preview.
+    val carouselItems = model.heroItems
+    val heroRequester = requesterFor(HERO_FOCUS_KEY)
+    var heroIndex by rememberSaveable { mutableIntStateOf(0) }
+    val activeHeroIndex = heroIndex.coerceIn(0, (carouselItems.size - 1).coerceAtLeast(0))
+    var heroFocused by remember { mutableStateOf(false) }
+    val carouselActive = carouselItems.isNotEmpty() && focusedHero == null
+    val carouselHero = carouselItems.getOrNull(activeHeroIndex)?.takeIf { carouselActive }
+    LaunchedEffect(carouselActive, activeHeroIndex, carouselItems.size) {
+        if (!carouselActive || carouselItems.size <= 1) return@LaunchedEffect
+        // A manual change restarts the wait (the effect is keyed on the index).
+        delay(HERO_AUTO_ADVANCE_MS)
+        heroIndex = (activeHeroIndex + 1) % carouselItems.size
+    }
+
     val firstKey = remember(model) { firstFocusableKey(model) }
     LaunchedEffect(firstKey) {
-        val target = lastFocusedKey?.let(requesters::get) ?: firstKey?.let(requesters::get) ?: return@LaunchedEffect
+        // NuvioTV starts on the hero carousel when there is one.
+        val initialKey = lastFocusedKey ?: if (carouselItems.isNotEmpty()) HERO_FOCUS_KEY else firstKey
+        val target = initialKey?.let(requesters::get) ?: firstKey?.let(requesters::get) ?: return@LaunchedEffect
         // The lazy rows compose their first items a few frames after the list.
         repeat(10) {
             withFrameNanos { }
@@ -205,6 +242,8 @@ private fun TvHomeContent(model: TvHomeModel) {
     }
 
     fun onCardFocused(key: String, hero: HeroInfo) {
+        // Leaving the carousel: the card preview replaces it at once, without the follow delay.
+        if (focusedHero == null) displayedHero = hero
         lastFocusedKey = key
         focusedHero = hero
         focusedPosterKey = null
@@ -218,21 +257,53 @@ private fun TvHomeContent(model: TvHomeModel) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         // NuvioTV keeps the rows in the bottom 52% of the screen (49% with landscape posters).
         val heroHeight = maxHeight * (1f - if (settings.landscapePosters) 0.49f else 0.52f)
-        HeroBackdrop(url = displayedHero?.backdrop, fullScreen = settings.heroFullScreenBackdrop)
+        val shownHero = carouselHero?.let(::heroOf) ?: displayedHero
+        HeroBackdrop(url = shownHero?.backdrop, fullScreen = settings.heroFullScreenBackdrop)
 
         Column(modifier = Modifier.fillMaxSize()) {
-            HeroInfoPanel(
-                hero = displayedHero,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(heroHeight),
-            )
+            Box(modifier = Modifier.fillMaxWidth().height(heroHeight)) {
+                // The carousel dots get their own band below the hero text.
+                HeroInfoPanel(
+                    hero = shownHero,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(bottom = if (carouselItems.isNotEmpty()) HERO_DOTS_BAND else 0.dp),
+                )
+                if (carouselItems.isNotEmpty()) {
+                    HeroCarouselFocusTarget(
+                        count = carouselItems.size,
+                        activeIndex = activeHeroIndex,
+                        visible = carouselActive,
+                        focused = heroFocused,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .focusRequester(heroRequester)
+                            .onFocusChanged { state ->
+                                heroFocused = state.isFocused
+                                if (state.isFocused) {
+                                    lastFocusedKey = HERO_FOCUS_KEY
+                                    focusedHero = null
+                                    focusedPosterKey = null
+                                }
+                            },
+                        onPrevious = { (activeHeroIndex > 0).also { moved -> if (moved) heroIndex = activeHeroIndex - 1 } },
+                        onNext = { (activeHeroIndex < carouselItems.lastIndex).also { moved -> if (moved) heroIndex = activeHeroIndex + 1 } },
+                        onClick = {
+                            carouselItems.getOrNull(activeHeroIndex)?.let { item ->
+                                log.d { "Hero carousel item opened" }
+                                model.onPosterClick(item)
+                            }
+                        },
+                    )
+                }
+            }
             val continueWatchingSubtitle: @Composable (ContinueWatchingItem) -> String = { item ->
                 localizedContinueWatchingSubtitle(item, compact = true)
             }
             LazyColumn(
                 state = rowsState,
-                contentPadding = PaddingValues(bottom = 48.dp),
+                // Room between the carousel dots and the first row.
+                contentPadding = PaddingValues(top = if (carouselItems.isNotEmpty()) HERO_ROWS_GAP else 0.dp, bottom = 48.dp),
                 verticalArrangement = Arrangement.spacedBy(TvDimens.rowGap - TvDimens.rowVerticalPadding * 2),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -298,6 +369,69 @@ private fun TvHomeContent(model: TvHomeModel) {
                             onFocused = { focusedPosterKey = null },
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+private val ConfirmKeys = setOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter)
+
+/**
+ * Focus target of the hero carousel (NuvioTV `HeroCarousel`): left/right change the slide, OK opens
+ * the details, the indicator dots sit at the bottom. Left on the first slide is not consumed, so it
+ * still opens the sidebar.
+ */
+@Composable
+private fun HeroCarouselFocusTarget(
+    count: Int,
+    activeIndex: Int,
+    visible: Boolean,
+    focused: Boolean,
+    onPrevious: () -> Boolean,
+    onNext: () -> Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val rtl = androidx.compose.ui.platform.LocalLayoutDirection.current == androidx.compose.ui.unit.LayoutDirection.Rtl
+    Box(
+        modifier = modifier
+            .onPreviewKeyEvent { event ->
+                when {
+                    event.type == KeyEventType.KeyDown && event.key == Key.DirectionLeft -> if (rtl) onNext() else onPrevious()
+                    event.type == KeyEventType.KeyDown && event.key == Key.DirectionRight -> if (rtl) onPrevious() else onNext()
+                    event.key in ConfirmKeys && event.type == KeyEventType.KeyDown -> true
+                    event.key in ConfirmKeys && event.type == KeyEventType.KeyUp -> {
+                        onClick()
+                        true
+                    }
+                    else -> false
+                }
+            }
+            .focusable(),
+    ) {
+        if (visible && count > 1) {
+            val accent = MaterialTheme.nuvio.colors.accent
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = HERO_DOTS_BOTTOM_PADDING),
+            ) {
+                repeat(count) { index ->
+                    val active = index == activeIndex
+                    Box(
+                        modifier = Modifier
+                            .size(width = if (active) 32.dp else 12.dp, height = if (active) 6.dp else 4.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(
+                                when {
+                                    active && focused -> accent
+                                    active -> Color.White.copy(alpha = 0.85f)
+                                    else -> Color.White.copy(alpha = 0.3f)
+                                },
+                            ),
+                    )
                 }
             }
         }
