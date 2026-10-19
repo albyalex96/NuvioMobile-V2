@@ -11,6 +11,7 @@ import com.nuvio.tv.auth.TvAuthScreen
 import com.nuvio.tv.details.TvDetailsScreen
 import com.nuvio.tv.home.TvHomeScreen
 import com.nuvio.tv.search.TvVoiceSearchButton
+import com.nuvio.tv.settings.TvLayoutSettingsPage
 import com.nuvio.tv.shell.TvSidebarChrome
 import com.nuvio.tv.ui.TvFocusCoordinator
 import com.nuvio.tv.ui.TvPosterMenuDialog
@@ -28,6 +29,7 @@ fun TvApp() {
             auth = { model -> TvAuthScreen(model) },
             voiceSearch = { onQuery -> TvVoiceSearchButton(onQuery) },
             posterMenu = { menu -> TvPosterMenuDialog(menu) },
+            layoutSettings = TvLayoutSettingsPage,
         )
     }
     CompositionLocalProvider(LocalTvShell provides shell) {

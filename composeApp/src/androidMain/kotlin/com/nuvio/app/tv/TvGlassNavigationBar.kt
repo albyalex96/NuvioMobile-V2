@@ -76,6 +76,7 @@ import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.core.ui.themePalette
 import com.nuvio.app.core.ui.visualNavIndex
 import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 
@@ -89,6 +90,16 @@ fun rememberTvGlassBackdrop(): TvGlassBackdrop {
 }
 
 fun Modifier.tvGlassBackdropSource(backdrop: TvGlassBackdrop): Modifier = hazeSource(backdrop.hazeState)
+
+/**
+ * Frosted background of a TV panel (NuvioTV "sidebar blur"): blurs the page marked with
+ * [tvGlassBackdropSource]; the caller draws its translucent fill on top.
+ */
+fun Modifier.tvGlassPanelBlur(backdrop: TvGlassBackdrop): Modifier =
+    hazeEffect(state = backdrop.hazeState) {
+        blurRadius = 24.dp
+        noiseFactor = 0f
+    }
 
 /**
  * One section of [TvGlassNavigationBar]. [leading] replaces the icon (e.g. the profile avatar);

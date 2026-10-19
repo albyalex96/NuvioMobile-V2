@@ -39,6 +39,8 @@
     <string name="tv_details_collection">Collection</string>
     <string name="tv_details_cast">Cast</string>
     <string name="tv_details_unavailable">Not yet available</string>
+    <string name="tv_details_expand_overview">Show full plot</string>
+    <string name="tv_details_collapse_overview">Show less</string>
     <string name="tv_details_hint_manual">Hold OK to choose the source</string>
     <string name="tv_details_creator">Created by %1$s</string>
     <string name="tv_details_director">Directed by %1$s</string>

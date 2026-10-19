@@ -35,6 +35,8 @@ class TvShell(
     val voiceSearch: (@Composable (onQuery: (String) -> Unit) -> Unit)? = null,
     /** Options menu of a poster / continue-watching card (long OK press), replacing the phone overlay. */
     val posterMenu: (@Composable (menu: TvPosterMenu) -> Unit)? = null,
+    /** TV-only layout settings page (Settings -> Appearance -> TV layout). */
+    val layoutSettings: TvSettingsPage? = null,
 )
 
 /** Options of a long-pressed card; [actions] are the shared ones (library, watched, resume…). */

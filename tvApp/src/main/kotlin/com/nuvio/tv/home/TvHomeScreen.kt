@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,12 +40,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import co.touchlab.kermit.Logger
@@ -62,17 +65,20 @@ import com.nuvio.app.tv.TvHomeModel
 import com.nuvio.app.tv.TvHomeRow
 import com.nuvio.app.tv.TvHomeStatus
 import com.nuvio.tv.R
+import com.nuvio.app.features.watchprogress.ContinueWatchingPreferencesRepository
+import com.nuvio.tv.settings.TvLayoutSettings
+import com.nuvio.tv.settings.rememberTvLayoutSettings
 import com.nuvio.tv.ui.TvActionButton
-import com.nuvio.tv.ui.TvCardShape
+import com.nuvio.tv.ui.TvCardMetrics
+import com.nuvio.tv.ui.TvLandscapeArtwork
+import com.nuvio.tv.ui.TvRowCardFocusBorder
+import com.nuvio.tv.ui.TvRowLandscapeCard
+import com.nuvio.tv.ui.TvRowPosterCard
+import com.nuvio.tv.ui.cardMetrics
 import com.nuvio.tv.ui.TvContentRow
 import com.nuvio.tv.ui.TvDimens
-import com.nuvio.tv.ui.TvLandscapeCard
 import com.nuvio.tv.ui.TvMessage
-import com.nuvio.tv.ui.TvPosterAspectRatio
-import com.nuvio.tv.ui.TvPosterCard
-import com.nuvio.tv.ui.TvSquareTileSize
 import com.nuvio.tv.ui.landscapeArtwork
-import com.nuvio.tv.ui.rememberTvPosterCardStyle
 import com.nuvio.tv.ui.showsLandscape
 import com.nuvio.tv.ui.tvFocusable
 import kotlinx.coroutines.delay
@@ -81,6 +87,9 @@ private val log = Logger.withTag("TvHome")
 
 /** Delay before the hero follows the focused card, so fast scrolling does not flicker. */
 private const val HERO_FOLLOW_DELAY_MS = 220L
+
+/** NuvioTV never expands a focused poster sooner than this, even with a 0 s delay. */
+private const val MIN_EXPAND_DELAY_MS = 150L
 
 // Hero text block of the NuvioTV modern home.
 private const val HERO_TEXT_WIDTH_FRACTION = 0.5f
@@ -150,9 +159,26 @@ private fun CenteredMessage(title: String, message: String?, onRetry: (() -> Uni
 
 @Composable
 private fun TvHomeContent(model: TvHomeModel) {
+    val settings = rememberTvLayoutSettings()
+    val metrics = remember(settings) { settings.cardMetrics() }
+    val continueWatchingPrefs by ContinueWatchingPreferencesRepository.uiState.collectAsState()
+    LaunchedEffect(Unit) { ContinueWatchingPreferencesRepository.ensureLoaded() }
     val requesters = remember { mutableMapOf<String, FocusRequester>() }
     fun requesterFor(key: String): FocusRequester = requesters.getOrPut(key) { FocusRequester() }
     var lastFocusedKey by rememberSaveable { mutableStateOf<String?>(null) }
+    // Card focused in a catalog row, and the one widened to its backdrop after the delay.
+    var focusedPosterKey by remember { mutableStateOf<String?>(null) }
+    var expandedPosterKey by remember { mutableStateOf<String?>(null) }
+    val rowsState = rememberLazyListState()
+    LaunchedEffect(focusedPosterKey, settings.expandFocusedPoster, settings.expandDelaySeconds, rowsState.isScrollInProgress) {
+        // Always collapse first: moving the focus or scrolling shrinks the expanded card.
+        expandedPosterKey = null
+        val key = focusedPosterKey ?: return@LaunchedEffect
+        if (!settings.expandFocusedPoster || rowsState.isScrollInProgress) return@LaunchedEffect
+        delay((settings.expandDelaySeconds * 1_000L).coerceAtLeast(MIN_EXPAND_DELAY_MS))
+        expandedPosterKey = key
+        log.d { "Focused poster expanded to its backdrop" }
+    }
 
     val defaultHero = remember(model.heroItems, model.continueWatching) {
         model.continueWatching.firstOrNull()?.let { heroOf(it, subtitle = null) }
@@ -181,12 +207,18 @@ private fun TvHomeContent(model: TvHomeModel) {
     fun onCardFocused(key: String, hero: HeroInfo) {
         lastFocusedKey = key
         focusedHero = hero
+        focusedPosterKey = null
+    }
+
+    fun onPosterFocused(key: String, hero: HeroInfo) {
+        onCardFocused(key, hero)
+        focusedPosterKey = key
     }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-        // NuvioTV keeps the rows in the bottom 52% of the screen.
-        val heroHeight = maxHeight * 0.48f
-        HeroBackdrop(url = displayedHero?.backdrop)
+        // NuvioTV keeps the rows in the bottom 52% of the screen (49% with landscape posters).
+        val heroHeight = maxHeight * (1f - if (settings.landscapePosters) 0.49f else 0.52f)
+        HeroBackdrop(url = displayedHero?.backdrop, fullScreen = settings.heroFullScreenBackdrop)
 
         Column(modifier = Modifier.fillMaxSize()) {
             HeroInfoPanel(
@@ -199,12 +231,14 @@ private fun TvHomeContent(model: TvHomeModel) {
                 localizedContinueWatchingSubtitle(item, compact = true)
             }
             LazyColumn(
-                state = rememberLazyListState(),
+                state = rowsState,
                 contentPadding = PaddingValues(bottom = 48.dp),
                 verticalArrangement = Arrangement.spacedBy(TvDimens.rowGap - TvDimens.rowVerticalPadding * 2),
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
+                    // Focus leaving the rows (sidebar, top bar) collapses the expanded poster.
+                    .onFocusChanged { state -> if (!state.hasFocus) focusedPosterKey = null }
                     .focusRestorer(),
             ) {
                 if (model.continueWatching.isNotEmpty()) {
@@ -213,7 +247,12 @@ private fun TvHomeContent(model: TvHomeModel) {
                             title = stringResource(R.string.tv_home_continue_watching),
                             items = model.continueWatching,
                             keyPrefix = "cw",
+                            upcoming = false,
                             model = model,
+                            settings = settings,
+                            metrics = metrics,
+                            useEpisodeThumbnails = continueWatchingPrefs.useEpisodeThumbnails,
+                            blurNextUp = continueWatchingPrefs.blurNextUp,
                             subtitle = continueWatchingSubtitle,
                             requesterFor = ::requesterFor,
                             onFocused = ::onCardFocused,
@@ -226,7 +265,12 @@ private fun TvHomeContent(model: TvHomeModel) {
                             title = stringResource(R.string.tv_home_upcoming),
                             items = model.upcoming,
                             keyPrefix = "up",
+                            upcoming = true,
                             model = model,
+                            settings = settings,
+                            metrics = metrics,
+                            useEpisodeThumbnails = continueWatchingPrefs.useEpisodeThumbnails,
+                            blurNextUp = continueWatchingPrefs.blurNextUp,
                             subtitle = continueWatchingSubtitle,
                             requesterFor = ::requesterFor,
                             onFocused = ::onCardFocused,
@@ -238,13 +282,20 @@ private fun TvHomeContent(model: TvHomeModel) {
                         is TvHomeRow.Catalog -> CatalogRow(
                             row = row,
                             model = model,
+                            settings = settings,
+                            metrics = metrics,
+                            expandedKey = expandedPosterKey,
                             requesterFor = ::requesterFor,
                             onFocused = ::onCardFocused,
+                            onPosterFocused = ::onPosterFocused,
                         )
                         is TvHomeRow.Folders -> FoldersRow(
                             row = row,
                             model = model,
+                            settings = settings,
+                            metrics = metrics,
                             requesterFor = ::requesterFor,
+                            onFocused = { focusedPosterKey = null },
                         )
                     }
                 }
@@ -254,17 +305,22 @@ private fun TvHomeContent(model: TvHomeModel) {
 }
 
 @Composable
-private fun HeroBackdrop(url: String?) {
+private fun HeroBackdrop(url: String?, fullScreen: Boolean) {
     val background = MaterialTheme.nuvio.colors.background
     Box(modifier = Modifier.fillMaxSize()) {
         Crossfade(
             targetState = url,
             animationSpec = tween(450),
             label = "tvHomeBackdrop",
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .fillMaxWidth(0.72f)
-                .fillMaxHeight(0.72f),
+            // "Fullscreen hero backdrop" (NuvioTV): the artwork fills the whole screen.
+            modifier = if (fullScreen) {
+                Modifier.fillMaxSize()
+            } else {
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .fillMaxWidth(0.72f)
+                    .fillMaxHeight(0.72f)
+            },
         ) { backdrop ->
             if (!backdrop.isNullOrBlank()) {
                 AsyncImage(
@@ -359,7 +415,12 @@ private fun ContinueWatchingRow(
     title: String,
     items: List<ContinueWatchingItem>,
     keyPrefix: String,
+    upcoming: Boolean,
     model: TvHomeModel,
+    settings: TvLayoutSettings,
+    metrics: TvCardMetrics,
+    useEpisodeThumbnails: Boolean,
+    blurNextUp: Boolean,
     subtitle: @Composable (ContinueWatchingItem) -> String,
     requesterFor: (String) -> FocusRequester,
     onFocused: (String, HeroInfo) -> Unit,
@@ -368,16 +429,13 @@ private fun ContinueWatchingRow(
         items(items, key = { item -> "$keyPrefix:${continueWatchingKey(item)}" }) { item ->
             val key = "$keyPrefix:${continueWatchingKey(item)}"
             val itemSubtitle = subtitle(item)
-            TvLandscapeCard(
-                imageUrl = item.imageUrl ?: item.background ?: item.poster,
-                title = item.title,
-                subtitle = itemSubtitle,
-                progress = item.progressFraction.takeIf { !item.isNextUp && it > 0f },
-                badge = when {
-                    item.isNewSeasonRelease || item.isReleaseAlert -> stringResource(R.string.tv_new_episode)
-                    item.isNextUp -> stringResource(R.string.tv_up_next)
-                    else -> null
-                },
+            TvContinueWatchingCard(
+                item = item,
+                style = settings.continueWatchingStyle,
+                metrics = metrics,
+                useEpisodeThumbnails = useEpisodeThumbnails,
+                blurNextUp = blurNextUp,
+                upcoming = upcoming,
                 onClick = { model.onContinueWatchingClick(item) },
                 onLongClick = model.onContinueWatchingLongClick?.let { longClick -> { longClick(item) } },
                 onFocused = { onFocused(key, heroOf(item, itemSubtitle)) },
@@ -391,23 +449,26 @@ private fun ContinueWatchingRow(
 private fun CatalogRow(
     row: TvHomeRow.Catalog,
     model: TvHomeModel,
+    settings: TvLayoutSettings,
+    metrics: TvCardMetrics,
+    expandedKey: String?,
     requesterFor: (String) -> FocusRequester,
     onFocused: (String, HeroInfo) -> Unit,
+    onPosterFocused: (String, HeroInfo) -> Unit,
 ) {
-    val posterStyle = rememberTvPosterCardStyle()
-    val landscape = posterStyle.showsLandscape(row.items)
+    val landscape = settings.showsLandscape(row.items)
     TvContentRow(title = row.section.title) {
         items(row.items, key = { item -> "${row.key}:${item.stableKey()}" }) { item ->
             val key = "${row.key}:${item.stableKey()}"
             val focusModifier = Modifier.focusRequester(requesterFor(key))
             if (landscape) {
-                val artwork = posterStyle.landscapeArtwork(item)
-                TvLandscapeCard(
-                    imageUrl = artwork.imageUrl,
-                    logoUrl = artwork.logoUrl,
-                    fitImage = artwork.fitImage,
+                TvRowLandscapeCard(
+                    artwork = settings.landscapeArtwork(item),
                     title = item.name,
-                    subtitle = null,
+                    width = metrics.landscapeWidth,
+                    height = metrics.landscapeHeight,
+                    shape = metrics.shape,
+                    showLabel = settings.posterLabels,
                     watched = model.isPosterWatched(item),
                     onClick = { model.onPosterClick(item) },
                     onLongClick = model.onPosterLongClick?.let { longClick -> { longClick(item) } },
@@ -415,15 +476,23 @@ private fun CatalogRow(
                     modifier = focusModifier,
                 )
             } else {
-                TvPosterCard(
+                val square = item.posterShape == PosterShape.Square
+                // Only portrait posters with a real backdrop expand (NuvioTV: catalog items only).
+                val expandedArtwork = if (square) null else settings.landscapeArtwork(item).takeUnless { it.fitImage }
+                TvRowPosterCard(
                     imageUrl = item.poster,
                     title = item.name,
+                    width = if (square) metrics.squareSize else metrics.posterWidth,
+                    height = if (square) metrics.squareSize else metrics.posterHeight,
+                    shape = metrics.shape,
+                    showLabel = settings.posterLabels,
                     watched = model.isPosterWatched(item),
-                    width = if (item.posterShape == PosterShape.Square) TvSquareTileSize else TvDimens.posterWidth,
-                    aspectRatio = if (item.posterShape == PosterShape.Square) 1f else TvPosterAspectRatio,
+                    expandedWidth = metrics.expandedPosterWidth,
+                    expanded = expandedKey == key,
+                    expandedArtwork = expandedArtwork,
                     onClick = { model.onPosterClick(item) },
                     onLongClick = model.onPosterLongClick?.let { longClick -> { longClick(item) } },
-                    onFocused = { onFocused(key, heroOf(item)) },
+                    onFocused = { onPosterFocused(key, heroOf(item)) },
                     modifier = focusModifier,
                 )
             }
@@ -432,7 +501,9 @@ private fun CatalogRow(
         if (row.canOpenCatalog && onCatalogClick != null) {
             item(key = "${row.key}:see_all") {
                 SeeAllTile(
-                    landscape = landscape,
+                    width = if (landscape) metrics.landscapeWidth else metrics.posterWidth,
+                    height = if (landscape) metrics.landscapeHeight else metrics.posterHeight,
+                    shape = metrics.shape,
                     onClick = { onCatalogClick(row.section) },
                 )
             }
@@ -444,7 +515,10 @@ private fun CatalogRow(
 private fun FoldersRow(
     row: TvHomeRow.Folders,
     model: TvHomeModel,
+    settings: TvLayoutSettings,
+    metrics: TvCardMetrics,
     requesterFor: (String) -> FocusRequester,
+    onFocused: () -> Unit,
 ) {
     val onFolderClick = model.onFolderClick ?: return
     // The folder's own tile shape (collection editor) wins over the global landscape posters setting.
@@ -454,21 +528,29 @@ private fun FoldersRow(
             val modifier = Modifier.focusRequester(requesterFor(key))
             val square = folder.tileShape.equals("square", ignoreCase = true)
             if (folder.isPosterTile() || square) {
-                TvPosterCard(
+                TvRowPosterCard(
                     imageUrl = folder.coverImageUrl,
                     title = folder.title,
+                    width = if (square) metrics.squareSize else metrics.posterWidth,
+                    height = if (square) metrics.squareSize else metrics.posterHeight,
+                    shape = metrics.shape,
+                    showLabel = settings.posterLabels,
                     watched = false,
-                    width = if (square) TvSquareTileSize else TvDimens.posterWidth,
-                    aspectRatio = if (square) 1f else TvPosterAspectRatio,
                     onClick = { onFolderClick(row.collection.id, folder.id) },
+                    onFocused = onFocused,
                     modifier = modifier,
                 )
             } else {
-                TvLandscapeCard(
-                    imageUrl = folder.coverImageUrl,
+                TvRowLandscapeCard(
+                    artwork = TvLandscapeArtwork(imageUrl = folder.coverImageUrl, logoUrl = null, customLandscape = true),
                     title = folder.title,
-                    subtitle = null,
+                    width = metrics.landscapeWidth,
+                    height = metrics.landscapeHeight,
+                    shape = metrics.shape,
+                    showLabel = settings.posterLabels,
+                    watched = false,
                     onClick = { onFolderClick(row.collection.id, folder.id) },
+                    onFocused = onFocused,
                     modifier = modifier,
                 )
             }
@@ -477,13 +559,19 @@ private fun FoldersRow(
 }
 
 @Composable
-private fun SeeAllTile(landscape: Boolean, onClick: () -> Unit) {
+private fun SeeAllTile(width: Dp, height: Dp, shape: Shape, onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
     Box(
         modifier = Modifier
-            .width(if (landscape) TvDimens.landscapeWidth else TvDimens.posterWidth)
-            .aspectRatio(if (landscape) 16f / 9f else 2f / 3f)
-            .tvFocusable(shape = TvCardShape, onClick = onClick, onFocusChange = { focused = it })
+            .width(width)
+            .height(height)
+            .tvFocusable(
+                shape = shape,
+                onClick = onClick,
+                focusedScale = 1f,
+                borderWidth = TvRowCardFocusBorder,
+                onFocusChange = { focused = it },
+            )
             .background(if (focused) Color.White.copy(alpha = 0.18f) else MaterialTheme.nuvio.colors.surfaceCard),
         contentAlignment = Alignment.Center,
     ) {

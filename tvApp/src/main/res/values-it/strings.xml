@@ -39,6 +39,8 @@
     <string name="tv_details_collection">Collezione</string>
     <string name="tv_details_cast">Cast</string>
     <string name="tv_details_unavailable">Non ancora disponibile</string>
+    <string name="tv_details_expand_overview">Mostra tutta la trama</string>
+    <string name="tv_details_collapse_overview">Mostra meno</string>
     <string name="tv_details_hint_manual">Tieni premuto OK per scegliere la sorgente</string>
     <string name="tv_details_creator">Creata da %1$s</string>
     <string name="tv_details_director">Regia di %1$s</string>

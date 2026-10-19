@@ -38,6 +38,8 @@ import com.nuvio.app.core.ui.dismissNuvioBottomSheet
 import com.nuvio.app.core.ui.labelRes
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.Res
+import nuvio.composeapp.generated.resources.tv_layout_settings_description
+import nuvio.composeapp.generated.resources.tv_layout_settings_title
 import nuvio.composeapp.generated.resources.cd_selected
 import nuvio.composeapp.generated.resources.collections_header
 import nuvio.composeapp.generated.resources.compose_player_episode_code_full
@@ -108,6 +110,8 @@ internal fun LazyListScope.appearanceSettingsContent(
     onCollectionsClick: () -> Unit,
     onContinueWatchingClick: () -> Unit,
     onPosterCustomizationClick: () -> Unit,
+    /** TV app only: opens the TV layout page (cards, rows, sidebar). */
+    onTvLayoutClick: (() -> Unit)? = null,
 ) {
     item {
         SettingsSection(
@@ -316,6 +320,15 @@ internal fun LazyListScope.appearanceSettingsContent(
             isTablet = isTablet,
         ) {
             SettingsGroup(isTablet = isTablet) {
+                if (onTvLayoutClick != null) {
+                    SettingsNavigationRow(
+                        title = stringResource(Res.string.tv_layout_settings_title),
+                        description = stringResource(Res.string.tv_layout_settings_description),
+                        isTablet = isTablet,
+                        onClick = onTvLayoutClick,
+                    )
+                    SettingsGroupDivider(isTablet = isTablet)
+                }
                 SettingsNavigationRow(
                     title = stringResource(Res.string.compose_settings_page_homescreen),
                     description = stringResource(Res.string.settings_content_discovery_homescreen_description),

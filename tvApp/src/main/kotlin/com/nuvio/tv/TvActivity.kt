@@ -7,6 +7,7 @@ import co.touchlab.kermit.Logger
 import com.nuvio.app.MainActivity
 import com.nuvio.app.tv.TvAppRuntime
 import com.nuvio.tv.player.TvPlayerKeyRouter
+import com.nuvio.tv.settings.TvLayoutSettingsRepository
 
 /**
  * Android TV entry point. [MainActivity] performs the whole platform initialization
@@ -18,6 +19,7 @@ class TvActivity : MainActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         TvAppRuntime.isTvApp = true
         super.onCreate(savedInstanceState)
+        TvLayoutSettingsRepository.initialize(this)
         Logger.withTag("TvApp").i { "Starting Android TV shell" }
         // Replaces the phone content set by MainActivity: the view is not attached yet,
         // so the phone UI is never composed.

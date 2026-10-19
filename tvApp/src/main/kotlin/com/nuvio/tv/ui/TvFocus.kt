@@ -85,7 +85,8 @@ fun Modifier.tvFocusable(
             scaleX = scale
             scaleY = scale
         }
-        .then(if (focused) Modifier.shadow(elevation = 18.dp, shape = shape, clip = false) else Modifier)
+        // Cards that keep their size on focus (NuvioTV home rows) only get the ring.
+        .then(if (focused && focusedScale > 1f) Modifier.shadow(elevation = 18.dp, shape = shape, clip = false) else Modifier)
         .border(
             width = if (focused) borderWidth else 0.dp,
             color = if (focused) ringColor else Color.Transparent,

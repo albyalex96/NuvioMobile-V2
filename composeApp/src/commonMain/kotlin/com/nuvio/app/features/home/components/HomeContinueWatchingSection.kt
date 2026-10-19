@@ -167,7 +167,7 @@ private fun ContinueWatchingItem.continueWatchingArtworkUrl(
     )
 }
 
-private fun ContinueWatchingItem.continueWatchingPosterArtworkUrl(
+internal fun ContinueWatchingItem.continueWatchingPosterArtworkUrl(
     useEpisodeThumbnails: Boolean,
 ): String? {
     if (seasonNumber == null || episodeNumber == null) {
@@ -188,7 +188,7 @@ private fun ContinueWatchingItem.continueWatchingPosterArtworkUrl(
     )
 }
 
-private fun ContinueWatchingItem.continueWatchingCardArtworkUrl(
+internal fun ContinueWatchingItem.continueWatchingCardArtworkUrl(
     useEpisodeThumbnails: Boolean,
     preferBackdropForNextUp: Boolean,
 ): String? = when {

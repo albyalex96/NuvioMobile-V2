@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- TV layout settings page (ported from NuvioTV "Layout Settings"). -->
+    <string name="tv_layout_open">Open</string>
+    <string name="tv_layout_closed">Closed</string>
+    <string name="tv_layout_custom">Custom</string>
+    <string name="tv_layout_reset_default">Reset to default</string>
+    <string name="tv_layout_more_options">More options</string>
+    <string name="tv_layout_decrease">Decrease</string>
+    <string name="tv_layout_increase">Increase</string>
+
+    <string name="tv_layout_section_home">Home layout</string>
+    <string name="tv_layout_section_home_desc">Hero backdrop of the home.</string>
+    <string name="tv_layout_fullscreen_hero_backdrop">Fullscreen hero backdrop</string>
+    <string name="tv_layout_fullscreen_hero_backdrop_sub">Expand the hero backdrop to fill the entire screen.</string>
+
+    <string name="tv_layout_section_content">Home content</string>
+    <string name="tv_layout_section_content_desc">Control what appears on the home rows.</string>
+    <string name="tv_layout_poster_labels">Show poster labels</string>
+    <string name="tv_layout_poster_labels_sub">Show titles under the posters of the home rows.</string>
+    <string name="tv_layout_catalog_type">Show catalog type</string>
+    <string name="tv_layout_catalog_type_sub">Show type suffix next to catalog name (Movie/Series).</string>
+    <string name="tv_layout_hide_unreleased">Hide unreleased content</string>
+    <string name="tv_layout_hide_unreleased_sub">Hide movies and shows that haven\'t been released yet.</string>
+    <string name="tv_layout_home_more_sub">Catalogs, order and hero sources (Settings → Home screen).</string>
+
+    <string name="tv_layout_section_sidebar">Sidebar &amp; navigation</string>
+    <string name="tv_layout_section_sidebar_desc">Floating pill and sidebar style.</string>
+    <string name="tv_layout_hide_floating_pill">Hide floating pill</string>
+    <string name="tv_layout_hide_floating_pill_sub">Hide the floating navigation indicator at the top left of the pages.</string>
+    <string name="tv_layout_sidebar_blur">Sidebar blur</string>
+    <string name="tv_layout_sidebar_blur_sub">Blur the page behind the sidebar and the floating pill.</string>
+    <string name="tv_layout_sidebar_top_bar_note">The glass top bar is active (Appearance → Navigation bar): these options apply to the sidebar only.</string>
+
+    <string name="tv_layout_section_continue_watching">Continue watching</string>
+    <string name="tv_layout_section_continue_watching_desc">Settings for the Continue Watching section.</string>
+    <string name="tv_layout_cw_enabled">Show Continue Watching</string>
+    <string name="tv_layout_cw_enabled_sub">Show the Continue Watching row on the home screen.</string>
+    <string name="tv_layout_cw_card_style">Card style</string>
+    <string name="tv_layout_cw_card_style_card">Card</string>
+    <string name="tv_layout_cw_card_style_wide">Wide</string>
+    <string name="tv_layout_cw_card_style_poster">Poster</string>
+    <string name="tv_layout_use_episode_thumbnails_cw">Use episode thumbnails</string>
+    <string name="tv_layout_use_episode_thumbnails_cw_sub">Use episode thumbnails as default image. When disabled, uses backdrop.</string>
+    <string name="tv_layout_blur_cw_next_up">Blur unwatched in Continue Watching</string>
+    <string name="tv_layout_blur_cw_next_up_sub">Blur unwatched episode thumbnails in Continue Watching to avoid spoilers.</string>
+    <string name="tv_layout_next_up_furthest_episode">Up next from furthest episode</string>
+    <string name="tv_layout_next_up_furthest_episode_sub">Show next episode based on the furthest watched episode. Disable for rewatches to use the most recently watched episode instead.</string>
+    <string name="tv_layout_show_unaired_next_up">Show unaired next up episodes</string>
+    <string name="tv_layout_show_unaired_next_up_sub">Include upcoming episodes in Continue Watching before they air.</string>
+    <string name="tv_layout_cw_sort_mode">Sort order</string>
+    <string name="tv_layout_cw_sort_mode_sub">How Continue Watching items are arranged.</string>
+    <string name="tv_layout_cw_sort_default">Default</string>
+    <string name="tv_layout_cw_sort_streaming">Streaming style</string>
+    <string name="tv_layout_cw_sort_split_upcoming">Separate upcoming row</string>
+    <string name="tv_layout_cw_more_sub">Resume prompt and other options (Settings → Continue watching).</string>
+
+    <string name="tv_layout_section_focused">Focused poster</string>
+    <string name="tv_layout_section_focused_desc">Advanced behavior for focused poster cards.</string>
+    <string name="tv_layout_expand_poster">Expand focused poster to backdrop</string>
+    <string name="tv_layout_expand_poster_sub">Expand focused poster after idle delay.</string>
+    <string name="tv_layout_expand_delay">Backdrop expand delay</string>
+    <string name="tv_layout_expand_delay_sub">How long to wait before expanding focused cards.</string>
+    <string name="tv_layout_seconds">%1$d s</string>
+
+    <string name="tv_layout_section_card_style">Poster card</string>
+    <string name="tv_layout_section_card_style_desc">Tune card width and corner radius.</string>
+    <string name="tv_layout_card_width">Width</string>
+    <string name="tv_layout_card_radius">Corner radius</string>
+    <string name="tv_layout_preset_compact">Compact</string>
+    <string name="tv_layout_preset_dense">Dense</string>
+    <string name="tv_layout_preset_standard">Standard</string>
+    <string name="tv_layout_preset_balanced">Balanced</string>
+    <string name="tv_layout_preset_comfort">Comfort</string>
+    <string name="tv_layout_preset_large">Large</string>
+    <string name="tv_layout_preset_sharp">Sharp</string>
+    <string name="tv_layout_preset_subtle">Subtle</string>
+    <string name="tv_layout_preset_classic">Classic</string>
+    <string name="tv_layout_preset_rounded">Rounded</string>
+    <string name="tv_layout_preset_pill">Pill</string>
+    <string name="tv_layout_landscape_posters">Landscape poster mode</string>
+    <string name="tv_layout_landscape_posters_sub">Use landscape cards in the home rows.</string>
+    <string name="tv_layout_always_show_landscape_clearlogo">Always backdrop with logo for landscape posters</string>
+    <string name="tv_layout_always_show_landscape_clearlogo_sub">Ignore landscape poster from addon and use backdrop with clearlogo overlay instead.</string>
+
+    <string name="tv_layout_section_card_depth">Card depth effect</string>
+    <string name="tv_layout_section_card_depth_desc">Edge light and sheen on image cards.</string>
+    <string name="tv_layout_card_depth_enabled">Enable depth effect</string>
+    <string name="tv_layout_card_depth_enabled_sub">Adds a lit top edge and a soft sheen to image cards for a subtle sense of depth.</string>
+    <string name="tv_layout_card_depth_edge">Edge glow</string>
+    <string name="tv_layout_card_depth_sheen">Top sheen</string>
+    <string name="tv_layout_card_depth_edge_coverage">Edge coverage</string>
+    <string name="tv_layout_card_depth_edge_subtle">Subtle</string>
+    <string name="tv_layout_card_depth_edge_balanced">Balanced</string>
+    <string name="tv_layout_card_depth_edge_bold">Bold</string>
+    <string name="tv_layout_card_depth_sheen_off">Off</string>
+    <string name="tv_layout_card_depth_sheen_soft">Soft</string>
+    <string name="tv_layout_card_depth_sheen_bright">Bright</string>
+    <string name="tv_layout_card_depth_coverage_top">Top only</string>
+    <string name="tv_layout_card_depth_coverage_half">Half</string>
+    <string name="tv_layout_card_depth_coverage_full">Full outline</string>
+    <string name="tv_layout_profile_note">Shared with the profile: the same option also changes the phone app.</string>
+
+    <string name="tv_layout_section_detail">Detail page</string>
+    <string name="tv_layout_section_detail_desc">Settings for the detail and episode screens.</string>
+    <string name="tv_layout_section_streams">Streams</string>
+    <string name="tv_layout_section_streams_desc">Display settings for stream results and player source panels.</string>
+    <string name="tv_layout_open_page">Open settings</string>
+
+    <!-- Continue watching cards (NuvioTV ContinueWatchingCard). -->
+    <string name="tv_cw_resume">Resume</string>
+    <string name="tv_cw_percent_watched">%1$d%% watched</string>
+    <string name="tv_cw_hours_min_left">%1$dh %2$dm left</string>
+    <string name="tv_cw_min_left">%1$dm left</string>
+    <string name="tv_cw_next_up">Next up</string>
+    <string name="tv_cw_next_up_short">Next</string>
+    <string name="tv_cw_new_episode">New episode</string>
+    <string name="tv_cw_new_episode_short">New</string>
+    <string name="tv_cw_new_season">New season</string>
+    <string name="tv_cw_upcoming">Upcoming</string>
+</resources>

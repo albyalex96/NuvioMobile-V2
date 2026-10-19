@@ -11,4 +11,6 @@
     <string name="settings_top_nav_bar_compact_description">Solo icone.</string>
     <string name="settings_nav_bar_sidebar">Barra laterale</string>
     <string name="settings_top_nav_bar_hint">Premi su dalla parte alta di una pagina, o Indietro, per raggiungere la barra.</string>
+    <string name="tv_layout_settings_title">Layout TV</string>
+    <string name="tv_layout_settings_description">Dimensione e forma delle card, righe della Home, Continua a guardare e barra laterale.</string>
 </resources>

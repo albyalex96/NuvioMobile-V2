@@ -72,6 +72,21 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.graphicsLayer
+import com.nuvio.app.core.ui.NuvioCardDepthSurface
+import com.nuvio.app.core.ui.nuvioCardDepth
+import com.nuvio.app.features.details.MetaEpisodeCardStyle
+import com.nuvio.app.features.details.MetaScreenSettingsRepository
+import com.nuvio.app.features.details.MetaScreenSettingsUiState
 import co.touchlab.kermit.Logger
 import coil3.compose.AsyncImage
 import com.nuvio.app.core.format.formatEpisodeCodeWithSelectedFormat
@@ -89,10 +104,11 @@ import com.nuvio.tv.R
 import com.nuvio.tv.ui.TvContentRow
 import com.nuvio.tv.ui.TvDimens
 import com.nuvio.tv.ui.showsLandscape
-import com.nuvio.tv.ui.rememberTvPosterCardStyle
+import com.nuvio.tv.settings.rememberTvLayoutSettings
+import com.nuvio.tv.ui.TvRowLandscapeCard
+import com.nuvio.tv.ui.TvRowPosterCard
+import com.nuvio.tv.ui.cardMetrics
 import com.nuvio.tv.ui.landscapeArtwork
-import com.nuvio.tv.ui.TvLandscapeCard
-import com.nuvio.tv.ui.TvPosterCard
 import com.nuvio.tv.ui.TvSectionTitle
 import com.nuvio.tv.ui.tvFocusable
 import kotlinx.coroutines.delay
@@ -109,6 +125,12 @@ private val PlayButtonShape = RoundedCornerShape(32.dp)
 private val CastPhotoSize = 100.dp
 private val CastItemWidth = 150.dp
 private const val SEASON_FOCUS_SELECT_DELAY_MS = 150L
+// Expandable plot of the phone episode cards (EPISODE_OVERVIEW_ANIMATION_MS in DetailSeriesContent).
+private const val EPISODE_OVERVIEW_ANIMATION_MS = 280
+private const val EPISODE_OVERVIEW_COLLAPSED_LINES = 3
+private val OverviewToggleSize = 36.dp
+private val EpisodeListArtworkWidth = 240.dp
+private val EpisodeTextShadow = Shadow(color = Color.Black, offset = Offset(0f, 1f), blurRadius = 1f)
 
 /** TV detail page, recreated from NuvioTV: full-screen backdrop, bottom-aligned hero, seasons and episodes below. */
 @Composable
@@ -117,6 +139,14 @@ fun TvDetailsScreen(model: TvDetailsModel) {
     val playRequester = remember { FocusRequester() }
     val listState = rememberLazyListState()
     val scrolledPastHero by remember { derivedStateOf { listState.firstVisibleItemIndex > 0 } }
+    // Episode layout, blur and ratings follow the shared detail page settings (also on the phone).
+    LaunchedEffect(Unit) { MetaScreenSettingsRepository.ensureLoaded() }
+    val metaSettings by MetaScreenSettingsRepository.uiState.collectAsState()
+    val seasons = remember(model.seasons) { orderedSeasons(model.seasons) }
+    var selectedSeason by rememberSaveable(meta.id) { mutableStateOf<Int?>(null) }
+    val season = seasons.firstOrNull { it.number == selectedSeason }
+        ?: seasons.firstOrNull { it.number == model.primaryActionSeason }
+        ?: seasons.firstOrNull()
 
     // "Watch a random episode" from a card menu: play one as soon as the episodes are loaded.
     LaunchedEffect(meta.id, model.seasons) {
@@ -163,10 +193,14 @@ fun TvDetailsScreen(model: TvDetailsModel) {
                         .height(heroHeight),
                 )
             }
-            if (model.seasons.isNotEmpty()) {
-                item(key = "episodes") {
-                    EpisodesSection(model)
-                }
+            if (season != null) {
+                episodesSection(
+                    model = model,
+                    seasons = seasons,
+                    season = season,
+                    onSeasonSelected = { selectedSeason = it },
+                    settings = metaSettings,
+                )
             }
             if (meta.cast.isNotEmpty()) {
                 item(key = "cast") {
@@ -567,31 +601,36 @@ private fun MetaBadge(text: String, color: Color) {
     )
 }
 
-@Composable
-private fun EpisodesSection(model: TvDetailsModel) {
-    // Specials (season 0) go last, like NuvioTV.
-    val seasons = remember(model.seasons) {
-        model.seasons.filter { it.number > 0 }.sortedBy { it.number } + model.seasons.filter { it.number <= 0 }
-    }
-    var selectedSeason by rememberSaveable(model.meta.id) {
-        mutableStateOf(
-            model.primaryActionSeason?.takeIf { season -> seasons.any { it.number == season } }
-                ?: seasons.first().number,
-        )
-    }
-    val season = seasons.firstOrNull { it.number == selectedSeason } ?: seasons.first()
+/** Seasons in NuvioTV order: specials (season 0) go last. */
+private fun orderedSeasons(seasons: List<TvSeason>): List<TvSeason> =
+    seasons.filter { it.number > 0 }.sortedBy { it.number } + seasons.filter { it.number <= 0 }
 
-    Column(modifier = Modifier.fillMaxWidth()) {
+/**
+ * Season tabs and episodes, following the shared detail page settings (Settings -> Detail page):
+ * horizontal cards or a vertical list, blurred unwatched artwork and the episode ratings rule.
+ */
+private fun LazyListScope.episodesSection(
+    model: TvDetailsModel,
+    seasons: List<TvSeason>,
+    season: TvSeason,
+    onSeasonSelected: (Int) -> Unit,
+    settings: MetaScreenSettingsUiState,
+) {
+    item(key = "season_tabs") {
         if (seasons.size > 1) {
-            SeasonTabs(
-                seasons = seasons,
-                selectedSeason = season.number,
-                onSeasonSelected = { selectedSeason = it },
-            )
+            SeasonTabs(seasons = seasons, selectedSeason = season.number, onSeasonSelected = onSeasonSelected)
         } else {
             Spacer(modifier = Modifier.height(12.dp))
         }
-        EpisodesRow(model = model, season = season)
+    }
+    if (settings.episodeCardStyle == MetaEpisodeCardStyle.List) {
+        items(season.episodes, key = { episode -> "episode:${episode.season}:${episode.episode}:${episode.id}" }) { episode ->
+            EpisodeListRow(model = model, episode = episode, settings = settings)
+        }
+    } else {
+        item(key = "episodes_row") {
+            EpisodesRow(model = model, season = season, settings = settings)
+        }
     }
 }
 
@@ -654,7 +693,7 @@ private fun SeasonTabs(
 }
 
 @Composable
-private fun EpisodesRow(model: TvDetailsModel, season: TvSeason) {
+private fun EpisodesRow(model: TvDetailsModel, season: TvSeason, settings: MetaScreenSettingsUiState) {
     val metrics = rememberEpisodeCardMetrics()
     val listState = rememberLazyListState()
     val targetIndex = season.episodes.indexOfFirst { episode ->
@@ -667,10 +706,11 @@ private fun EpisodesRow(model: TvDetailsModel, season: TvSeason) {
         state = listState,
         contentPadding = PaddingValues(horizontal = metrics.rowPadding, vertical = 14.dp),
         horizontalArrangement = Arrangement.spacedBy(metrics.spacing),
+        verticalAlignment = Alignment.Top,
         modifier = Modifier.fillMaxWidth().focusRestorer(),
     ) {
         items(season.episodes, key = { episode -> "${episode.season}:${episode.episode}:${episode.id}" }) { episode ->
-            EpisodeCard(model = model, episode = episode, metrics = metrics)
+            EpisodeCard(model = model, episode = episode, metrics = metrics, settings = settings)
         }
     }
 }
@@ -690,11 +730,19 @@ private fun rememberEpisodeCardMetrics(): EpisodeCardMetrics {
     }
 }
 
-/** Episode card of NuvioTV: artwork with a bottom scrim, episode badge, title, plot and info row. */
+/** Texts and state of an episode shared by the card and the list row. */
+private class EpisodeInfo(
+    val code: String?,
+    val date: String?,
+    val runtime: String?,
+    val rating: String?,
+    val progress: Float?,
+    val watched: Boolean,
+    val blurArtwork: Boolean,
+)
+
 @Composable
-private fun EpisodeCard(model: TvDetailsModel, episode: MetaVideo, metrics: EpisodeCardMetrics) {
-    var focused by remember { mutableStateOf(false) }
-    val progress = model.episodeProgress(episode)
+private fun rememberEpisodeInfo(model: TvDetailsModel, episode: MetaVideo, settings: MetaScreenSettingsUiState): EpisodeInfo {
     val watched = model.isEpisodeWatched(episode)
     val code = formatEpisodeCodeWithSelectedFormat(episode.season, episode.episode)
         ?: if (episode.season != null && episode.episode != null) {
@@ -702,175 +750,382 @@ private fun EpisodeCard(model: TvDetailsModel, episode: MetaVideo, metrics: Epis
         } else {
             null
         }
-    val date = episode.released?.takeIf { it.isNotBlank() }?.let(::formatReleaseDateForDisplay)
-    val runtime = episode.runtime?.takeIf { it > 0 }?.let { stringResource(R.string.tv_details_runtime_minutes, it) }
-    val rating = episode.rating?.takeIf { it > 0.0 }?.let { "%.1f".format(it) }
-    val textShadow = Shadow(color = Color.Black, offset = Offset(0f, 1f), blurRadius = 1f)
-    val muted = MaterialTheme.nuvio.colors.textSecondary
+    return EpisodeInfo(
+        code = code,
+        date = episode.released?.takeIf { it.isNotBlank() }?.let(::formatReleaseDateForDisplay),
+        runtime = episode.runtime?.takeIf { it > 0 }?.let { stringResource(R.string.tv_details_runtime_minutes, it) },
+        // "Episode ratings" of the detail page settings (all / hidden / only watched episodes).
+        rating = episode.rating
+            ?.takeIf { it > 0.0 && settings.episodeRatingsVisibility.showRating(watched) }
+            ?.let { "%.1f".format(it) },
+        progress = model.episodeProgress(episode),
+        watched = watched,
+        blurArtwork = settings.blurUnwatchedEpisodes && !watched,
+    )
+}
 
-    Box(
-        modifier = Modifier
-            .width(metrics.width)
-            .height(metrics.height)
-            .tvFocusable(
-                shape = EpisodeCardShape,
-                onClick = { model.onEpisodeClick(episode) },
-                onLongClick = model.onEpisodeManualClick?.let { manual -> { manual(episode) } },
-                focusedScale = 1f,
-                onFocusChange = { focused = it },
-            )
-            .background(MaterialTheme.nuvio.colors.surfaceCard, EpisodeCardShape),
-    ) {
-        AsyncImage(
-            model = episode.thumbnail ?: model.meta.background,
-            contentDescription = episode.title,
-            contentScale = ContentScale.Crop,
-            alpha = if (episode.available) 1f else 0.5f,
-            modifier = Modifier.fillMaxSize(),
-        )
+/** Episode card of NuvioTV: artwork with a bottom scrim, episode badge, title, plot and info row. */
+@Composable
+private fun EpisodeCard(
+    model: TvDetailsModel,
+    episode: MetaVideo,
+    metrics: EpisodeCardMetrics,
+    settings: MetaScreenSettingsUiState,
+) {
+    var focused by remember { mutableStateOf(false) }
+    val expandState = rememberOverviewExpandState(episode)
+    val info = rememberEpisodeInfo(model, episode, settings)
+
+    Column(modifier = Modifier.width(metrics.width)) {
         Box(
             modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        0f to Color.Transparent,
-                        0.2f to Color.Black.copy(alpha = 0.04f),
-                        0.38f to Color.Black.copy(alpha = 0.26f),
-                        0.54f to Color.Black.copy(alpha = 0.56f),
-                        0.7f to Color.Black.copy(alpha = 0.76f),
-                        0.86f to Color.Black.copy(alpha = 0.88f),
-                        1f to Color.Black.copy(alpha = if (focused) 0.95f else 0.9f),
-                    ),
-                ),
-        )
-        Column(
-            verticalArrangement = Arrangement.spacedBy(5.dp),
-            modifier = Modifier
-                .align(Alignment.BottomStart)
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 18.dp),
+                .animateContentSize(animationSpec = tween(EPISODE_OVERVIEW_ANIMATION_MS))
+                // Expanded: the card grows below the artwork, which keeps its size (like the phone).
+                .then(if (expandState.expanded) Modifier.heightIn(min = metrics.height) else Modifier.height(metrics.height))
+                .then(expandState.downToToggle())
+                .tvFocusable(
+                    shape = EpisodeCardShape,
+                    onClick = { model.onEpisodeClick(episode) },
+                    onLongClick = model.onEpisodeManualClick?.let { manual -> { manual(episode) } },
+                    focusedScale = 1f,
+                    onFocusChange = {
+                        focused = it
+                        expandState.ownerFocused = it
+                    },
+                )
+                .background(MaterialTheme.nuvio.colors.surfaceCard, EpisodeCardShape)
+                .nuvioCardDepth(shape = EpisodeCardShape, surface = NuvioCardDepthSurface.EpisodeCards),
         ) {
-            if (code != null) {
-                Text(
-                    text = code.uppercase(),
-                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold, letterSpacing = 0.9.sp),
-                    color = Color.White.copy(alpha = 0.9f),
-                    maxLines = 1,
-                    modifier = Modifier
-                        .background(Color.Black.copy(alpha = 0.42f), RoundedCornerShape(7.dp))
-                        .padding(horizontal = 8.dp, vertical = 3.dp),
-                )
-            }
-            Text(
-                text = episode.title,
-                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold, shadow = textShadow),
-                color = MaterialTheme.nuvio.colors.textPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            val overview = episode.overview?.trim().orEmpty()
-            if (overview.isNotBlank()) {
-                Text(
-                    text = overview,
-                    style = MaterialTheme.typography.bodySmall.copy(shadow = textShadow, lineHeight = 17.sp),
-                    color = Color.White.copy(alpha = 0.9f),
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            if (runtime != null || rating != null || date != null) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    runtime?.let {
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Outlined.Schedule, contentDescription = null, tint = muted, modifier = Modifier.size(14.dp))
-                            Text(text = it, style = MaterialTheme.typography.labelSmall, color = muted, maxLines = 1)
-                        }
-                    }
-                    rating?.let {
-                        Text(
-                            text = "IMDb $it",
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                            color = Color(0xFFF5C518),
-                            maxLines = 1,
-                        )
-                    }
-                    date?.let {
-                        Text(
-                            text = it,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = muted,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            textAlign = TextAlign.End,
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                }
-            }
-        }
-        if (progress != null && progress > 0f && !watched) {
+            // Fills the area below the artwork when the plot is expanded, continuing the scrim.
             Box(
                 modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(start = 16.dp, end = 16.dp, bottom = 8.dp)
+                    .matchParentSize()
+                    .padding(top = metrics.height)
+                    .background(Color.Black.copy(alpha = 0.92f)),
+            )
+            EpisodeArtwork(
+                model = model,
+                episode = episode,
+                blurred = info.blurArtwork,
+                modifier = Modifier.fillMaxWidth().height(metrics.height),
+            )
+            Box(
+                modifier = Modifier
                     .fillMaxWidth()
-                    .height(4.dp)
-                    .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.45f)),
+                    .height(metrics.height)
+                    .background(
+                        Brush.verticalGradient(
+                            0f to Color.Transparent,
+                            0.2f to Color.Black.copy(alpha = 0.04f),
+                            0.38f to Color.Black.copy(alpha = 0.26f),
+                            0.54f to Color.Black.copy(alpha = 0.56f),
+                            0.7f to Color.Black.copy(alpha = 0.76f),
+                            0.86f to Color.Black.copy(alpha = 0.88f),
+                            1f to Color.Black.copy(alpha = if (focused || expandState.expanded) 0.95f else 0.9f),
+                        ),
+                    ),
+            )
+            Column(
+                verticalArrangement = Arrangement.spacedBy(5.dp),
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 18.dp),
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(progress.coerceIn(0f, 1f))
-                        .height(4.dp)
-                        .background(MaterialTheme.nuvio.colors.accent),
-                )
+                EpisodeCodeBadge(info.code)
+                EpisodeTitle(episode.title)
+                EpisodeOverview(episode = episode, state = expandState)
+                EpisodeInfoRow(info)
+            }
+            EpisodeProgressBar(info, modifier = Modifier.align(Alignment.BottomStart).padding(start = 16.dp, end = 16.dp, bottom = 8.dp))
+            EpisodeStatusBadge(episode = episode, info = info, modifier = Modifier.padding(14.dp))
+        }
+        if (expandState.canExpand) {
+            Box(modifier = Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.CenterEnd) {
+                OverviewToggleButton(state = expandState)
             }
         }
-        when {
-            !episode.available -> Text(
-                text = stringResource(R.string.tv_details_unavailable).uppercase(),
-                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                color = Color.White.copy(alpha = 0.9f),
-                maxLines = 1,
+    }
+}
+
+/**
+ * Vertical "List" layout of the phone (Settings -> Detail page -> episode card style): artwork on
+ * the left, details and the plot on the right, the expand arrow at the end of the row.
+ */
+@Composable
+private fun EpisodeListRow(model: TvDetailsModel, episode: MetaVideo, settings: MetaScreenSettingsUiState) {
+    val expandState = rememberOverviewExpandState(episode)
+    val info = rememberEpisodeInfo(model, episode, settings)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = HeroHorizontalPadding, vertical = 6.dp),
+    ) {
+        Row(
+            modifier = Modifier
+                .weight(1f)
+                .animateContentSize(animationSpec = tween(EPISODE_OVERVIEW_ANIMATION_MS))
+                .then(expandState.rightToToggle())
+                .tvFocusable(
+                    shape = EpisodeCardShape,
+                    onClick = { model.onEpisodeClick(episode) },
+                    onLongClick = model.onEpisodeManualClick?.let { manual -> { manual(episode) } },
+                    focusedScale = 1f,
+                    onFocusChange = { expandState.ownerFocused = it },
+                )
+                .background(MaterialTheme.nuvio.colors.surfaceCard, EpisodeCardShape)
+                .nuvioCardDepth(shape = EpisodeCardShape, surface = NuvioCardDepthSurface.EpisodeCards)
+                .padding(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Box(
                 modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(14.dp)
-                    .background(Color(0xCC5D4037), RoundedCornerShape(7.dp))
-                    .padding(horizontal = 8.dp, vertical = 3.dp),
+                    .width(EpisodeListArtworkWidth)
+                    .aspectRatio(16f / 9f)
+                    .clip(RoundedCornerShape(8.dp)),
+            ) {
+                EpisodeArtwork(model = model, episode = episode, blurred = info.blurArtwork, modifier = Modifier.fillMaxSize())
+                EpisodeProgressBar(info, modifier = Modifier.align(Alignment.BottomStart).padding(horizontal = 8.dp, vertical = 6.dp))
+                EpisodeStatusBadge(episode = episode, info = info, modifier = Modifier.padding(8.dp))
+            }
+            Column(
+                verticalArrangement = Arrangement.spacedBy(5.dp),
+                modifier = Modifier.weight(1f).padding(top = 2.dp, end = 6.dp),
+            ) {
+                EpisodeCodeBadge(info.code)
+                EpisodeTitle(episode.title)
+                EpisodeOverview(episode = episode, state = expandState)
+                EpisodeInfoRow(info)
+            }
+        }
+        // Always laid out so the rows keep the same width; focusable only when the plot overflows.
+        Box(modifier = Modifier.size(OverviewToggleSize)) {
+            if (expandState.canExpand) OverviewToggleButton(state = expandState)
+        }
+    }
+}
+
+/**
+ * Expand state of an episode plot. The arrow button is a separate D-pad target (down from a card,
+ * right from a list row) that can take the focus only from its own episode, so moving down from
+ * a card without a long plot still reaches the next section.
+ */
+@Stable
+private class OverviewExpandState(val toggleRequester: FocusRequester) {
+    var expanded by mutableStateOf(false)
+    var canExpand by mutableStateOf(false)
+    var ownerFocused by mutableStateOf(false)
+    var toggleFocused by mutableStateOf(false)
+
+    fun toggle() {
+        expanded = !expanded
+        log.d { "Episode plot ${if (expanded) "expanded" else "collapsed"}" }
+    }
+
+    fun downToToggle(): Modifier = Modifier.focusProperties {
+        if (canExpand) down = toggleRequester
+    }
+
+    fun rightToToggle(): Modifier = Modifier.focusProperties {
+        if (canExpand) right = toggleRequester
+    }
+}
+
+@Composable
+private fun rememberOverviewExpandState(episode: MetaVideo): OverviewExpandState {
+    val requester = remember { FocusRequester() }
+    return remember(episode.id) { OverviewExpandState(requester) }
+}
+
+@Composable
+private fun OverviewToggleButton(state: OverviewExpandState) {
+    val rotation by animateFloatAsState(
+        targetValue = if (state.expanded) 180f else 0f,
+        animationSpec = tween(EPISODE_OVERVIEW_ANIMATION_MS),
+        label = "episodeOverviewArrow",
+    )
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = Modifier
+            .size(OverviewToggleSize)
+            .focusRequester(state.toggleRequester)
+            .focusProperties { canFocus = state.ownerFocused || state.toggleFocused }
+            .tvFocusable(
+                shape = CircleShape,
+                onClick = state::toggle,
+                focusedScale = 1f,
+                borderWidth = 2.dp,
+                onFocusChange = { state.toggleFocused = it },
             )
-            watched -> Box(
-                contentAlignment = Alignment.Center,
+            .background(if (state.toggleFocused) Color.White else Color.White.copy(alpha = 0.14f), CircleShape),
+    ) {
+        Icon(
+            imageVector = Icons.Filled.KeyboardArrowDown,
+            contentDescription = stringResource(
+                if (state.expanded) R.string.tv_details_collapse_overview else R.string.tv_details_expand_overview,
+            ),
+            tint = if (state.toggleFocused) Color.Black else MaterialTheme.nuvio.colors.textPrimary,
+            modifier = Modifier.size(22.dp).graphicsLayer { rotationZ = rotation },
+        )
+    }
+}
+
+@Composable
+private fun EpisodeArtwork(model: TvDetailsModel, episode: MetaVideo, blurred: Boolean, modifier: Modifier) {
+    AsyncImage(
+        model = episode.thumbnail ?: model.meta.background,
+        contentDescription = episode.title,
+        contentScale = ContentScale.Crop,
+        alpha = if (episode.available) 1f else 0.5f,
+        // "Blur unwatched episodes" of the detail page settings (spoiler protection).
+        modifier = modifier.then(if (blurred) Modifier.blur(18.dp) else Modifier),
+    )
+}
+
+@Composable
+private fun EpisodeCodeBadge(code: String?) {
+    if (code == null) return
+    Text(
+        text = code.uppercase(),
+        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold, letterSpacing = 0.9.sp),
+        color = Color.White.copy(alpha = 0.9f),
+        maxLines = 1,
+        modifier = Modifier
+            .background(Color.Black.copy(alpha = 0.42f), RoundedCornerShape(7.dp))
+            .padding(horizontal = 8.dp, vertical = 3.dp),
+    )
+}
+
+@Composable
+private fun EpisodeTitle(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.ExtraBold, shadow = EpisodeTextShadow),
+        color = MaterialTheme.nuvio.colors.textPrimary,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
+}
+
+/** Plot: three lines, the whole text once expanded; reports whether it is cut. */
+@Composable
+private fun EpisodeOverview(episode: MetaVideo, state: OverviewExpandState) {
+    val overview = episode.overview?.trim().orEmpty()
+    if (overview.isBlank()) return
+    Text(
+        text = overview,
+        style = MaterialTheme.typography.bodySmall.copy(shadow = EpisodeTextShadow, lineHeight = 17.sp),
+        color = Color.White.copy(alpha = 0.9f),
+        maxLines = if (state.expanded) Int.MAX_VALUE else EPISODE_OVERVIEW_COLLAPSED_LINES,
+        overflow = TextOverflow.Ellipsis,
+        onTextLayout = { layout -> if (!state.expanded) state.canExpand = layout.hasVisualOverflow },
+    )
+}
+
+@Composable
+private fun EpisodeInfoRow(info: EpisodeInfo) {
+    if (info.runtime == null && info.rating == null && info.date == null) return
+    val muted = MaterialTheme.nuvio.colors.textSecondary
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        info.runtime?.let {
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Outlined.Schedule, contentDescription = null, tint = muted, modifier = Modifier.size(14.dp))
+                Text(text = it, style = MaterialTheme.typography.labelSmall, color = muted, maxLines = 1)
+            }
+        }
+        info.rating?.let {
+            Text(
+                text = "IMDb $it",
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                color = Color(0xFFF5C518),
+                maxLines = 1,
+            )
+        }
+        info.date?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.labelSmall,
+                color = muted,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.End,
+                modifier = Modifier.weight(1f),
+            )
+        }
+    }
+}
+
+@Composable
+private fun EpisodeProgressBar(info: EpisodeInfo, modifier: Modifier) {
+    val progress = info.progress ?: return
+    if (progress <= 0f || info.watched) return
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(4.dp)
+            .clip(CircleShape)
+            .background(Color.Black.copy(alpha = 0.45f)),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth(progress.coerceIn(0f, 1f))
+                .height(4.dp)
+                .background(MaterialTheme.nuvio.colors.accent),
+        )
+    }
+}
+
+/** Unavailable label (top end), watched check or the dashed "not started" circle (top start). */
+@Composable
+private fun BoxScope.EpisodeStatusBadge(episode: MetaVideo, info: EpisodeInfo, modifier: Modifier) {
+    val muted = MaterialTheme.nuvio.colors.textSecondary
+    when {
+        !episode.available -> Text(
+            text = stringResource(R.string.tv_details_unavailable).uppercase(),
+            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+            color = Color.White.copy(alpha = 0.9f),
+            maxLines = 1,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .then(modifier)
+                .background(Color(0xCC5D4037), RoundedCornerShape(7.dp))
+                .padding(horizontal = 8.dp, vertical = 3.dp),
+        )
+        info.watched -> Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .then(modifier)
+                .size(28.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.nuvio.colors.accent),
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Check,
+                contentDescription = stringResource(R.string.tv_watched),
+                tint = MaterialTheme.nuvio.colors.onAccent,
+                modifier = Modifier.size(18.dp),
+            )
+        }
+        (info.progress ?: 0f) < 0.02f -> {
+            val dashColor = muted.copy(alpha = 0.9f)
+            Canvas(
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(14.dp)
-                    .size(28.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.nuvio.colors.accent),
+                    .then(modifier)
+                    .size(28.dp),
             ) {
-                Icon(
-                    imageVector = Icons.Filled.Check,
-                    contentDescription = stringResource(R.string.tv_watched),
-                    tint = MaterialTheme.nuvio.colors.onAccent,
-                    modifier = Modifier.size(18.dp),
+                drawCircle(
+                    color = dashColor,
+                    style = Stroke(width = 2.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(7f, 5f), 0f)),
                 )
-            }
-            (progress ?: 0f) < 0.02f -> {
-                val dashColor = muted.copy(alpha = 0.9f)
-                Canvas(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(14.dp)
-                        .size(28.dp),
-                ) {
-                    drawCircle(
-                        color = dashColor,
-                        style = Stroke(width = 2.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(7f, 5f), 0f)),
-                    )
-                }
             }
         }
     }
@@ -949,26 +1204,32 @@ private fun PosterRow(
     items: List<MetaPreview>,
     onClick: (MetaPreview) -> Unit,
 ) {
-    val posterStyle = rememberTvPosterCardStyle()
-    val landscape = posterStyle.showsLandscape(items)
+    val settings = rememberTvLayoutSettings()
+    val metrics = remember(settings) { settings.cardMetrics() }
+    val landscape = settings.showsLandscape(items)
     TvContentRow(title = title, modifier = Modifier.padding(top = 18.dp)) {
         items(items, key = MetaPreview::stableKey) { item ->
             if (landscape) {
-                val artwork = posterStyle.landscapeArtwork(item)
-                TvLandscapeCard(
-                    imageUrl = artwork.imageUrl,
-                    logoUrl = artwork.logoUrl,
-                    fitImage = artwork.fitImage,
+                TvRowLandscapeCard(
+                    artwork = settings.landscapeArtwork(item),
                     title = item.name,
-                    subtitle = null,
+                    width = metrics.landscapeWidth,
+                    height = metrics.landscapeHeight,
+                    shape = metrics.shape,
+                    showLabel = settings.posterLabels,
+                    watched = false,
                     onClick = { onClick(item) },
                 )
             } else {
-                TvPosterCard(
+                // Outside the home rows NuvioTV uses the base poster size.
+                TvRowPosterCard(
                     imageUrl = item.poster,
                     title = item.name,
+                    width = metrics.basePosterWidth,
+                    height = metrics.basePosterWidth * 1.5f,
+                    shape = metrics.shape,
+                    showLabel = settings.posterLabels,
                     watched = false,
-                    width = TvDimens.basePosterWidth,
                     onClick = { onClick(item) },
                 )
             }

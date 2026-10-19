@@ -54,6 +54,7 @@ import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.p2p.P2pSettingsRepository
 import com.nuvio.app.isIos
+import com.nuvio.app.tv.LocalTvShell
 import com.nuvio.app.tv.TvAppRuntime
 import com.nuvio.app.supportsPosterNavigationMotion
 import com.nuvio.app.core.mediaproxy.LanMediaProxy
@@ -1041,6 +1042,32 @@ internal fun settingsSearchEntries(
         category = accountCategory,
         icon = Icons.Rounded.Link,
     )
+
+    LocalTvShell.current?.layoutSettings?.let { tvLayout ->
+        val tvLayoutPage = stringResource(Res.string.tv_layout_settings_title)
+        addRow(
+            page = SettingsPage.Appearance,
+            key = "tv-layout",
+            title = tvLayoutPage,
+            description = stringResource(Res.string.tv_layout_settings_description),
+            pageLabel = layoutPage,
+            section = stringResource(Res.string.settings_appearance_section_home),
+            category = generalCategory,
+            icon = Icons.Rounded.Palette,
+        )
+        tvLayout.searchEntries().forEach { item ->
+            addRow(
+                page = SettingsPage.TvLayout,
+                key = "tv-layout-${item.key}",
+                title = item.title,
+                description = item.description,
+                pageLabel = tvLayoutPage,
+                section = item.section,
+                category = generalCategory,
+                icon = Icons.Rounded.Palette,
+            )
+        }
+    }
 
     addAdditionalSearchEntries(
         addPage = ::addPage,

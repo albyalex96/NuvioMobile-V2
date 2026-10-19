@@ -104,7 +104,11 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.stringResource
+import com.nuvio.app.tv.LocalTvShell
+import com.nuvio.app.tv.TvCenteredScrolling
+import com.nuvio.app.tv.tvFadingEdges
 import com.nuvio.app.tv.TvMenuBackHandler
+import com.nuvio.app.tv.TvSettingsNavigator
 import com.nuvio.app.tv.rememberTvFocusRegion
 import com.nuvio.app.tv.tvEnterOn
 import com.nuvio.app.tv.tvFocusRegion
@@ -112,6 +116,9 @@ import com.nuvio.app.tv.tvFocusRegion
 private val SettingsSearchRevealThreshold = 28.dp
 private const val SettingsSearchRevealAnimationMillis = 240L
 private const val SettingsSearchRevealHapticDelayMillis = 90L
+
+/** TV: top inset of the settings panes, below the fading edge (the chrome reserves its own space). */
+private val TvSettingsTopOffset = 32.dp
 
 @Composable
 private fun watchPartyRow(onClick: () -> Unit): (() -> Unit)? {
@@ -694,6 +701,7 @@ private fun MobileSettingsScreen(
 
         val appLogsViewer = if (page == SettingsPage.AppLogs) rememberAppLogsViewerState() else null
         val watchPartyRowClick = watchPartyRow(onWatchPartyClick)
+        val tvLayoutSettings = LocalTvShell.current?.layoutSettings
 
         NuvioScreen(
             modifier = Modifier.nestedScroll(rootSearchRevealConnection),
@@ -816,6 +824,7 @@ private fun MobileSettingsScreen(
                     onCollectionsClick = onCollectionsClick,
                     onContinueWatchingClick = onContinueWatchingClick,
                     onPosterCustomizationClick = { onPageChange(SettingsPage.PosterCustomization) },
+                    onTvLayoutClick = tvLayoutSettings?.let { { onPageChange(SettingsPage.TvLayout) } },
                 )
                 SettingsPage.Advanced -> advancedSettingsContent(
                     isTablet = false,
@@ -847,6 +856,15 @@ private fun MobileSettingsScreen(
                 SettingsPage.PosterCustomization -> posterCustomizationSettingsContent(
                     isTablet = false,
                     uiState = posterCardStyleUiState,
+                )
+                SettingsPage.TvLayout -> tvLayoutSettings?.content?.invoke(
+                    this,
+                    TvSettingsNavigator(
+                        openHomescreen = onHomescreenClick,
+                        openContinueWatching = onContinueWatchingClick,
+                        openMetaScreen = onMetaScreenClick,
+                        openStreams = { onPageChange(SettingsPage.Streams) },
+                    ),
                 )
                 SettingsPage.ContentDiscovery -> contentDiscoveryContent(
                     isTablet = false,
@@ -1035,7 +1053,10 @@ private fun TabletSettingsScreen(
     var selectedCategory by rememberSaveable { mutableStateOf(SettingsCategory.General.name) }
     val activeCategory = SettingsCategory.valueOf(selectedCategory)
     val statusBarPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val topOffset = max(statusBarPadding + 24.dp, 48.dp) + 64.dp
+    val isTv = LocalTvShell.current != null
+    // On TV the navigation chrome already keeps its own space above the page; the list starts
+    // just below the fading edge.
+    val topOffset = if (isTv) TvSettingsTopOffset else max(statusBarPadding + 24.dp, 48.dp) + 64.dp
 
     LaunchedEffect(page) {
         if (page.opensInlineOnTablet) {
@@ -1058,6 +1079,7 @@ private fun TabletSettingsScreen(
         contentAtRoot = page == SettingsPage.Root,
     )
 
+    TvCenteredScrolling {
     Row(modifier = Modifier.fillMaxSize()) {
         Surface(
             modifier = Modifier
@@ -1158,10 +1180,13 @@ private fun TabletSettingsScreen(
             }
             val appLogsViewer = if (page == SettingsPage.AppLogs) rememberAppLogsViewerState() else null
             val watchPartyRowClick = watchPartyRow(onWatchPartyClick)
+            val tvLayoutSettings = LocalTvShell.current?.layoutSettings
             LazyColumn(
                 state = listState,
                 modifier = Modifier
                     .fillMaxSize()
+                    // TV: rows leaving the viewport fade out instead of being cut.
+                    .tvFadingEdges(enabled = isTv)
                     .tvFocusRegion(
                         key = page.name to activeCategory.name,
                         region = tvContentRegion,
@@ -1303,6 +1328,7 @@ private fun TabletSettingsScreen(
                         onCollectionsClick = onCollectionsClick,
                         onContinueWatchingClick = { openInlinePage(SettingsPage.ContinueWatching) },
                         onPosterCustomizationClick = { openInlinePage(SettingsPage.PosterCustomization) },
+                        onTvLayoutClick = tvLayoutSettings?.let { { openInlinePage(SettingsPage.TvLayout) } },
                     )
                     SettingsPage.Advanced -> advancedSettingsContent(
                         isTablet = true,
@@ -1334,6 +1360,15 @@ private fun TabletSettingsScreen(
                     SettingsPage.PosterCustomization -> posterCustomizationSettingsContent(
                         isTablet = true,
                         uiState = posterCardStyleUiState,
+                    )
+                    SettingsPage.TvLayout -> tvLayoutSettings?.content?.invoke(
+                        this,
+                        TvSettingsNavigator(
+                            openHomescreen = { openInlinePage(SettingsPage.Homescreen) },
+                            openContinueWatching = { openInlinePage(SettingsPage.ContinueWatching) },
+                            openMetaScreen = { openInlinePage(SettingsPage.MetaScreen) },
+                            openStreams = { openInlinePage(SettingsPage.Streams) },
+                        ),
                     )
                     SettingsPage.ContentDiscovery -> contentDiscoveryContent(
                         isTablet = true,
@@ -1405,5 +1440,6 @@ private fun TabletSettingsScreen(
                 }
             }
         }
+    }
     }
 }

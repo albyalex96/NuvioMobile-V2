@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Pagina "Layout TV" (portata dalle "Impostazioni Layout" di NuvioTV). -->
+    <string name="tv_layout_open">Aperto</string>
+    <string name="tv_layout_closed">Chiuso</string>
+    <string name="tv_layout_custom">Personalizzato</string>
+    <string name="tv_layout_reset_default">Ripristina predefiniti</string>
+    <string name="tv_layout_more_options">Altre opzioni</string>
+    <string name="tv_layout_decrease">Diminuisci</string>
+    <string name="tv_layout_increase">Aumenta</string>
+
+    <string name="tv_layout_section_home">Layout Home</string>
+    <string name="tv_layout_section_home_desc">Sfondo hero della Home.</string>
+    <string name="tv_layout_fullscreen_hero_backdrop">Sfondo hero a schermo intero</string>
+    <string name="tv_layout_fullscreen_hero_backdrop_sub">Espandi lo sfondo hero per riempire tutto lo schermo.</string>
+
+    <string name="tv_layout_section_content">Contenuto Home</string>
+    <string name="tv_layout_section_content_desc">Controlla cosa appare nelle righe della Home.</string>
+    <string name="tv_layout_poster_labels">Mostra etichette locandine</string>
+    <string name="tv_layout_poster_labels_sub">Mostra i titoli sotto le locandine delle righe della Home.</string>
+    <string name="tv_layout_catalog_type">Mostra tipo di catalogo</string>
+    <string name="tv_layout_catalog_type_sub">Mostra il suffisso del tipo accanto al nome del catalogo (Film/Serie).</string>
+    <string name="tv_layout_hide_unreleased">Nascondi contenuti non usciti</string>
+    <string name="tv_layout_hide_unreleased_sub">Nascondi film e serie TV non ancora usciti.</string>
+    <string name="tv_layout_home_more_sub">Cataloghi, ordine e sorgenti hero (Impostazioni → Schermata Home).</string>
+
+    <string name="tv_layout_section_sidebar">Barra laterale e navigazione</string>
+    <string name="tv_layout_section_sidebar_desc">Indicatore fluttuante e stile della barra laterale.</string>
+    <string name="tv_layout_hide_floating_pill">Nascondi l\'indicatore di navigazione</string>
+    <string name="tv_layout_hide_floating_pill_sub">Nascondi l\'indicatore di navigazione fluttuante in alto a sinistra delle pagine.</string>
+    <string name="tv_layout_sidebar_blur">Sfocatura barra laterale</string>
+    <string name="tv_layout_sidebar_blur_sub">Sfoca la pagina dietro la barra laterale e l\'indicatore fluttuante.</string>
+    <string name="tv_layout_sidebar_top_bar_note">È attiva la barra vetrosa in alto (Aspetto → Barra di navigazione): queste opzioni valgono solo per la barra laterale.</string>
+
+    <string name="tv_layout_section_continue_watching">Continua a guardare</string>
+    <string name="tv_layout_section_continue_watching_desc">Impostazioni per la sezione \"Continua a guardare\".</string>
+    <string name="tv_layout_cw_enabled">Mostra Continua a guardare</string>
+    <string name="tv_layout_cw_enabled_sub">Mostra la riga Continua a guardare nella schermata Home.</string>
+    <string name="tv_layout_cw_card_style">Stile delle card</string>
+    <string name="tv_layout_cw_card_style_card">Scheda</string>
+    <string name="tv_layout_cw_card_style_wide">Larga</string>
+    <string name="tv_layout_cw_card_style_poster">Locandina</string>
+    <string name="tv_layout_use_episode_thumbnails_cw">Usa miniature episodi</string>
+    <string name="tv_layout_use_episode_thumbnails_cw_sub">Usa le miniature degli episodi come immagine predefinita. Se disattivato, usa lo sfondo.</string>
+    <string name="tv_layout_blur_cw_next_up">Sfoca non visti in Continua a guardare</string>
+    <string name="tv_layout_blur_cw_next_up_sub">Sfoca le miniature degli episodi non visti in Continua a guardare per evitare spoiler.</string>
+    <string name="tv_layout_next_up_furthest_episode">Prossimo episodio dall\'ultimo raggiunto</string>
+    <string name="tv_layout_next_up_furthest_episode_sub">Mostra l\'episodio successivo basandosi su quello più avanti nella visione. Disattiva per i rewatch per usare invece l\'episodio guardato più di recente.</string>
+    <string name="tv_layout_show_unaired_next_up">Mostra episodi non ancora trasmessi</string>
+    <string name="tv_layout_show_unaired_next_up_sub">Includi i prossimi episodi in \"Continua a guardare\" prima della loro messa in onda.</string>
+    <string name="tv_layout_cw_sort_mode">Ordinamento</string>
+    <string name="tv_layout_cw_sort_mode_sub">Come vengono ordinati gli elementi in \"Continua a guardare\".</string>
+    <string name="tv_layout_cw_sort_default">Predefinito</string>
+    <string name="tv_layout_cw_sort_streaming">Stile streaming</string>
+    <string name="tv_layout_cw_sort_split_upcoming">Riga separata per i prossimi</string>
+    <string name="tv_layout_cw_more_sub">Richiesta di ripresa e altre opzioni (Impostazioni → Continua a guardare).</string>
+
+    <string name="tv_layout_section_focused">Locandina a fuoco</string>
+    <string name="tv_layout_section_focused_desc">Comportamento avanzato per le locandine selezionate.</string>
+    <string name="tv_layout_expand_poster">Espandi locandina a fuoco su sfondo</string>
+    <string name="tv_layout_expand_poster_sub">Espandi la locandina a fuoco dopo un ritardo di inattività.</string>
+    <string name="tv_layout_expand_delay">Ritardo espansione sfondo</string>
+    <string name="tv_layout_expand_delay_sub">Quanto tempo attendere prima di espandere le locandine a fuoco.</string>
+    <string name="tv_layout_seconds">%1$d s</string>
+
+    <string name="tv_layout_section_card_style">Scheda locandina</string>
+    <string name="tv_layout_section_card_style_desc">Regola la larghezza della scheda e il raggio degli angoli.</string>
+    <string name="tv_layout_card_width">Larghezza</string>
+    <string name="tv_layout_card_radius">Raggio angoli</string>
+    <string name="tv_layout_preset_compact">Compatto</string>
+    <string name="tv_layout_preset_dense">Denso</string>
+    <string name="tv_layout_preset_standard">Standard</string>
+    <string name="tv_layout_preset_balanced">Bilanciato</string>
+    <string name="tv_layout_preset_comfort">Comodo</string>
+    <string name="tv_layout_preset_large">Grande</string>
+    <string name="tv_layout_preset_sharp">Netto</string>
+    <string name="tv_layout_preset_subtle">Sottile</string>
+    <string name="tv_layout_preset_classic">Classico</string>
+    <string name="tv_layout_preset_rounded">Arrotondato</string>
+    <string name="tv_layout_preset_pill">Pillola</string>
+    <string name="tv_layout_landscape_posters">Locandine orizzontali</string>
+    <string name="tv_layout_landscape_posters_sub">Usa card orizzontali nelle righe della Home.</string>
+    <string name="tv_layout_always_show_landscape_clearlogo">Mostra sempre lo sfondo con il logo per le locandine orizzontali</string>
+    <string name="tv_layout_always_show_landscape_clearlogo_sub">Ignora la locandina orizzontale dell\'addon e usa invece lo sfondo con il logo trasparente sovrapposto.</string>
+
+    <string name="tv_layout_section_card_depth">Effetto profondità schede</string>
+    <string name="tv_layout_section_card_depth_desc">Effetti di luce sul bordo e brillantezza delle schede.</string>
+    <string name="tv_layout_card_depth_enabled">Attiva effetto profondità</string>
+    <string name="tv_layout_card_depth_enabled_sub">Aggiunge un bordo superiore illuminato e una lucentezza morbida alle schede immagine per un sottile senso di profondità.</string>
+    <string name="tv_layout_card_depth_edge">Bagliore del bordo</string>
+    <string name="tv_layout_card_depth_sheen">Lucentezza superiore</string>
+    <string name="tv_layout_card_depth_edge_coverage">Copertura del bordo</string>
+    <string name="tv_layout_card_depth_edge_subtle">Sottile</string>
+    <string name="tv_layout_card_depth_edge_balanced">Bilanciato</string>
+    <string name="tv_layout_card_depth_edge_bold">Marcato</string>
+    <string name="tv_layout_card_depth_sheen_off">Disattivata</string>
+    <string name="tv_layout_card_depth_sheen_soft">Morbida</string>
+    <string name="tv_layout_card_depth_sheen_bright">Intensa</string>
+    <string name="tv_layout_card_depth_coverage_top">Solo in alto</string>
+    <string name="tv_layout_card_depth_coverage_half">Metà</string>
+    <string name="tv_layout_card_depth_coverage_full">Contorno completo</string>
+    <string name="tv_layout_profile_note">Condivisa con il profilo: la stessa opzione cambia anche l\'app del telefono.</string>
+
+    <string name="tv_layout_section_detail">Pagina dettagli</string>
+    <string name="tv_layout_section_detail_desc">Impostazioni per le schermate dei dettagli e degli episodi.</string>
+    <string name="tv_layout_section_streams">Flussi</string>
+    <string name="tv_layout_section_streams_desc">Impostazioni di visualizzazione per i risultati dei flussi e i pannelli sorgente del player.</string>
+    <string name="tv_layout_open_page">Apri impostazioni</string>
+
+    <!-- Card "Continua a guardare" (ContinueWatchingCard di NuvioTV). -->
+    <string name="tv_cw_resume">Riprendi</string>
+    <string name="tv_cw_percent_watched">%1$d%% visto</string>
+    <string name="tv_cw_hours_min_left">%1$dh %2$dm rimanenti</string>
+    <string name="tv_cw_min_left">%1$dm rimanenti</string>
+    <string name="tv_cw_next_up">Prossimo episodio</string>
+    <string name="tv_cw_next_up_short">Prossimo</string>
+    <string name="tv_cw_new_episode">Nuovo episodio</string>
+    <string name="tv_cw_new_episode_short">Nuovo</string>
+    <string name="tv_cw_new_season">Nuova stagione</string>
+    <string name="tv_cw_upcoming">In arrivo</string>
+</resources>
