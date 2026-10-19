@@ -51,6 +51,7 @@ private const val MAX_MANIFEST_BYTES = 8 * 1024 * 1024
 private const val MANIFEST_SNIFF_BYTES = 512
 private const val MAX_REDIRECTS = 5
 private const val COPY_BUFFER_BYTES = 64 * 1024
+private const val MIN_SEGMENT_BYTES = 4 * 1024L
 private const val DEFAULT_USER_AGENT = "Mozilla/5.0 (Linux; Android) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Mobile Safari/537.36"
 
 /** Interfaces that face the local network: Wi-Fi, hotspot, Ethernet, USB tethering. */
@@ -86,7 +87,11 @@ actual object LanMediaProxy {
         val requestHeaders: Map<String, String>,
         /** Loopback sources may only reach their own host:port (no open proxy to this device). */
         val restrictedAuthority: String?,
-    )
+    ) {
+        /** Diagnostics: the first media response (segment, key, file) is logged once. */
+        @Volatile var firstMediaLogged = false
+        @Volatile var disguisedMediaLogged = false
+    }
 
     private val routes = ConcurrentHashMap<String, Route>()
     private val lock = Any()
@@ -377,7 +382,8 @@ actual object LanMediaProxy {
         val scheme = withoutSlash.substringBefore('/').lowercase()
         val afterScheme = withoutSlash.substringAfter('/', missingDelimiterValue = "")
         val authority = afterScheme.takeWhile { it != '/' && it != '?' }
-        val rest = afterScheme.removePrefix(authority).let { if (it.startsWith("/")) it else "/$it" }
+        val encodedRest = afterScheme.removePrefix(authority).let { if (it.startsWith("/")) it else "/$it" }
+        val (rest, hintedType) = splitSegmentExtensionHint(encodedRest)
         if ((scheme != "http" && scheme != "https") || authority.isEmpty()) {
             return writeEmpty(output, 400, "Bad Request")
         }
@@ -391,8 +397,17 @@ actual object LanMediaProxy {
             val code = connection.responseCode
             val finalUrl = connection.url.toString()
             val upstreamType = connection.contentType
-            val contentType = source.responseHeaders.entries
+            // The stream's response headers describe the link itself, not the segments and keys of a playlist.
+            val isEntry = proxiedRemoteUrl(route, source.url) == proxiedRemoteUrl(route, "$scheme://$authority$rest")
+            val responseHeaders = if (isEntry) source.responseHeaders else emptyMap()
+            val contentType = responseHeaders.entries
                 .firstOrNull { it.key.equals("content-type", ignoreCase = true) }?.value ?: upstreamType
+            if (code >= 400) {
+                log.w {
+                    "${route.options.label}: upstream answered $code for ${describeResource(authority, rest)} " +
+                        "(type=$upstreamType)"
+                }
+            }
             val isRange = request.headers.containsKey("range")
             val body = if (code >= 400) connection.errorStream else connection.inputStream
             val buffered = body?.let { BufferedInputStream(it, COPY_BUFFER_BYTES) }
@@ -409,12 +424,44 @@ actual object LanMediaProxy {
                 return
             }
 
+            val disguised = if (
+                route.options.rewriteManifests && request.method == "GET" && code == 200 && !isRange &&
+                buffered != null && isDisguisedMediaType(contentType) &&
+                // Keys and other tiny files are never segments.
+                (connection.getHeaderField("Content-Length")?.toLongOrNull() ?: Long.MAX_VALUE) >= MIN_SEGMENT_BYTES
+            ) {
+                sniffDisguisedMedia(route, buffered, authority, rest, contentType)
+            } else {
+                null
+            }
+
             val headers = linkedMapOf<String, String>()
             FORWARDED_RESPONSE_HEADERS.forEach { name ->
                 connection.getHeaderField(name)?.let { headers[name] = it }
             }
             contentType?.let { headers["Content-Type"] = it }
-            source.responseHeaders.forEach { (name, value) ->
+            if (disguised != null) {
+                headers["Content-Type"] = disguised.mimeType
+                if (disguised.offset > 0) {
+                    // Offsets no longer match the upstream file: no ranges on this response.
+                    headers.remove("Accept-Ranges")
+                    headers.remove("ETag")
+                    connection.getHeaderField("Content-Length")?.toLongOrNull()
+                        ?.let { headers["Content-Length"] = (it - disguised.offset).coerceAtLeast(0L).toString() }
+                        ?: headers.remove("Content-Length")
+                    buffered?.skipFully(disguised.offset.toLong())
+                }
+            }
+            // Segments renamed by the playlist rewrite get the type of their real container.
+            if (code < 400) hintedType?.let { headers["Content-Type"] = it }
+            if (code < 400 && !route.firstMediaLogged) {
+                route.firstMediaLogged = true
+                log.d {
+                    "${route.options.label}: first media response $code for ${describeResource(authority, rest)} " +
+                        "(type=$contentType, length=${connection.getHeaderField("Content-Length")})"
+                }
+            }
+            responseHeaders.forEach { (name, value) ->
                 if (name.lowercase() !in PROTECTED_RESPONSE_HEADERS) headers[name] = value
             }
             if (route.options.cors) headers += corsHeaders()
@@ -486,6 +533,45 @@ actual object LanMediaProxy {
         }
     }
 
+    /**
+     * Finds the real media in a segment served as a page or image (see [findDisguisedMediaStart]).
+     * The stream is left at its start; null when nothing recognizable is found.
+     */
+    private fun sniffDisguisedMedia(
+        route: Route,
+        body: BufferedInputStream,
+        authority: String,
+        rest: String,
+        contentType: String?,
+    ): MediaStart? {
+        body.mark(DISGUISED_MEDIA_SNIFF_BYTES)
+        val head = ByteArray(DISGUISED_MEDIA_SNIFF_BYTES)
+        var read = 0
+        while (read < head.size) {
+            val count = body.read(head, read, head.size - read)
+            if (count <= 0) break
+            read += count
+        }
+        body.reset()
+        val start = findDisguisedMediaStart(head, read)
+        if (!route.disguisedMediaLogged) {
+            route.disguisedMediaLogged = true
+            val prefix = head.take(minOf(read, 8)).joinToString("") { "%02x".format(it) }
+            if (start != null) {
+                log.i {
+                    "${route.options.label}: segment disguised as $contentType on ${describeResource(authority, rest)}: " +
+                        "serving it as ${start.mimeType}, skipping ${start.offset} bytes of fake header (starts with $prefix)"
+                }
+            } else {
+                log.w {
+                    "${route.options.label}: no media found in a $contentType response on " +
+                        "${describeResource(authority, rest)} (starts with $prefix, maybe encrypted)"
+                }
+            }
+        }
+        return start
+    }
+
     private fun serveManifest(
         route: Route,
         kind: ManifestKind,
@@ -500,8 +586,11 @@ actual object LanMediaProxy {
         }
         val text = bytes.toString(Charsets.UTF_8)
         val proxify: (String) -> String = { absolute -> proxiedRemoteUrl(route, absolute) ?: absolute }
+        val proxifyWithExtension: (String, String) -> String = { absolute, extension ->
+            proxiedRemoteUrl(route, absolute, extension) ?: absolute
+        }
         val rewritten = when (kind) {
-            ManifestKind.Hls -> rewriteHlsPlaylist(text, finalUrl, proxify)
+            ManifestKind.Hls -> rewriteHlsPlaylist(text, finalUrl, proxify, proxifyWithExtension)
             ManifestKind.Dash -> rewriteDashManifest(text, requestedUrl, finalUrl, proxify)
         }.toByteArray(Charsets.UTF_8)
         val headers = linkedMapOf(
@@ -606,14 +695,19 @@ actual object LanMediaProxy {
         return bytes.joinToString("") { "%02x".format(it) }
     }
 
-    /** "<base>/p/<token>/<scheme>/<authority><path>?<query>": relative URLs keep resolving through the proxy. */
-    private fun proxiedRemoteUrl(route: Route, absoluteUrl: String): String? {
+    /**
+     * "<base>/p/<token>/<scheme>/<authority><path>?<query>": relative URLs keep resolving through
+     * the proxy. With [extensionHint] the path ends with an extra "/[SEGMENT_HINT_MARKER]<ext>"
+     * (see [splitSegmentExtensionHint]), removed again before the upstream request.
+     */
+    private fun proxiedRemoteUrl(route: Route, absoluteUrl: String, extensionHint: String? = null): String? {
         val uri = parseUri(absoluteUrl) ?: return null
         val scheme = uri.scheme?.lowercase()?.takeIf { it == "http" || it == "https" } ?: return null
         val authority = uri.authorityWithoutUserInfo() ?: return null
         val path = uri.rawPath?.takeIf { it.isNotEmpty() } ?: "/"
         val query = uri.rawQuery?.let { "?$it" }.orEmpty()
-        return "${route.baseUrl}/p/${route.token}/$scheme/$authority$path$query"
+        val hint = extensionHint?.let { "/$SEGMENT_HINT_MARKER$it" }.orEmpty()
+        return "${route.baseUrl}/p/${route.token}/$scheme/$authority$path$hint$query"
     }
 
     private fun corsHeaders(): Map<String, String> = mapOf(
@@ -676,6 +770,46 @@ actual object LanMediaProxy {
 private val REDIRECT_CODES = setOf(301, 302, 303, 307, 308)
 
 /** Parses links leniently: addon links sometimes contain spaces or pipes. */
+/** Last path segment added to renamed HLS segments, followed by their real extension. */
+private const val SEGMENT_HINT_MARKER = "nuvio-segment."
+
+private val SEGMENT_HINT_TYPES = mapOf(
+    "ts" to "video/mp2t",
+    "m4s" to "video/mp4",
+    "mp4" to "video/mp4",
+)
+
+/** Splits "<path>/nuvio-segment.<ext>?<query>" into the upstream "<path>?<query>" and the type of <ext>. */
+internal fun splitSegmentExtensionHint(pathAndQuery: String): Pair<String, String?> {
+    val path = pathAndQuery.substringBefore('?')
+    val query = pathAndQuery.substring(path.length)
+    val marker = path.lastIndexOf("/$SEGMENT_HINT_MARKER")
+    if (marker < 0) return pathAndQuery to null
+    val type = SEGMENT_HINT_TYPES[path.substring(marker + SEGMENT_HINT_MARKER.length + 1)] ?: return pathAndQuery to null
+    return (path.substring(0, marker).ifEmpty { "/" } + query) to type
+}
+
+/** Host and file extension of a proxied resource, for the logs (never the full link: it may hold tokens). */
+private fun describeResource(authority: String, pathAndQuery: String): String {
+    val name = pathAndQuery.substringBefore('?').substringAfterLast('/')
+    val extension = name.substringAfterLast('.', "").takeIf { it.isNotEmpty() && it.length <= 5 } ?: "no-ext"
+    return "${authority.substringBefore(':')} [.$extension]"
+}
+
+private fun InputStream.skipFully(count: Long) {
+    var remaining = count
+    while (remaining > 0) {
+        val skipped = skip(remaining)
+        if (skipped > 0) {
+            remaining -= skipped
+        } else if (read() >= 0) {
+            remaining--
+        } else {
+            return
+        }
+    }
+}
+
 private fun parseUri(url: String): URI? = runCatching { URI(url.trim()) }.getOrNull()
     ?: runCatching { URI(url.trim().replace(" ", "%20").replace("|", "%7C")) }.getOrNull()
 

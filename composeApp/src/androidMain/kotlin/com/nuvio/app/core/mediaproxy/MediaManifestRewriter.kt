@@ -17,23 +17,66 @@ internal fun resolveUrl(baseUrl: String, reference: String): String? = runCatchi
 
 private fun String.isHttpUrl(): Boolean = startsWith("http://", ignoreCase = true) || startsWith("https://", ignoreCase = true)
 
+private val HLS_TS_EXTENSIONS = setOf("ts", "m2ts", "mts")
+private val HLS_FMP4_EXTENSIONS = setOf("mp4", "m4s", "m4v", "m4a", "cmfv", "cmfa", "fmp4")
+private val HLS_PACKED_AUDIO_EXTENSIONS = setOf("aac", "adts", "ac3", "ec3", "eac3", "mp3")
+
+private fun String.urlExtension(): String =
+    substringBefore('?').substringBefore('#').substringAfterLast('/').substringAfterLast('.', "").lowercase()
+
+/**
+ * Extension a segment of a media playlist really has. Segments disguised as pages or images
+ * (".html", ".png") or labelled with the wrong container (".m4s" on MPEG-TS) confuse web players
+ * that pick the demuxer from the URL, like the Cast receivers. Without `EXT-X-MAP` a segment is
+ * MPEG-TS (or packed audio), with it fMP4. Null when the extension is already right.
+ */
+internal fun hlsSegmentExtensionHint(segmentUrl: String, hasInitSection: Boolean): String? {
+    val extension = segmentUrl.urlExtension()
+    return when {
+        extension in HLS_PACKED_AUDIO_EXTENSIONS -> null
+        hasInitSection -> if (extension in HLS_FMP4_EXTENSIONS) null else "m4s"
+        extension in HLS_TS_EXTENSIONS -> null
+        else -> "ts"
+    }
+}
+
 /**
  * Routes every URI of an HLS playlist (variants, segments, keys, init sections, renditions)
  * through [proxify]. Relative URIs are resolved against [baseUrl], the final URL of the
  * playlist after redirects; non-HTTP URIs (data:, skd:) are left untouched.
+ *
+ * Segments and init sections whose extension does not match their container go through
+ * [proxifyWithExtension] with the right one (see [hlsSegmentExtensionHint]).
  */
-internal fun rewriteHlsPlaylist(text: String, baseUrl: String, proxify: (String) -> String): String {
-    fun route(reference: String): String {
+internal fun rewriteHlsPlaylist(
+    text: String,
+    baseUrl: String,
+    proxify: (String) -> String,
+    proxifyWithExtension: ((url: String, extension: String) -> String)? = null,
+): String {
+    fun route(reference: String, hint: (String) -> String? = { null }): String {
         val absolute = resolveUrl(baseUrl, reference) ?: return reference
-        return if (absolute.isHttpUrl()) proxify(absolute) else reference
+        if (!absolute.isHttpUrl()) return reference
+        val extension = proxifyWithExtension?.let { hint(absolute) }
+        return if (extension != null) proxifyWithExtension(absolute, extension) else proxify(absolute)
     }
-    return text.lineSequence().joinToString("\n") { line ->
+    val lines = text.lines()
+    val isMediaPlaylist = lines.any { it.trim().startsWith("#EXTINF") }
+    val hasInitSection = lines.any { it.trim().startsWith("#EXT-X-MAP") }
+    return lines.joinToString("\n") { line ->
         val trimmed = line.trim()
         when {
             trimmed.isEmpty() -> line
+            trimmed.startsWith("#EXT-X-MAP") -> HLS_URI_ATTRIBUTE.replace(line) { match ->
+                val uri = route(match.groupValues[1]) { url ->
+                    if (url.urlExtension() in HLS_FMP4_EXTENSIONS) null else "mp4"
+                }
+                "URI=\"$uri\""
+            }
             trimmed.startsWith("#") -> HLS_URI_ATTRIBUTE.replace(line) { match ->
                 "URI=\"${route(match.groupValues[1])}\""
             }
+            isMediaPlaylist -> route(trimmed) { url -> hlsSegmentExtensionHint(url, hasInitSection) }
             else -> route(trimmed)
         }
     }
