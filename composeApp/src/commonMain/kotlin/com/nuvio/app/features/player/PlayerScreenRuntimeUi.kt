@@ -849,7 +849,7 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
         val liveTvState by LiveTvRepository.uiState.collectAsStateWithLifecycle()
         PlayerLiveChannelsPanel(
             visible = showLiveChannelsPanel,
-            channels = liveTvState.channels,
+            channels = liveTvState.displayedChannels,
             currentStreamUrl = activeSourceUrl,
             onChannelSelected = { channel -> switchToLiveChannel(channel) },
             onDismiss = {

@@ -16,8 +16,8 @@ import kotlinx.serialization.json.put
  * Profile sync for Live TV, carried inside the existing `stream_badge_settings` payload of the
  * profile settings blob (schema unchanged).
  *
- * Synced: URL playlists, XMLTV guide sources, favourite channels, the navigation toggle and the
- * guide auto-detect toggle. Never synced: local M3U files (their content can be large) and the
+ * Synced: URL playlists, XMLTV guide sources, favourite channels, the navigation toggle, the
+ * guide auto-detect toggle and the channel preferences (hidden channels/categories and order). Never synced: local M3U files (their content can be large) and the
  * Xtream/Stalker provider settings, which hold credentials and stay on the device.
  */
 internal object LiveTvProfileSync {
@@ -26,6 +26,7 @@ internal object LiveTvProfileSync {
     private const val FAVORITE_CHANNEL_IDS_KEY = "live_tv_favorite_channel_ids"
     private const val NAVIGATION_ENABLED_KEY = "live_tv_navigation_enabled"
     private const val EPG_AUTO_DETECT_KEY = "live_tv_epg_auto_detect_enabled"
+    private const val CHANNEL_PREFERENCES_KEY = "live_tv_channel_preferences"
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -53,6 +54,7 @@ internal object LiveTvProfileSync {
         state.favoriteChannelIds.sorted().joinToString("|"),
         state.isNavigationEnabled.toString(),
         state.isEpgAutoDetectEnabled.toString(),
+        state.channelPreferences.signature(),
     ).joinToString("#")
 
     fun exportToSyncPayload(): JsonObject = buildJsonObject {
@@ -71,6 +73,7 @@ internal object LiveTvProfileSync {
         )
         put(NAVIGATION_ENABLED_KEY, encodeSyncBoolean(state.isNavigationEnabled))
         put(EPG_AUTO_DETECT_KEY, encodeSyncBoolean(state.isEpgAutoDetectEnabled))
+        put(CHANNEL_PREFERENCES_KEY, encodeSyncString(encodeLiveTvChannelPreferences(state.channelPreferences)))
     }
 
     /** Applies only the values present, so blobs from older clients keep the local choices. */
@@ -100,6 +103,7 @@ internal object LiveTvProfileSync {
             favoriteChannelIds = favorites,
             navigationEnabled = payload.decodeSyncBoolean(NAVIGATION_ENABLED_KEY),
             epgAutoDetectEnabled = payload.decodeSyncBoolean(EPG_AUTO_DETECT_KEY),
+            channelPreferences = decodeLiveTvChannelPreferences(payload.decodeSyncString(CHANNEL_PREFERENCES_KEY)),
         )
     }
 }

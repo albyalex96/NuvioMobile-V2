@@ -724,7 +724,7 @@ private fun filterPlayerLiveChannels(
                 playerLiveChannelCategoryName(channel, uncategorizedGroupName).lowercase().contains(normalizedQuery) ||
                 channel.playlistName.orEmpty().lowercase().contains(normalizedQuery)
         }
-        .sortedBy { it.name.lowercase() }
+        // Already in the user's order (sorted by name unless reordered in the settings).
         .toList()
 }
 

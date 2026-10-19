@@ -87,6 +87,7 @@ internal actual object PlatformLocalAccountDataCleaner {
         "xtream_settings",
         "epg_sources_blob",
         "epg_auto_detect_enabled",
+        "channel_preferences",
     )
 
     actual fun wipe() {

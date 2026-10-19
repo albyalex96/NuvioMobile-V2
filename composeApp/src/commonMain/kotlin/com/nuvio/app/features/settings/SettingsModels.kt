@@ -8,6 +8,7 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.ui.graphics.vector.ImageVector
 import nuvio.composeapp.generated.resources.Res
+import nuvio.composeapp.generated.resources.live_tv_channels_title
 import nuvio.composeapp.generated.resources.compose_settings_category_about
 import nuvio.composeapp.generated.resources.media_proxy_title
 import nuvio.composeapp.generated.resources.compose_settings_root_downloads_title
@@ -185,6 +186,11 @@ internal enum class SettingsPage(
         titleRes = Res.string.compose_settings_page_live_tv,
         category = SettingsCategory.General,
         parentPage = Integrations,
+    ),
+    LiveTvChannels(
+        titleRes = Res.string.live_tv_channels_title,
+        category = SettingsCategory.General,
+        parentPage = LiveTv,
     ),
     TraktAuthentication(
         // Keep the enum name for saved navigation-state compatibility.

@@ -14,6 +14,7 @@ actual object LiveTvStorage {
     private const val xtreamSettingsKey = "xtream_settings"
     private const val epgSourcesBlobKey = "epg_sources_blob"
     private const val epgAutoDetectEnabledKey = "epg_auto_detect_enabled"
+    private const val channelPreferencesKey = "channel_preferences"
     private const val nativeNavigationVisibleKey = "NuvioLiveTvNavigationVisible"
     private const val nativeNavigationDidChangeNotification = "NuvioLiveTvNavigationVisibilityDidChange"
 
@@ -104,5 +105,12 @@ actual object LiveTvStorage {
             enabled,
             forKey = ProfileScopedKey.of(epgAutoDetectEnabledKey),
         )
+    }
+
+    actual fun loadChannelPreferencesBlob(): String? =
+        NSUserDefaults.standardUserDefaults.stringForKey(ProfileScopedKey.of(channelPreferencesKey))
+
+    actual fun saveChannelPreferencesBlob(blob: String) {
+        NSUserDefaults.standardUserDefaults.setObject(blob, forKey = ProfileScopedKey.of(channelPreferencesKey))
     }
 }

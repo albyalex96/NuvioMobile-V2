@@ -900,6 +900,11 @@ private fun MobileSettingsScreen(
                 SettingsPage.LiveTv -> liveTvSettingsContent(
                     isTablet = false,
                     uiState = liveTvUiState,
+                    onChannelsClick = { onPageChange(SettingsPage.LiveTvChannels) },
+                )
+                SettingsPage.LiveTvChannels -> liveTvChannelsSettingsContent(
+                    isTablet = false,
+                    uiState = liveTvUiState,
                 )
                 SettingsPage.TraktAuthentication -> trackingSettingsContent(
                     isTablet = false,
@@ -1380,6 +1385,11 @@ private fun TabletSettingsScreen(
                         settings = debridSettings,
                     )
                     SettingsPage.LiveTv -> liveTvSettingsContent(
+                        isTablet = true,
+                        uiState = liveTvUiState,
+                        onChannelsClick = { onPageChange(SettingsPage.LiveTvChannels) },
+                    )
+                    SettingsPage.LiveTvChannels -> liveTvChannelsSettingsContent(
                         isTablet = true,
                         uiState = liveTvUiState,
                     )

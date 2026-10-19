@@ -1383,6 +1383,29 @@ private fun addAdditionalSearchEntries(
         row(SettingsPage.LiveTv, item.key, item.title, item.description, liveTvPage, item.sectionOverride.orEmpty(), icon = Icons.Rounded.LiveTv)
     }
 
+    // Integrations: Live TV → Manage channels (custom layout)
+    val liveTvChannelsPage = stringResource(Res.string.live_tv_channels_title)
+    val liveTvChannelsSection = stringResource(Res.string.live_tv_settings_section_channels)
+    addPage(
+        SettingsPage.LiveTvChannels,
+        "live-tv-channels",
+        liveTvChannelsPage,
+        stringResource(Res.string.live_tv_channels_description),
+        generalCategory,
+        Icons.Rounded.LiveTv,
+    )
+    row(SettingsPage.LiveTv, "live-tv-channels-row", liveTvChannelsPage, stringResource(Res.string.live_tv_channels_description), liveTvPage, liveTvChannelsSection, icon = Icons.Rounded.LiveTv)
+    listOf(
+        PlaybackSearchRow("live-tv-channels-select-all", stringResource(Res.string.live_tv_channels_select_all), stringResource(Res.string.live_tv_channels_select_all_description), liveTvChannelsSection),
+        PlaybackSearchRow("live-tv-channels-deselect-all", stringResource(Res.string.live_tv_channels_deselect_all), stringResource(Res.string.live_tv_channels_deselect_all_description), liveTvChannelsSection),
+        PlaybackSearchRow("live-tv-channels-show-categories", stringResource(Res.string.live_tv_channels_show_categories), stringResource(Res.string.live_tv_channels_show_categories_description), liveTvChannelsSection),
+        PlaybackSearchRow("live-tv-channels-hide-categories", stringResource(Res.string.live_tv_channels_hide_categories), stringResource(Res.string.live_tv_channels_hide_categories_description), liveTvChannelsSection),
+        PlaybackSearchRow("live-tv-channels-order", stringResource(Res.string.live_tv_channels_reorder), stringResource(Res.string.live_tv_channels_hint), liveTvChannelsSection),
+        PlaybackSearchRow("live-tv-channels-reset-order", stringResource(Res.string.live_tv_channels_reset_order), stringResource(Res.string.live_tv_channels_reset_order_description), liveTvChannelsSection),
+    ).forEach { item ->
+        row(SettingsPage.LiveTvChannels, item.key, item.title, item.description, liveTvChannelsPage, item.sectionOverride.orEmpty(), icon = Icons.Rounded.LiveTv)
+    }
+
     // Downloads
     val downloadsPage = stringResource(Res.string.compose_settings_root_downloads_title)
     addPage(

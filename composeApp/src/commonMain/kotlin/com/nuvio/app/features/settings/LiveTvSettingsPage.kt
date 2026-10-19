@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.List
 import androidx.compose.material3.Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +40,9 @@ import com.nuvio.app.features.livetv.LiveTvXtreamSettings
 import com.nuvio.app.features.livetv.rememberLiveTvPlaylistFilePicker
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_remove
+import nuvio.composeapp.generated.resources.live_tv_channels_description
+import nuvio.composeapp.generated.resources.live_tv_channels_title
+import nuvio.composeapp.generated.resources.live_tv_settings_section_channels
 import nuvio.composeapp.generated.resources.live_tv_settings_add_local_playlist
 import nuvio.composeapp.generated.resources.live_tv_settings_add_url_playlist
 import nuvio.composeapp.generated.resources.live_tv_settings_cancel_edit
@@ -92,8 +97,25 @@ import org.jetbrains.compose.resources.stringResource
 internal fun LazyListScope.liveTvSettingsContent(
     isTablet: Boolean,
     uiState: LiveTvUiState,
+    onChannelsClick: () -> Unit,
 ) {
     if (uiState.hasPlaylist) {
+        item {
+            SettingsSection(
+                title = stringResource(Res.string.live_tv_settings_section_channels),
+                isTablet = isTablet,
+            ) {
+                SettingsGroup(isTablet = isTablet) {
+                    SettingsNavigationRow(
+                        title = stringResource(Res.string.live_tv_channels_title),
+                        description = stringResource(Res.string.live_tv_channels_description),
+                        icon = Icons.AutoMirrored.Rounded.List,
+                        isTablet = isTablet,
+                        onClick = onChannelsClick,
+                    )
+                }
+            }
+        }
         item {
             SettingsSection(
                 title = stringResource(Res.string.live_tv_settings_section_navigation),

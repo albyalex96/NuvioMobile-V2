@@ -20,4 +20,6 @@ internal expect object LiveTvStorage {
     fun saveEpgSourcesBlob(blob: String)
     fun loadEpgAutoDetectEnabled(): Boolean?
     fun saveEpgAutoDetectEnabled(enabled: Boolean)
+    fun loadChannelPreferencesBlob(): String?
+    fun saveChannelPreferencesBlob(blob: String)
 }

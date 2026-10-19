@@ -15,6 +15,7 @@ actual object LiveTvStorage {
     private const val xtreamSettingsKey = "xtream_settings"
     private const val epgSourcesBlobKey = "epg_sources_blob"
     private const val epgAutoDetectEnabledKey = "epg_auto_detect_enabled"
+    private const val channelPreferencesKey = "channel_preferences"
 
     private var preferences: SharedPreferences? = null
 
@@ -117,6 +118,16 @@ actual object LiveTvStorage {
         preferences
             ?.edit()
             ?.putBoolean(ProfileScopedKey.of(epgAutoDetectEnabledKey), enabled)
+            ?.apply()
+    }
+
+    actual fun loadChannelPreferencesBlob(): String? =
+        preferences?.getString(ProfileScopedKey.of(channelPreferencesKey), null)
+
+    actual fun saveChannelPreferencesBlob(blob: String) {
+        preferences
+            ?.edit()
+            ?.putString(ProfileScopedKey.of(channelPreferencesKey), blob)
             ?.apply()
     }
 }

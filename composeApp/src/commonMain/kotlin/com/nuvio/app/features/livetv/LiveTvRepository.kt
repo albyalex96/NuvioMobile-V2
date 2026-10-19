@@ -46,6 +46,8 @@ object LiveTvRepository {
             isNavigationEnabled = LiveTvStorage.loadNavigationEnabled() ?: true,
             epgSources = decodeEpgSources(LiveTvStorage.loadEpgSourcesBlob().orEmpty()),
             isEpgAutoDetectEnabled = LiveTvStorage.loadEpgAutoDetectEnabled() ?: true,
+            channelPreferences = decodeLiveTvChannelPreferences(LiveTvStorage.loadChannelPreferencesBlob())
+                ?: LiveTvChannelPreferences(),
         )
         publishNavigationVisibility()
     }
@@ -88,6 +90,7 @@ object LiveTvRepository {
         favoriteChannelIds: Set<String>?,
         navigationEnabled: Boolean?,
         epgAutoDetectEnabled: Boolean?,
+        channelPreferences: LiveTvChannelPreferences? = null,
     ) {
         ensureLoaded()
         val state = _uiState.value
@@ -110,6 +113,11 @@ object LiveTvRepository {
         if (epgAutoDetectEnabled != null && epgAutoDetectEnabled != state.isEpgAutoDetectEnabled) {
             LiveTvStorage.saveEpgAutoDetectEnabled(epgAutoDetectEnabled)
         }
+        val preferencesChanged = channelPreferences != null && channelPreferences != state.channelPreferences
+        if (preferencesChanged) {
+            LiveTvStorage.saveChannelPreferencesBlob(encodeLiveTvChannelPreferences(channelPreferences))
+            log.i { "Applied synced channel preferences (${channelPreferences.describe()})" }
+        }
         _uiState.value = _uiState.value.copy(
             playlistUrl = (playlists ?: state.playlists).firstEnabledUrlSource(),
             playlists = playlists ?: state.playlists,
@@ -117,6 +125,7 @@ object LiveTvRepository {
             favoriteChannelIds = favoriteChannelIds ?: state.favoriteChannelIds,
             isNavigationEnabled = navigationEnabled ?: state.isNavigationEnabled,
             isEpgAutoDetectEnabled = epgAutoDetectEnabled ?: state.isEpgAutoDetectEnabled,
+            channelPreferences = channelPreferences ?: state.channelPreferences,
         )
         publishNavigationVisibility()
         if (playlistsChanged || epgChanged) {
@@ -677,6 +686,56 @@ object LiveTvRepository {
         _uiState.value = _uiState.value.copy(favoriteChannelIds = favorites)
     }
 
+    fun setChannelsVisible(channels: Collection<LiveTvChannel>, visible: Boolean) {
+        if (channels.isEmpty()) return
+        val keys = channels.map(::liveTvChannelPreferenceKey).toSet()
+        updateChannelPreferences("set ${keys.size} channels visible=$visible") { current ->
+            current.copy(
+                hiddenChannelKeys = if (visible) current.hiddenChannelKeys - keys else current.hiddenChannelKeys + keys,
+            )
+        }
+    }
+
+    /** [categoryKeys] are [liveTvCategoryKey] values. */
+    fun setCategoriesVisible(categoryKeys: Collection<String>, visible: Boolean) {
+        if (categoryKeys.isEmpty()) return
+        val keys = categoryKeys.toSet()
+        updateChannelPreferences("set ${keys.size} categories visible=$visible") { current ->
+            current.copy(
+                hiddenCategoryKeys = if (visible) current.hiddenCategoryKeys - keys else current.hiddenCategoryKeys + keys,
+            )
+        }
+    }
+
+    fun moveChannel(fromKey: String, toKey: String) {
+        val state = _uiState.value
+        val order = moveLiveTvChannelOrder(state.arrangedChannels, state.channelPreferences.channelOrder, fromKey, toKey)
+        if (order == state.channelPreferences.channelOrder) return
+        updateChannelPreferences(reason = null) { current -> current.copy(channelOrder = order) }
+    }
+
+    /** Called when a drag ends, so a long drag produces a single log line. */
+    fun logChannelOrderChanged() {
+        log.d { "Channel order changed (${_uiState.value.channelPreferences.describe()})" }
+    }
+
+    fun resetChannelOrder() {
+        updateChannelPreferences("reset channel order") { current -> current.copy(channelOrder = emptyList()) }
+    }
+
+    private fun updateChannelPreferences(
+        reason: String?,
+        transform: (LiveTvChannelPreferences) -> LiveTvChannelPreferences,
+    ) {
+        ensureLoaded()
+        val current = _uiState.value.channelPreferences
+        val updated = transform(current)
+        if (updated == current) return
+        LiveTvStorage.saveChannelPreferencesBlob(encodeLiveTvChannelPreferences(updated))
+        _uiState.value = _uiState.value.copy(channelPreferences = updated)
+        if (reason != null) log.i { "Channel preferences: $reason (${updated.describe()})" }
+    }
+
     fun markChannelWatched(channel: LiveTvChannel) {
         ensureLoaded()
         LiveTvStorage.saveLastWatchedChannelId(channel.id)
@@ -712,6 +771,9 @@ object LiveTvRepository {
         LiveTvStorage.saveFavoriteChannelIdsBlob(channelIds.sorted().joinToString("\n"))
     }
 }
+
+private fun LiveTvChannelPreferences.describe(): String =
+    "hiddenChannels=${hiddenChannelKeys.size}, hiddenCategories=${hiddenCategoryKeys.size}, ordered=${channelOrder.size}"
 
 private const val LIVE_TV_EPG_CACHE_TTL_MILLIS = 6L * 60L * 60L * 1000L
 private const val LIVE_TV_CHANNEL_CACHE_FRESH_MILLIS = 15L * 60L * 1000L

@@ -133,13 +133,13 @@ fun LiveTvScreen(
     val chooseCategoryLabel = stringResource(Res.string.live_tv_filter_choose_category)
 
     val categoryOptions = remember(
-        uiState.channels,
+        uiState.displayedChannels,
         allChannelsLabel,
         favoritesLabel,
         uncategorizedLabel,
     ) {
         buildLiveTvCategoryFilterOptions(
-            channels = uiState.channels,
+            channels = uiState.displayedChannels,
             allChannelsLabel = allChannelsLabel,
             favoritesLabel = favoritesLabel,
             uncategorizedLabel = uncategorizedLabel,
@@ -147,7 +147,7 @@ fun LiveTvScreen(
     }
 
     val visibleChannels = remember(
-        uiState.channels,
+        uiState.displayedChannels,
         uiState.favoriteChannelIds,
         filterMode,
         selectedCategoryName,
@@ -155,7 +155,7 @@ fun LiveTvScreen(
         uncategorizedLabel,
     ) {
         filterLiveTvChannels(
-            channels = uiState.channels,
+            channels = uiState.displayedChannels,
             favoriteChannelIds = uiState.favoriteChannelIds,
             filterMode = filterMode,
             selectedCategoryName = selectedCategoryName,
@@ -164,9 +164,9 @@ fun LiveTvScreen(
         )
     }
 
-    val lastWatchedChannel = remember(uiState.channels, uiState.lastWatchedChannelId) {
+    val lastWatchedChannel = remember(uiState.displayedChannels, uiState.lastWatchedChannelId) {
         uiState.lastWatchedChannelId?.let { channelId ->
-            uiState.channels.firstOrNull { it.id == channelId }
+            uiState.displayedChannels.firstOrNull { it.id == channelId }
         }
     }
 
@@ -964,7 +964,7 @@ private fun filterLiveTvChannels(
                 categoryNameForChannel(channel, uncategorizedGroupName).lowercase().contains(normalizedQuery) ||
                 channel.playlistName.orEmpty().lowercase().contains(normalizedQuery)
         }
-        .sortedBy { it.name.lowercase() }
+        // Already in the user's order (sorted by name unless reordered in the settings).
         .toList()
 }
 
