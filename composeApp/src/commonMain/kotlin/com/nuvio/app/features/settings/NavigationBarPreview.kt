@@ -56,7 +56,7 @@ internal fun NavigationBarPreview(
             val compact = if (topBarStyle != null) {
                 topBarStyle == TopNavBarStyle.COMPACT
             } else {
-                isTablet || style == NavBarStyle.COMPACT
+                style == NavBarStyle.COMPACT
             }
             if (compact) collapse()
         }
@@ -76,7 +76,7 @@ internal fun NavigationBarPreview(
             Column(
                 Modifier.matchParentSize()
                     .hazeSource(hazeState)
-                    .then(if (!isTablet && !topBar && style == NavBarStyle.ADAPTIVE) Modifier.nestedScroll(barScrollState.nestedScrollConnection) else Modifier)
+                    .then(if (!topBar && style == NavBarStyle.ADAPTIVE) Modifier.nestedScroll(barScrollState.nestedScrollConnection) else Modifier)
                     .verticalScroll(rememberScrollState())
                     .background(tokens.colors.surfaceCard)
                     .padding(12.dp),
@@ -117,7 +117,7 @@ internal fun NavigationBarPreview(
                 FloatingNavigationBar(
                     items = items,
                     modifier = Modifier.align(if (atTop) Alignment.TopCenter else Alignment.BottomCenter)
-                        .then(if (atTop) Modifier.widthIn(max = 416.dp) else Modifier),
+                        .then(if (atTop) Modifier.widthIn(max = 520.dp) else Modifier),
                     scrollState = barScrollState,
                     hazeState = hazeState,
                     contentPadding = PaddingValues(vertical = 16.dp),
@@ -132,7 +132,7 @@ internal fun NavigationBarPreview(
         } else {
             Text(
                 text = stringResource(
-                    if (!isTablet && style == NavBarStyle.ADAPTIVE) Res.string.settings_nav_bar_preview_hint
+                    if (style == NavBarStyle.ADAPTIVE) Res.string.settings_nav_bar_preview_hint
                     else Res.string.settings_nav_bar_preview_tap_hint,
                 ),
                 style = MaterialTheme.typography.bodySmall,

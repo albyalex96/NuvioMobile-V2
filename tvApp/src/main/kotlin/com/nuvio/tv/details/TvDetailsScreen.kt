@@ -94,6 +94,7 @@ import com.nuvio.app.tv.TvSeasonViewMode
 import co.touchlab.kermit.Logger
 import coil3.compose.AsyncImage
 import com.nuvio.app.core.format.formatEpisodeCodeWithSelectedFormat
+import com.nuvio.app.core.ui.EpisodeCodeChip
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.details.MetaPerson
@@ -1257,14 +1258,13 @@ private fun EpisodeArtwork(model: TvDetailsModel, episode: MetaVideo, blurred: B
 @Composable
 private fun EpisodeCodeBadge(code: String?) {
     if (code == null) return
-    Text(
-        text = code.uppercase(),
-        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold, letterSpacing = 0.9.sp),
-        color = Color.White.copy(alpha = 0.9f),
-        maxLines = 1,
-        modifier = Modifier
-            .background(Color.Black.copy(alpha = 0.42f), RoundedCornerShape(7.dp))
-            .padding(horizontal = 8.dp, vertical = 3.dp),
+    // Same chip as the phone episode list and Continue Watching.
+    EpisodeCodeChip(
+        text = code,
+        textSize = MaterialTheme.typography.labelSmall.fontSize,
+        radius = 7.dp,
+        horizontalPadding = 8.dp,
+        verticalPadding = 3.dp,
     )
 }
 

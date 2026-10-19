@@ -75,6 +75,7 @@ import com.nuvio.app.core.build.AppFeaturePolicy
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
 import com.nuvio.app.features.settings.ThemeSettingsRepository
 import com.nuvio.app.core.i18n.localizedSeasonEpisodeCode
+import com.nuvio.app.core.ui.EpisodeCodeChip
 import com.nuvio.app.core.ui.NuvioAnimatedWatchedBadge
 import com.nuvio.app.core.ui.NuvioCardDepthSurface
 import com.nuvio.app.core.ui.NuvioProgressBar
@@ -919,7 +920,6 @@ private fun EpisodeHorizontalCard(
                 radius = metrics.badgeRadius,
                 horizontalPadding = metrics.badgeHorizontalPadding,
                 verticalPadding = metrics.badgeVerticalPadding,
-                backgroundAlpha = 0.42f,
             )
 
             Text(
@@ -1142,26 +1142,16 @@ private fun EpisodeCodeBadge(
     radius: Dp,
     horizontalPadding: Dp,
     verticalPadding: Dp,
-    backgroundAlpha: Float,
     modifier: Modifier = Modifier,
 ) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(radius))
-            .background(Color.Black.copy(alpha = backgroundAlpha))
-            .padding(horizontal = horizontalPadding, vertical = verticalPadding),
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelMedium.copy(
-                fontSize = textSize,
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = 0.sp,
-            ),
-            color = Color.White.copy(alpha = 0.9f),
-            maxLines = 1,
-        )
-    }
+    EpisodeCodeChip(
+        text = text,
+        textSize = textSize,
+        modifier = modifier,
+        radius = radius,
+        horizontalPadding = horizontalPadding,
+        verticalPadding = verticalPadding,
+    )
 }
 
 @Composable
@@ -1287,7 +1277,6 @@ private fun EpisodeListCard(
                         radius = sizing.badgeRadius,
                         horizontalPadding = sizing.badgeHorizontalPadding,
                         verticalPadding = sizing.badgeVerticalPadding,
-                        backgroundAlpha = 0.85f,
                         modifier = Modifier
                             .align(Alignment.TopStart)
                             .padding(start = 8.dp, top = 8.dp),

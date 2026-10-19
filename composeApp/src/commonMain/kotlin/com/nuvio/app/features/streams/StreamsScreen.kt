@@ -66,6 +66,9 @@ import com.nuvio.app.core.ui.NuvioBackButton
 import com.nuvio.app.core.ui.NuvioBottomSheetActionRow
 import com.nuvio.app.core.ui.NuvioBottomSheetDivider
 import com.nuvio.app.core.ui.NuvioModalBottomSheet
+import com.nuvio.app.core.ui.NuvioActionMenuDivider
+import com.nuvio.app.core.ui.NuvioActionMenuGroup
+import com.nuvio.app.core.ui.NuvioActionMenuRow
 import com.nuvio.app.core.ui.NuvioToastController
 import com.nuvio.app.core.ui.dismissNuvioBottomSheet
 import com.nuvio.app.features.downloads.DownloadsRepository
@@ -1171,78 +1174,70 @@ private fun StreamActionsSheet(
                     }
             }
 
-            NuvioBottomSheetDivider()
-            if (showOriginalDescription) {
-                NuvioBottomSheetActionRow(
-                    icon = Icons.Rounded.Description,
-                    title = stringResource(Res.string.stream_parser_original_description),
-                    onClick = {
-                        // The dialog lives outside the sheet, so it can open right away.
+            val dismissAfter: (() -> Unit) -> Unit = { action ->
+                // Dialogs and the device picker live outside the sheet, so they can open right away.
+                action()
+                coroutineScope.launch {
+                    dismissNuvioBottomSheet(sheetState = sheetState, onDismiss = onDismiss)
+                }
+            }
+            val castIssues = remember(stream) { stream.castCompatibilityIssues() }
+            val castSubtitle = castIssues.takeIf { it.isNotEmpty() }?.let {
+                stringResource(Res.string.cast_compatibility_warning, it.joinToString(", "))
+            }
+            val actions = buildList {
+                if (showOriginalDescription) {
+                    add(StreamMenuAction(Icons.Rounded.Description, stringResource(Res.string.stream_parser_original_description)) {
                         onShowOriginalDescription(stream)
-                        coroutineScope.launch {
-                            dismissNuvioBottomSheet(sheetState = sheetState, onDismiss = onDismiss)
-                        }
-                    },
-                )
-            }
-            if (stream.hasLinkActions) {
-                NuvioBottomSheetActionRow(
-                    icon = Icons.Rounded.ContentCopy,
-                    title = stringResource(Res.string.streams_copy_link),
-                    onClick = {
+                    })
+                }
+                if (stream.hasLinkActions) {
+                    add(StreamMenuAction(Icons.Rounded.ContentCopy, stringResource(Res.string.streams_copy_link)) {
                         onCopyLink(stream)
-                        coroutineScope.launch {
-                            dismissNuvioBottomSheet(sheetState = sheetState, onDismiss = onDismiss)
-                        }
-                    },
-                )
-                NuvioBottomSheetActionRow(
-                    icon = Icons.AutoMirrored.Rounded.OpenInNew,
-                    title = stringResource(
-                        if (externalPlayerEnabled) {
-                            Res.string.streams_open_internal_player
-                        } else {
-                            Res.string.streams_open_external_player
-                        },
-                    ),
-                    onClick = {
-                        onOpen(stream, !externalPlayerEnabled)
-                        coroutineScope.launch {
-                            dismissNuvioBottomSheet(sheetState = sheetState, onDismiss = onDismiss)
-                        }
-                    },
-                )
-                NuvioBottomSheetActionRow(
-                    icon = Icons.Rounded.Download,
-                    title = stringResource(Res.string.streams_download_file),
-                    onClick = {
+                    })
+                    add(
+                        StreamMenuAction(
+                            Icons.AutoMirrored.Rounded.OpenInNew,
+                            stringResource(
+                                if (externalPlayerEnabled) {
+                                    Res.string.streams_open_internal_player
+                                } else {
+                                    Res.string.streams_open_external_player
+                                },
+                            ),
+                        ) { onOpen(stream, !externalPlayerEnabled) },
+                    )
+                    add(StreamMenuAction(Icons.Rounded.Download, stringResource(Res.string.streams_download_file)) {
                         onDownload(stream)
-                        coroutineScope.launch {
-                            dismissNuvioBottomSheet(sheetState = sheetState, onDismiss = onDismiss)
-                        }
-                    },
-                )
-            }
-            if (castAvailable && stream.canCast) {
-                val compatibilityIssues = remember(stream) { stream.castCompatibilityIssues() }
-                NuvioBottomSheetActionRow(
-                    icon = Icons.Rounded.Cast,
-                    title = stringResource(Res.string.cast_stream_action),
-                    subtitle = compatibilityIssues.takeIf { it.isNotEmpty() }?.let {
-                        stringResource(Res.string.cast_compatibility_warning, it.joinToString(", "))
-                    },
-                    onClick = {
-                        // The device picker lives outside the sheet, so it can open right away.
+                    })
+                }
+                if (castAvailable && stream.canCast) {
+                    add(StreamMenuAction(Icons.Rounded.Cast, stringResource(Res.string.cast_stream_action), castSubtitle) {
                         onCast(stream)
-                        coroutineScope.launch {
-                            dismissNuvioBottomSheet(sheetState = sheetState, onDismiss = onDismiss)
-                        }
-                    },
-                )
+                    })
+                }
+            }
+            NuvioActionMenuGroup(modifier = Modifier.padding(horizontal = 16.dp)) {
+                actions.forEachIndexed { index, action ->
+                    if (index > 0) NuvioActionMenuDivider()
+                    NuvioActionMenuRow(
+                        title = action.title,
+                        icon = action.icon,
+                        subtitle = action.subtitle,
+                        onClick = { dismissAfter(action.onClick) },
+                    )
+                }
             }
         }
     }
 }
+
+private class StreamMenuAction(
+    val icon: androidx.compose.ui.graphics.vector.ImageVector,
+    val title: String,
+    val subtitle: String? = null,
+    val onClick: () -> Unit,
+)
 
 private fun Long.toPlaybackClock(): String {
     val totalSeconds = (this / 1000L).coerceAtLeast(0L)

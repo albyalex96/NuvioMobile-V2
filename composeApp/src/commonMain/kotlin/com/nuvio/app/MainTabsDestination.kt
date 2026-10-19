@@ -34,6 +34,7 @@ import com.nuvio.app.core.ui.rememberNuvioNavBarScrollState
 import com.nuvio.app.features.profiles.NuvioProfile
 import com.nuvio.app.features.profiles.ProfileSwitcherTab
 import com.nuvio.app.features.settings.NavBarStyle
+import com.nuvio.app.features.settings.tabletNavBarStyle
 import com.nuvio.app.features.settings.ThemeSettingsRepository
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
@@ -195,10 +196,15 @@ internal fun MainTabsDestination(
                 }
 
                 if (isTabletLayout && !useNativeBottomTabs) {
-                    val tabletNavBarScrollState = remember { NuvioNavBarScrollState().apply { collapse() } }
+                    // Same styles as the phone bar; Classic has no top-bar form, so it falls back to Compact.
+                    when (tabletNavBarStyle(navBarStyleSetting)) {
+                        NavBarStyle.EXPANDED -> navBarScrollState.expand()
+                        NavBarStyle.COMPACT -> navBarScrollState.collapse()
+                        else -> {}
+                    }
                     FloatingNavigationBar(
-                        modifier = Modifier.align(Alignment.TopCenter).widthIn(max = 416.dp),
-                        scrollState = tabletNavBarScrollState,
+                        modifier = Modifier.align(Alignment.TopCenter).widthIn(max = 520.dp),
+                        scrollState = navBarScrollState,
                         hazeState = navBarHazeState,
                         contentPadding = PaddingValues(
                             top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 10.dp,

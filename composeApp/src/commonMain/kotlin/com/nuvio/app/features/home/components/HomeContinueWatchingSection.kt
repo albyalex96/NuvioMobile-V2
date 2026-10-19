@@ -50,6 +50,9 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.nuvio.app.core.ui.DisintegratingContainer
 import com.nuvio.app.core.ui.DisintegrationRequest
+import com.nuvio.app.core.ui.EpisodeCodeChip
+import com.nuvio.app.core.ui.MediaInfoChip
+import com.nuvio.app.core.ui.MediaInfoChipStyle
 import com.nuvio.app.core.ui.NuvioCardDepthSurface
 import com.nuvio.app.core.ui.NuvioProgressBar
 import com.nuvio.app.core.ui.nuvioCardDepth
@@ -76,9 +79,6 @@ import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 import com.nuvio.app.core.i18n.localizedEpisodeTitle
 
-private val ContinueWatchingStatusBadgeShape = RoundedCornerShape(4.dp)
-private val ContinueWatchingNewEpisodeBadgeColor = Color(0xFF1D4ED8)
-private val ContinueWatchingNewSeasonBadgeColor = Color(0xFFB45309)
 private const val ContinueWatchingLandscapeCardScale = 1.2f
 internal val HomeContinueWatchingSectionBottomPadding = 12.dp
 
@@ -710,7 +710,7 @@ private fun ContinueWatchingCard(
     val episodeTitle = localizedEpisodeTitle(item.episodeTitle, item.episodeNumber) ?: airDateText
     val badgeText = continueWatchingCardBadgeText(item = item, airDateText = airDateText)
     val backgroundColor = MaterialTheme.colorScheme.background
-    val badgeBackground = continueWatchingBadgeBackground(item)
+    val badgeStyle = continueWatchingCardBadgeStyle(item = item, airDateText = airDateText)
 
     Box(
         modifier = Modifier
@@ -772,15 +772,11 @@ private fun ContinueWatchingCard(
             verticalArrangement = Arrangement.spacedBy(cardMetrics.textGap),
         ) {
             if (episodeCode != null) {
-                Text(
+                EpisodeCodeChip(
                     text = episodeCode,
-                    style = MaterialTheme.typography.labelMedium.copy(
-                        fontSize = cardMetrics.metaTextSize,
-                        fontWeight = FontWeight.SemiBold,
-                    ),
-                    color = MaterialTheme.colorScheme.onBackground,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    textSize = cardMetrics.metaTextSize,
+                    horizontalPadding = cardMetrics.badgeHorizontalPadding,
+                    verticalPadding = cardMetrics.badgeVerticalPadding,
                 )
             }
             Text(
@@ -806,27 +802,16 @@ private fun ContinueWatchingCard(
                 )
             }
         }
-        Box(
+        MediaInfoChip(
+            text = badgeText,
+            style = badgeStyle,
+            textSize = cardMetrics.badgeTextSize,
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(cardMetrics.badgeInset)
-                .clip(ContinueWatchingStatusBadgeShape)
-                .background(badgeBackground)
-                .padding(
-                    horizontal = cardMetrics.badgeHorizontalPadding,
-                    vertical = cardMetrics.badgeVerticalPadding,
-                ),
-        ) {
-            Text(
-                text = badgeText,
-                style = MaterialTheme.typography.labelSmall.copy(
-                    fontSize = cardMetrics.badgeTextSize,
-                    fontWeight = FontWeight.SemiBold,
-                ),
-                color = Color.White,
-                maxLines = 1,
-            )
-        }
+                .padding(cardMetrics.badgeInset),
+            horizontalPadding = cardMetrics.badgeHorizontalPadding,
+            verticalPadding = cardMetrics.badgeVerticalPadding,
+        )
         if (item.progressFraction > 0f) {
             Box(
                 modifier = Modifier
@@ -885,6 +870,25 @@ private fun continueWatchingCardBadgeText(
         airDateText != null -> airDateText
         else -> stringResource(Res.string.home_continue_watching_up_next)
     }
+}
+
+private fun continueWatchingCardBadgeStyle(
+    item: ContinueWatchingItem,
+    airDateText: String?,
+): MediaInfoChipStyle = when {
+    item.progressFraction > 0f && item.durationMs <= 0L -> MediaInfoChipStyle.WatchedPercent
+    item.progressFraction > 0f -> MediaInfoChipStyle.TimeRemaining
+    else -> continueWatchingUpNextChipStyle(item = item, hasAirDate = airDateText != null)
+}
+
+private fun continueWatchingUpNextChipStyle(
+    item: ContinueWatchingItem,
+    hasAirDate: Boolean,
+): MediaInfoChipStyle = when {
+    item.isReleaseAlert && item.isNewSeasonRelease -> MediaInfoChipStyle.NewSeason
+    item.isReleaseAlert -> MediaInfoChipStyle.NewEpisode
+    hasAirDate -> MediaInfoChipStyle.AirDate
+    else -> MediaInfoChipStyle.UpNext
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -959,29 +963,41 @@ private fun ContinueWatchingWideCard(
                     if (item.shufflePlayback) ShuffleBadge()
                     if (item.progressFraction <= 0f && item.seasonNumber != null && item.episodeNumber != null) {
                         val todayIsoDate = CurrentDateProvider.todayIsoDate()
+                        val airDate = computeAirDateBadgeText(item.released, todayIsoDate)
                         val badgeText = when {
                             item.isReleaseAlert -> {
                                 if (item.isNewSeasonRelease) stringResource(Res.string.cw_new_season)
                                 else stringResource(Res.string.cw_new_episode)
                             }
                             else -> {
-                                computeAirDateBadgeText(item.released, todayIsoDate)
-                                    ?: stringResource(Res.string.home_continue_watching_up_next)
+                                airDate ?: stringResource(Res.string.home_continue_watching_up_next)
                             }
                         }
-                        UpNextBadge(item = item, text = badgeText, compact = isCompact, textSize = layout.wideBadgeTextSize)
+                        UpNextBadge(
+                            style = continueWatchingUpNextChipStyle(item, hasAirDate = airDate != null),
+                            text = badgeText,
+                            compact = isCompact,
+                            textSize = layout.wideBadgeTextSize,
+                        )
                     }
                 }
-                Text(
-                    text = wideMetaLine,
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        fontSize = layout.wideMetaSize,
-                        fontWeight = FontWeight.Medium,
-                    ),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                if (item.seasonNumber != null && item.episodeNumber != null) {
+                    EpisodeCodeChip(
+                        text = wideMetaLine,
+                        textSize = layout.wideMetaSize,
+                    )
+                } else {
+                    Text(
+                        text = wideMetaLine,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontSize = layout.wideMetaSize,
+                            fontWeight = FontWeight.Medium,
+                        ),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
                 if (episodeTitle != null) {
                     Text(
                         text = episodeTitle,
@@ -1082,17 +1098,22 @@ private fun ContinueWatchingPosterCard(
                         .padding(8.dp),
                 ) {
                     val todayIsoDate = CurrentDateProvider.todayIsoDate()
+                    val airDate = computeAirDateBadgeText(item.released, todayIsoDate)
                     val badgeText = when {
                         item.isReleaseAlert -> {
                             if (item.isNewSeasonRelease) stringResource(Res.string.cw_new_season)
                             else stringResource(Res.string.cw_new_episode)
                         }
                         else -> {
-                            computeAirDateBadgeText(item.released, todayIsoDate)
-                                ?: stringResource(Res.string.home_continue_watching_up_next)
+                            airDate ?: stringResource(Res.string.home_continue_watching_up_next)
                         }
                     }
-                    UpNextBadge(item = item, text = badgeText, compact = true, textSize = layout.posterBadgeTextSize)
+                    UpNextBadge(
+                        style = continueWatchingUpNextChipStyle(item, hasAirDate = airDate != null),
+                        text = badgeText,
+                        compact = true,
+                        textSize = layout.posterBadgeTextSize,
+                    )
                 }
             }
             if (item.progressFraction > 0f) {
@@ -1140,18 +1161,14 @@ private fun ContinueWatchingPosterCard(
                 )
             }
             if (item.seasonNumber != null && item.episodeNumber != null) {
-                Text(
+                EpisodeCodeChip(
                     text = formatEpisodeCodeWithSelectedFormat(item.seasonNumber, item.episodeNumber) ?: stringResource(
                         Res.string.streams_episode_badge,
                         item.seasonNumber,
                         item.episodeNumber,
                     ),
+                    textSize = layout.posterMetaSize,
                     modifier = Modifier.padding(start = 6.dp),
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontSize = layout.posterMetaSize,
-                        fontWeight = FontWeight.SemiBold,
-                    ),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -1190,38 +1207,20 @@ private fun ArtworkPanel(
 }
 
 @Composable
-private fun continueWatchingBadgeBackground(item: ContinueWatchingItem): Color = when {
-    item.isNewSeasonRelease -> ContinueWatchingNewSeasonBadgeColor
-    item.isReleaseAlert -> ContinueWatchingNewEpisodeBadgeColor
-    else -> MaterialTheme.colorScheme.background.copy(alpha = 0.80f)
-}
-
-@Composable
 private fun UpNextBadge(
-    item: ContinueWatchingItem,
+    style: MediaInfoChipStyle,
     text: String,
     compact: Boolean,
     textSize: androidx.compose.ui.unit.TextUnit,
 ) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(if (compact) 4.dp else 12.dp))
-            .background(continueWatchingBadgeBackground(item))
-            .padding(
-                horizontal = if (compact) 6.dp else 8.dp,
-                vertical = if (compact) 3.dp else 4.dp,
-            ),
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontSize = textSize,
-                fontWeight = FontWeight.Bold,
-            ),
-            color = Color.White,
-            maxLines = 1,
-        )
-    }
+    MediaInfoChip(
+        text = text,
+        style = style,
+        textSize = textSize,
+        radius = if (compact) 4.dp else 12.dp,
+        horizontalPadding = if (compact) 6.dp else 8.dp,
+        verticalPadding = if (compact) 3.dp else 4.dp,
+    )
 }
 
 internal data class ContinueWatchingLayout(

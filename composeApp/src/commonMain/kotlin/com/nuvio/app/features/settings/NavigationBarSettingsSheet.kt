@@ -78,8 +78,10 @@ internal fun NavigationBarSettingsSheet(
                     showLiveTv = showLiveTv,
                 )
             } else {
-                if (!isTablet) {
-                    NavBarStyle.entries.forEach { style ->
+                // Tablet: the bar sits at the top, so the bottom-only Classic style is not offered.
+                NavBarStyle.entries
+                    .filter { !isTablet || it != NavBarStyle.CLASSIC }
+                    .forEach { style ->
                         item(key = style.key) {
                             NavBarOptionRow(
                                 title = stringResource(style.labelRes),
@@ -88,7 +90,6 @@ internal fun NavigationBarSettingsSheet(
                             )
                         }
                     }
-                }
                 item {
                     AnimatedVisibility(floatingNavigationGlowSupported && selectedStyle != NavBarStyle.CLASSIC) {
                         Column {

@@ -35,6 +35,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nuvio.app.core.format.formatEpisodeCodeWithSelectedFormat
+import com.nuvio.app.core.ui.EpisodeCodeChip
+import com.nuvio.app.core.ui.MediaInfoChip
+import com.nuvio.app.core.ui.MediaInfoChipStyle
 import com.nuvio.app.core.format.formatReleaseDateWithoutYear
 import com.nuvio.app.core.ui.NuvioCardDepthSurface
 import com.nuvio.app.core.ui.nuvio
@@ -50,9 +53,6 @@ import com.nuvio.tv.ui.tvRowCardSurface
 import kotlinx.coroutines.delay
 
 // Colors and timings of NuvioTV's ContinueWatchingCard.
-private val NewEpisodeBadgeColor = Color(0xFF1D4ED8)
-private val NewSeasonBadgeColor = Color(0xFFB45309)
-private val BadgeShape = RoundedCornerShape(4.dp)
 private val PosterTitleBlockHeight = 30.dp
 private const val TITLE_MARQUEE_DELAY_MS = 1_000L
 private const val PosterTitleScale = 0.85f
@@ -148,7 +148,7 @@ fun TvContinueWatchingCard(
                     )
                 }
             }
-            ContinueWatchingBadge(text = text.badge, color = text.badgeColor, modifier = Modifier.align(Alignment.TopEnd).padding(8.dp))
+            ContinueWatchingBadge(text = text.badge, style = text.badgeStyle, modifier = Modifier.align(Alignment.TopEnd).padding(8.dp))
             if (text.progress != null) {
                 TvRowProgressBar(
                     progress = text.progress,
@@ -183,18 +183,24 @@ fun TvContinueWatchingCard(
                             MarqueeTitle(text = item.title, active = marqueeActive, style = titleSmall())
                         }
                         if (text.progress == null) {
-                            ContinueWatchingBadge(text = text.badge, color = text.badgeColor, modifier = Modifier.padding(start = 4.dp))
+                            ContinueWatchingBadge(text = text.badge, style = text.badgeStyle, modifier = Modifier.padding(start = 4.dp))
                         }
                     }
                     // Both lines are always laid out so a movie keeps the same shape as a show.
-                    Text(
-                        text = text.episode.orEmpty(),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.nuvio.colors.textSecondary,
-                        maxLines = 1,
-                        minLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    if (text.episode != null) {
+                        EpisodeCodeChip(
+                            text = text.episode,
+                            textSize = MaterialTheme.typography.labelSmall.fontSize,
+                            radius = 4.dp,
+                        )
+                    } else {
+                        Text(
+                            text = "",
+                            style = MaterialTheme.typography.labelMedium,
+                            maxLines = 1,
+                            minLines = 1,
+                        )
+                    }
                     MarqueeTitle(
                         text = text.episodeTitle.orEmpty(),
                         active = marqueeActive,
@@ -231,7 +237,7 @@ fun TvContinueWatchingCard(
                 CardArtwork(url = artwork, blurred = blurred)
                 // Poster cards only show next-up / new episode badges, not the remaining time.
                 if (text.progress == null) {
-                    ContinueWatchingBadge(text = text.badge, color = text.badgeColor, modifier = Modifier.align(Alignment.TopEnd).padding(8.dp))
+                    ContinueWatchingBadge(text = text.badge, style = text.badgeStyle, modifier = Modifier.align(Alignment.TopEnd).padding(8.dp))
                 } else {
                     Box(
                         modifier = Modifier
@@ -264,12 +270,11 @@ fun TvContinueWatchingCard(
                     modifier = Modifier.weight(1f),
                 )
                 text.episode?.let { episode ->
-                    Text(
+                    EpisodeCodeChip(
                         text = episode,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.nuvio.colors.textSecondary,
-                        maxLines = 1,
+                        textSize = MaterialTheme.typography.labelSmall.fontSize,
                         modifier = Modifier.padding(start = 4.dp),
+                        radius = 4.dp,
                     )
                 }
             }
@@ -281,7 +286,7 @@ private class ContinueWatchingText(
     val episode: String?,
     val episodeTitle: String?,
     val badge: String,
-    val badgeColor: Color?,
+    val badgeStyle: MediaInfoChipStyle,
     val progress: Float?,
 )
 
@@ -304,16 +309,19 @@ private fun continueWatchingText(item: ContinueWatchingItem, short: Boolean, upc
         progress != null -> remainingLabel(item)
         else -> stringResource(if (short) R.string.tv_cw_next_up_short else R.string.tv_cw_next_up)
     }
-    val badgeColor = when {
-        item.isNewSeasonRelease -> NewSeasonBadgeColor
-        item.isReleaseAlert -> NewEpisodeBadgeColor
-        else -> null
+    val badgeStyle = when {
+        item.isNewSeasonRelease -> MediaInfoChipStyle.NewSeason
+        item.isReleaseAlert -> MediaInfoChipStyle.NewEpisode
+        upcoming -> MediaInfoChipStyle.AirDate
+        progress != null && item.durationMs <= 0L -> MediaInfoChipStyle.WatchedPercent
+        progress != null -> MediaInfoChipStyle.TimeRemaining
+        else -> MediaInfoChipStyle.UpNext
     }
     return ContinueWatchingText(
         episode = episode,
         episodeTitle = item.episodeTitle?.takeIf { it.isNotBlank() },
         badge = badge,
-        badgeColor = badgeColor,
+        badgeStyle = badgeStyle,
         progress = progress,
     )
 }
@@ -342,16 +350,15 @@ private fun CardArtwork(url: String?, blurred: Boolean) {
 }
 
 @Composable
-private fun ContinueWatchingBadge(text: String, color: Color?, modifier: Modifier = Modifier) {
-    Text(
+private fun ContinueWatchingBadge(text: String, style: MediaInfoChipStyle, modifier: Modifier = Modifier) {
+    MediaInfoChip(
         text = text,
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.nuvio.colors.textPrimary,
-        maxLines = 1,
-        modifier = modifier
-            .clip(BadgeShape)
-            .background(color ?: MaterialTheme.nuvio.colors.background.copy(alpha = 0.8f))
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+        style = style,
+        textSize = MaterialTheme.typography.labelSmall.fontSize,
+        modifier = modifier,
+        radius = 4.dp,
+        horizontalPadding = 8.dp,
+        verticalPadding = 4.dp,
     )
 }
 

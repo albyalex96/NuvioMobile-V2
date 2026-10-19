@@ -139,7 +139,7 @@ internal fun LazyListScope.appearanceSettingsContent(
         val episodeCodeFormat by ThemeSettingsRepository.episodeCodeFormat.collectAsStateWithLifecycle()
         val navBarStyleAvailable = !isIos
         val glowEnabled by ThemeSettingsRepository.navBarGlowEnabled.collectAsStateWithLifecycle()
-        val effectiveNavBarStyle = if (isTablet) NavBarStyle.COMPACT else selectedNavBarStyle
+        val effectiveNavBarStyle = if (isTablet) tabletNavBarStyle(selectedNavBarStyle) else selectedNavBarStyle
         val topNavBarEnabled by ThemeSettingsRepository.topNavBarEnabled.collectAsStateWithLifecycle()
         val topNavBarStyle by ThemeSettingsRepository.topNavBarStyle.collectAsStateWithLifecycle()
         val liveTvUiState by remember {

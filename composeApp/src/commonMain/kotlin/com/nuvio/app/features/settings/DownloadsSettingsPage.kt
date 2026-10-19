@@ -1,5 +1,8 @@
 package com.nuvio.app.features.settings
 
+import com.nuvio.app.core.ui.NuvioActionMenuDivider
+import com.nuvio.app.core.ui.NuvioActionMenuGroup
+import com.nuvio.app.core.ui.NuvioActionMenuRow
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalIndication
@@ -817,10 +820,13 @@ private fun DownloadActionsDialog(
             is DownloadEntry.External -> entry.file.displayName
         },
     ) {
-        Column(modifier = Modifier.ignoreHeldConfirmKey()) {
-            actions.forEach { action ->
-                DownloadMenuRow(
-                    action = action,
+        NuvioActionMenuGroup(modifier = Modifier.ignoreHeldConfirmKey()) {
+            actions.forEachIndexed { index, action ->
+                if (index > 0) NuvioActionMenuDivider()
+                NuvioActionMenuRow(
+                    title = action.label,
+                    icon = action.icon,
+                    destructive = action.destructive,
                     onClick = {
                         onDismiss()
                         action.onClick()
@@ -829,34 +835,6 @@ private fun DownloadActionsDialog(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun DownloadMenuRow(action: DownloadMenuAction, onClick: () -> Unit) {
-    val tokens = MaterialTheme.nuvio
-    val color = if (action.destructive) tokens.colors.danger else tokens.colors.textPrimary
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .heightIn(min = 48.dp)
-            .clip(tokens.shapes.compactCard)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-    ) {
-        Icon(
-            imageVector = action.icon,
-            contentDescription = null,
-            tint = if (action.destructive) color else tokens.colors.accent,
-            modifier = Modifier.size(22.dp),
-        )
-        Text(
-            text = action.label,
-            style = MaterialTheme.typography.bodyLarge,
-            color = color,
-        )
     }
 }
 

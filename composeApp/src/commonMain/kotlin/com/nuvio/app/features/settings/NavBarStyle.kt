@@ -22,3 +22,7 @@ enum class NavBarStyle(
             entries.firstOrNull { it.key.equals(key, ignoreCase = true) } ?: ADAPTIVE
     }
 }
+
+/** The tablet bar sits at the top: Classic (a bottom bar) has no top form, so it shows as Compact. */
+fun tabletNavBarStyle(style: NavBarStyle): NavBarStyle =
+    if (style == NavBarStyle.CLASSIC) NavBarStyle.COMPACT else style
