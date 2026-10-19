@@ -1037,6 +1037,11 @@ fun MetaDetailsScreen(
                             onOpenMeta = onOpenMeta,
                             onBack = onBackFromDetails,
                             showExternalRatings = mdbListSettings.isActive,
+                            episodeRatings = episodeImdbRatings,
+                            // Same rule as the phone cast row: only people with a TMDB page.
+                            onCastClick = onCastClick?.let { open ->
+                                { person: MetaPerson -> if ((person.tmdbId ?: 0) > 0) open(person, null) }
+                            },
                         ),
                     )
                     return@Box

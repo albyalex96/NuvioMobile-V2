@@ -73,4 +73,11 @@
     <string name="tv_voice_mic_permission">Consenti l\'accesso al microfono per cercare con la voce.</string>
     <string name="tv_voice_failed">Ricerca vocale non riuscita. Riprova.</string>
     <string name="tv_voice_unavailable">La ricerca vocale non è disponibile su questo dispositivo.</string>
+    <string name="tv_details_seasons">Stagioni</string>
+    <string name="tv_details_season_view_posters">Locandine</string>
+    <string name="tv_details_season_view_text">Testo</string>
+    <string name="tv_details_ratings">Valutazioni</string>
+    <string name="tv_details_ratings_season">S%1$d</string>
+    <string name="tv_details_ratings_episode">E%1$d</string>
+    <string name="tv_details_ratings_summary">Stagione %1$d - %2$d episodi</string>
 </resources>

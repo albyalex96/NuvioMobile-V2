@@ -251,6 +251,8 @@ internal fun buildTvDetailsModel(
     onOpenMeta: ((MetaPreview) -> Unit)?,
     onBack: () -> Unit,
     showExternalRatings: Boolean,
+    episodeRatings: Map<Pair<Int, Int>, Double>,
+    onCastClick: ((com.nuvio.app.features.details.MetaPerson) -> Unit)?,
 ): TvDetailsModel {
     val isSeries = meta.type == "series" || hasEpisodes
     val seasons = if (hasEpisodes) {
@@ -285,7 +287,25 @@ internal fun buildTvDetailsModel(
         onOpenMeta = onOpenMeta ?: {},
         onBack = onBack,
         showExternalRatings = showExternalRatings,
+        episodeRatings = episodeRatings,
+        onCastClick = onCastClick,
     )
+}
+
+/**
+ * Season selector of the detail page: posters or text pills. Same per-device choice as the
+ * phone's toggle (`SeasonViewModeStorage`), posters by default.
+ */
+object TvSeasonViewMode {
+    fun postersEnabled(): Boolean =
+        (com.nuvio.app.features.details.SeasonViewModeStorage.load()
+            ?: com.nuvio.app.features.details.SeasonViewMode.Posters) == com.nuvio.app.features.details.SeasonViewMode.Posters
+
+    fun setPostersEnabled(enabled: Boolean) {
+        com.nuvio.app.features.details.SeasonViewModeStorage.save(
+            if (enabled) com.nuvio.app.features.details.SeasonViewMode.Posters else com.nuvio.app.features.details.SeasonViewMode.Text,
+        )
+    }
 }
 
 /** MDBList ratings row of the detail page (same logos and provider order as the phone app). */

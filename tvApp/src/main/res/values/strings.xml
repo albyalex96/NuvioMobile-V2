@@ -73,4 +73,11 @@
     <string name="tv_voice_mic_permission">Allow microphone access to search by voice.</string>
     <string name="tv_voice_failed">Voice search failed. Try again.</string>
     <string name="tv_voice_unavailable">Voice search is not available on this device.</string>
+    <string name="tv_details_seasons">Seasons</string>
+    <string name="tv_details_season_view_posters">Posters</string>
+    <string name="tv_details_season_view_text">Text</string>
+    <string name="tv_details_ratings">Ratings</string>
+    <string name="tv_details_ratings_season">S%1$d</string>
+    <string name="tv_details_ratings_episode">E%1$d</string>
+    <string name="tv_details_ratings_summary">Season %1$d - %2$d episodes</string>
 </resources>

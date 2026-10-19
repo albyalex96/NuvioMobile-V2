@@ -87,6 +87,10 @@ import com.nuvio.app.core.ui.nuvioCardDepth
 import com.nuvio.app.features.details.MetaEpisodeCardStyle
 import com.nuvio.app.features.details.MetaScreenSettingsRepository
 import com.nuvio.app.features.details.MetaScreenSettingsUiState
+import androidx.compose.foundation.border
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.automirrored.filled.ViewList
+import com.nuvio.app.tv.TvSeasonViewMode
 import co.touchlab.kermit.Logger
 import coil3.compose.AsyncImage
 import com.nuvio.app.core.format.formatEpisodeCodeWithSelectedFormat
@@ -130,6 +134,10 @@ private const val EPISODE_OVERVIEW_ANIMATION_MS = 280
 private const val EPISODE_OVERVIEW_COLLAPSED_LINES = 3
 private val OverviewToggleSize = 36.dp
 private val EpisodeListArtworkWidth = 240.dp
+// Season posters of the phone selector, and NuvioTV rating chips.
+private val SeasonPosterWidth = 110.dp
+private val SeasonPosterShape = RoundedCornerShape(12.dp)
+private val RatingChipShape = RoundedCornerShape(14.dp)
 private val EpisodeTextShadow = Shadow(color = Color.Black, offset = Offset(0f, 1f), blurRadius = 1f)
 
 /** TV detail page, recreated from NuvioTV: full-screen backdrop, bottom-aligned hero, seasons and episodes below. */
@@ -202,9 +210,15 @@ fun TvDetailsScreen(model: TvDetailsModel) {
                     settings = metaSettings,
                 )
             }
+            // NuvioTV "Ratings": series only, when the detail settings show episode ratings.
+            if (model.isSeries && metaSettings.episodeRatingsVisibility.showRatings && model.episodeRatings.isNotEmpty()) {
+                item(key = "episode_ratings") {
+                    EpisodeRatingsSection(model = model, seasons = seasons, settings = metaSettings)
+                }
+            }
             if (meta.cast.isNotEmpty()) {
                 item(key = "cast") {
-                    CastSection(cast = meta.cast)
+                    CastSection(cast = meta.cast, onClick = model.onCastClick)
                 }
             }
             if (meta.collectionItems.isNotEmpty()) {
@@ -618,7 +632,7 @@ private fun LazyListScope.episodesSection(
 ) {
     item(key = "season_tabs") {
         if (seasons.size > 1) {
-            SeasonTabs(seasons = seasons, selectedSeason = season.number, onSeasonSelected = onSeasonSelected)
+            SeasonSelector(model = model, seasons = seasons, selectedSeason = season.number, onSeasonSelected = onSeasonSelected)
         } else {
             Spacer(modifier = Modifier.height(12.dp))
         }
@@ -633,6 +647,261 @@ private fun LazyListScope.episodesSection(
         }
     }
 }
+
+/** Season artwork like the phone (`resolveSeasonPoster`): the episodes' season poster, then the addon map. */
+private fun seasonPoster(model: TvDetailsModel, season: TvSeason): String? =
+    season.episodes.firstNotNullOfOrNull { episode -> episode.seasonPoster?.takeIf(String::isNotBlank) }
+        ?: model.meta.seasonPosters[season.number]?.takeIf(String::isNotBlank)
+
+/**
+ * Season selector of the phone: posters (default) or text pills, with the same per-device toggle.
+ * Without any season artwork only the pills are shown.
+ */
+@Composable
+private fun SeasonSelector(
+    model: TvDetailsModel,
+    seasons: List<TvSeason>,
+    selectedSeason: Int,
+    onSeasonSelected: (Int) -> Unit,
+) {
+    val hasPosters = remember(seasons, model.meta.seasonPosters) { seasons.any { seasonPoster(model, it) != null } }
+    var postersEnabled by remember { mutableStateOf(TvSeasonViewMode.postersEnabled()) }
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 12.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = HeroHorizontalPadding),
+        ) {
+            Text(
+                text = stringResource(R.string.tv_details_seasons),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                color = MaterialTheme.nuvio.colors.textPrimary,
+                modifier = Modifier.weight(1f),
+            )
+            if (hasPosters) {
+                SeasonViewModeToggle(
+                    posters = postersEnabled,
+                    onToggle = {
+                        postersEnabled = !postersEnabled
+                        TvSeasonViewMode.setPostersEnabled(postersEnabled)
+                        log.d { "Season selector: ${if (postersEnabled) "posters" else "text"}" }
+                    },
+                )
+            }
+        }
+        if (hasPosters && postersEnabled) {
+            SeasonPosters(model = model, seasons = seasons, selectedSeason = selectedSeason, onSeasonSelected = onSeasonSelected)
+        } else {
+            SeasonTabs(seasons = seasons, selectedSeason = selectedSeason, onSeasonSelected = onSeasonSelected)
+        }
+    }
+}
+
+@Composable
+private fun SeasonViewModeToggle(posters: Boolean, onToggle: () -> Unit) {
+    var focused by remember { mutableStateOf(false) }
+    val colors = MaterialTheme.nuvio.colors
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = Modifier
+            .tvFocusable(shape = SeasonTabShape, onClick = onToggle, focusedScale = 1f, borderWidth = 2.dp, onFocusChange = { focused = it })
+            .background(if (focused) Color.White else colors.surfaceCard, SeasonTabShape)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+    ) {
+        Icon(
+            imageVector = if (posters) Icons.AutoMirrored.Filled.ViewList else Icons.Filled.GridView,
+            contentDescription = null,
+            tint = if (focused) Color.Black else colors.textPrimary,
+            modifier = Modifier.size(18.dp),
+        )
+        Text(
+            // Shows the mode the toggle switches to, like the phone button.
+            text = stringResource(if (posters) R.string.tv_details_season_view_text else R.string.tv_details_season_view_posters),
+            style = MaterialTheme.typography.labelLarge,
+            color = if (focused) Color.Black else colors.textPrimary,
+        )
+    }
+}
+
+/** Season posters (2:3) with the label below; focusing one selects it after a short pause. */
+@Composable
+private fun SeasonPosters(
+    model: TvDetailsModel,
+    seasons: List<TvSeason>,
+    selectedSeason: Int,
+    onSeasonSelected: (Int) -> Unit,
+) {
+    var pendingSeason by remember { mutableStateOf<Int?>(null) }
+    LaunchedEffect(pendingSeason) {
+        val target = pendingSeason ?: return@LaunchedEffect
+        delay(SEASON_FOCUS_SELECT_DELAY_MS)
+        onSeasonSelected(target)
+        pendingSeason = null
+    }
+    val listState = rememberLazyListState()
+    LaunchedEffect(Unit) {
+        val index = seasons.indexOfFirst { it.number == selectedSeason }
+        if (index > 0) listState.scrollToItem(index)
+    }
+    val colors = MaterialTheme.nuvio.colors
+    LazyRow(
+        state = listState,
+        contentPadding = PaddingValues(horizontal = HeroHorizontalPadding, vertical = 14.dp),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        modifier = Modifier.fillMaxWidth().focusRestorer(),
+    ) {
+        items(seasons, key = TvSeason::number) { season ->
+            val selected = season.number == selectedSeason
+            val label = seasonLabel(season.number)
+            Column(modifier = Modifier.width(SeasonPosterWidth), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(2f / 3f)
+                        .onFocusChanged { state ->
+                            if (state.isFocused && !selected) pendingSeason = season.number
+                        }
+                        .tvFocusable(
+                            shape = SeasonPosterShape,
+                            onClick = { onSeasonSelected(season.number) },
+                            focusedScale = 1f,
+                            borderWidth = 3.dp,
+                        )
+                        .background(colors.surfaceCard)
+                        .then(if (selected) Modifier.border(2.dp, colors.accent, SeasonPosterShape) else Modifier),
+                ) {
+                    val poster = seasonPoster(model, season) ?: model.meta.poster ?: model.meta.background
+                    if (poster != null) {
+                        AsyncImage(
+                            model = poster,
+                            contentDescription = label,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    } else {
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+                            color = colors.textSecondary,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.align(Alignment.Center).padding(8.dp),
+                        )
+                    }
+                }
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold),
+                    color = if (selected) colors.textPrimary else colors.textSecondary,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * IMDb rating of every episode (NuvioTV `EpisodeRatingsSection`): season pills, a summary line
+ * and colored rating chips. Hidden ratings ("only watched episodes") show a dash.
+ */
+@Composable
+private fun EpisodeRatingsSection(model: TvDetailsModel, seasons: List<TvSeason>, settings: MetaScreenSettingsUiState) {
+    // Specials are never rated (NuvioTV).
+    val ratedSeasons = remember(seasons) { seasons.filter { it.number > 0 } }
+    if (ratedSeasons.isEmpty()) return
+    var selected by rememberSaveable(model.meta.id) { mutableStateOf(ratedSeasons.first().number) }
+    val season = ratedSeasons.firstOrNull { it.number == selected } ?: ratedSeasons.first()
+    val episodes = remember(season) {
+        season.episodes.filter { it.episode != null }.distinctBy { it.episode }.sortedBy { it.episode }
+    }
+    val colors = MaterialTheme.nuvio.colors
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 18.dp)) {
+        TvSectionTitle(stringResource(R.string.tv_details_ratings))
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = HeroHorizontalPadding, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.fillMaxWidth().focusRestorer(),
+        ) {
+            items(ratedSeasons, key = TvSeason::number) { item ->
+                val isSelected = item.number == season.number
+                Text(
+                    text = stringResource(R.string.tv_details_ratings_season, item.number),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = colors.textPrimary,
+                    modifier = Modifier
+                        .onFocusChanged { state -> if (state.isFocused) selected = item.number }
+                        .tvFocusable(
+                            shape = RatingChipShape,
+                            onClick = { selected = item.number },
+                            focusedScale = 1f,
+                            borderWidth = 2.dp,
+                        )
+                        .background(if (isSelected) Color.White.copy(alpha = 0.18f) else colors.surfaceCard)
+                        .padding(horizontal = 11.dp, vertical = 6.dp),
+                )
+            }
+        }
+        Text(
+            text = stringResource(R.string.tv_details_ratings_summary, season.number, episodes.size),
+            style = MaterialTheme.typography.labelSmall,
+            color = colors.textMuted,
+            modifier = Modifier.padding(horizontal = HeroHorizontalPadding, vertical = 2.dp),
+        )
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = HeroHorizontalPadding, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.fillMaxWidth().focusRestorer(),
+        ) {
+            items(episodes, key = { episode -> "${episode.season}:${episode.episode}" }) { episode ->
+                val number = episode.episode ?: 0
+                val watched = model.isEpisodeWatched(episode)
+                val rating = (model.episodeRatings[season.number to number] ?: episode.rating)
+                    ?.takeIf { it > 0.0 && settings.episodeRatingsVisibility.showRating(watched) }
+                val chipColor = rating?.let(::ratingColor) ?: colors.surfaceCard
+                val textColor = rating?.let(::ratingTextColor) ?: colors.textSecondary
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier
+                        .size(width = 72.dp, height = 46.dp)
+                        .tvFocusable(
+                            shape = RatingChipShape,
+                            onClick = { model.onEpisodeClick(episode) },
+                            focusedScale = 1.03f,
+                            borderWidth = 2.dp,
+                        )
+                        .background(chipColor),
+                ) {
+                    Text(
+                        text = stringResource(R.string.tv_details_ratings_episode, number),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = textColor,
+                    )
+                    Text(
+                        text = rating?.let { "%.1f".format(it) } ?: "—",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = textColor,
+                    )
+                }
+            }
+        }
+    }
+}
+
+// Rating scale of NuvioTV's episode ratings.
+private fun ratingColor(value: Double): Color = when {
+    value >= 9.0 -> Color(0xFF186A3B)
+    value >= 8.0 -> Color(0xFF28B463)
+    value >= 7.5 -> Color(0xFFF4D03F)
+    value >= 7.0 -> Color(0xFFF39C12)
+    value >= 6.0 -> Color(0xFFE74C3C)
+    else -> Color(0xFF633974)
+}
+
+private fun ratingTextColor(value: Double): Color =
+    if (value >= 7.0 && value < 8.0) Color(0xFF1D1D1F) else Color.White
 
 /** Season pills: moving the focus on a season selects it after a short pause (NuvioTV behavior). */
 @Composable
@@ -755,7 +1024,7 @@ private fun rememberEpisodeInfo(model: TvDetailsModel, episode: MetaVideo, setti
         date = episode.released?.takeIf { it.isNotBlank() }?.let(::formatReleaseDateForDisplay),
         runtime = episode.runtime?.takeIf { it > 0 }?.let { stringResource(R.string.tv_details_runtime_minutes, it) },
         // "Episode ratings" of the detail page settings (all / hidden / only watched episodes).
-        rating = episode.rating
+        rating = (episode.season?.let { season -> episode.episode?.let { model.episodeRatings[season to it] } } ?: episode.rating)
             ?.takeIf { it > 0.0 && settings.episodeRatingsVisibility.showRating(watched) }
             ?.let { "%.1f".format(it) },
         progress = model.episodeProgress(episode),
@@ -1132,7 +1401,7 @@ private fun BoxScope.EpisodeStatusBadge(episode: MetaVideo, info: EpisodeInfo, m
 }
 
 @Composable
-private fun CastSection(cast: List<MetaPerson>) {
+private fun CastSection(cast: List<MetaPerson>, onClick: ((MetaPerson) -> Unit)?) {
     Column(modifier = Modifier.fillMaxWidth().padding(top = 18.dp)) {
         TvSectionTitle(stringResource(R.string.tv_details_cast))
         LazyRow(
@@ -1141,15 +1410,15 @@ private fun CastSection(cast: List<MetaPerson>) {
             modifier = Modifier.fillMaxWidth().focusRestorer(),
         ) {
             items(cast.take(30), key = { person -> "${person.tmdbId}:${person.name}:${person.role}" }) { person ->
-                CastMemberItem(person)
+                CastMemberItem(person = person, onClick = onClick)
             }
         }
     }
 }
 
-/** Round cast photo with name and role (NuvioTV `CastMemberItem`); focusable to scroll the row. */
+/** Round cast photo with name and role (NuvioTV `CastMemberItem`); OK opens the person page. */
 @Composable
-private fun CastMemberItem(person: MetaPerson) {
+private fun CastMemberItem(person: MetaPerson, onClick: ((MetaPerson) -> Unit)?) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.width(CastItemWidth),
@@ -1158,7 +1427,14 @@ private fun CastMemberItem(person: MetaPerson) {
             contentAlignment = Alignment.Center,
             modifier = Modifier
                 .size(CastPhotoSize)
-                .tvFocusable(shape = CircleShape, onClick = {}, focusedScale = 1.06f)
+                .tvFocusable(
+                    shape = CircleShape,
+                    onClick = {
+                        log.d { "Cast member opened: ${person.tmdbId}" }
+                        onClick?.invoke(person)
+                    },
+                    focusedScale = 1.06f,
+                )
                 .background(MaterialTheme.nuvio.colors.surfaceCard, CircleShape),
         ) {
             if (!person.photo.isNullOrBlank()) {
