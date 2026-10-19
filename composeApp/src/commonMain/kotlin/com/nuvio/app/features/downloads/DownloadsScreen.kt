@@ -457,7 +457,7 @@ private fun DownloadRow(
     }
 }
 
-private fun DownloadItem.displayTitle(): String =
+internal fun DownloadItem.displayTitle(): String =
     if (isEpisode) {
         episodeTitle?.trim()?.takeIf { it.isNotBlank() } ?: title
     } else {
@@ -465,7 +465,7 @@ private fun DownloadItem.displayTitle(): String =
     }
 
 @Composable
-private fun downloadDisplaySubtitle(
+internal fun downloadDisplaySubtitle(
     item: DownloadItem,
     displayTitle: String,
 ): String {
@@ -501,9 +501,9 @@ private fun SectionTitle(title: String) {
 @Composable
 private fun statusText(item: DownloadItem): String {
     val size = if (item.totalBytes != null && item.totalBytes > 0L) {
-        "${formatBytes(item.downloadedBytes)} / ${formatBytes(item.totalBytes)}"
+        "${formatDownloadBytes(item.downloadedBytes)} / ${formatDownloadBytes(item.totalBytes)}"
     } else {
-        formatBytes(item.downloadedBytes)
+        formatDownloadBytes(item.downloadedBytes)
     }
 
     return when (item.status) {
@@ -511,13 +511,13 @@ private fun statusText(item: DownloadItem): String {
         DownloadStatus.Paused -> stringResource(Res.string.downloads_status_paused, size)
         DownloadStatus.Completed -> stringResource(
             Res.string.downloads_status_completed,
-            formatBytes(item.totalBytes ?: item.downloadedBytes),
+            formatDownloadBytes(item.totalBytes ?: item.downloadedBytes),
         )
         DownloadStatus.Failed -> item.errorMessage ?: stringResource(Res.string.downloads_status_failed)
     }
 }
 
-private fun formatBytes(bytes: Long): String {
+internal fun formatDownloadBytes(bytes: Long): String {
     if (bytes <= 0L) return "0 ${localizedByteUnit("B")}"
     val kib = 1024.0
     val mib = kib * 1024.0

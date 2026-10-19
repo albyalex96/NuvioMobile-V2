@@ -5,6 +5,7 @@ import android.app.job.JobScheduler
 import android.content.ComponentName
 import android.content.Context
 import android.net.Network
+import android.net.Uri
 import android.os.Build
 import android.os.PersistableBundle
 import android.os.SystemClock
@@ -17,6 +18,7 @@ import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
+import co.touchlab.kermit.Logger
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
@@ -115,20 +117,28 @@ internal class AndroidDownloadScheduler(val context: Context) {
         paused?.let { DownloadsLiveStatusPlatform.notifyTransfer(it.item) }
     }
 
-    fun remove(fileName: String) {
+    fun remove(fileName: String, storageTreeUri: String? = null) {
         val transfer = store.get(fileName)
         store.remove(fileName)
         transfer?.let(::cancelScheduled)
         transfer?.let { DownloadsLiveStatusPlatform.removeNotification(it.item.id) }
+        val treeUri = transfer?.item?.storageTreeUri ?: storageTreeUri
         cleanupScope.launch {
             lock(fileName).withLock {
                 if (store.get(fileName) == null) {
-                    File(directory, "$fileName.part").delete()
-                    DownloadSubtitleStorage(File(directory, fileName).toURI().toString()).remove()
+                    runCatching { destinationFor(fileName, treeUri).deletePartial() }
+                    DownloadSubtitleStorage(subtitleAnchorUri(fileName)).remove()
                 }
             }
         }
     }
+
+    /** Subtitles always stay in the app storage, next to where an app-storage video would be. */
+    fun subtitleAnchorUri(fileName: String): String = File(directory, fileName).toURI().toString()
+
+    private fun destinationFor(fileName: String, storageTreeUri: String?): DownloadDestination =
+        storageTreeUri?.let { TreeDownloadDestination(context, Uri.parse(it), fileName) }
+            ?: FileDownloadDestination(directory, fileName)
 
     private fun cancelScheduled(transfer: AndroidDownloadTransfer) {
         if (Build.VERSION.SDK_INT >= 34) jobScheduler().cancel(transfer.jobId)
@@ -142,7 +152,7 @@ internal class AndroidDownloadScheduler(val context: Context) {
     ): Boolean = lock(transfer.item.fileName).withLock {
         val fileName = transfer.item.fileName
         if (!isActive(transfer)) return@withLock false
-        val destination = File(directory, fileName)
+        val destination = destinationFor(fileName, transfer.item.storageTreeUri)
         val client = if (network != null) {
             downloadHttpClient.newBuilder()
                 .socketFactory(network.socketFactory)
@@ -151,13 +161,14 @@ internal class AndroidDownloadScheduler(val context: Context) {
                 .build()
         } else downloadHttpClient
         try {
-            DownloadSubtitles.prepare(transfer.item, destination.toURI().toString())
+            DownloadSubtitles.prepare(transfer.item, subtitleAnchorUri(fileName))
             currentCoroutineContext().ensureActive()
             if (!isActive(transfer)) return@withLock false
             var lastProgressAt = 0L
-            val partial = if (destination.isFile) destination else transferAndroidDownload(
+            val existing = withContext(Dispatchers.IO) { destination.completedFile() }
+            if (existing == null) transferAndroidDownload(
                 item = transfer.item,
-                directory = directory,
+                destination = destination,
                 validator = transfer.validator,
                 client = client,
                 onHeaders = { total, validator ->
@@ -174,14 +185,13 @@ internal class AndroidDownloadScheduler(val context: Context) {
                 },
             )
             currentCoroutineContext().ensureActive()
+            if (!isActive(transfer)) return@withLock false
+            val completed = existing ?: withContext(Dispatchers.IO) { destination.completePartial() }
             updateActive(transfer) { current ->
-                if (partial != destination && !partial.renameTo(destination)) {
-                    throw IOException("Could not finalize the downloaded file")
-                }
-                val bytes = destination.length()
+                val bytes = completed.sizeBytes
                 current.copy(item = current.item.copy(
                     status = DownloadStatus.Completed,
-                    localFileUri = destination.toURI().toString(),
+                    localFileUri = completed.uri,
                     downloadedBytes = bytes,
                     totalBytes = bytes,
                     errorMessage = null,
@@ -207,8 +217,14 @@ internal class AndroidDownloadScheduler(val context: Context) {
     } == true
 
     fun fail(transfer: AndroidDownloadTransfer, error: Exception) {
+        val message = if (error is SecurityException && transfer.item.storageTreeUri != null) {
+            "The downloads folder is no longer accessible. Pick it again in Settings → Downloads."
+        } else {
+            error.message ?: "Download failed"
+        }
+        Logger.withTag("Downloads").e(error) { "Download ${transfer.item.id} failed" }
         updateActive(transfer) {
-            it.copy(item = it.item.copy(status = DownloadStatus.Failed, errorMessage = error.message ?: "Download failed"))
+            it.copy(item = it.item.copy(status = DownloadStatus.Failed, errorMessage = message))
         }
     }
 

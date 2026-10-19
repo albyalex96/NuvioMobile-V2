@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="downloads_settings_section_folder">Posizione di salvataggio</string>
+    <string name="downloads_settings_folder_title">Cartella dei download</string>
+    <string name="downloads_settings_folder_description">Scegli la cartella in cui salvare i nuovi download</string>
+    <string name="downloads_settings_folder_internal">Memoria dell&apos;app (privata)</string>
+    <string name="downloads_settings_folder_unavailable">%1$s · non accessibile, i nuovi download vengono salvati nella memoria dell&apos;app</string>
+    <string name="downloads_settings_folder_failed">Impossibile usare la cartella selezionata</string>
+    <string name="downloads_settings_folder_hint">Il cambio di cartella vale solo per i nuovi download: i file già scaricati restano dove sono. I sottotitoli restano sempre nella memoria dell&apos;app.</string>
+    <string name="downloads_settings_use_internal_title">Usa la memoria dell&apos;app</string>
+    <string name="downloads_settings_use_internal_description">Salva i nuovi download nella memoria privata dell&apos;app</string>
+    <string name="downloads_settings_section_summary">Spazio</string>
+    <string name="downloads_settings_summary_description">Video scaricati e spazio libero sul disco</string>
+    <string name="downloads_settings_summary_videos">%1$d video · %2$s</string>
+    <string name="downloads_settings_summary_used">Video</string>
+    <string name="downloads_settings_summary_free">Disponibile</string>
+    <string name="downloads_settings_summary_of_total">%1$s di %2$s</string>
+    <string name="downloads_settings_section_files">File scaricati</string>
+    <string name="downloads_settings_files_description">Tocca un file per riprodurlo, tieni premuto per altre opzioni</string>
+    <string name="downloads_settings_refresh">Aggiorna</string>
+    <string name="downloads_settings_empty">Nessun file scaricato</string>
+    <string name="downloads_settings_badge_external">Esterno</string>
+    <string name="downloads_settings_badge_other_profile">Altro profilo</string>
+    <string name="downloads_action_play_from_start">Riproduci dall&apos;inizio</string>
+    <string name="downloads_action_external_player">Apri con player esterno</string>
+    <string name="downloads_action_open_folder">Apri cartella</string>
+    <string name="downloads_action_share">Condividi file</string>
+    <string name="downloads_action_details">Visualizza dettagli del titolo</string>
+    <string name="downloads_action_info">Informazioni file</string>
+    <string name="downloads_delete_message">Il file scaricato verrà eliminato dal dispositivo.</string>
+    <string name="downloads_delete_external_message">&quot;%1$s&quot; non è stato scaricato dall&apos;app: verrà eliminato definitivamente dal dispositivo.</string>
+    <string name="downloads_delete_failed">Impossibile eliminare il file</string>
+    <string name="downloads_share_failed">Impossibile condividere il file</string>
+    <string name="downloads_file_missing">Il file scaricato non è più disponibile</string>
+    <string name="downloads_info_name">Nome</string>
+    <string name="downloads_info_location">Posizione</string>
+    <string name="downloads_info_size">Dimensione</string>
+    <string name="downloads_info_date">Data</string>
+    <string name="downloads_info_source">Sorgente</string>
+    <string name="downloads_info_status">Stato</string>
+    <string name="downloads_info_origin">Origine</string>
+    <string name="downloads_info_origin_app">Scaricato dall&apos;app</string>
+</resources>

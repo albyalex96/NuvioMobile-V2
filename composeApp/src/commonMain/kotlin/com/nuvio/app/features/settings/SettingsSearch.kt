@@ -18,6 +18,7 @@ import androidx.compose.material.icons.rounded.CloudDownload
 import androidx.compose.material.icons.rounded.CollectionsBookmark
 import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Dns
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Hub
@@ -1379,6 +1380,30 @@ private fun addAdditionalSearchEntries(
         PlaybackSearchRow("live-tv-epg-auto", stringResource(Res.string.live_tv_settings_epg_auto_title), stringResource(Res.string.live_tv_settings_epg_auto_description), liveTvEpg),
     ).forEach { item ->
         row(SettingsPage.LiveTv, item.key, item.title, item.description, liveTvPage, item.sectionOverride.orEmpty(), icon = Icons.Rounded.LiveTv)
+    }
+
+    // Downloads
+    val downloadsPage = stringResource(Res.string.compose_settings_root_downloads_title)
+    addPage(
+        SettingsPage.Downloads,
+        "downloads",
+        downloadsPage,
+        stringResource(Res.string.compose_settings_root_downloads_description),
+        generalCategory,
+        Icons.Rounded.Download,
+    )
+    val downloadsFolderSection = stringResource(Res.string.downloads_settings_section_folder)
+    val downloadsSummarySection = stringResource(Res.string.downloads_settings_section_summary)
+    val downloadsFilesSection = stringResource(Res.string.downloads_settings_section_files)
+    buildList {
+        if (downloadsFolderOptionsVisible) {
+            add(PlaybackSearchRow("downloads-folder", stringResource(Res.string.downloads_settings_folder_title), stringResource(Res.string.downloads_settings_folder_description), downloadsFolderSection))
+            add(PlaybackSearchRow("downloads-use-app-storage", stringResource(Res.string.downloads_settings_use_internal_title), stringResource(Res.string.downloads_settings_use_internal_description), downloadsFolderSection))
+        }
+        add(PlaybackSearchRow("downloads-storage", downloadsSummarySection, stringResource(Res.string.downloads_settings_summary_description), downloadsSummarySection))
+        add(PlaybackSearchRow("downloads-files", downloadsFilesSection, stringResource(Res.string.downloads_settings_files_description), downloadsFilesSection))
+    }.forEach { item ->
+        row(SettingsPage.Downloads, item.key, item.title, item.description, downloadsPage, item.sectionOverride.orEmpty(), icon = Icons.Rounded.Download)
     }
 
     // Advanced: app logs

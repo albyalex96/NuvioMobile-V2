@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="downloads_settings_section_folder">Save location</string>
+    <string name="downloads_settings_folder_title">Downloads folder</string>
+    <string name="downloads_settings_folder_description">Pick the folder where new downloads are saved</string>
+    <string name="downloads_settings_folder_internal">App storage (private)</string>
+    <string name="downloads_settings_folder_unavailable">%1$s · not accessible, new downloads are saved in the app storage</string>
+    <string name="downloads_settings_folder_failed">Couldn&apos;t use the selected folder</string>
+    <string name="downloads_settings_folder_hint">Changing folder affects only new downloads: files already downloaded stay where they are. Subtitles are always kept in the app storage.</string>
+    <string name="downloads_settings_use_internal_title">Use app storage</string>
+    <string name="downloads_settings_use_internal_description">Save new downloads in the app&apos;s private storage</string>
+    <string name="downloads_settings_section_summary">Storage</string>
+    <string name="downloads_settings_summary_description">Downloaded videos and free space on the disk</string>
+    <string name="downloads_settings_summary_videos">%1$d video(s) · %2$s</string>
+    <string name="downloads_settings_summary_used">Videos</string>
+    <string name="downloads_settings_summary_free">Available</string>
+    <string name="downloads_settings_summary_of_total">%1$s of %2$s</string>
+    <string name="downloads_settings_section_files">Downloaded files</string>
+    <string name="downloads_settings_files_description">Tap a file to play it, long press for more options</string>
+    <string name="downloads_settings_refresh">Refresh</string>
+    <string name="downloads_settings_empty">No downloaded files</string>
+    <string name="downloads_settings_badge_external">External</string>
+    <string name="downloads_settings_badge_other_profile">Other profile</string>
+    <string name="downloads_action_play_from_start">Play from the beginning</string>
+    <string name="downloads_action_external_player">Open with external player</string>
+    <string name="downloads_action_open_folder">Open folder</string>
+    <string name="downloads_action_share">Share file</string>
+    <string name="downloads_action_details">View title details</string>
+    <string name="downloads_action_info">File information</string>
+    <string name="downloads_delete_message">The downloaded file will be deleted from the device.</string>
+    <string name="downloads_delete_external_message">&quot;%1$s&quot; was not downloaded by the app: it will be permanently deleted from the device.</string>
+    <string name="downloads_delete_failed">Couldn&apos;t delete the file</string>
+    <string name="downloads_share_failed">Couldn&apos;t share the file</string>
+    <string name="downloads_file_missing">The downloaded file is no longer available</string>
+    <string name="downloads_info_name">Name</string>
+    <string name="downloads_info_location">Location</string>
+    <string name="downloads_info_size">Size</string>
+    <string name="downloads_info_date">Date</string>
+    <string name="downloads_info_source">Source</string>
+    <string name="downloads_info_status">Status</string>
+    <string name="downloads_info_origin">Origin</string>
+    <string name="downloads_info_origin_app">Downloaded by the app</string>
+</resources>

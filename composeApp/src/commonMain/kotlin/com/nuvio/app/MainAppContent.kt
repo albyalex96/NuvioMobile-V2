@@ -101,6 +101,13 @@ import com.nuvio.app.features.collection.CollectionSyncService
 import com.nuvio.app.features.details.MetaDetailsRepository
 import com.nuvio.app.features.details.MetaScreenSettingsRepository
 import com.nuvio.app.features.downloads.DownloadItem
+import com.nuvio.app.features.downloads.DownloadPlaybackMode
+import com.nuvio.app.features.downloads.DownloadsAction
+import com.nuvio.app.features.downloads.DownloadsActionBridge
+import com.nuvio.app.features.downloads.ExternalVideoFile
+import com.nuvio.app.features.downloads.LOCAL_FILE_PROVIDER_ID
+import com.nuvio.app.features.cast.CastPlatform
+import com.nuvio.app.features.cast.CastSessionState
 import com.nuvio.app.features.downloads.DownloadSubtitles
 import com.nuvio.app.features.downloads.DownloadsRepository
 import com.nuvio.app.features.home.HomeCatalogSection
@@ -371,6 +378,7 @@ internal fun MainAppContent(
     val continueWatchingSettingsTitle = stringResource(Res.string.compose_settings_page_continue_watching)
     val debridSettingsTitle = stringResource(Res.string.compose_settings_page_debrid)
     val downloadsTitle = stringResource(Res.string.compose_settings_root_downloads_title)
+    val downloadFileMissingText = stringResource(Res.string.downloads_file_missing)
     val addonsSettingsTitle = stringResource(Res.string.compose_settings_page_addons)
     val pluginsSettingsTitle = stringResource(Res.string.compose_settings_page_plugins)
     val accountSettingsTitle = stringResource(Res.string.compose_settings_page_account)
@@ -860,10 +868,32 @@ internal fun MainAppContent(
             }
         }
 
-        fun openDownloadedItem(item: DownloadItem) {
-            val sourceUrl = DownloadsRepository.playableLocalFileUri(item) ?: return
+        fun launchLocalPlayback(playerLaunch: PlayerLaunch, mode: DownloadPlaybackMode) {
+            val external = when (mode) {
+                DownloadPlaybackMode.ExternalPlayer -> true
+                DownloadPlaybackMode.Internal -> false
+                DownloadPlaybackMode.Default -> playerSettingsUiState.externalPlayerEnabled &&
+                    CastPlatform.state.value !is CastSessionState.Connected
+            }
+            if (external) {
+                coroutineScope.launch { openExternalPlayback(playerLaunch) }
+                return
+            }
+            val launchId = PlayerLaunchStore.put(playerLaunch)
+            navController.navigate(PlayerRoute(launchId = launchId, title = playerLaunch.title))
+        }
+
+        fun openDownloadedItem(
+            item: DownloadItem,
+            fromStart: Boolean = false,
+            mode: DownloadPlaybackMode = DownloadPlaybackMode.Default,
+        ) {
+            val sourceUrl = DownloadsRepository.playableLocalFileUri(item) ?: run {
+                NuvioToastController.show(downloadFileMissingText)
+                return
+            }
             val resumeEntry = item.videoId
-                .takeIf { it.isNotBlank() }
+                .takeIf { it.isNotBlank() && !fromStart }
                 ?.let(WatchProgressRepository::progressForVideo)
                 ?.takeIf { it.isResumable }
 
@@ -893,12 +923,42 @@ internal fun MainAppContent(
                 initialPositionMs = resumeEntry?.lastPositionMs?.takeIf { it > 0L } ?: 0L,
                 initialProgressFraction = resumeEntry?.progressFraction?.takeIf { it > 0f },
             )
-            if (playerSettingsUiState.externalPlayerEnabled) {
-                coroutineScope.launch { openExternalPlayback(playerLaunch) }
-                return
+            launchLocalPlayback(playerLaunch, mode)
+        }
+
+        // Files of the downloads folder that are not linked to a title: no progress, no lookups.
+        fun openExternalVideoFile(file: ExternalVideoFile, mode: DownloadPlaybackMode) {
+            val playerLaunch = PlayerLaunch(
+                profileId = activePlaybackProfileId,
+                title = file.displayName,
+                sourceUrl = file.uri,
+                externalSubtitles = file.subtitles,
+                streamTitle = file.fileName,
+                providerName = file.fileName,
+                providerAddonId = LOCAL_FILE_PROVIDER_ID,
+                contentType = "movie",
+                parentMetaId = "$LOCAL_FILE_PROVIDER_ID:${file.uri.hashCode()}",
+                parentMetaType = "movie",
+                sourceFilename = file.fileName,
+            )
+            launchLocalPlayback(playerLaunch, mode)
+        }
+
+        LaunchedEffect(navController) {
+            if (!ownsAppRuntime) return@LaunchedEffect
+            DownloadsActionBridge.actions.collect { action ->
+                when (action) {
+                    is DownloadsAction.PlayDownload -> openDownloadedItem(action.item, action.fromStart, action.mode)
+                    is DownloadsAction.PlayExternalFile -> openExternalVideoFile(action.file, action.mode)
+                    is DownloadsAction.OpenDetails -> navController.navigate(
+                        DetailRoute(
+                            type = action.item.parentMetaType,
+                            id = action.item.parentMetaId,
+                            title = action.item.title,
+                        ),
+                    )
+                }
             }
-            val launchId = PlayerLaunchStore.put(playerLaunch)
-            navController.navigate(PlayerRoute(launchId = launchId, title = playerLaunch.title))
         }
 
         fun openExternalStreamUrl(url: String): Boolean {
@@ -1667,14 +1727,14 @@ internal fun MainAppContent(
                         route = route,
                         navController = navController,
                         useNativeNavigation = useNativeNavigation,
-                        onOpenDownload = ::openDownloadedItem,
+                        onOpenDownload = { openDownloadedItem(it) },
                     )
                 }
                 entry<DownloadShowRoute> { route ->
                     DownloadShowDestination(
                         route = route,
                         navController = navController,
-                        onOpenDownload = ::openDownloadedItem,
+                        onOpenDownload = { openDownloadedItem(it) },
                     )
                 }
                 entry<AddonsSettingsRoute> { route ->

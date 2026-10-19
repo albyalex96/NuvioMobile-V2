@@ -1,5 +1,6 @@
 package com.nuvio.app.features.player
 
+import com.nuvio.app.features.downloads.LOCAL_FILE_PROVIDER_ID
 import com.nuvio.app.features.servers.ServerItemRef
 import com.nuvio.app.features.servers.ServerStreams
 import com.nuvio.app.features.tmdb.TmdbService
@@ -208,9 +209,13 @@ private fun TrackingScrobbleItemInputs.buildMedia(): TrackingMediaReference =
         episodeTitle = episodeTitle,
     )
 
-// Live TV channels have no watch progress and are never scrobbled.
+/** A file of the downloads folder not linked to any title (Settings → Downloads). */
+internal val PlayerScreenRuntime.isLocalFilePlayback: Boolean
+    get() = activeProviderAddonId == LOCAL_FILE_PROVIDER_ID
+
+// Live TV channels and unlinked local files have no watch progress and are never scrobbled.
 internal val PlayerScreenRuntime.shouldTrackWatchProgress: Boolean
-    get() = !isLiveTvPlayback
+    get() = !isLiveTvPlayback && !isLocalFilePlayback
 
 internal fun PlayerScreenRuntime.currentTrackingMedia(): TrackingMediaReference =
     snapshotTrackingScrobbleItemInputs().buildMedia()

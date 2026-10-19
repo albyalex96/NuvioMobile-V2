@@ -2,6 +2,8 @@ package com.nuvio.app.features.downloads
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
+import android.os.SystemClock
 import androidx.core.content.FileProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -26,6 +28,7 @@ internal actual object DownloadsPlatformDownloader {
     @Synchronized
     internal fun scheduler(context: Context): AndroidDownloadScheduler {
         appContext = context.applicationContext
+        DownloadsFolderPlatform.initialize(context.applicationContext)
         return downloadScheduler ?: AndroidDownloadScheduler(context.applicationContext).also { downloadScheduler = it }
     }
 
@@ -71,17 +74,47 @@ internal actual object DownloadsPlatformDownloader {
 
     actual fun removeFile(localFileUri: String?): Boolean {
         if (localFileUri.isNullOrBlank()) return false
+        if (localFileUri.isContentUri()) {
+            val context = appContext ?: return false
+            contentUriChecks.remove(localFileUri)
+            return SafDownloadTree.deleteDocument(context, Uri.parse(localFileUri))
+        }
         val file = localFileUri.toLocalFileOrNull() ?: return false
         return runCatching { file.delete() }.getOrDefault(false)
     }
 
-    actual fun removePartialFile(destinationFileName: String): Boolean {
+    actual fun removePartialFile(item: DownloadItem): Boolean {
         val scheduler = downloadScheduler ?: return false
-        scheduler.remove(destinationFileName)
+        scheduler.remove(item.fileName, item.storageTreeUri)
         return true
     }
 
+    actual fun subtitleAnchorUri(item: DownloadItem, localFileUri: String): String =
+        if (localFileUri.isContentUri()) {
+            downloadScheduler?.subtitleAnchorUri(item.fileName) ?: localFileUri
+        } else {
+            localFileUri
+        }
+
+    // Files in a user folder are checked through the provider: cache the answer briefly because
+    // the download list asks for every item while it renders.
+    private val contentUriChecks = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, Boolean>>()
+
+    private fun contentUriExists(context: Context, uri: String): Boolean {
+        val now = SystemClock.elapsedRealtime()
+        contentUriChecks[uri]?.let { (checkedAt, exists) ->
+            if (now - checkedAt < CONTENT_URI_CHECK_TTL_MS) return exists
+        }
+        val exists = SafDownloadTree.exists(context, Uri.parse(uri))
+        contentUriChecks[uri] = now to exists
+        return exists
+    }
+
     actual fun resolveLocalFileUri(localFileUri: String?, destinationFileName: String): String? {
+        if (localFileUri != null && localFileUri.isContentUri()) {
+            val context = appContext ?: return null
+            return localFileUri.takeIf { contentUriExists(context, it) }
+        }
         localFileUri
             ?.toLocalFileOrNull()
             ?.takeIf { it.exists() }
@@ -101,6 +134,13 @@ internal actual object DownloadsPlatformDownloader {
 
     actual fun openDownloadsDirectory(): Boolean {
         val context = appContext ?: return false
+        DownloadsFolderPlatform.selectedFolder.value?.let { folder ->
+            return DownloadsFolderPlatform.openFolder(folder.treeUri)
+        }
+        return openAppDownloadsDirectory(context)
+    }
+
+    internal fun openAppDownloadsDirectory(context: Context): Boolean {
         val downloadsDir = File(context.filesDir, "downloads").apply { mkdirs() }
         val uri = runCatching {
             FileProvider.getUriForFile(
@@ -135,6 +175,10 @@ internal actual object DownloadsPlatformDownloader {
         }
     }
 }
+
+private const val CONTENT_URI_CHECK_TTL_MS = 5_000L
+
+internal fun String.isContentUri(): Boolean = startsWith("content:", ignoreCase = true)
 
 private fun String.toLocalFileOrNull(): File? {
     return runCatching {

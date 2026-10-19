@@ -738,6 +738,7 @@ private fun MobileSettingsScreen(
                         settingsRootContent(
                             isTablet = false,
                             onPlaybackClick = { onPageChange(SettingsPage.Playback) },
+                            onDownloadsClick = { onPageChange(SettingsPage.Downloads) },
                             onAppearanceClick = { onPageChange(SettingsPage.Appearance) },
                             onAdvancedClick = { onPageChange(SettingsPage.Advanced) },
                             onNotificationsClick = { onPageChange(SettingsPage.Notifications) },
@@ -827,6 +828,7 @@ private fun MobileSettingsScreen(
                     viewer = requireNotNull(appLogsViewer),
                 )
                 SettingsPage.MediaProxy -> mediaProxySettingsContent(isTablet = false)
+                SettingsPage.Downloads -> downloadsSettingsContent(isTablet = false)
                 SettingsPage.Notifications -> notificationsSettingsContent(
                     isTablet = false,
                     uiState = episodeReleaseNotificationsUiState,
@@ -1214,6 +1216,7 @@ private fun TabletSettingsScreen(
                             settingsRootContent(
                                 isTablet = true,
                                 onPlaybackClick = { openInlinePage(SettingsPage.Playback) },
+                                onDownloadsClick = { openInlinePage(SettingsPage.Downloads) },
                                 onAppearanceClick = { openInlinePage(SettingsPage.Appearance) },
                                 onAdvancedClick = { openInlinePage(SettingsPage.Advanced) },
                                 onNotificationsClick = { openInlinePage(SettingsPage.Notifications) },
@@ -1307,6 +1310,7 @@ private fun TabletSettingsScreen(
                         viewer = requireNotNull(appLogsViewer),
                     )
                     SettingsPage.MediaProxy -> mediaProxySettingsContent(isTablet = true)
+                    SettingsPage.Downloads -> downloadsSettingsContent(isTablet = true)
                     SettingsPage.Notifications -> notificationsSettingsContent(
                         isTablet = true,
                         uiState = episodeReleaseNotificationsUiState,

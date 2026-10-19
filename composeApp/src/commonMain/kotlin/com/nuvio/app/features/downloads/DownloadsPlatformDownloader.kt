@@ -25,9 +25,15 @@ internal expect object DownloadsPlatformDownloader {
 
     fun removeFile(localFileUri: String?): Boolean
 
-    fun removePartialFile(destinationFileName: String): Boolean
+    fun removePartialFile(item: DownloadItem): Boolean
 
     fun resolveLocalFileUri(localFileUri: String?, destinationFileName: String): String?
+
+    /**
+     * Video URI the subtitles of [item] are stored next to. It differs from [localFileUri] when
+     * the video is in a user folder: subtitles always stay in the app storage.
+     */
+    fun subtitleAnchorUri(item: DownloadItem, localFileUri: String): String
 
     fun openDownloadsDirectory(): Boolean
 }

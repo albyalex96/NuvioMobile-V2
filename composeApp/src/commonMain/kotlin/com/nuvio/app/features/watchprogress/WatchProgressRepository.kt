@@ -1752,8 +1752,10 @@ internal fun projectWatchProgressUiState(
         providerSnapshot?.hasLoadedRemoteProgress ?: hasLoadedNuvioRemoteProgress,
 )
 
-// Live TV channels have no meaningful position, so they never enter watch progress.
+// Live TV channels have no meaningful position, so they never enter watch progress; neither do
+// local files that are not linked to a title (Settings → Downloads).
 private fun WatchProgressPlaybackSession.isLiveTvSession(): Boolean =
     contentType.equals("live", ignoreCase = true) ||
         parentMetaType.equals("live", ignoreCase = true) ||
-        providerAddonId?.equals("live-tv", ignoreCase = true) == true
+        providerAddonId?.equals("live-tv", ignoreCase = true) == true ||
+        providerAddonId == com.nuvio.app.features.downloads.LOCAL_FILE_PROVIDER_ID

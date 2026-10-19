@@ -1,5 +1,6 @@
 package com.nuvio.app.features.downloads
 
+import co.touchlab.kermit.Logger
 import com.nuvio.app.features.player.addonSubtitleRequests
 import com.nuvio.app.features.streams.StreamItem
 import kotlinx.coroutines.runBlocking
@@ -15,6 +16,7 @@ import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.getString
 
 object DownloadsRepository {
+    private val log = Logger.withTag("Downloads")
     private val _uiState = MutableStateFlow(DownloadsUiState())
     val uiState: StateFlow<DownloadsUiState> = _uiState.asStateFlow()
 
@@ -149,11 +151,13 @@ object DownloadsRepository {
             replacedExisting = true
             activeHandles.remove(existing.id)?.cancel()
             DownloadsPlatformDownloader.removeFile(playableLocalFileUri(existing) ?: existing.localFileUri)
-            DownloadsPlatformDownloader.removePartialFile(existing.fileName)
+            DownloadsPlatformDownloader.removePartialFile(existing)
             currentItems.removeAll { it.id == existing.id }
         }
 
         val downloadId = nextDownloadId(now)
+        val storageTreeUri = DownloadsFolderPlatform.treeUriForNewDownload()
+        log.i { "Enqueue download $downloadId in ${if (storageTreeUri != null) "the selected folder" else "app storage"}" }
         val fileName = buildFileName(
             title = title,
             seasonNumber = seasonNumber,
@@ -188,6 +192,7 @@ object DownloadsRepository {
             subtitleRequests = addonSubtitleRequests(contentType, videoId),
             sourceSubtitles = stream.externalSubtitles,
             localFileUri = null,
+            storageTreeUri = storageTreeUri,
             fileName = fileName,
             status = DownloadStatus.Downloading,
             downloadedBytes = 0L,
@@ -268,8 +273,9 @@ object DownloadsRepository {
         val item = _uiState.value.items.firstOrNull { it.id == downloadId } ?: return
 
         activeHandles.remove(downloadId)?.cancel()
+        log.i { "Delete download $downloadId (status=${item.status})" }
         DownloadsPlatformDownloader.removeFile(playableLocalFileUri(item) ?: item.localFileUri)
-        DownloadsPlatformDownloader.removePartialFile(item.fileName)
+        DownloadsPlatformDownloader.removePartialFile(item)
 
         publish(_uiState.value.items.filterNot { it.id == downloadId })
         persist()

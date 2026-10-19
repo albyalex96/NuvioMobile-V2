@@ -73,8 +73,17 @@ internal object DownloadSubtitles {
     }
 
     fun localSubtitles(localVideoUri: String): List<StreamSubtitle> {
-        if (!localVideoUri.startsWith("file:")) return emptyList()
-        val storage = DownloadSubtitleStorage(localVideoUri)
+        // Videos in a user folder keep their subtitles in the app storage (see subtitleAnchorUri).
+        val anchorUri = if (localVideoUri.startsWith("file:")) {
+            localVideoUri
+        } else {
+            DownloadsRepository.uiState.value.items
+                .firstOrNull { it.localFileUri == localVideoUri }
+                ?.let { DownloadsPlatformDownloader.subtitleAnchorUri(it, localVideoUri) }
+                ?.takeIf { it.startsWith("file:") }
+                ?: return emptyList()
+        }
+        val storage = DownloadSubtitleStorage(anchorUri)
         return readManifest(storage).tracks.mapNotNull { track ->
             val uri = storage.localFileUri(track.fileName) ?: return@mapNotNull null
             StreamSubtitle(url = uri, language = track.language, name = track.name)

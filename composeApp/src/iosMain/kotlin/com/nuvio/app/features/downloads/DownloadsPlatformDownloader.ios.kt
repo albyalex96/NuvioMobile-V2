@@ -164,8 +164,10 @@ internal actual object DownloadsPlatformDownloader {
         return removePathIfExists("${downloadsDirectoryPath()}/$fileName")
     }
 
-    actual fun removePartialFile(destinationFileName: String): Boolean {
-        val destinationPath = "${downloadsDirectoryPath()}/$destinationFileName"
+    actual fun subtitleAnchorUri(item: DownloadItem, localFileUri: String): String = localFileUri
+
+    actual fun removePartialFile(item: DownloadItem): Boolean {
+        val destinationPath = "${downloadsDirectoryPath()}/${item.fileName}"
         DownloadSubtitleStorage(NSURL.fileURLWithPath(destinationPath).absoluteString!!).remove()
         return removePathIfExists("$destinationPath.part")
     }

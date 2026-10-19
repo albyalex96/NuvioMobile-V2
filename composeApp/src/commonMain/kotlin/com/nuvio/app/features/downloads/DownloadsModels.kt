@@ -44,6 +44,8 @@ data class DownloadItem(
     val subtitleRequests: List<SubtitleAddonRequest> = emptyList(),
     val sourceSubtitles: List<StreamSubtitle> = emptyList(),
     val localFileUri: String? = null,
+    /** Folder picked by the user (Android SAF tree URI) this download is saved in; null = app storage. */
+    val storageTreeUri: String? = null,
     val fileName: String,
     val status: DownloadStatus,
     val downloadedBytes: Long = 0L,
