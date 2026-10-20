@@ -140,6 +140,7 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
     BindAutoSyncRuntimeEffects() // AutoSync hook
     BindLiveTvStillWatchingTimer()
     BindAudioDelay()
+    BindPrivateViewingNotice()
 
     Box(
         modifier = Modifier

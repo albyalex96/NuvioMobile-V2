@@ -148,6 +148,7 @@ import com.nuvio.app.features.player.ExternalPlayerPlatform
 import com.nuvio.app.features.player.PlayerLaunch
 import com.nuvio.app.features.player.PlayerLaunchStore
 import com.nuvio.app.features.player.PlayerSettingsRepository
+import com.nuvio.app.features.player.PrivatePlaybackRequests
 import com.nuvio.app.features.player.SubtitleLanguageOption
 import com.nuvio.app.features.player.prepareExternalPlayerLaunch
 import com.nuvio.app.features.player.LockPlayerToLandscape
@@ -722,8 +723,9 @@ internal fun MainAppContent(
     val launchExternalPlayer = rememberExternalPlayerLauncher { result ->
         if (result != null) {
             val fallbackSession = lastExternalPlayerLaunch?.externalPlaybackSession()
+            val privateLaunch = lastExternalPlayerLaunch?.takeIf { it.privateViewing }
             coroutineScope.launch {
-                recordExternalPlaybackProgress(result, fallbackSession)
+                recordExternalPlaybackProgress(result, fallbackSession, privateLaunch)
                 result.callbackId?.let(infusePlaybackCallbacks::consume)
             }
         }
@@ -818,7 +820,8 @@ internal fun MainAppContent(
             }
         }
 
-        suspend fun openExternalPlayback(launch: PlayerLaunch): Boolean {
+        suspend fun openExternalPlayback(requestedLaunch: PlayerLaunch): Boolean {
+            val launch = PrivatePlaybackRequests.applyTo(requestedLaunch)
             lastExternalPlayerLaunch = launch
 
             val bingeGroup = launch.bingeGroup

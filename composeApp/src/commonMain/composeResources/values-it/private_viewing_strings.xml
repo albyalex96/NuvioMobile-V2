@@ -2,4 +2,8 @@
 <resources>
     <string name="settings_playback_private_viewing">Visione privata</string>
     <string name="settings_playback_private_viewing_description">Non salva i progressi di visione, Continua a guardare e lo stato \"visto\", e non invia la riproduzione ai tracker collegati.</string>
+    <string name="private_viewing_play_action">Guarda in privato</string>
+    <string name="private_viewing_play_action_episode_description">Solo questo episodio: niente progressi, stato \"visto\" né tracker</string>
+    <string name="private_viewing_play_action_movie_description">Niente progressi, stato \"visto\" né tracker per questo film</string>
+    <string name="private_viewing_item_notice">Visione privata: i progressi non verranno salvati</string>
 </resources>

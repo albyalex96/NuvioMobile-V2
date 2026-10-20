@@ -89,7 +89,6 @@ actual object PlayerSettingsStorage {
     private const val nextEpisodeThresholdPercentKey = "next_episode_threshold_percent_v2"
     private const val nextEpisodeThresholdMinutesBeforeEndKey = "next_episode_threshold_minutes_before_end_v2"
     private const val preloadNextEpisodeSourcesKey = "preload_next_episode_sources"
-    // Per profile and per device: deliberately not part of the synced player settings.
     private const val privateViewingEnabledKey = "private_viewing_enabled"
     private const val stillWatchingPromptEnabledKey = "still_watching_prompt_enabled"
     private const val stillWatchingEpisodeCountKey = "still_watching_episode_count"
@@ -175,6 +174,7 @@ actual object PlayerSettingsStorage {
         nextEpisodeThresholdPercentKey,
         nextEpisodeThresholdMinutesBeforeEndKey,
         preloadNextEpisodeSourcesKey,
+        privateViewingEnabledKey,
         stillWatchingPromptEnabledKey,
         stillWatchingEpisodeCountKey,
         stillWatchingNightOnlyKey,
@@ -1236,6 +1236,7 @@ actual object PlayerSettingsStorage {
         loadNextEpisodeThresholdPercent()?.let { put(nextEpisodeThresholdPercentKey, encodeSyncFloat(it)) }
         loadNextEpisodeThresholdMinutesBeforeEnd()?.let { put(nextEpisodeThresholdMinutesBeforeEndKey, encodeSyncFloat(it)) }
         loadPreloadNextEpisodeSources()?.let { put(preloadNextEpisodeSourcesKey, encodeSyncBoolean(it)) }
+        loadPrivateViewingEnabled()?.let { put(privateViewingEnabledKey, encodeSyncBoolean(it)) }
         loadStillWatchingPromptEnabled()?.let { put(stillWatchingPromptEnabledKey, encodeSyncBoolean(it)) }
         loadStillWatchingEpisodeCount()?.let { put(stillWatchingEpisodeCountKey, encodeSyncInt(it)) }
         loadStillWatchingNightOnly()?.let { put(stillWatchingNightOnlyKey, encodeSyncBoolean(it)) }
@@ -1324,6 +1325,7 @@ actual object PlayerSettingsStorage {
         payload.decodeSyncFloat(nextEpisodeThresholdPercentKey)?.let(::saveNextEpisodeThresholdPercent)
         payload.decodeSyncFloat(nextEpisodeThresholdMinutesBeforeEndKey)?.let(::saveNextEpisodeThresholdMinutesBeforeEnd)
         payload.decodeSyncBoolean(preloadNextEpisodeSourcesKey)?.let(::savePreloadNextEpisodeSources)
+        payload.decodeSyncBoolean(privateViewingEnabledKey)?.let(::savePrivateViewingEnabled)
         payload.decodeSyncBoolean(stillWatchingPromptEnabledKey)?.let(::saveStillWatchingPromptEnabled)
         payload.decodeSyncInt(stillWatchingEpisodeCountKey)?.let(::saveStillWatchingEpisodeCount)
         payload.decodeSyncBoolean(stillWatchingNightOnlyKey)?.let(::saveStillWatchingNightOnly)

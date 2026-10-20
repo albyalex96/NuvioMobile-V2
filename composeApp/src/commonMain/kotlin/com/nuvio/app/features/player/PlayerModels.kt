@@ -48,6 +48,8 @@ data class PlayerLaunch(
     val contentLanguage: String? = null,
     val sourceFilename: String? = null,
     val stream: com.nuvio.app.features.streams.StreamItem? = null,
+    /** "Watch privately" for this movie/episode only (see [PrivatePlaybackRequests]). */
+    val privateViewing: Boolean = false,
 )
 
 object PlayerLaunchStore {
@@ -56,7 +58,7 @@ object PlayerLaunchStore {
 
     fun put(launch: PlayerLaunch): Long {
         val launchId = nextLaunchId++
-        launches[launchId] = launch
+        launches[launchId] = PrivatePlaybackRequests.applyTo(launch)
         return launchId
     }
 

@@ -129,6 +129,11 @@ internal class PlayerScreenRuntime(
     var activeLogo by mutableStateOf(logo)
     var activePauseDescription by mutableStateOf(pauseDescription)
     var activeVideoId by mutableStateOf(videoId)
+    /** Content key of the movie/episode launched with "Watch privately", if any. */
+    val privateViewingKey: String? = args.launchId
+        ?.let(PlayerLaunchStore::get)
+        ?.takeIf { it.privateViewing }
+        ?.let { PrivatePlaybackRequests.contentKey(it.parentMetaId, it.videoId) }
     var activeInitialPositionMs by mutableStateOf(initialPositionMs)
     var activeInitialProgressFraction by mutableStateOf(initialProgressFraction)
     var shouldPlay by mutableStateOf(true)

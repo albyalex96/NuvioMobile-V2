@@ -72,7 +72,7 @@ Portata da [luqmanfadlli/NuvioMobile-Enhanced](https://github.com/luqmanfadlli/N
 - **Prompt "Stai ancora guardando?"** (in stile Netflix): dopo un numero configurabile di episodi riprodotti in automatico, opzionalmente solo di notte (22:00–04:00), con un conto alla rovescia di 10 secondi prima della chiusura del player. Una versione separata a tempo per la **Live TV** (da 15 min a 6 h).
 - **Ritardo audio** (portato da NuvioTV): ±60 s a passi di 25 ms, ricordato **per uscita audio** (altoparlante, Bluetooth, HDMI…), con supporto all'hint `behaviorHints.audioDelayMs` di addon e plugin. Funziona con ExoPlayer e mpv.
 - **Capitoli** (portati dalla fork di luqmanfadlli): segni dei capitoli sulla barra di avanzamento, titolo del capitolo corrente sopra la barra e pannello **Capitoli** per saltare a qualsiasi capitolo, su telefono, tablet e app TV. Letti dai file MKV/MP4 con ExoPlayer e direttamente da mpv (libmpv Android e iOS).
-- **Visione privata** (portata dalla fork di luqmanfadlli): interruttore in Riproduzione → Player che smette di salvare progressi, Continua a guardare e stato "visto" e di inviare lo scrobbling ai tracker collegati, sia nel player interno sia per i risultati dei player esterni. Per profilo e per dispositivo (non sincronizzata).
+- **Visione privata** (portata dalla fork di luqmanfadlli): interruttore in Riproduzione → Player che smette di salvare progressi, Continua a guardare e stato "visto" e di inviare lo scrobbling ai tracker collegati, sia nel player interno sia per i risultati dei player esterni. Sincronizzata col profilo. Nel menu del flusso c'è anche **Guarda in privato**, per vedere in privato un singolo film o episodio (gli episodi successivi vengono registrati normalmente).
 
 ## Flussi
 

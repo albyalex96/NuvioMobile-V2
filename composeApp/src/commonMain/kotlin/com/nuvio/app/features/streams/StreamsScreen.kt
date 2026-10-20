@@ -36,10 +36,12 @@ import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.SearchOff
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -70,6 +72,7 @@ import com.nuvio.app.core.ui.NuvioActionMenuDivider
 import com.nuvio.app.core.ui.NuvioActionMenuGroup
 import com.nuvio.app.core.ui.NuvioActionMenuRow
 import com.nuvio.app.core.ui.NuvioToastController
+import com.nuvio.app.features.player.PrivatePlaybackRequests
 import com.nuvio.app.core.ui.dismissNuvioBottomSheet
 import com.nuvio.app.features.downloads.DownloadsRepository
 import com.nuvio.app.features.downloads.hls.HlsDownloadDialog
@@ -319,6 +322,7 @@ fun StreamsScreen(
                 resumePositionMs = effectiveResumePositionMs,
                 resumeProgressFraction = effectiveResumeProgressFraction,
                 onStreamSelected = { stream, positionMs, progressFraction ->
+                    PrivatePlaybackRequests.clear()
                     onStreamSelected(stream, positionMs, progressFraction)
                 },
                 onStreamLongPress = onStreamLongPress,
@@ -341,6 +345,7 @@ fun StreamsScreen(
                 resumePositionMs = effectiveResumePositionMs,
                 resumeProgressFraction = effectiveResumeProgressFraction,
                 onStreamSelected = { stream, positionMs, progressFraction ->
+                    PrivatePlaybackRequests.clear()
                     onStreamSelected(stream, positionMs, progressFraction)
                 },
                 onStreamLongPress = onStreamLongPress,
@@ -365,14 +370,28 @@ fun StreamsScreen(
         }
 
 
+        DisposableEffect(Unit) {
+            onDispose { PrivatePlaybackRequests.clear() }
+        }
+
         StreamActionsSheet(
             stream = streamActionsTarget,
             externalPlayerEnabled = playerSettings.externalPlayerEnabled,
             showOriginalDescription = streamParserSettings.enabled,
             castAvailable = castAvailable,
+            // Pointless while private viewing is on for everything.
+            privatePlaybackAvailable = !playerSettings.privateViewingEnabled,
+            isEpisode = isEpisode,
             imageUrl = poster ?: background,
             onDismiss = { streamActionsTarget = null },
-            onPlay = { stream -> onStreamSelected(stream, effectiveResumePositionMs, effectiveResumeProgressFraction) },
+            onPlay = { stream ->
+                PrivatePlaybackRequests.clear()
+                onStreamSelected(stream, effectiveResumePositionMs, effectiveResumeProgressFraction)
+            },
+            onPlayPrivately = { stream ->
+                PrivatePlaybackRequests.request(parentMetaId = parentMetaId, videoId = videoId)
+                onStreamSelected(stream, effectiveResumePositionMs, effectiveResumeProgressFraction)
+            },
             onCast = { stream ->
                 if (castState is CastSessionState.Connected) {
                     streamCastLog.i { "Casting the selected stream" }
@@ -1083,9 +1102,12 @@ private fun StreamActionsSheet(
     externalPlayerEnabled: Boolean,
     showOriginalDescription: Boolean,
     castAvailable: Boolean,
+    privatePlaybackAvailable: Boolean,
+    isEpisode: Boolean,
     imageUrl: String?,
     onDismiss: () -> Unit,
     onPlay: (StreamItem) -> Unit,
+    onPlayPrivately: (StreamItem) -> Unit,
     onCast: (StreamItem) -> Unit,
     onShowOriginalDescription: (StreamItem) -> Unit,
     onCopyLink: (StreamItem) -> Unit,
@@ -1093,6 +1115,7 @@ private fun StreamActionsSheet(
     onOpen: (StreamItem, openExternally: Boolean) -> Unit,
 ) {
     if (stream == null) return
+    val privatePlaybackTitle = stringResource(Res.string.private_viewing_play_action)
 
     // TV: the card menu dialog of the TV shell (icons, D-pad). It also ignores the OK still held
     // from the long press, which the bottom sheet turned into a click on its first row.
@@ -1124,6 +1147,9 @@ private fun StreamActionsSheet(
                 }
                 if (castAvailable && stream.canCast) {
                     add(PosterZoomOverlayAction(Icons.Rounded.Cast, stringResource(Res.string.cast_stream_action), onSelected = { onCast(stream) }))
+                }
+                if (privatePlaybackAvailable) {
+                    add(PosterZoomOverlayAction(Icons.Rounded.VisibilityOff, privatePlaybackTitle, onSelected = { onPlayPrivately(stream) }))
                 }
             },
             onDismiss = onDismiss,
@@ -1215,6 +1241,21 @@ private fun StreamActionsSheet(
                     add(StreamMenuAction(Icons.Rounded.Cast, stringResource(Res.string.cast_stream_action), castSubtitle) {
                         onCast(stream)
                     })
+                }
+                if (privatePlaybackAvailable) {
+                    add(
+                        StreamMenuAction(
+                            Icons.Rounded.VisibilityOff,
+                            privatePlaybackTitle,
+                            stringResource(
+                                if (isEpisode) {
+                                    Res.string.private_viewing_play_action_episode_description
+                                } else {
+                                    Res.string.private_viewing_play_action_movie_description
+                                },
+                            ),
+                        ) { onPlayPrivately(stream) },
+                    )
                 }
             }
             NuvioActionMenuGroup(modifier = Modifier.padding(horizontal = 16.dp)) {

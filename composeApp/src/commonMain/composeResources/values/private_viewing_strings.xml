@@ -2,4 +2,8 @@
 <resources>
     <string name="settings_playback_private_viewing">Private Viewing</string>
     <string name="settings_playback_private_viewing_description">Don\'t save watch progress, Continue Watching or watched status, and don\'t sync playback to connected trackers.</string>
+    <string name="private_viewing_play_action">Watch privately</string>
+    <string name="private_viewing_play_action_episode_description">Only this episode: no watch progress, watched status or tracker sync</string>
+    <string name="private_viewing_play_action_movie_description">No watch progress, watched status or tracker sync for this movie</string>
+    <string name="private_viewing_item_notice">Watching privately: progress won't be saved</string>
 </resources>

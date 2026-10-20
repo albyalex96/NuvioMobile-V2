@@ -214,9 +214,16 @@ internal val PlayerScreenRuntime.isLocalFilePlayback: Boolean
     get() = activeProviderAddonId == LOCAL_FILE_PROVIDER_ID
 
 // Live TV channels and unlinked local files have no watch progress and are never scrobbled,
-// and nothing is recorded or scrobbled while private viewing is on.
+// and nothing is recorded or scrobbled while private viewing is on (globally, or for the
+// movie/episode chosen with "Watch privately").
 internal val PlayerScreenRuntime.shouldTrackWatchProgress: Boolean
-    get() = !isLiveTvPlayback && !isLocalFilePlayback && !playerSettingsUiState.privateViewingEnabled
+    get() = !isLiveTvPlayback && !isLocalFilePlayback && !playerSettingsUiState.privateViewingEnabled &&
+        !isPrivateViewingActiveItem
+
+/** The item playing now is the one launched with "Watch privately" (not the next episodes). */
+internal val PlayerScreenRuntime.isPrivateViewingActiveItem: Boolean
+    get() = privateViewingKey != null &&
+        privateViewingKey == PrivatePlaybackRequests.contentKey(parentMetaId, activeVideoId)
 
 internal fun PlayerScreenRuntime.currentTrackingMedia(): TrackingMediaReference =
     snapshotTrackingScrobbleItemInputs().buildMedia()

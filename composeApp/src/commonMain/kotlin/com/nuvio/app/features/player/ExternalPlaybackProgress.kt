@@ -34,12 +34,21 @@ internal fun PlayerLaunch.externalPlaybackSession(): WatchProgressPlaybackSessio
 internal suspend fun recordExternalPlaybackProgress(
     result: ExternalPlaybackResult,
     fallbackSession: WatchProgressPlaybackSession?,
+    privateLaunch: PlayerLaunch? = null,
 ) {
     if (PlayerSettingsRepository.uiState.value.privateViewingEnabled) {
         Logger.i("PrivateViewing") { "External player result not recorded: private viewing is on" }
         return
     }
     val session = result.playbackSession ?: fallbackSession ?: return
+    if (
+        privateLaunch != null &&
+        PrivatePlaybackRequests.contentKey(privateLaunch.parentMetaId, privateLaunch.videoId) ==
+        PrivatePlaybackRequests.contentKey(session.parentMetaId, session.videoId)
+    ) {
+        Logger.i("PrivateViewing") { "External player result not recorded: watched privately" }
+        return
+    }
     // A completed playback may carry no position at all (MX Player), so only drop position-less
     // results that were not reported as played to the end.
     if (result.positionMs <= 0L && result.endedByUser) return
