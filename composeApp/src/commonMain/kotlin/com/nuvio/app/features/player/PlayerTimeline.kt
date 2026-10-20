@@ -119,6 +119,9 @@ internal fun PlayerTimeline(
     val durationMs = snapshot.durationMs.coerceAtLeast(0L)
     val rangeEnd = durationMs.coerceAtLeast(1L).toFloat()
     val bufferedFraction = (snapshot.bufferedPositionMs.toFloat() / rangeEnd).coerceIn(0f, 1f)
+    val chapterMarks = remember(snapshot.chapters, durationMs) {
+        snapshot.chapters.chapterMarkFractions(durationMs)
+    }
     val accent = MaterialTheme.colorScheme.primary
     val accentBrush = MaterialTheme.themePalette.accentBrush()
     val description = stringResource(Res.string.player_seek_position)
@@ -179,6 +182,14 @@ internal fun PlayerTimeline(
                                 size = Size(progressWidth, trackHeight),
                                 cornerRadius = radius,
                             )
+                            val markWidth = PlayerChapterMarkWidth.toPx()
+                            chapterMarks.forEach { fraction ->
+                                drawRect(
+                                    color = PlayerChapterMarkColor,
+                                    topLeft = Offset(size.width * fraction - markWidth / 2f, trackOrigin.y),
+                                    size = Size(markWidth, trackHeight),
+                                )
+                            }
                             if (isFocused) {
                                 drawCircle(
                                     color = Color.White,

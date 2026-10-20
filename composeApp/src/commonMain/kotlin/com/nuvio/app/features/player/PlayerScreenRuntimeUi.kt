@@ -474,6 +474,7 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
             },
             onSourcesClick = if (!isLiveTvPlayback && activeVideoId != null) { { openSourcesPanel() } } else null,
             onEpisodesClick = if (isSeries) { { openEpisodesPanel() } } else null,
+            onChaptersClick = if (playbackSnapshot.chapters.isNotEmpty()) { { openChaptersPanel() } } else null,
             onLiveChannelsClick = if (isLiveTvPlayback) {
                 {
                     showLiveChannelsPanel = true
@@ -843,6 +844,17 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
         subtitleTrack = subtitleTracks.firstOrNull { it.index == selectedSubtitleIndex }.takeIf { !useCustomSubtitles },
         addonSubtitle = selectedAddonSubtitle.takeIf { useCustomSubtitles },
         onDismiss = { showStreamInfo = false },
+    )
+
+    PlayerChaptersPanel(
+        visible = showChaptersPanel,
+        chapters = playbackSnapshot.chapters,
+        positionMs = displayedPositionMs,
+        onChapterSelected = { chapter -> seekToChapter(chapter) },
+        onDismiss = {
+            showChaptersPanel = false
+            controlsVisible = true
+        },
     )
 
     if (isLiveTvPlayback) {

@@ -530,6 +530,7 @@ private fun PlayerScreenRuntime.switchToPreparedLiveChannel(channel: LiveTvChann
     LiveTvRepository.markChannelWatched(channel)
     resetLiveTvStillWatchingTimer()
     showLiveChannelsPanel = false
+    showChaptersPanel = false
     controlsVisible = true
 
     if (channel.streamUrl == activeSourceUrl) {
@@ -577,6 +578,7 @@ internal fun PlayerScreenRuntime.openSourcesPanel() {
     showSourcesPanel = true
     showEpisodesPanel = false
     showLiveChannelsPanel = false
+    showChaptersPanel = false
     controlsVisible = false
 }
 
@@ -589,7 +591,30 @@ internal fun PlayerScreenRuntime.openEpisodesPanel() {
     showEpisodesPanel = true
     showSourcesPanel = false
     showLiveChannelsPanel = false
+    showChaptersPanel = false
     controlsVisible = false
+}
+
+internal fun PlayerScreenRuntime.openChaptersPanel() {
+    showChaptersPanel = true
+    showSourcesPanel = false
+    showEpisodesPanel = false
+    showLiveChannelsPanel = false
+    controlsVisible = false
+}
+
+/** Jumps to a chapter from the chapters panel, with the same party rules as the seek bar. */
+internal fun PlayerScreenRuntime.seekToChapter(chapter: PlayerChapter) {
+    val requestedMs = chapter.startMs.coerceAtLeast(0L)
+    val targetMs = if (isPartyControlLocked) ownSeekTarget(requestedMs) else requestedMs
+    showChaptersPanel = false
+    controlsVisible = true
+    if (targetMs == null) return
+    Logger.d("PlayerChapters") { "Seek to chapter at ${targetMs}ms" }
+    finishTimelineScrub(targetMs)
+    playerController?.seekTo(targetMs)
+    scheduleProgressSyncAfterSeek()
+    publishPartyPlayback(positionMs = targetMs)
 }
 
 private data class EpisodeResume(val positionMs: Long, val fraction: Float?)
@@ -599,6 +624,7 @@ private fun PlayerScreenRuntime.resetEpisodePanelAndNextEpisodeState() {
     showSourcesPanel = false
     showEpisodesPanel = false
     showLiveChannelsPanel = false
+    showChaptersPanel = false
     episodeStreamsPanelState = EpisodeStreamsPanelState()
     cancelNextEpisodeAutoPlay()
     PlayerStreamsRepository.clearEpisodeStreams()

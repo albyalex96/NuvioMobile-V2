@@ -236,6 +236,13 @@ data class PlayerPlaybackSnapshot(
     val playbackSpeed: Float = 1f,
     val videoWidth: Int = 0,
     val videoHeight: Int = 0,
+    /** Chapters of the media (at least two), sorted by start; empty when the file has none. */
+    val chapters: List<PlayerChapter> = emptyList(),
+)
+
+data class PlayerChapter(
+    val title: String,
+    val startMs: Long,
 )
 
 data class PlayerNowPlayingInfo(

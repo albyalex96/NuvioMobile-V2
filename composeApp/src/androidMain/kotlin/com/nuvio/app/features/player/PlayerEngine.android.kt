@@ -84,6 +84,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import java.io.File
 import java.net.URI
 import java.util.concurrent.Executors
@@ -275,6 +276,8 @@ private fun ExoPlayerSurface(
     var currentSubtitleStyle by remember { mutableStateOf(SubtitleStyleState.DEFAULT) }
     var decoderPriorityOverride by remember(playerSourceKey) { mutableStateOf<Int?>(null) }
     var fallbackStartPositionMs by remember(playerSourceKey) { mutableStateOf<Long?>(null) }
+    // ExoPlayer does not expose container chapters: they are read from the file (see below).
+    var playerChapters by remember(playerSourceKey) { mutableStateOf<List<PlayerChapter>>(emptyList()) }
     val effectiveDecoderPriority = decoderPriorityOverride ?: playerSettings.decoderPriority
 
     var resolvedMediaItem by remember(playerSourceKey, externalSubtitles) {
@@ -502,9 +505,46 @@ private fun ExoPlayerSurface(
     }
 
     fun dispatchExoPlayerSnapshot() {
-        val snapshot = exoPlayer.snapshot()
+        val snapshot = exoPlayer.snapshot(playerChapters)
         latestOnSnapshot.value(snapshot)
         nowPlayingController.syncPlayback(snapshot)
+    }
+
+    // Chapters (MKV/MP4) of progressive sources, read once the media is ready.
+    LaunchedEffect(exoPlayer, playerSourceKey) {
+        if (useYoutubeChunkedPlayback) return@LaunchedEffect
+        val mimeType = playbackMediaItemFromUrl(
+            url = sourceUrl,
+            responseHeaders = sanitizedSourceResponseHeaders,
+            streamType = normalizedStreamType,
+        ).localConfiguration?.mimeType
+        val adaptive = mimeType == MimeTypes.APPLICATION_M3U8 ||
+            mimeType == MimeTypes.APPLICATION_MPD ||
+            mimeType == MimeTypes.APPLICATION_SS
+        if (adaptive) return@LaunchedEffect
+        while (
+            exoPlayer.playbackState != Player.STATE_READY ||
+            exoPlayer.duration == C.TIME_UNSET ||
+            exoPlayer.isCurrentMediaItemLive
+        ) {
+            delay(500)
+        }
+        val chapterDataSourceFactory = PlatformPlaybackDataSourceFactory.create(
+            context = context,
+            defaultRequestHeaders = sanitizedSourceHeaders,
+            defaultResponseHeaders = sanitizedSourceResponseHeaders,
+            useYoutubeChunkedPlayback = false,
+            useLongReadTimeout = isLoopbackPlaybackSource(sourceUrl),
+        )
+        val chapters = withTimeoutOrNull(CHAPTERS_PROBE_TIMEOUT_MS) {
+            PlayerChapterReader.read(sourceUrl, chapterDataSourceFactory)
+        }
+        if (chapters == null) Logger.w("PlayerChapters") { "Chapters probe timed out" }
+        if (!chapters.isNullOrEmpty()) {
+            Logger.i("PlayerChapters") { "ExoPlayer chapters loaded: ${chapters.size}" }
+            playerChapters = chapters
+            dispatchExoPlayerSnapshot()
+        }
     }
 
     DisposableEffect(nowPlayingController) {
@@ -684,7 +724,7 @@ private fun ExoPlayerSurface(
             }
 
             override fun onVideoSizeChanged(videoSize: VideoSize) {
-                latestOnSnapshot.value(exoPlayer.snapshot())
+                latestOnSnapshot.value(exoPlayer.snapshot(playerChapters))
                 if (videoSize.width > 0 && videoSize.height > 0) {
                     videoAspectRatio = videoSize.width.toFloat() / videoSize.height.toFloat()
                 }
@@ -1526,7 +1566,25 @@ private class NuvioLibmpvView(
             playbackSpeed = (mpv.getPropertyDouble("speed") ?: 1.0).toFloat(),
             videoWidth = videoWidth,
             videoHeight = videoHeight,
+            chapters = chaptersFor(durationMs),
         )
+    }
+
+    private var cachedChapters: List<PlayerChapter> = emptyList()
+    private var cachedChaptersKey: String? = null
+
+    /** mpv reads the container chapters itself; re-read only when the source or duration changes. */
+    private fun chaptersFor(durationMs: Long): List<PlayerChapter> {
+        if (durationMs <= 0L) return emptyList()
+        val key = "$currentSourceUrl|$durationMs"
+        if (key != cachedChaptersKey) {
+            cachedChaptersKey = key
+            cachedChapters = runCatching { mpvChapters(mpv::getPropertyString) }.getOrDefault(emptyList())
+            if (cachedChapters.isNotEmpty()) {
+                Logger.i("PlayerChapters") { "libmpv chapters loaded: ${cachedChapters.size}" }
+            }
+        }
+        return cachedChapters
     }
 
     fun applyResizeMode(resizeMode: PlayerResizeMode) {
@@ -1860,7 +1918,9 @@ private const val MPV_SUBTITLE_FONT_SIZE_MIN = 36
 private const val MPV_SUBTITLE_FONT_SIZE_MAX = 122
 private const val MPV_SUBTITLE_OUTLINE_SIZE_SCALE = 1.5
 
-private fun ExoPlayer.snapshot(): PlayerPlaybackSnapshot {
+private const val CHAPTERS_PROBE_TIMEOUT_MS = 20_000L
+
+private fun ExoPlayer.snapshot(chapters: List<PlayerChapter> = emptyList()): PlayerPlaybackSnapshot {
     val (videoWidth, videoHeight) = videoDimensions()
     return PlayerPlaybackSnapshot(
         isLoading = playbackState == Player.STATE_IDLE || playbackState == Player.STATE_BUFFERING,
@@ -1872,6 +1932,7 @@ private fun ExoPlayer.snapshot(): PlayerPlaybackSnapshot {
         playbackSpeed = playbackParameters.speed,
         videoWidth = videoWidth,
         videoHeight = videoHeight,
+        chapters = chapters,
     )
 }
 

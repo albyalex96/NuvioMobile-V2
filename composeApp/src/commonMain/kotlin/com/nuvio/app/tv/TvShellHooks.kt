@@ -468,7 +468,7 @@ internal fun PlayerScreenRuntime.BindTvPlayerRemote() {
 
 /** A panel, modal or blocking prompt of the player is open: it owns the remote keys. */
 private fun PlayerScreenRuntime.tvOverlayOpen(): Boolean =
-    showSourcesPanel || showEpisodesPanel || showLiveChannelsPanel ||
+    showSourcesPanel || showEpisodesPanel || showLiveChannelsPanel || showChaptersPanel ||
         showSubmitIntroModal || showAudioModal || showSubtitleModal ||
         showVideoSettingsModal || showStillWatchingPrompt || showPartyPanel ||
         pendingP2pSwitch != null || errorMessage != null

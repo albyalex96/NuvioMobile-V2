@@ -330,15 +330,30 @@ actual fun PlatformPlayerSurface(
     // Polling for snapshots
     LaunchedEffect(bridge) {
         var lastReportedError: String? = null
+        var chapters = emptyList<PlayerChapter>()
+        var chaptersDurationMs = 0L
         while (isActive) {
+            val durationMs = bridge.getDurationMs()
+            // mpv reads the container chapters itself; re-read when a new media (duration) appears.
+            if (durationMs != chaptersDurationMs) {
+                chaptersDurationMs = durationMs
+                chapters = if (durationMs > 0L) {
+                    runCatching { mpvChapters { name -> bridge.getProperty(name).ifBlank { null } } }
+                        .getOrDefault(emptyList())
+                } else {
+                    emptyList()
+                }
+                if (chapters.isNotEmpty()) Logger.i("PlayerChapters") { "mpv chapters loaded: ${chapters.size}" }
+            }
             val snapshot = PlayerPlaybackSnapshot(
                 isLoading = bridge.getIsLoading(),
                 isPlaying = bridge.getIsPlaying(),
                 isEnded = bridge.getIsEnded(),
-                durationMs = bridge.getDurationMs(),
+                durationMs = durationMs,
                 positionMs = bridge.getPositionMs(),
                 bufferedPositionMs = bridge.getBufferedMs(),
                 playbackSpeed = bridge.getPlaybackSpeed(),
+                chapters = chapters,
             )
             latestOnSnapshot.value(snapshot)
             val errorMessage = bridge.getErrorMessage().ifBlank { null }
