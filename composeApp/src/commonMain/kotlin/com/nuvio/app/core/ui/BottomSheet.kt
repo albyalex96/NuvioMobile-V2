@@ -31,6 +31,7 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import com.nuvio.app.tv.tvTextInputKeys
 
 private val SheetShape = RoundedCornerShape(NuvioTokens.Space.s28)
 
@@ -70,6 +71,8 @@ fun NuvioModalBottomSheet(
             CompositionLocalProvider(LocalBottomInsetsConsumed provides true) {
                 Column(
                     modifier = modifier
+                        // TV: the sheet has its own window, so it needs its own text field keys.
+                        .tvTextInputKeys()
                         .padding(NuvioTokens.Space.s10)
                         .clip(SheetShape)
                         .background(containerColor)

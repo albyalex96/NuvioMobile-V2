@@ -7,6 +7,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
@@ -79,7 +80,8 @@ fun TvTextInputHost(content: @Composable () -> Unit) {
 /**
  * Remote keys for the gated text fields of a window (the app root and each dialog): OK opens the
  * keyboard of the focused field (again, if it was closed with Back); while the field only shows
- * the focus, left/right move the focus instead of the cursor. No-op without a [TvShell].
+ * the focus, left/right move the focus instead of the cursor; up/down always move the focus to the
+ * previous/next element. No-op without a [TvShell].
  */
 @Composable
 fun Modifier.tvTextInputKeys(): Modifier {
@@ -92,14 +94,14 @@ fun Modifier.tvTextInputKeys(): Modifier {
         }
         when {
             TvTextInputGate.waiting && event.key in ConfirmKeys -> TvTextInputGate.openKeyboard()
-            TvTextInputGate.waiting && event.key == Key.DirectionLeft -> {
-                focusManager.moveFocus(FocusDirection.Left)
-                true
-            }
-            TvTextInputGate.waiting && event.key == Key.DirectionRight -> {
-                focusManager.moveFocus(FocusDirection.Right)
-                true
-            }
+            TvTextInputGate.waiting && event.key == Key.DirectionLeft -> moveFocusFromField(focusManager, FocusDirection.Left)
+            TvTextInputGate.waiting && event.key == Key.DirectionRight -> moveFocusFromField(focusManager, FocusDirection.Right)
+            // Up/down always leave the field (the field would use them as cursor keys and keep the
+            // focus), also while editing with the keyboard hidden.
+            (TvTextInputGate.waiting || TvTextInputGate.editing) && event.key == Key.DirectionUp ->
+                moveFocusFromField(focusManager, FocusDirection.Up)
+            (TvTextInputGate.waiting || TvTextInputGate.editing) && event.key == Key.DirectionDown ->
+                moveFocusFromField(focusManager, FocusDirection.Down)
             // Keys reach the app only while the keyboard is hidden: OK shows it again.
             TvTextInputGate.editing && event.key in ConfirmKeys && keyboard != null -> {
                 keyboard.show()
@@ -108,4 +110,12 @@ fun Modifier.tvTextInputKeys(): Modifier {
             else -> false
         }
     }
+}
+
+/** Moves the focus out of the focused text field; the key is consumed even when nothing is there. */
+private fun moveFocusFromField(focusManager: FocusManager, direction: FocusDirection): Boolean {
+    if (!focusManager.moveFocus(direction)) {
+        log.d { "No focus target $direction of the text field" }
+    }
+    return true
 }
