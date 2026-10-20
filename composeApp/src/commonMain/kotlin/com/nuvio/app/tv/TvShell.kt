@@ -199,6 +199,32 @@ interface TvPlayerRemote {
 
     /** Keeps the controls on screen while the user is navigating them. */
     fun registerActivity()
+
+    /*
+     * Dedicated remote buttons. Each returns false when the action is not available right now
+     * (wrong content, blocking prompt, watch party lock), so the key falls through to the system.
+     */
+
+    /** Subtitles button: opens the subtitle menu, or closes it when already open. */
+    fun toggleSubtitleMenu(): Boolean
+
+    /** Audio track button: opens the audio menu, or closes it when already open. */
+    fun toggleAudioMenu(): Boolean
+
+    /** Guide button: episodes panel for series, channel list for Live TV (toggles). */
+    fun toggleGuidePanel(): Boolean
+
+    /** Next button: next episode, or next channel on Live TV. */
+    fun playNext(): Boolean
+
+    /** Previous button: previous channel on Live TV. */
+    fun playPrevious(): Boolean
+
+    /** Channel up/down: Live TV zapping ([step] = +1 next, -1 previous). */
+    fun zapChannel(step: Int): Boolean
+
+    /** Zoom / aspect button: cycles fit, fill and zoom. */
+    fun cycleResizeMode(): Boolean
 }
 
 /** Process-wide flags for the Android TV app, set by its activity before any UI is shown. */

@@ -13,6 +13,10 @@ import com.nuvio.app.tv.TvPlayerRemoteRegistry
  * - Controls visible: D-pad moves between the player buttons, Back hides the controls.
  * - A panel, modal or prompt is open: keys go untouched to it.
  * - Media keys work in every state.
+ * - Dedicated buttons work in every state unless a blocking prompt is open: subtitles and audio
+ *   open/close their menu, guide opens the episodes (series) or channels (Live TV) panel,
+ *   next/previous and channel up/down change episode or channel, zoom cycles the resize mode,
+ *   info shows/hides the controls.
  */
 object TvPlayerKeyRouter {
     private val log = Logger.withTag("TvRemote")
@@ -51,13 +55,32 @@ object TvPlayerKeyRouter {
                 if (firstPress && remote.isPlaying) remote.togglePlayback()
                 return true
             }
-            KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> {
+            KeyEvent.KEYCODE_MEDIA_STOP -> {
+                if (firstPress && remote.isPlaying) remote.togglePlayback()
+                return true
+            }
+            KeyEvent.KEYCODE_MEDIA_FAST_FORWARD,
+            KeyEvent.KEYCODE_MEDIA_SKIP_FORWARD,
+            KeyEvent.KEYCODE_MEDIA_STEP_FORWARD,
+            -> {
                 remote.seekStep(forward = true)
                 return true
             }
-            KeyEvent.KEYCODE_MEDIA_REWIND -> {
+            KeyEvent.KEYCODE_MEDIA_REWIND,
+            KeyEvent.KEYCODE_MEDIA_SKIP_BACKWARD,
+            KeyEvent.KEYCODE_MEDIA_STEP_BACKWARD,
+            -> {
                 remote.seekStep(forward = false)
                 return true
+            }
+        }
+
+        val shortcut = shortcutFor(event.keyCode)
+        if (shortcut != null) {
+            // Held keys repeat nothing: the menus would flicker open and closed.
+            if (!firstPress) return event.keyCode in consumedKeys
+            return shortcut(remote).also { consumed ->
+                log.d { "Remote button ${KeyEvent.keyCodeToString(event.keyCode)} consumed=$consumed" }
             }
         }
 
@@ -65,7 +88,7 @@ object TvPlayerKeyRouter {
 
         if (remote.controlsVisible) {
             remote.registerActivity()
-            if (event.keyCode == KeyEvent.KEYCODE_BACK && firstPress) {
+            if ((event.keyCode == KeyEvent.KEYCODE_BACK || event.keyCode == KeyEvent.KEYCODE_INFO) && firstPress) {
                 remote.hideControls()
                 return true
             }
@@ -93,6 +116,7 @@ object TvPlayerKeyRouter {
             KeyEvent.KEYCODE_DPAD_UP,
             KeyEvent.KEYCODE_DPAD_DOWN,
             KeyEvent.KEYCODE_MENU,
+            KeyEvent.KEYCODE_INFO,
             -> {
                 if (firstPress) {
                     log.d { "Showing player controls from remote" }
@@ -102,5 +126,18 @@ object TvPlayerKeyRouter {
             }
             else -> false
         }
+    }
+
+    /** Dedicated remote buttons; null for keys handled by the state-dependent mapping. */
+    private fun shortcutFor(keyCode: Int): ((TvPlayerRemote) -> Boolean)? = when (keyCode) {
+        KeyEvent.KEYCODE_CAPTIONS -> TvPlayerRemote::toggleSubtitleMenu
+        KeyEvent.KEYCODE_MEDIA_AUDIO_TRACK -> TvPlayerRemote::toggleAudioMenu
+        KeyEvent.KEYCODE_GUIDE -> TvPlayerRemote::toggleGuidePanel
+        KeyEvent.KEYCODE_MEDIA_NEXT -> TvPlayerRemote::playNext
+        KeyEvent.KEYCODE_MEDIA_PREVIOUS -> TvPlayerRemote::playPrevious
+        KeyEvent.KEYCODE_CHANNEL_UP -> { remote -> remote.zapChannel(1) }
+        KeyEvent.KEYCODE_CHANNEL_DOWN -> { remote -> remote.zapChannel(-1) }
+        KeyEvent.KEYCODE_TV_ZOOM_MODE -> TvPlayerRemote::cycleResizeMode
+        else -> null
     }
 }

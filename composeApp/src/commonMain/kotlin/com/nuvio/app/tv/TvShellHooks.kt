@@ -56,6 +56,11 @@ import com.nuvio.app.features.player.isPartyControlLocked
 import com.nuvio.app.features.player.ownSeekTarget
 import com.nuvio.app.features.player.partyBlocksControl
 import com.nuvio.app.features.player.publishPartyPlayback
+import com.nuvio.app.features.player.cycleResizeMode
+import com.nuvio.app.features.player.openEpisodesPanel
+import com.nuvio.app.features.player.refreshTracks
+import com.nuvio.app.features.player.switchToLiveChannel
+import com.nuvio.app.features.livetv.LiveTvRepository
 import com.nuvio.app.features.profiles.NuvioProfile
 import com.nuvio.app.features.profiles.ProfileRepository
 import com.nuvio.app.features.watchprogress.ContinueWatchingItem
@@ -433,6 +438,106 @@ internal fun PlayerScreenRuntime.BindTvPlayerRemote() {
             override fun registerActivity() {
                 runtime.controlsActivityTick += 1
             }
+
+            override fun toggleSubtitleMenu(): Boolean {
+                if (runtime.tvShortcutsBlocked()) return false
+                val open = !runtime.showSubtitleModal
+                runtime.closeTvMenus()
+                if (open) {
+                    runtime.refreshTracks()
+                    runtime.showSubtitleModal = true
+                }
+                log.d { "Remote subtitles key: menu ${if (open) "opened" else "closed"}" }
+                return true
+            }
+
+            override fun toggleAudioMenu(): Boolean {
+                if (runtime.tvShortcutsBlocked()) return false
+                val open = !runtime.showAudioModal
+                runtime.closeTvMenus()
+                if (open) {
+                    runtime.refreshTracks()
+                    runtime.showAudioModal = true
+                }
+                log.d { "Remote audio key: menu ${if (open) "opened" else "closed"}" }
+                return true
+            }
+
+            override fun toggleGuidePanel(): Boolean {
+                if (runtime.tvShortcutsBlocked()) return false
+                when {
+                    runtime.isLiveTvPlayback -> {
+                        val open = !runtime.showLiveChannelsPanel
+                        runtime.closeTvMenus()
+                        if (open) {
+                            runtime.showLiveChannelsPanel = true
+                            runtime.controlsVisible = false
+                        }
+                        log.d { "Remote guide key: channels panel ${if (open) "opened" else "closed"}" }
+                    }
+                    runtime.isSeries -> {
+                        val open = !runtime.showEpisodesPanel
+                        runtime.closeTvMenus()
+                        if (open) runtime.openEpisodesPanel()
+                        log.d { "Remote guide key: episodes panel ${if (open) "opened" else "closed"}" }
+                    }
+                    else -> return false
+                }
+                return true
+            }
+
+            override fun playNext(): Boolean {
+                if (runtime.tvShortcutsBlocked()) return false
+                if (runtime.isLiveTvPlayback) return zapChannel(1)
+                val next = runtime.nextEpisodeInfo
+                if (
+                    next?.hasAired != true ||
+                    runtime.nextEpisodeAutoPlaySearching ||
+                    runtime.nextEpisodeAutoPlayCountdown != null
+                ) {
+                    log.d { "Remote next key: no next episode available" }
+                    return false
+                }
+                if (runtime.partyBlocksControl()) return true
+                runtime.closeTvMenus()
+                log.i { "Remote next key: playing the next episode" }
+                runtime.playNextEpisode()
+                return true
+            }
+
+            override fun playPrevious(): Boolean {
+                if (runtime.tvShortcutsBlocked()) return false
+                return runtime.isLiveTvPlayback && zapChannel(-1)
+            }
+
+            override fun zapChannel(step: Int): Boolean {
+                if (!runtime.isLiveTvPlayback || runtime.tvShortcutsBlocked()) return false
+                val channels = LiveTvRepository.uiState.value.displayedChannels
+                if (channels.isEmpty()) {
+                    log.w { "Remote zapping: no channels in the list" }
+                    return true
+                }
+                val current = channels.indexOfFirst { it.id == runtime.activeVideoId }
+                    .takeIf { it >= 0 }
+                    ?: channels.indexOfFirst { it.streamUrl == runtime.activeSourceUrl }
+                val target = if (current < 0) {
+                    0
+                } else {
+                    (current + step).mod(channels.size)
+                }
+                val channel = channels[target]
+                runtime.closeTvMenus()
+                log.i { "Remote zapping ${if (step > 0) "up" else "down"} to ${channel.name}" }
+                runtime.switchToLiveChannel(channel)
+                return true
+            }
+
+            override fun cycleResizeMode(): Boolean {
+                if (runtime.tvShortcutsBlocked()) return false
+                runtime.cycleResizeMode()
+                log.d { "Remote zoom key: resize mode ${runtime.resizeMode}" }
+                return true
+            }
         }
         TvPlayerRemoteRegistry.active = remote
         log.i { "Player remote bound" }
@@ -472,6 +577,22 @@ private fun PlayerScreenRuntime.tvOverlayOpen(): Boolean =
         showSubmitIntroModal || showAudioModal || showSubtitleModal ||
         showVideoSettingsModal || showStillWatchingPrompt || showPartyPanel ||
         pendingP2pSwitch != null || errorMessage != null
+
+/** A prompt or panel that must be answered first is open: the dedicated remote buttons do nothing. */
+private fun PlayerScreenRuntime.tvShortcutsBlocked(): Boolean =
+    showSubmitIntroModal || showStillWatchingPrompt || showPartyPanel ||
+        pendingP2pSwitch != null || errorMessage != null
+
+/** Closes the menus and panels a remote button can replace with its own. */
+private fun PlayerScreenRuntime.closeTvMenus() {
+    showSubtitleModal = false
+    showAudioModal = false
+    showVideoSettingsModal = false
+    showSourcesPanel = false
+    showEpisodesPanel = false
+    showLiveChannelsPanel = false
+    showChaptersPanel = false
+}
 
 /** "Skip intro/recap/outro" or "next episode" is on screen (it takes the focus itself). */
 private fun PlayerScreenRuntime.tvPromptVisible(): Boolean =
