@@ -8,6 +8,12 @@ import com.nuvio.app.features.simkl.SimklBrandAsset
 import com.nuvio.app.features.simkl.simklBrandPainter
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.discord_logo
+import nuvio.composeapp.generated.resources.animeskip_logo
+import nuvio.composeapp.generated.resources.myanimelist_logo
+import nuvio.composeapp.generated.resources.kitsu_logo
+import nuvio.composeapp.generated.resources.anilist_logo
+import nuvio.composeapp.generated.resources.subdl_logo
+import nuvio.composeapp.generated.resources.telegram_logo
 import nuvio.composeapp.generated.resources.introdb_favicon
 import nuvio.composeapp.generated.resources.rating_tmdb
 import org.jetbrains.compose.resources.painterResource as composePainterResource
@@ -21,4 +27,10 @@ internal actual fun integrationLogoPainter(logo: IntegrationLogo): Painter =
         IntegrationLogo.MdbList -> painterResource(id = R.drawable.mdblist_logo)
         IntegrationLogo.IntroDb -> composePainterResource(Res.drawable.introdb_favicon)
         IntegrationLogo.Discord -> composePainterResource(Res.drawable.discord_logo)
+        IntegrationLogo.AnimeSkip -> composePainterResource(Res.drawable.animeskip_logo)
+        IntegrationLogo.MyAnimeList -> composePainterResource(Res.drawable.myanimelist_logo)
+        IntegrationLogo.Kitsu -> composePainterResource(Res.drawable.kitsu_logo)
+        IntegrationLogo.AniList -> composePainterResource(Res.drawable.anilist_logo)
+        IntegrationLogo.SubDl -> composePainterResource(Res.drawable.subdl_logo)
+        IntegrationLogo.Telegram -> composePainterResource(Res.drawable.telegram_logo)
     }

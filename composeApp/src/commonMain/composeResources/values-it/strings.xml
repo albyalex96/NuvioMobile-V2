@@ -1416,7 +1416,7 @@
   <string name="settings_debrid_key_invalid">Impossibile convalidare questa chiave API.</string>
   <string name="settings_meta_blur_unwatched_episodes">Sfoca episodi non visti</string>
   <string name="settings_meta_blur_unwatched_episodes_description">Sfoca le miniature degli episodi finché non vengono visti per evitare spoiler.</string>
-  <string name="settings_playback_intro_submit_enabled">Abilita invio intro</string>
+  <string name="settings_playback_intro_submit_enabled">Abilita invio IntroDB</string>
   <string name="settings_playback_intro_submit_enabled_description">Mostra un pulsante per inviare i timestamp di intro/sigle finali al database della community.</string>
   <string name="settings_playback_introdb_api_key">Chiave API IntroDB</string>
   <string name="settings_playback_introdb_api_key_description">Inserisci la tua chiave API IntroDB per inviare i timestamp. Richiesta per l'invio.</string>

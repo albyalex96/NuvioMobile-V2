@@ -898,11 +898,7 @@ private fun MobileSettingsScreen(
                 )
                 SettingsPage.Integrations -> integrationsContent(
                     isTablet = false,
-                    onTmdbClick = { onPageChange(SettingsPage.TmdbEnrichment) },
-                    onMdbListClick = { onPageChange(SettingsPage.MdbListRatings) },
-                    onDebridClick = { onPageChange(SettingsPage.Debrid) },
-                    onLiveTvClick = { onPageChange(SettingsPage.LiveTv) },
-                    onDiscordClick = { onPageChange(SettingsPage.DiscordRpc) },
+                    onPageClick = onPageChange,
                 )
                 SettingsPage.TmdbEnrichment -> tmdbSettingsContent(
                     isTablet = false,
@@ -928,6 +924,16 @@ private fun MobileSettingsScreen(
                 SettingsPage.DiscordRpc -> discordRpcSettingsContent(
                     isTablet = false,
                 )
+                SettingsPage.AnimeSkip -> animeSkipSettingsContent(isTablet = false)
+                SettingsPage.IntroDb -> introDbSettingsContent(isTablet = false)
+                SettingsPage.MyAnimeList,
+                SettingsPage.Kitsu,
+                SettingsPage.AniList,
+                SettingsPage.OpenSubtitles,
+                SettingsPage.SubDl,
+                SettingsPage.AiAssistant,
+                SettingsPage.Telegram,
+                -> workInProgressIntegrationContent(isTablet = false, page = page)
                 SettingsPage.TraktAuthentication -> trackingSettingsContent(
                     isTablet = false,
                     traktUiState = traktAuthUiState,
@@ -1406,11 +1412,7 @@ private fun TabletSettingsScreen(
                     )
                     SettingsPage.Integrations -> integrationsContent(
                         isTablet = true,
-                        onTmdbClick = { onPageChange(SettingsPage.TmdbEnrichment) },
-                        onMdbListClick = { onPageChange(SettingsPage.MdbListRatings) },
-                        onDebridClick = { onPageChange(SettingsPage.Debrid) },
-                        onLiveTvClick = { onPageChange(SettingsPage.LiveTv) },
-                        onDiscordClick = { onPageChange(SettingsPage.DiscordRpc) },
+                        onPageClick = onPageChange,
                     )
                     SettingsPage.TmdbEnrichment -> tmdbSettingsContent(
                         isTablet = true,
@@ -1436,6 +1438,16 @@ private fun TabletSettingsScreen(
                     SettingsPage.DiscordRpc -> discordRpcSettingsContent(
                         isTablet = true,
                     )
+                    SettingsPage.AnimeSkip -> animeSkipSettingsContent(isTablet = true)
+                    SettingsPage.IntroDb -> introDbSettingsContent(isTablet = true)
+                    SettingsPage.MyAnimeList,
+                    SettingsPage.Kitsu,
+                    SettingsPage.AniList,
+                    SettingsPage.OpenSubtitles,
+                    SettingsPage.SubDl,
+                    SettingsPage.AiAssistant,
+                    SettingsPage.Telegram,
+                    -> workInProgressIntegrationContent(isTablet = true, page = page)
                     SettingsPage.TraktAuthentication -> trackingSettingsContent(
                         isTablet = true,
                         traktUiState = traktAuthUiState,

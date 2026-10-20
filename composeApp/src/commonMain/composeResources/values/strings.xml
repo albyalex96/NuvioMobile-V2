@@ -1064,7 +1064,7 @@
     <string name="settings_playback_anime_skip">Anime Skip</string>
     <string name="settings_playback_anime_skip_client_id">AnimeSkip Client ID</string>
     <string name="settings_playback_anime_skip_client_id_description">Enter your AnimeSkip API client ID. Get one at anime-skip.com.</string>
-    <string name="settings_playback_intro_submit_enabled">Enable Intro Submission</string>
+    <string name="settings_playback_intro_submit_enabled">Enable IntroDB Submission</string>
     <string name="settings_playback_intro_submit_enabled_description">Show a button to submit intro/outro timestamps to the community database.</string>
     <string name="settings_playback_introdb_api_key">IntroDB API Key</string>
     <string name="settings_playback_introdb_api_key_description">Enter your IntroDB API key to submit timestamps. Required for submission.</string>

@@ -6,6 +6,12 @@ import com.nuvio.app.features.simkl.SimklBrandAsset
 import com.nuvio.app.features.simkl.simklBrandPainter
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.discord_logo
+import nuvio.composeapp.generated.resources.animeskip_logo
+import nuvio.composeapp.generated.resources.myanimelist_logo
+import nuvio.composeapp.generated.resources.kitsu_logo
+import nuvio.composeapp.generated.resources.anilist_logo
+import nuvio.composeapp.generated.resources.subdl_logo
+import nuvio.composeapp.generated.resources.telegram_logo
 import nuvio.composeapp.generated.resources.introdb_favicon
 import nuvio.composeapp.generated.resources.mdblist_logo
 import nuvio.composeapp.generated.resources.rating_tmdb
@@ -21,4 +27,10 @@ internal actual fun integrationLogoPainter(logo: IntegrationLogo): Painter =
         IntegrationLogo.MdbList -> painterResource(Res.drawable.mdblist_logo)
         IntegrationLogo.IntroDb -> painterResource(Res.drawable.introdb_favicon)
         IntegrationLogo.Discord -> painterResource(Res.drawable.discord_logo)
+        IntegrationLogo.AnimeSkip -> painterResource(Res.drawable.animeskip_logo)
+        IntegrationLogo.MyAnimeList -> painterResource(Res.drawable.myanimelist_logo)
+        IntegrationLogo.Kitsu -> painterResource(Res.drawable.kitsu_logo)
+        IntegrationLogo.AniList -> painterResource(Res.drawable.anilist_logo)
+        IntegrationLogo.SubDl -> painterResource(Res.drawable.subdl_logo)
+        IntegrationLogo.Telegram -> painterResource(Res.drawable.telegram_logo)
     }

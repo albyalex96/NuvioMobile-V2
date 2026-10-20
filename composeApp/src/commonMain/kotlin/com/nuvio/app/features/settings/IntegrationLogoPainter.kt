@@ -10,6 +10,12 @@ internal enum class IntegrationLogo {
     MdbList,
     IntroDb,
     Discord,
+    AnimeSkip,
+    MyAnimeList,
+    Kitsu,
+    AniList,
+    SubDl,
+    Telegram,
 }
 
 @Composable

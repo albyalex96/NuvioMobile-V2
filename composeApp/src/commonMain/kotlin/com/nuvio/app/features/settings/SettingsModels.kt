@@ -21,6 +21,15 @@ import nuvio.composeapp.generated.resources.compose_settings_page_appearance
 import nuvio.composeapp.generated.resources.compose_settings_page_content_discovery
 import nuvio.composeapp.generated.resources.compose_settings_page_debrid
 import nuvio.composeapp.generated.resources.compose_settings_page_discord_rpc
+import nuvio.composeapp.generated.resources.compose_settings_page_anime_skip
+import nuvio.composeapp.generated.resources.compose_settings_page_introdb
+import nuvio.composeapp.generated.resources.compose_settings_page_myanimelist
+import nuvio.composeapp.generated.resources.compose_settings_page_kitsu
+import nuvio.composeapp.generated.resources.compose_settings_page_anilist
+import nuvio.composeapp.generated.resources.compose_settings_page_opensubtitles
+import nuvio.composeapp.generated.resources.compose_settings_page_subdl
+import nuvio.composeapp.generated.resources.compose_settings_page_ai_assistant
+import nuvio.composeapp.generated.resources.compose_settings_page_telegram
 import nuvio.composeapp.generated.resources.compose_settings_page_continue_watching
 import nuvio.composeapp.generated.resources.compose_settings_page_homescreen
 import nuvio.composeapp.generated.resources.compose_settings_page_integrations
@@ -201,6 +210,51 @@ internal enum class SettingsPage(
     ),
     DiscordRpc(
         titleRes = Res.string.compose_settings_page_discord_rpc,
+        category = SettingsCategory.General,
+        parentPage = Integrations,
+    ),
+    AnimeSkip(
+        titleRes = Res.string.compose_settings_page_anime_skip,
+        category = SettingsCategory.General,
+        parentPage = Integrations,
+    ),
+    IntroDb(
+        titleRes = Res.string.compose_settings_page_introdb,
+        category = SettingsCategory.General,
+        parentPage = Integrations,
+    ),
+    MyAnimeList(
+        titleRes = Res.string.compose_settings_page_myanimelist,
+        category = SettingsCategory.General,
+        parentPage = Integrations,
+    ),
+    Kitsu(
+        titleRes = Res.string.compose_settings_page_kitsu,
+        category = SettingsCategory.General,
+        parentPage = Integrations,
+    ),
+    AniList(
+        titleRes = Res.string.compose_settings_page_anilist,
+        category = SettingsCategory.General,
+        parentPage = Integrations,
+    ),
+    OpenSubtitles(
+        titleRes = Res.string.compose_settings_page_opensubtitles,
+        category = SettingsCategory.General,
+        parentPage = Integrations,
+    ),
+    SubDl(
+        titleRes = Res.string.compose_settings_page_subdl,
+        category = SettingsCategory.General,
+        parentPage = Integrations,
+    ),
+    AiAssistant(
+        titleRes = Res.string.compose_settings_page_ai_assistant,
+        category = SettingsCategory.General,
+        parentPage = Integrations,
+    ),
+    Telegram(
+        titleRes = Res.string.compose_settings_page_telegram,
         category = SettingsCategory.General,
         parentPage = Integrations,
     ),

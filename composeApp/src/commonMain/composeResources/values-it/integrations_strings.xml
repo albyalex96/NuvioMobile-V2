@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_integrations_section_timestamps">Timestamp</string>
+    <string name="settings_integrations_section_lists">Liste</string>
+    <string name="settings_integrations_section_subtitles">Sottotitoli</string>
+    <string name="settings_integrations_section_extra">Extra</string>
+    <string name="compose_settings_page_anime_skip">AnimeSkip</string>
+    <string name="compose_settings_page_introdb">IntroDB</string>
+    <string name="compose_settings_page_myanimelist">MyAnimeList</string>
+    <string name="compose_settings_page_kitsu">Kitsu</string>
+    <string name="compose_settings_page_anilist">AniList</string>
+    <string name="compose_settings_page_opensubtitles">OpenSubtitles</string>
+    <string name="compose_settings_page_subdl">SubDL</string>
+    <string name="compose_settings_page_telegram">Telegram</string>
+    <string name="compose_settings_page_ai_assistant">Assistente AI</string>
+    <string name="settings_integrations_anime_skip_description">Timestamp della community per saltare le sigle degli anime</string>
+    <string name="settings_integrations_introdb_description">Invia i timestamp di intro e sigle finali</string>
+    <string name="settings_integrations_myanimelist_description">Sincronizza la tua lista anime con MyAnimeList</string>
+    <string name="settings_integrations_kitsu_description">Sincronizza la tua lista anime con Kitsu</string>
+    <string name="settings_integrations_anilist_description">Sincronizza la tua lista anime con AniList</string>
+    <string name="settings_integrations_opensubtitles_description">Cerca i sottotitoli su OpenSubtitles</string>
+    <string name="settings_integrations_subdl_description">Cerca i sottotitoli su SubDL</string>
+    <string name="settings_integrations_ai_assistant_description">Chiedi a un assistente consigli su cosa guardare</string>
+    <string name="settings_integrations_telegram_description">Collega Nuvio a Telegram</string>
+    <string name="settings_work_in_progress_badge">Lavori in corso</string>
+    <string name="settings_work_in_progress_title">%1$s sta arrivando</string>
+    <string name="settings_work_in_progress_message">Questa integrazione è in fase di sviluppo. Sarà disponibile in un prossimo aggiornamento.</string>
+</resources>

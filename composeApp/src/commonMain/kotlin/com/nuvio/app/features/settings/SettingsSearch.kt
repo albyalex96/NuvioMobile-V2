@@ -11,6 +11,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Cloud
+import androidx.compose.material.icons.rounded.Send
+import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.Subtitles
+import androidx.compose.material.icons.rounded.ViewList
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.Close
@@ -715,10 +721,6 @@ internal fun settingsSearchEntries(
         icon = Icons.Rounded.PlayArrow,
         rows = listOf(
             PlaybackSearchRow("skip-intro", stringResource(Res.string.settings_playback_skip_intro_outro_recap), stringResource(Res.string.settings_playback_skip_intro_outro_recap_description)),
-            PlaybackSearchRow("anime-skip", stringResource(Res.string.settings_playback_anime_skip), stringResource(Res.string.settings_playback_anime_skip_description)),
-            PlaybackSearchRow("anime-skip-client", stringResource(Res.string.settings_playback_anime_skip_client_id), stringResource(Res.string.settings_playback_anime_skip_client_id_description)),
-            PlaybackSearchRow("intro-submit", stringResource(Res.string.settings_playback_intro_submit_enabled), stringResource(Res.string.settings_playback_intro_submit_enabled_description)),
-            PlaybackSearchRow("introdb-key", stringResource(Res.string.settings_playback_introdb_api_key), stringResource(Res.string.settings_playback_introdb_api_key_description)),
         ),
     )
     addPlaybackRows(
@@ -1366,7 +1368,7 @@ private fun addAdditionalSearchEntries(
         debridPage,
         stringResource(Res.string.settings_integrations_debrid_description),
         generalCategory,
-        Icons.Rounded.Link,
+        Icons.Rounded.Cloud,
     )
     val debridGeneral = stringResource(Res.string.settings_debrid_section_title)
     val debridLinks = stringResource(Res.string.settings_debrid_section_instant_playback)
@@ -1469,6 +1471,47 @@ private fun addAdditionalSearchEntries(
             row(SettingsPage.DiscordRpc, item.key, item.title, item.description, discordPage, item.sectionOverride.orEmpty(), icon = Icons.Rounded.Forum)
         }
     }
+
+    // Integrations: timestamps (AnimeSkip, IntroDB)
+    val animeSkipPage = stringResource(Res.string.compose_settings_page_anime_skip)
+    addPage(
+        SettingsPage.AnimeSkip,
+        "anime-skip-page",
+        animeSkipPage,
+        stringResource(Res.string.settings_integrations_anime_skip_description),
+        generalCategory,
+        Icons.Rounded.SkipNext,
+    )
+    listOf(
+        PlaybackSearchRow("anime-skip", stringResource(Res.string.settings_playback_anime_skip), stringResource(Res.string.settings_playback_anime_skip_description)),
+        PlaybackSearchRow("anime-skip-client", stringResource(Res.string.settings_playback_anime_skip_client_id), stringResource(Res.string.settings_playback_anime_skip_client_id_description)),
+    ).forEach { item ->
+        row(SettingsPage.AnimeSkip, item.key, item.title, item.description, animeSkipPage, animeSkipPage, icon = Icons.Rounded.SkipNext)
+    }
+    val introDbPage = stringResource(Res.string.compose_settings_page_introdb)
+    addPage(
+        SettingsPage.IntroDb,
+        "introdb-page",
+        introDbPage,
+        stringResource(Res.string.settings_integrations_introdb_description),
+        generalCategory,
+        Icons.Rounded.SkipNext,
+    )
+    listOf(
+        PlaybackSearchRow("intro-submit", stringResource(Res.string.settings_playback_intro_submit_enabled), stringResource(Res.string.settings_playback_intro_submit_enabled_description)),
+        PlaybackSearchRow("introdb-key", stringResource(Res.string.settings_playback_introdb_api_key), stringResource(Res.string.settings_playback_introdb_api_key_description)),
+    ).forEach { item ->
+        row(SettingsPage.IntroDb, item.key, item.title, item.description, introDbPage, introDbPage, icon = Icons.Rounded.SkipNext)
+    }
+
+    // Integrations: placeholder pages (work in progress)
+    addPage(SettingsPage.MyAnimeList, "myanimelist", stringResource(Res.string.compose_settings_page_myanimelist), stringResource(Res.string.settings_integrations_myanimelist_description), generalCategory, Icons.Rounded.ViewList)
+    addPage(SettingsPage.Kitsu, "kitsu", stringResource(Res.string.compose_settings_page_kitsu), stringResource(Res.string.settings_integrations_kitsu_description), generalCategory, Icons.Rounded.ViewList)
+    addPage(SettingsPage.AniList, "anilist", stringResource(Res.string.compose_settings_page_anilist), stringResource(Res.string.settings_integrations_anilist_description), generalCategory, Icons.Rounded.ViewList)
+    addPage(SettingsPage.OpenSubtitles, "opensubtitles", stringResource(Res.string.compose_settings_page_opensubtitles), stringResource(Res.string.settings_integrations_opensubtitles_description), generalCategory, Icons.Rounded.Subtitles)
+    addPage(SettingsPage.SubDl, "subdl", stringResource(Res.string.compose_settings_page_subdl), stringResource(Res.string.settings_integrations_subdl_description), generalCategory, Icons.Rounded.Subtitles)
+    addPage(SettingsPage.AiAssistant, "ai-assistant", stringResource(Res.string.compose_settings_page_ai_assistant), stringResource(Res.string.settings_integrations_ai_assistant_description), generalCategory, Icons.Rounded.AutoAwesome)
+    addPage(SettingsPage.Telegram, "telegram", stringResource(Res.string.compose_settings_page_telegram), stringResource(Res.string.settings_integrations_telegram_description), generalCategory, Icons.Rounded.Send)
 
     // Downloads
     val downloadsPage = stringResource(Res.string.compose_settings_root_downloads_title)
