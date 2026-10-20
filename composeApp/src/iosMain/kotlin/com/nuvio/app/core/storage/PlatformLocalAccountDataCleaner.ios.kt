@@ -88,6 +88,9 @@ internal actual object PlatformLocalAccountDataCleaner {
         "epg_sources_blob",
         "epg_auto_detect_enabled",
         "channel_preferences",
+        // Discord Rich Presence (DiscordRpcStorage.ios.kt)
+        "discord_rpc_settings_payload",
+        "discord_rpc_user_payload",
     )
 
     actual fun wipe() {

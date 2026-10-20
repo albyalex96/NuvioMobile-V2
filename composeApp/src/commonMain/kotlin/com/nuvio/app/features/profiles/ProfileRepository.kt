@@ -194,6 +194,7 @@ object ProfileRepository {
         DownloadsRepository.onProfileChanged()
         com.nuvio.app.features.livetv.LiveTvRepository.onProfileChanged()
         ServerRepository.onProfileChanged()
+        com.nuvio.app.features.discord.DiscordRpcRepository.onProfileChanged()
         ProfileSettingsSync.onProfileChanged()
     }
 

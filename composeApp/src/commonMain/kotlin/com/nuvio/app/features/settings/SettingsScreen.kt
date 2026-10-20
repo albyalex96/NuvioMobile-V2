@@ -902,6 +902,7 @@ private fun MobileSettingsScreen(
                     onMdbListClick = { onPageChange(SettingsPage.MdbListRatings) },
                     onDebridClick = { onPageChange(SettingsPage.Debrid) },
                     onLiveTvClick = { onPageChange(SettingsPage.LiveTv) },
+                    onDiscordClick = { onPageChange(SettingsPage.DiscordRpc) },
                 )
                 SettingsPage.TmdbEnrichment -> tmdbSettingsContent(
                     isTablet = false,
@@ -923,6 +924,9 @@ private fun MobileSettingsScreen(
                 SettingsPage.LiveTvChannels -> liveTvChannelsSettingsContent(
                     isTablet = false,
                     uiState = liveTvUiState,
+                )
+                SettingsPage.DiscordRpc -> discordRpcSettingsContent(
+                    isTablet = false,
                 )
                 SettingsPage.TraktAuthentication -> trackingSettingsContent(
                     isTablet = false,
@@ -1406,6 +1410,7 @@ private fun TabletSettingsScreen(
                         onMdbListClick = { onPageChange(SettingsPage.MdbListRatings) },
                         onDebridClick = { onPageChange(SettingsPage.Debrid) },
                         onLiveTvClick = { onPageChange(SettingsPage.LiveTv) },
+                        onDiscordClick = { onPageChange(SettingsPage.DiscordRpc) },
                     )
                     SettingsPage.TmdbEnrichment -> tmdbSettingsContent(
                         isTablet = true,
@@ -1427,6 +1432,9 @@ private fun TabletSettingsScreen(
                     SettingsPage.LiveTvChannels -> liveTvChannelsSettingsContent(
                         isTablet = true,
                         uiState = liveTvUiState,
+                    )
+                    SettingsPage.DiscordRpc -> discordRpcSettingsContent(
+                        isTablet = true,
                     )
                     SettingsPage.TraktAuthentication -> trackingSettingsContent(
                         isTablet = true,

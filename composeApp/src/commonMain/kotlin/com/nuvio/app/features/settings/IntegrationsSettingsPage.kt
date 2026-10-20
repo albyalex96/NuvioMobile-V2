@@ -2,7 +2,11 @@ package com.nuvio.app.features.settings
 
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Forum
 import androidx.compose.material.icons.rounded.LiveTv
+import com.nuvio.app.features.discord.DiscordRpcPlatform
+import nuvio.composeapp.generated.resources.compose_settings_page_discord_rpc
+import nuvio.composeapp.generated.resources.settings_integrations_discord_description
 import nuvio.composeapp.generated.resources.compose_settings_page_live_tv
 import nuvio.composeapp.generated.resources.settings_integrations_live_tv_description
 import nuvio.composeapp.generated.resources.compose_settings_page_debrid
@@ -21,6 +25,7 @@ internal fun LazyListScope.integrationsContent(
     onMdbListClick: () -> Unit,
     onDebridClick: () -> Unit,
     onLiveTvClick: () -> Unit,
+    onDiscordClick: () -> Unit,
 ) {
     item {
         SettingsSection(
@@ -58,6 +63,16 @@ internal fun LazyListScope.integrationsContent(
                     isTablet = isTablet,
                     onClick = onLiveTvClick,
                 )
+                if (DiscordRpcPlatform.isSupported) {
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsNavigationRow(
+                        title = stringResource(Res.string.compose_settings_page_discord_rpc),
+                        description = stringResource(Res.string.settings_integrations_discord_description),
+                        icon = Icons.Rounded.Forum,
+                        isTablet = isTablet,
+                        onClick = onDiscordClick,
+                    )
+                }
             }
         }
     }

@@ -20,6 +20,7 @@ import nuvio.composeapp.generated.resources.compose_settings_page_advanced
 import nuvio.composeapp.generated.resources.compose_settings_page_appearance
 import nuvio.composeapp.generated.resources.compose_settings_page_content_discovery
 import nuvio.composeapp.generated.resources.compose_settings_page_debrid
+import nuvio.composeapp.generated.resources.compose_settings_page_discord_rpc
 import nuvio.composeapp.generated.resources.compose_settings_page_continue_watching
 import nuvio.composeapp.generated.resources.compose_settings_page_homescreen
 import nuvio.composeapp.generated.resources.compose_settings_page_integrations
@@ -197,6 +198,11 @@ internal enum class SettingsPage(
         titleRes = Res.string.live_tv_channels_title,
         category = SettingsCategory.General,
         parentPage = LiveTv,
+    ),
+    DiscordRpc(
+        titleRes = Res.string.compose_settings_page_discord_rpc,
+        category = SettingsCategory.General,
+        parentPage = Integrations,
     ),
     TraktAuthentication(
         // Keep the enum name for saved navigation-state compatibility.

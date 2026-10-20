@@ -7,6 +7,7 @@ import com.nuvio.app.core.build.AppFeaturePolicy
 import com.nuvio.app.core.time.EpisodeReleaseDatePlatform
 import com.nuvio.app.features.addons.AddonRepository
 import com.nuvio.app.features.collection.CollectionSyncService
+import com.nuvio.app.features.discord.DiscordCredentialSync
 import com.nuvio.app.features.home.HomeCatalogSettingsSyncService
 import com.nuvio.app.features.library.LibrarySourceMode
 import com.nuvio.app.features.library.LibraryRepository
@@ -285,7 +286,11 @@ object SyncManager {
         pullAddons = { profileId -> AddonRepository.pullFromServer(profileId) },
         pullPlugins = { profileId -> PluginRepository.pullFromServer(profileId) },
         pullProfileSettings = { profileId -> ProfileSettingsSync.pull(profileId) },
-        syncProviderCredentials = { profileId -> ProviderCredentialSync.syncFromRemote(profileId) },
+        syncProviderCredentials = { profileId ->
+            ProviderCredentialSync.syncFromRemote(profileId)
+            // Separate RPC calls: a server that rejects the Discord provider cannot break the others.
+            DiscordCredentialSync.pull(profileId)
+        },
         pullLibrary = { profileId -> LibraryRepository.pullFromServer(profileId) },
         refreshActiveWatchSource = { profileId ->
             val result = WatchProgressSourceCoordinator.refreshActiveSource(profileId = profileId, force = true)

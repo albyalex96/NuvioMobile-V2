@@ -26,6 +26,7 @@ import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.Forum
 import androidx.compose.material.icons.rounded.LiveTv
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Palette
@@ -55,6 +56,7 @@ import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.p2p.P2pSettingsRepository
 import com.nuvio.app.isIos
 import com.nuvio.app.tv.LocalTvShell
+import com.nuvio.app.features.discord.DiscordRpcPlatform
 import com.nuvio.app.tv.TvAppRuntime
 import com.nuvio.app.supportsPosterNavigationMotion
 import com.nuvio.app.core.mediaproxy.LanMediaProxy
@@ -1432,6 +1434,40 @@ private fun addAdditionalSearchEntries(
         PlaybackSearchRow("live-tv-channels-reset-order", stringResource(Res.string.live_tv_channels_reset_order), stringResource(Res.string.live_tv_channels_reset_order_description), liveTvChannelsSection),
     ).forEach { item ->
         row(SettingsPage.LiveTvChannels, item.key, item.title, item.description, liveTvChannelsPage, item.sectionOverride.orEmpty(), icon = Icons.Rounded.LiveTv)
+    }
+
+    // Integrations: Discord Rich Presence (Android only, same condition as the Integrations row)
+    if (DiscordRpcPlatform.isSupported) {
+        val discordPage = stringResource(Res.string.compose_settings_page_discord_rpc)
+        addPage(
+            SettingsPage.DiscordRpc,
+            "discord-rpc",
+            discordPage,
+            stringResource(Res.string.settings_integrations_discord_description),
+            generalCategory,
+            Icons.Rounded.Forum,
+        )
+        val discordAccount = stringResource(Res.string.discord_rpc_section_account)
+        val discordPresence = stringResource(Res.string.discord_rpc_section_presence)
+        val discordDisplay = stringResource(Res.string.discord_rpc_section_display)
+        val discordAdvanced = stringResource(Res.string.discord_rpc_section_advanced)
+        listOf(
+            PlaybackSearchRow("discord-rpc-login", stringResource(Res.string.discord_rpc_login_button), stringResource(Res.string.discord_rpc_login_description), discordAccount),
+            PlaybackSearchRow("discord-rpc-test", stringResource(Res.string.discord_rpc_test_button), stringResource(Res.string.discord_rpc_sync_notice), discordAccount),
+            PlaybackSearchRow("discord-rpc-enable", stringResource(Res.string.discord_rpc_enable_title), stringResource(Res.string.discord_rpc_enable_description), discordPresence),
+            PlaybackSearchRow("discord-rpc-activity-type", stringResource(Res.string.discord_rpc_activity_type_title), stringResource(Res.string.discord_rpc_activity_type_description), discordPresence),
+            PlaybackSearchRow("discord-rpc-status", stringResource(Res.string.discord_rpc_status_title), stringResource(Res.string.discord_rpc_status_description), discordPresence),
+            PlaybackSearchRow("discord-rpc-title-as-name", stringResource(Res.string.discord_rpc_show_title_as_name_title), stringResource(Res.string.discord_rpc_show_title_as_name_description), discordDisplay),
+            PlaybackSearchRow("discord-rpc-poster", stringResource(Res.string.discord_rpc_show_poster_title), stringResource(Res.string.discord_rpc_show_poster_description), discordDisplay),
+            PlaybackSearchRow("discord-rpc-playback-state", stringResource(Res.string.discord_rpc_show_playback_state_title), stringResource(Res.string.discord_rpc_show_playback_state_description), discordDisplay),
+            PlaybackSearchRow("discord-rpc-timestamps", stringResource(Res.string.discord_rpc_show_timestamps_title), stringResource(Res.string.discord_rpc_show_timestamps_description), discordDisplay),
+            PlaybackSearchRow("discord-rpc-hide-on-pause", stringResource(Res.string.discord_rpc_hide_on_pause_title), stringResource(Res.string.discord_rpc_hide_on_pause_description), discordDisplay),
+            PlaybackSearchRow("discord-rpc-imdb-button", stringResource(Res.string.discord_rpc_show_imdb_button_title), stringResource(Res.string.discord_rpc_show_imdb_button_description), discordDisplay),
+            PlaybackSearchRow("discord-rpc-live-tv", stringResource(Res.string.discord_rpc_show_live_tv_title), stringResource(Res.string.discord_rpc_show_live_tv_description), discordDisplay),
+            PlaybackSearchRow("discord-rpc-application-id", stringResource(Res.string.discord_rpc_application_id_title), stringResource(Res.string.discord_rpc_application_id_description), discordAdvanced),
+        ).forEach { item ->
+            row(SettingsPage.DiscordRpc, item.key, item.title, item.description, discordPage, item.sectionOverride.orEmpty(), icon = Icons.Rounded.Forum)
+        }
     }
 
     // Downloads

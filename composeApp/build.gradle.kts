@@ -164,6 +164,19 @@ abstract class GenerateRuntimeConfigsTask : DefaultTask() {
             )
         }
 
+        outDir.resolve("com/nuvio/app/features/discord").apply {
+            mkdirs()
+            resolve("DiscordRpcBuildConfig.kt").writeText(
+                """
+                |package com.nuvio.app.features.discord
+                |
+                |internal object DiscordRpcBuildConfig {
+                |    const val IMAGE_PROXY_URL = "${props.getProperty("DISCORD_IMAGE_PROXY_URL", "")}"
+                |}
+                """.trimMargin()
+            )
+        }
+
         outDir.resolve("com/nuvio/app/features/debrid").apply {
             mkdirs()
             resolve("PremiumizeConfig.kt").writeText(
