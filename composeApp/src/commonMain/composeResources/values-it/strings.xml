@@ -1878,6 +1878,7 @@
   <string name="plugins_badge_providers">%1$d provider</string>
   <string name="plugins_badge_refreshing">Aggiornamento</string>
   <string name="plugins_badge_repos">%1$d repository</string>
+  <string name="plugins_badge_updated">Aggiornato %1$s</string>
   <string name="plugins_button_install_repo">Installa repository di plugin</string>
   <string name="plugins_button_installing">Installazione…</string>
   <string name="plugins_button_test_provider">Testa provider</string>

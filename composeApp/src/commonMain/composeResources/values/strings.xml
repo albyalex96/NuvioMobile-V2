@@ -2251,6 +2251,7 @@
     <string name="plugins_badge_providers">%1$d providers</string>
     <string name="plugins_badge_refreshing">Refreshing</string>
     <string name="plugins_badge_repos">%1$d repos</string>
+    <string name="plugins_badge_updated">Updated %1$s</string>
     <string name="plugins_button_install_repo">Install Plugin Repository</string>
     <string name="plugins_button_installing">Installing…</string>
     <string name="plugins_button_test_provider">Test Provider</string>

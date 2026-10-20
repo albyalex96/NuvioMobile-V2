@@ -52,6 +52,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -372,20 +373,34 @@ fun NuvioInputField(
 fun NuvioInfoBadge(
     text: String,
     modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    containerColor: Color = Color.Unspecified,
+    contentColor: Color = Color.Unspecified,
 ) {
     val tokens = MaterialTheme.nuvio
-    Box(
+    val resolvedContentColor = contentColor.takeOrElse { tokens.colors.textMuted }
+    Row(
         modifier = modifier
             .background(
-                color = tokens.colors.surfaceCard,
+                color = containerColor.takeOrElse { tokens.colors.surfaceCard },
                 shape = tokens.shapes.chip,
             )
             .padding(horizontal = NuvioTokens.Space.s10, vertical = NuvioTokens.Space.s6),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (icon != null) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = resolvedContentColor,
+                modifier = Modifier.size(14.dp),
+            )
+            Spacer(modifier = Modifier.width(NuvioTokens.Space.s6))
+        }
         Text(
             text = text,
             style = MaterialTheme.typography.labelMedium,
-            color = tokens.colors.textMuted,
+            color = resolvedContentColor,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )

@@ -1,6 +1,10 @@
 package com.nuvio.app.features.settings
 
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Dns
+import androidx.compose.material.icons.rounded.Extension
+import androidx.compose.material.icons.rounded.Hub
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -64,12 +68,14 @@ internal fun LazyListScope.contentDiscoveryContent(
                             Res.string.settings_content_discovery_addons_description
                         },
                     ),
+                    icon = Icons.Rounded.Extension,
                     isTablet = isTablet,
                     onClick = onAddonsClick,
                 )
                 SettingsNavigationRow(
                     title = stringResource(Res.string.compose_settings_page_media_servers),
                     description = stringResource(Res.string.settings_content_discovery_media_servers_description),
+                    icon = Icons.Rounded.Dns,
                     isTablet = isTablet,
                     onClick = onMediaServersClick,
                 )
@@ -77,6 +83,7 @@ internal fun LazyListScope.contentDiscoveryContent(
                     SettingsNavigationRow(
                         title = stringResource(Res.string.compose_settings_page_plugins),
                         description = stringResource(Res.string.settings_content_discovery_plugins_description),
+                        icon = Icons.Rounded.Hub,
                         isTablet = isTablet,
                         onClick = onPluginsClick,
                     )

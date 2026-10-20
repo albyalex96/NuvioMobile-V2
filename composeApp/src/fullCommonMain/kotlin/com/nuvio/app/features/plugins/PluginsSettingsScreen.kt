@@ -2,6 +2,7 @@ package com.nuvio.app.features.plugins
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,6 +13,7 @@ import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -34,6 +36,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nuvio.app.core.format.formatLocalDateTime
 import com.nuvio.app.core.ui.NuvioIconActionButton
 import com.nuvio.app.core.ui.NuvioInfoBadge
 import com.nuvio.app.core.ui.NuvioInputField
@@ -48,6 +51,7 @@ import nuvio.composeapp.generated.resources.plugins_badge_enabled
 import nuvio.composeapp.generated.resources.plugins_badge_providers
 import nuvio.composeapp.generated.resources.plugins_badge_refreshing
 import nuvio.composeapp.generated.resources.plugins_badge_repos
+import nuvio.composeapp.generated.resources.plugins_badge_updated
 import nuvio.composeapp.generated.resources.plugins_button_install_repo
 import nuvio.composeapp.generated.resources.plugins_button_installing
 import nuvio.composeapp.generated.resources.plugins_button_test_provider
@@ -310,11 +314,23 @@ fun PluginsSettingsPageContent(
                         }
                     }
                     Spacer(modifier = Modifier.height(14.dp))
-                    Row(
+                    FlowRow(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        NuvioInfoBadge(text = stringResource(Res.string.plugins_badge_providers, repo.scraperCount))
+                        NuvioInfoBadge(
+                            text = stringResource(Res.string.plugins_badge_providers, repo.scraperCount),
+                            icon = Icons.Rounded.Extension,
+                            containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
+                            contentColor = MaterialTheme.colorScheme.primary,
+                        )
+                        if (repo.lastUpdated > 0L) {
+                            NuvioInfoBadge(
+                                text = stringResource(Res.string.plugins_badge_updated, formatLocalDateTime(repo.lastUpdated)),
+                                icon = Icons.Rounded.Schedule,
+                            )
+                        }
                         if (repo.isRefreshing) {
                             NuvioInfoBadge(text = stringResource(Res.string.plugins_badge_refreshing))
                         }
