@@ -36,7 +36,7 @@
     <string name="app_logs_clear_confirm">Cancella</string>
     <string name="app_logs_section_entries">Voci (%1$d di %2$d)</string>
     <string name="app_logs_empty">Nessuna voce corrisponde ai filtri</string>
-    <string name="app_logs_empty_disabled">Attiva \"Registra log\" per iniziare a raccogliere le voci</string>
+    <string name="app_logs_empty_disabled">Attiva "Registra log" per iniziare a raccogliere le voci</string>
     <string name="app_logs_copied">%1$d voci copiate</string>
     <string name="app_logs_copied_truncated">Copiate le ultime %1$d voci (limite degli appunti). Usa Condividi per il log completo.</string>
     <string name="app_logs_nothing_to_export">Nessuna voce da esportare</string>

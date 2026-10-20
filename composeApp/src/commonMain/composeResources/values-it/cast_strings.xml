@@ -18,5 +18,5 @@
     <string name="cast_load_failed_with_issues">Il Chromecast non è riuscito a riprodurre questo flusso. Usa %1$s, che molti Chromecast non supportano: prova un altro flusso.</string>
     <string name="cast_lan_unavailable">Per trasmettere questo flusso il dispositivo deve essere connesso alla stessa rete Wi-Fi del Chromecast.</string>
     <string name="cast_compatibility_warning">Potrebbe non funzionare su tutti i Chromecast: %1$s</string>
-    <string name="cast_compatibility_toast">Questo flusso usa %1$s: alcuni Chromecast non riescono a riprodurlo. Se non parte o manca l\'audio, prova un altro flusso.</string>
+    <string name="cast_compatibility_toast">Questo flusso usa %1$s: alcuni Chromecast non riescono a riprodurlo. Se non parte o manca l'audio, prova un altro flusso.</string>
 </resources>

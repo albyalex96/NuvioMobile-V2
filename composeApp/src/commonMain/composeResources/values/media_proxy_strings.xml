@@ -25,14 +25,14 @@
     <string name="media_proxy_address_description">Address announced to the other devices. Set it by hand with several networks or a VPN</string>
     <string name="media_proxy_address_auto">Automatic (%1$s)</string>
     <string name="media_proxy_address_auto_none">Automatic</string>
-    <string name="media_proxy_address_hint">IPv4 address of this device on the receiver\'s network (e.g. 192.168.1.20), empty for automatic.</string>
+    <string name="media_proxy_address_hint">IPv4 address of this device on the receiver's network (e.g. 192.168.1.20), empty for automatic.</string>
     <string name="media_proxy_address_invalid">Enter a valid IPv4 address.</string>
     <string name="media_proxy_keep_awake_title">Keep Wi-Fi and CPU awake</string>
     <string name="media_proxy_keep_awake_description">Avoids interruptions with the screen off while serving other devices. Uses a little more battery</string>
 
     <string name="media_proxy_section_requests">Requests</string>
     <string name="media_proxy_user_agent_title">Default User-Agent</string>
-    <string name="media_proxy_user_agent_description">Sent to servers when the stream doesn\'t set one. Some servers block unknown players</string>
+    <string name="media_proxy_user_agent_description">Sent to servers when the stream doesn't set one. Some servers block unknown players</string>
     <string name="media_proxy_user_agent_default">Built-in</string>
     <string name="media_proxy_user_agent_hint">Empty to use the built-in one. The headers of the stream always take priority.</string>
     <string name="media_proxy_connect_timeout_title">Connection timeout</string>
@@ -47,7 +47,7 @@
     <string name="media_proxy_cast_always_title">Always cast through the proxy</string>
     <string name="media_proxy_cast_always_description">Every stream passes through this device, not only the ones that need it. Useful when a server refuses the Chromecast; this device must stay on the network</string>
     <string name="media_proxy_cast_fallback_title">Automatic fallback for HLS/DASH</string>
-    <string name="media_proxy_cast_fallback_description">If the Chromecast can\'t load an adaptive stream directly, retry once through the proxy</string>
+    <string name="media_proxy_cast_fallback_description">If the Chromecast can't load an adaptive stream directly, retry once through the proxy</string>
 
     <string name="media_proxy_section_reset">Reset</string>
     <string name="media_proxy_reset_title">Restore defaults</string>

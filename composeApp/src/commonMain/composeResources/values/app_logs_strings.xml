@@ -36,7 +36,7 @@
     <string name="app_logs_clear_confirm">Clear</string>
     <string name="app_logs_section_entries">Entries (%1$d of %2$d)</string>
     <string name="app_logs_empty">No entries match the current filters</string>
-    <string name="app_logs_empty_disabled">Turn on \"Record logs\" to start collecting entries</string>
+    <string name="app_logs_empty_disabled">Turn on "Record logs" to start collecting entries</string>
     <string name="app_logs_copied">%1$d entries copied</string>
     <string name="app_logs_copied_truncated">Copied the latest %1$d entries (clipboard limit). Use Share for the full log.</string>
     <string name="app_logs_nothing_to_export">No entries to export</string>

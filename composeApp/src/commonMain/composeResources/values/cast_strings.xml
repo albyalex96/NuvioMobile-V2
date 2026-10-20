@@ -12,11 +12,11 @@
     <string name="cast_stop">Stop casting</string>
     <string name="cast_close">Close</string>
     <string name="cast_source_local_only">This stream is served by this device: to cast it, connect this device to the same Wi-Fi network as the Chromecast. It keeps playing here.</string>
-    <string name="cast_source_separate_audio">This stream uses a separate audio track and can\'t be cast. It keeps playing here.</string>
-    <string name="cast_load_failed">The Chromecast couldn\'t play this stream. Its format or codec may not be supported.</string>
+    <string name="cast_source_separate_audio">This stream uses a separate audio track and can't be cast. It keeps playing here.</string>
+    <string name="cast_load_failed">The Chromecast couldn't play this stream. Its format or codec may not be supported.</string>
     <string name="cast_session_lost">Casting stopped. Playback continues on this device.</string>
-    <string name="cast_load_failed_with_issues">The Chromecast couldn\'t play this stream. It uses %1$s, which many Chromecasts don\'t support: try another stream.</string>
+    <string name="cast_load_failed_with_issues">The Chromecast couldn't play this stream. It uses %1$s, which many Chromecasts don't support: try another stream.</string>
     <string name="cast_lan_unavailable">To cast this stream, this device must be connected to the same Wi-Fi network as the Chromecast.</string>
     <string name="cast_compatibility_warning">May not play on every Chromecast: %1$s</string>
-    <string name="cast_compatibility_toast">This stream uses %1$s: some Chromecasts can\'t play it. If it doesn\'t start or there is no audio, try another stream.</string>
+    <string name="cast_compatibility_toast">This stream uses %1$s: some Chromecasts can't play it. If it doesn't start or there is no audio, try another stream.</string>
 </resources>

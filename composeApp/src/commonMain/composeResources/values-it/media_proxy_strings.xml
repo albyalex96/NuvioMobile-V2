@@ -28,7 +28,7 @@
     <string name="media_proxy_address_hint">Indirizzo IPv4 di questo dispositivo sulla rete del ricevitore (es. 192.168.1.20), vuoto per automatico.</string>
     <string name="media_proxy_address_invalid">Inserisci un indirizzo IPv4 valido.</string>
     <string name="media_proxy_keep_awake_title">Mantieni attivi Wi-Fi e CPU</string>
-    <string name="media_proxy_keep_awake_description">Evita interruzioni a schermo spento mentre servi altri dispositivi. Consuma un po\' più di batteria</string>
+    <string name="media_proxy_keep_awake_description">Evita interruzioni a schermo spento mentre servi altri dispositivi. Consuma un po' più di batteria</string>
 
     <string name="media_proxy_section_requests">Richieste</string>
     <string name="media_proxy_user_agent_title">User-Agent predefinito</string>
