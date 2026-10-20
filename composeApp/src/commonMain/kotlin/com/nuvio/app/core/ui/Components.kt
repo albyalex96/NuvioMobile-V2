@@ -58,8 +58,10 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.toUpperCase
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.material.icons.Icons
@@ -214,8 +216,9 @@ fun NuvioSectionLabel(
     text: String,
     modifier: Modifier = Modifier,
 ) {
+    // Section headers are always upper case, so a string shared with a row title needs no copy.
     Text(
-        text = text,
+        text = text.toUpperCase(Locale.current),
         modifier = modifier,
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.nuvio.colors.textMuted,

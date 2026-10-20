@@ -1923,7 +1923,7 @@ private fun PickerOptionRow(
 @Composable
 private fun PickerSectionLabel(text: String) {
     NuvioSectionLabel(
-        text = text.uppercase(),
+        text = text,
         modifier = Modifier.padding(top = 4.dp, bottom = 2.dp),
     )
 }
