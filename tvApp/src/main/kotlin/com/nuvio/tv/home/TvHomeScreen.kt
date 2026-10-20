@@ -1,6 +1,7 @@
 package com.nuvio.tv.home
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -92,6 +93,12 @@ import com.nuvio.tv.ui.TvMessage
 import com.nuvio.tv.ui.landscapeArtwork
 import com.nuvio.tv.ui.showsLandscape
 import com.nuvio.tv.ui.tvFocusable
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.graphics.graphicsLayer
 import kotlinx.coroutines.delay
 
 private val log = Logger.withTag("TvHome")
@@ -102,10 +109,14 @@ private const val HERO_FOLLOW_DELAY_MS = 220L
 /** NuvioTV `HeroCarousel`: slides advance by themselves every 10 s. */
 private const val HERO_AUTO_ADVANCE_MS = 10_000L
 private const val HERO_FOCUS_KEY = "hero"
-private val HERO_DOTS_BOTTOM_PADDING = 6.dp
+/** The carousel dots sit low, partly in the gap above the first row, to leave room to the plot. */
+private val HERO_DOTS_OFFSET = 8.dp
 /** Space kept free under the hero text for the carousel dots. */
-private val HERO_DOTS_BAND = 30.dp
+private val HERO_DOTS_BAND = 12.dp
 private val HERO_ROWS_GAP = 14.dp
+
+/** Collapse/expand of the hero when the first row leaves or re-enters the screen. */
+private const val HERO_COLLAPSE_ANIMATION_MS = 350
 
 /** NuvioTV never expands a focused poster sooner than this, even with a 0 s delay. */
 private const val MIN_EXPAND_DELAY_MS = 150L
@@ -254,47 +265,77 @@ private fun TvHomeContent(model: TvHomeModel) {
         focusedPosterKey = key
     }
 
+    // The hero belongs to the top of the page: once the first row scrolls off the screen it
+    // collapses (backdrop included) and the rows take the whole height.
+    val heroHidden by remember { derivedStateOf { rowsState.firstVisibleItemIndex > 0 } }
+    LaunchedEffect(heroHidden) { log.d { if (heroHidden) "Hero collapsed" else "Hero expanded" } }
+    val heroProgress by animateFloatAsState(
+        targetValue = if (heroHidden) 0f else 1f,
+        animationSpec = tween(HERO_COLLAPSE_ANIMATION_MS),
+        label = "tvHomeHeroCollapse",
+    )
+
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         // NuvioTV keeps the rows in the bottom 52% of the screen (49% with landscape posters).
         val heroHeight = maxHeight * (1f - if (settings.landscapePosters) 0.49f else 0.52f)
         val shownHero = carouselHero?.let(::heroOf) ?: displayedHero
-        HeroBackdrop(url = shownHero?.backdrop, fullScreen = settings.heroFullScreenBackdrop)
+        if (heroProgress > 0f) {
+            Box(modifier = Modifier.fillMaxSize().graphicsLayer { alpha = heroProgress }) {
+                HeroBackdrop(url = shownHero?.backdrop, fullScreen = settings.heroFullScreenBackdrop)
+            }
+        }
 
         Column(modifier = Modifier.fillMaxSize()) {
-            Box(modifier = Modifier.fillMaxWidth().height(heroHeight)) {
-                // The carousel dots get their own band below the hero text.
-                HeroInfoPanel(
-                    hero = shownHero,
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(heroHeight * heroProgress)
+                    // Clipped only while collapsing: the dots hang a little below the hero.
+                    .then(if (heroProgress < 1f) Modifier.clipToBounds() else Modifier)
+                    .graphicsLayer { alpha = heroProgress },
+            ) {
+                Box(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(bottom = if (carouselItems.isNotEmpty()) HERO_DOTS_BAND else 0.dp),
-                )
-                if (carouselItems.isNotEmpty()) {
-                    HeroCarouselFocusTarget(
-                        count = carouselItems.size,
-                        activeIndex = activeHeroIndex,
-                        visible = carouselActive,
-                        focused = heroFocused,
+                        .fillMaxWidth()
+                        // Full height while collapsing: the hero slides up instead of being squashed.
+                        .wrapContentHeight(Alignment.Bottom, unbounded = true)
+                        .height(heroHeight),
+                ) {
+                    // The carousel dots get their own band below the hero text.
+                    HeroInfoPanel(
+                        hero = shownHero,
                         modifier = Modifier
                             .fillMaxSize()
-                            .focusRequester(heroRequester)
-                            .onFocusChanged { state ->
-                                heroFocused = state.isFocused
-                                if (state.isFocused) {
-                                    lastFocusedKey = HERO_FOCUS_KEY
-                                    focusedHero = null
-                                    focusedPosterKey = null
+                            .padding(bottom = if (carouselItems.isNotEmpty()) HERO_DOTS_BAND else 0.dp),
+                    )
+                    if (carouselItems.isNotEmpty()) {
+                        HeroCarouselFocusTarget(
+                            count = carouselItems.size,
+                            activeIndex = activeHeroIndex,
+                            visible = carouselActive,
+                            focused = heroFocused,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .focusProperties { canFocus = !heroHidden }
+                                .focusRequester(heroRequester)
+                                .onFocusChanged { state ->
+                                    heroFocused = state.isFocused
+                                    if (state.isFocused) {
+                                        lastFocusedKey = HERO_FOCUS_KEY
+                                        focusedHero = null
+                                        focusedPosterKey = null
+                                    }
+                                },
+                            onPrevious = { (activeHeroIndex > 0).also { moved -> if (moved) heroIndex = activeHeroIndex - 1 } },
+                            onNext = { (activeHeroIndex < carouselItems.lastIndex).also { moved -> if (moved) heroIndex = activeHeroIndex + 1 } },
+                            onClick = {
+                                carouselItems.getOrNull(activeHeroIndex)?.let { item ->
+                                    log.d { "Hero carousel item opened" }
+                                    model.onPosterClick(item)
                                 }
                             },
-                        onPrevious = { (activeHeroIndex > 0).also { moved -> if (moved) heroIndex = activeHeroIndex - 1 } },
-                        onNext = { (activeHeroIndex < carouselItems.lastIndex).also { moved -> if (moved) heroIndex = activeHeroIndex + 1 } },
-                        onClick = {
-                            carouselItems.getOrNull(activeHeroIndex)?.let { item ->
-                                log.d { "Hero carousel item opened" }
-                                model.onPosterClick(item)
-                            }
-                        },
-                    )
+                        )
+                    }
                 }
             }
             val continueWatchingSubtitle: @Composable (ContinueWatchingItem) -> String = { item ->
@@ -303,7 +344,12 @@ private fun TvHomeContent(model: TvHomeModel) {
             LazyColumn(
                 state = rowsState,
                 // Room between the carousel dots and the first row.
-                contentPadding = PaddingValues(top = if (carouselItems.isNotEmpty()) HERO_ROWS_GAP else 0.dp, bottom = 48.dp),
+                // Collapsed hero: the rows start below the floating pill / top bar.
+                contentPadding = PaddingValues(
+                    top = (if (carouselItems.isNotEmpty()) HERO_ROWS_GAP else 0.dp) * heroProgress +
+                        TvDimens.chromeTopInset * (1f - heroProgress),
+                    bottom = 48.dp,
+                ),
                 verticalArrangement = Arrangement.spacedBy(TvDimens.rowGap - TvDimens.rowVerticalPadding * 2),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -416,7 +462,7 @@ private fun HeroCarouselFocusTarget(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
-                    .padding(bottom = HERO_DOTS_BOTTOM_PADDING),
+                    .offset(y = HERO_DOTS_OFFSET),
             ) {
                 repeat(count) { index ->
                     val active = index == activeIndex
