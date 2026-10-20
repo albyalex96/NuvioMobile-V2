@@ -216,8 +216,10 @@ private fun CalendarTabs(
     onSelected: (CalendarTab) -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
     ) {
         CalendarChip(
             label = stringResource(Res.string.library_calendar_upcoming),
@@ -480,6 +482,7 @@ private fun MonthNavigation(
             Icon(
                 imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowLeft,
                 contentDescription = stringResource(Res.string.library_calendar_previous_month),
+                tint = MaterialTheme.colorScheme.onSurface,
             )
         }
         Text(
@@ -487,6 +490,7 @@ private fun MonthNavigation(
             modifier = Modifier.weight(1f),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
         )
         if (!today.startsWith(month.firstDayIso.take(7))) {
@@ -494,6 +498,7 @@ private fun MonthNavigation(
                 Icon(
                     imageVector = Icons.Rounded.Today,
                     contentDescription = stringResource(Res.string.library_calendar_go_to_today),
+                    tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
         }
@@ -501,6 +506,7 @@ private fun MonthNavigation(
             Icon(
                 imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
                 contentDescription = stringResource(Res.string.library_calendar_next_month),
+                tint = MaterialTheme.colorScheme.onSurface,
             )
         }
     }
