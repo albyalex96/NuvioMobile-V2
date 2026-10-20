@@ -1,5 +1,6 @@
 package com.nuvio.app.core.deeplink
 
+import com.nuvio.app.features.watchprogress.ContinueWatchingItem
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -73,5 +74,52 @@ class AppUrlBridgeTest {
     @Test
     fun `does not treat non-host stremio link as addon install`() {
         assertNull(parseAppDeepLink("stremio://detail/series/tt0944947"))
+    }
+
+    @Test
+    fun `continue watching links round trip with special characters`() {
+        val item = ContinueWatchingItem(
+            parentMetaId = "tt0944947",
+            parentMetaType = "series",
+            videoId = "tt0944947:2:5",
+            title = "Il Trono di Spade & co / 100% \"test\"",
+            subtitle = "",
+            imageUrl = "https://img.example/thumb.jpg?w=300&h=170",
+            logo = "https://img.example/logo.png",
+            poster = "https://img.example/poster.jpg",
+            background = "https://img.example/bg.jpg",
+            seasonNumber = 2,
+            episodeNumber = 5,
+            episodeTitle = "L'episodio #5",
+            episodeThumbnail = "https://img.example/thumb.jpg?w=300&h=170",
+            resumePositionMs = 754_000L,
+            durationMs = 3_300_000L,
+            progressFraction = 0.25f,
+        )
+        val parsed = parseAppDeepLink(buildContinueWatchingDeepLinkUrl(item, ContinueWatchingLaunchAction.ChooseSource))
+        assertEquals(AppDeepLink.ContinueWatching(item, ContinueWatchingLaunchAction.ChooseSource), parsed)
+    }
+
+    @Test
+    fun `continue watching links need type and id and default to play`() {
+        assertNull(parseAppDeepLink("nuvio://continue?type=movie"))
+        val parsed = parseAppDeepLink("nuvio://continue?type=movie&id=tt0133093&action=unknown")
+        assertEquals(
+            AppDeepLink.ContinueWatching(
+                item = ContinueWatchingItem(
+                    parentMetaId = "tt0133093",
+                    parentMetaType = "movie",
+                    videoId = "tt0133093",
+                    title = "",
+                    subtitle = "",
+                    imageUrl = null,
+                    resumePositionMs = 0L,
+                    durationMs = 0L,
+                    progressFraction = 0f,
+                ),
+                action = ContinueWatchingLaunchAction.Play,
+            ),
+            parsed,
+        )
     }
 }

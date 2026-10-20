@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Dashboard
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.RoundedCorner
 import androidx.compose.material.icons.filled.Tune
@@ -51,6 +52,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.nuvio.app.core.deeplink.ContinueWatchingLaunchAction
 import com.nuvio.app.core.ui.CardDepthStyleRepository
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.home.HomeCatalogSettingsRepository
@@ -73,6 +75,7 @@ private enum class TvLayoutSection(val title: Int, val description: Int, val ico
         R.string.tv_layout_section_continue_watching_desc,
         Icons.Filled.History,
     ),
+    Launcher(R.string.tv_layout_section_launcher, R.string.tv_layout_section_launcher_desc, Icons.Filled.Home),
     FocusedPoster(R.string.tv_layout_section_focused, R.string.tv_layout_section_focused_desc, Icons.Filled.CenterFocusStrong),
     PosterCard(R.string.tv_layout_section_card_style, R.string.tv_layout_section_card_style_desc, Icons.Filled.RoundedCorner),
     CardDepth(R.string.tv_layout_section_card_depth, R.string.tv_layout_section_card_depth_desc, Icons.Filled.ViewInAr),
@@ -148,6 +151,29 @@ private fun SectionContent(section: TvLayoutSection, navigator: TvSettingsNaviga
         }
 
         TvLayoutSection.ContinueWatching -> ContinueWatchingSection(settings, navigator)
+
+        TvLayoutSection.Launcher -> {
+            TvSettingsToggleRow(
+                title = stringResource(R.string.tv_launcher_cw_enabled),
+                subtitle = stringResource(R.string.tv_launcher_cw_enabled_sub),
+                checked = settings.launcherContinueWatching,
+                onCheckedChange = repository::setLauncherContinueWatching,
+            )
+            if (settings.launcherContinueWatching) {
+                TvSettingsOptionRow(
+                    title = stringResource(R.string.tv_launcher_open_action),
+                    selected = settings.launcherOpenAction,
+                    options = listOf(
+                        TvPresetOption(stringResource(R.string.tv_launcher_action_menu), ContinueWatchingLaunchAction.Menu),
+                        TvPresetOption(stringResource(R.string.tv_launcher_action_play), ContinueWatchingLaunchAction.Play),
+                        TvPresetOption(stringResource(R.string.tv_launcher_action_sources), ContinueWatchingLaunchAction.ChooseSource),
+                        TvPresetOption(stringResource(R.string.tv_launcher_action_details), ContinueWatchingLaunchAction.Details),
+                    ),
+                    onSelected = repository::setLauncherOpenAction,
+                )
+            }
+            TvSettingsNote(stringResource(R.string.tv_launcher_note))
+        }
 
         TvLayoutSection.FocusedPoster -> {
             TvSettingsToggleRow(
@@ -522,6 +548,10 @@ private fun tvLayoutSearchEntries(): List<TvSettingsSearchItem> {
         R.string.tv_layout_next_up_furthest_episode to R.string.tv_layout_next_up_furthest_episode_sub,
         R.string.tv_layout_show_unaired_next_up to R.string.tv_layout_show_unaired_next_up_sub,
         R.string.tv_layout_cw_sort_mode to R.string.tv_layout_cw_sort_mode_sub,
+    ) + entries(
+        R.string.tv_layout_section_launcher,
+        R.string.tv_launcher_cw_enabled to R.string.tv_launcher_cw_enabled_sub,
+        R.string.tv_launcher_open_action to R.string.tv_launcher_open_action_sub,
     ) + entries(
         R.string.tv_layout_section_focused,
         R.string.tv_layout_expand_poster to R.string.tv_layout_expand_poster_sub,

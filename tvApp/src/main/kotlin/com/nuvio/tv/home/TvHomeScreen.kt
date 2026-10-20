@@ -79,6 +79,7 @@ import com.nuvio.app.tv.TvHomeStatus
 import com.nuvio.tv.R
 import com.nuvio.app.features.watchprogress.ContinueWatchingPreferencesRepository
 import com.nuvio.tv.settings.TvLayoutSettings
+import com.nuvio.tv.launcher.TvWatchNextSync
 import com.nuvio.tv.settings.rememberTvLayoutSettings
 import com.nuvio.tv.ui.TvActionButton
 import com.nuvio.tv.ui.TvCardMetrics
@@ -137,6 +138,7 @@ private class HeroInfo(
 
 @Composable
 fun TvHomeScreen(model: TvHomeModel) {
+    TvWatchNextSync(items = model.continueWatching, ready = model.status == TvHomeStatus.Content)
     when (model.status) {
         TvHomeStatus.Loading -> Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {

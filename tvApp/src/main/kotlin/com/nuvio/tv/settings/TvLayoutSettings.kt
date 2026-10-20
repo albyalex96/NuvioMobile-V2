@@ -7,6 +7,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import co.touchlab.kermit.Logger
+import com.nuvio.app.core.deeplink.ContinueWatchingLaunchAction
 import com.nuvio.app.core.storage.ProfileScopedKey
 import com.nuvio.app.features.profiles.ProfileRepository
 import com.nuvio.app.features.watchprogress.ContinueWatchingSectionStyle
@@ -40,6 +41,10 @@ data class TvLayoutSettings(
     val expandFocusedPoster: Boolean = true,
     val expandDelaySeconds: Int = DefaultTvExpandDelaySeconds,
     val heroFullScreenBackdrop: Boolean = false,
+    /** Publishes "Continue watching" to the launcher "Watch Next" row. */
+    val launcherContinueWatching: Boolean = true,
+    /** What opening a launcher entry does (the launcher menu itself cannot be customized). */
+    val launcherOpenAction: ContinueWatchingLaunchAction = ContinueWatchingLaunchAction.Menu,
 ) {
     /** Height of the base poster: NuvioTV keeps the 2:3 shape when the width changes. */
     val posterHeightDp: Int get() = posterWidthDp * 3 / 2
@@ -56,6 +61,8 @@ object TvLayoutSettingsRepository {
     private const val KEY_EXPAND_FOCUSED_POSTER = "expand_focused_poster"
     private const val KEY_EXPAND_DELAY = "expand_delay_seconds"
     private const val KEY_HERO_FULL_SCREEN = "hero_full_screen_backdrop"
+    private const val KEY_LAUNCHER_CONTINUE_WATCHING = "launcher_continue_watching"
+    private const val KEY_LAUNCHER_OPEN_ACTION = "launcher_open_action"
 
     private var preferences: SharedPreferences? = null
     private var loadedProfileId: Int? = null
@@ -86,6 +93,10 @@ object TvLayoutSettingsRepository {
             expandDelaySeconds = prefs.getInt(key(KEY_EXPAND_DELAY), DefaultTvExpandDelaySeconds)
                 .coerceIn(TvExpandDelayRange.first, TvExpandDelayRange.last),
             heroFullScreenBackdrop = prefs.getBoolean(key(KEY_HERO_FULL_SCREEN), false),
+            launcherContinueWatching = prefs.getBoolean(key(KEY_LAUNCHER_CONTINUE_WATCHING), true),
+            launcherOpenAction = prefs.getString(key(KEY_LAUNCHER_OPEN_ACTION), null)
+                ?.let { name -> ContinueWatchingLaunchAction.entries.firstOrNull { it.name == name } }
+                ?: ContinueWatchingLaunchAction.Menu,
         )
         log.d { "TV layout loaded for profile $profileId: ${_settings.value}" }
     }
@@ -106,6 +117,10 @@ object TvLayoutSettingsRepository {
     }
     fun setHeroFullScreenBackdrop(enabled: Boolean) =
         update(KEY_HERO_FULL_SCREEN, enabled) { copy(heroFullScreenBackdrop = enabled) }
+    fun setLauncherContinueWatching(enabled: Boolean) =
+        update(KEY_LAUNCHER_CONTINUE_WATCHING, enabled) { copy(launcherContinueWatching = enabled) }
+    fun setLauncherOpenAction(action: ContinueWatchingLaunchAction) =
+        update(KEY_LAUNCHER_OPEN_ACTION, action.name) { copy(launcherOpenAction = action) }
 
     /** "Reset to default" of the poster card section (NuvioTV `ResetPosterCardStyle`). */
     fun resetPosterCardStyle() {

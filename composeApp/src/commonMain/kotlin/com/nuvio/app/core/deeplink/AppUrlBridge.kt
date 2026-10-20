@@ -5,6 +5,7 @@ import com.nuvio.app.features.party.PARTY_CODE_LENGTH
 import com.nuvio.app.features.party.normalizePartyCode
 import com.nuvio.app.features.player.infusePlaybackCallbacks
 import com.nuvio.app.features.tracking.TrackingProviderRegistry
+import com.nuvio.app.features.watchprogress.ContinueWatchingItem
 import io.ktor.http.Url
 import io.ktor.http.encodeURLParameter
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,6 +27,29 @@ internal sealed interface AppDeepLink {
     data class Party(
         val code: String,
     ) : AppDeepLink
+
+    /** A "continue watching" entry opened from outside the app (Android TV launcher). */
+    data class ContinueWatching(
+        val item: ContinueWatchingItem,
+        val action: ContinueWatchingLaunchAction,
+    ) : AppDeepLink
+}
+
+/** What opening a [buildContinueWatchingDeepLinkUrl] link does. */
+enum class ContinueWatchingLaunchAction(val urlValue: String) {
+    /** Resumes like a tap on the in-app card. */
+    Play("play"),
+    /** Opens the stream list of the episode/movie without autoplay. */
+    ChooseSource("sources"),
+    /** Shows the card options menu (resume, choose source, details…). */
+    Menu("menu"),
+    Details("details"),
+    ;
+
+    companion object {
+        fun fromUrlValue(value: String?): ContinueWatchingLaunchAction =
+            entries.firstOrNull { it.urlValue.equals(value?.trim(), ignoreCase = true) } ?: Play
+    }
 }
 
 internal object AppDeepLinkRepository {
@@ -67,6 +91,38 @@ fun buildMetaDeepLinkUrl(
 
 fun buildDownloadsDeepLinkUrl(): String = "nuvio://downloads"
 
+/**
+ * `nuvio://continue?...` link of a continue-watching entry. It carries everything needed to
+ * start playback, because the app may be cold started from the link (Android TV launcher).
+ */
+fun buildContinueWatchingDeepLinkUrl(
+    item: ContinueWatchingItem,
+    action: ContinueWatchingLaunchAction,
+): String {
+    val parameters = listOf(
+        "type" to item.parentMetaType,
+        "id" to item.parentMetaId,
+        "video" to item.videoId,
+        "s" to item.seasonNumber?.toString(),
+        "e" to item.episodeNumber?.toString(),
+        "title" to item.title,
+        "ep" to item.episodeTitle,
+        "poster" to item.poster,
+        "bg" to item.background,
+        "logo" to item.logo,
+        "thumb" to item.episodeThumbnail,
+        "pos" to item.resumePositionMs.takeIf { it > 0L }?.toString(),
+        "frac" to item.resumeProgressFraction?.toString(),
+        "dur" to item.durationMs.takeIf { it > 0L }?.toString(),
+        "progress" to item.progressFraction.takeIf { it > 0f }?.toString(),
+        "next" to if (item.isNextUp) "1" else null,
+        "action" to action.urlValue,
+    )
+    return parameters
+        .mapNotNull { (key, value) -> value?.takeIf(String::isNotBlank)?.let { "$key=${it.encodeURLParameter()}" } }
+        .joinToString(separator = "&", prefix = "nuvio://continue?")
+}
+
 internal fun parseAppDeepLink(url: String): AppDeepLink? {
     val parsedUrl = runCatching { Url(url) }.getOrNull() ?: return null
     val scheme = parsedUrl.protocol.name.lowercase()
@@ -104,6 +160,8 @@ internal fun parseAppDeepLink(url: String): AppDeepLink? {
 
         "party" -> partyDeepLink(pathSegments.firstOrNull() ?: firstParameter(parsedUrl, "code"))
 
+        "continue" -> parseContinueWatchingDeepLink(parsedUrl)
+
         "auth" -> null
 
         else -> {
@@ -118,6 +176,40 @@ internal fun parseAppDeepLink(url: String): AppDeepLink? {
 
 private fun partyDeepLink(code: String?): AppDeepLink.Party? =
     code?.let(::normalizePartyCode)?.takeIf { it.length == PARTY_CODE_LENGTH }?.let(AppDeepLink::Party)
+
+private fun parseContinueWatchingDeepLink(parsedUrl: Url): AppDeepLink.ContinueWatching? {
+    fun parameter(key: String) = firstParameter(parsedUrl, key)
+    val type = parameter("type") ?: return null
+    val id = parameter("id") ?: return null
+    val videoId = parameter("video") ?: id
+    val poster = parameter("poster")
+    val background = parameter("bg")
+    val thumbnail = parameter("thumb")
+    val item = ContinueWatchingItem(
+        parentMetaId = id,
+        parentMetaType = type,
+        videoId = videoId,
+        title = parameter("title").orEmpty(),
+        subtitle = "",
+        imageUrl = thumbnail ?: background ?: poster,
+        logo = parameter("logo"),
+        poster = poster,
+        background = background,
+        seasonNumber = parameter("s")?.toIntOrNull(),
+        episodeNumber = parameter("e")?.toIntOrNull(),
+        episodeTitle = parameter("ep"),
+        episodeThumbnail = thumbnail,
+        isNextUp = parameter("next") == "1",
+        resumePositionMs = parameter("pos")?.toLongOrNull()?.coerceAtLeast(0L) ?: 0L,
+        resumeProgressFraction = parameter("frac")?.toFloatOrNull()?.takeIf { !it.isNaN() }?.coerceIn(0f, 1f),
+        durationMs = parameter("dur")?.toLongOrNull()?.coerceAtLeast(0L) ?: 0L,
+        progressFraction = parameter("progress")?.toFloatOrNull()?.takeIf { !it.isNaN() }?.coerceIn(0f, 1f) ?: 0f,
+    )
+    return AppDeepLink.ContinueWatching(
+        item = item,
+        action = ContinueWatchingLaunchAction.fromUrlValue(parameter("action")),
+    )
+}
 
 private fun parseMetaFromParameters(parsedUrl: Url): AppDeepLink.Meta? {
     val type = firstParameter(parsedUrl, "type", "mediaType", "media_type")

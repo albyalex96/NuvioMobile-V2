@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tv_launcher_channel_name">Continue watching</string>
+    <string name="tv_layout_section_launcher">Android TV home screen</string>
+    <string name="tv_layout_section_launcher_desc">Continue watching outside the app, in the launcher row.</string>
+    <string name="tv_launcher_cw_enabled">Show on the home screen</string>
+    <string name="tv_launcher_cw_enabled_sub">Adds a \"Continue watching\" row of Nuvio to the Android TV home screen and fills the \"Play next\" row of the launcher.</string>
+    <string name="tv_launcher_open_action">When an item is opened</string>
+    <string name="tv_launcher_open_action_sub">What happens when you select an item of the launcher row.</string>
+    <string name="tv_launcher_action_menu">Show menu</string>
+    <string name="tv_launcher_action_play">Resume</string>
+    <string name="tv_launcher_action_sources">Choose source</string>
+    <string name="tv_launcher_action_details">Details</string>
+    <string name="tv_launcher_note">The long-press menu of the launcher belongs to the system and cannot be changed: with \"Show menu\" the app opens straight on the options of the item (resume, choose source and play, details…). Some launchers, such as Google TV, may only show this row for certified apps.</string>
+</resources>

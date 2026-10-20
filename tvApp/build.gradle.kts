@@ -133,6 +133,8 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.kermit)
     implementation("com.google.zxing:core:3.5.3")
+    // Launcher "Watch Next" row (continue watching outside the app).
+    implementation("androidx.tvprovider:tvprovider:1.0.0")
     coreLibraryDesugaring(libs.desugar.jdk.libs)
     debugImplementation(libs.compose.uiTooling)
 }

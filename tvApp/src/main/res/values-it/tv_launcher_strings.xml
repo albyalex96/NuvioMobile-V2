@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="tv_launcher_channel_name">Continua a guardare</string>
+    <string name="tv_layout_section_launcher">Schermata Home di Android TV</string>
+    <string name="tv_layout_section_launcher_desc">\"Continua a guardare\" fuori dall\'app, nella riga del launcher.</string>
+    <string name="tv_launcher_cw_enabled">Mostra nella schermata Home</string>
+    <string name="tv_launcher_cw_enabled_sub">Aggiunge una riga \"Continua a guardare\" di Nuvio alla schermata Home di Android TV e riempie la riga \"Riproduci successivo\" del launcher.</string>
+    <string name="tv_launcher_open_action">All\'apertura di un elemento</string>
+    <string name="tv_launcher_open_action_sub">Cosa succede quando selezioni un elemento della riga del launcher.</string>
+    <string name="tv_launcher_action_menu">Mostra menu</string>
+    <string name="tv_launcher_action_play">Riprendi</string>
+    <string name="tv_launcher_action_sources">Scegli sorgente</string>
+    <string name="tv_launcher_action_details">Dettagli</string>
+    <string name="tv_launcher_note">Il menu che si apre tenendo premuto nel launcher è del sistema e non si può modificare: con \"Mostra menu\" l\'app si apre direttamente sulle opzioni dell\'elemento (riprendi, scegli sorgente e riproduci, dettagli…). Alcuni launcher, come Google TV, potrebbero mostrare questa riga solo per le app certificate.</string>
+</resources>

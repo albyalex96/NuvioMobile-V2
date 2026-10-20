@@ -60,6 +60,8 @@ import com.nuvio.app.core.auth.DeviceSessionRegistration
 import com.nuvio.app.core.build.AppFeaturePolicy
 import com.nuvio.app.core.deeplink.AppDeepLink
 import com.nuvio.app.core.deeplink.AppDeepLinkRepository
+import com.nuvio.app.core.deeplink.ContinueWatchingLaunchAction
+import co.touchlab.kermit.Logger
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
 import com.nuvio.app.core.network.NetworkCondition
 import com.nuvio.app.core.network.NetworkStatusRepository
@@ -203,6 +205,7 @@ import com.nuvio.app.features.servers.ServerMatcher
 import com.nuvio.app.features.servers.ServerRepository
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
@@ -816,6 +819,9 @@ internal fun MainAppContent(
                         AppDeepLinkRepository.markConsumed(deepLink)
                     }
 
+                    // Needs the playback callbacks defined below: handled by its own collector.
+                    is AppDeepLink.ContinueWatching -> Unit
+
                     null -> Unit
                 }
             }
@@ -1371,6 +1377,69 @@ internal fun MainAppContent(
             val zoomAnchor = PosterZoomAnchorHolder.consume()
             selectedContinueWatchingZoomAnchor = zoomAnchor.takeUnless { TvAppRuntime.isTvApp }
             selectedContinueWatchingForActions = item
+        }
+
+        // Continue-watching entries opened from outside the app (Android TV launcher "Watch Next").
+        LaunchedEffect(navController) {
+            if (!ownsAppRuntime) return@LaunchedEffect
+            val log = Logger.withTag("ContinueWatchingLink")
+            AppDeepLinkRepository.pendingDeepLink
+                .filterIsInstance<AppDeepLink.ContinueWatching>()
+                .collectLatest { deepLink ->
+                    appGateController?.appReady?.first { it }
+                    AppDeepLinkRepository.markConsumed(deepLink)
+                    val linkItem = deepLink.item
+                    // The link may be old: prefer the saved progress of the same video.
+                    val item = if (linkItem.isNextUp) {
+                        linkItem
+                    } else {
+                        WatchProgressRepository.progressForVideo(
+                            videoId = linkItem.videoId,
+                            parentMetaId = linkItem.parentMetaId,
+                            seasonNumber = linkItem.seasonNumber,
+                            episodeNumber = linkItem.episodeNumber,
+                        )
+                            ?.takeIf { it.isResumable }
+                            ?.toContinueWatchingItem()
+                            ?.let { saved ->
+                                saved.copy(
+                                    logo = saved.logo ?: linkItem.logo,
+                                    poster = saved.poster ?: linkItem.poster,
+                                    background = saved.background ?: linkItem.background,
+                                    imageUrl = saved.imageUrl ?: linkItem.imageUrl,
+                                )
+                            }
+                            ?: linkItem
+                    }
+                    log.i {
+                        "Opening ${item.parentMetaType} ${item.parentMetaId} (${item.videoId}) " +
+                            "with action ${deepLink.action}, resume at ${item.resumePositionMs} ms"
+                    }
+                    when (deepLink.action) {
+                        ContinueWatchingLaunchAction.Play -> onContinueWatchingClick(item)
+                        ContinueWatchingLaunchAction.ChooseSource -> {
+                            if (canSelectContinueWatchingStreams(item)) {
+                                onContinueWatchingPlayManually(item)
+                            } else {
+                                log.w { "Source choice not available for ${item.videoId}, resuming instead" }
+                                onContinueWatchingClick(item)
+                            }
+                        }
+                        ContinueWatchingLaunchAction.Menu -> {
+                            activateTab(AppScreenTab.Home)
+                            selectedContinueWatchingZoomAnchor = null
+                            selectedContinueWatchingForActions = item
+                        }
+                        ContinueWatchingLaunchAction.Details -> {
+                            activateTab(AppScreenTab.Home)
+                            navController.navigate(
+                                DetailRoute(type = item.parentMetaType, id = item.parentMetaId, title = item.title),
+                            ) {
+                                launchSingleTop = true
+                            }
+                        }
+                    }
+                }
         }
 
         val onLiveTvChannelClick: (LiveTvChannel) -> Unit = { channel ->
