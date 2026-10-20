@@ -89,6 +89,8 @@ actual object PlayerSettingsStorage {
     private const val nextEpisodeThresholdPercentKey = "next_episode_threshold_percent_v2"
     private const val nextEpisodeThresholdMinutesBeforeEndKey = "next_episode_threshold_minutes_before_end_v2"
     private const val preloadNextEpisodeSourcesKey = "preload_next_episode_sources"
+    // Per profile and per device: deliberately not part of the synced player settings.
+    private const val privateViewingEnabledKey = "private_viewing_enabled"
     private const val stillWatchingPromptEnabledKey = "still_watching_prompt_enabled"
     private const val stillWatchingEpisodeCountKey = "still_watching_episode_count"
     private const val stillWatchingNightOnlyKey = "still_watching_night_only"
@@ -985,6 +987,12 @@ actual object PlayerSettingsStorage {
 
     actual fun savePreloadNextEpisodeSources(enabled: Boolean) {
         saveBoolean(preloadNextEpisodeSourcesKey, enabled)
+    }
+
+    actual fun loadPrivateViewingEnabled(): Boolean? = loadBoolean(privateViewingEnabledKey)
+
+    actual fun savePrivateViewingEnabled(enabled: Boolean) {
+        saveBoolean(privateViewingEnabledKey, enabled)
     }
 
     actual fun loadStillWatchingPromptEnabled(): Boolean? = loadBoolean(stillWatchingPromptEnabledKey)

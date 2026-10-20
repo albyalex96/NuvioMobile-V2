@@ -148,6 +148,8 @@ internal expect object PlayerSettingsStorage {
     fun saveNextEpisodeThresholdMinutesBeforeEnd(minutes: Float)
     fun loadPreloadNextEpisodeSources(): Boolean?
     fun savePreloadNextEpisodeSources(enabled: Boolean)
+    fun loadPrivateViewingEnabled(): Boolean?
+    fun savePrivateViewingEnabled(enabled: Boolean)
     fun loadStillWatchingPromptEnabled(): Boolean?
     fun saveStillWatchingPromptEnabled(enabled: Boolean)
     fun loadStillWatchingEpisodeCount(): Int?

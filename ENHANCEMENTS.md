@@ -71,6 +71,8 @@ Ported from [luqmanfadlli/NuvioMobile-Enhanced](https://github.com/luqmanfadlli/
 - **Custom seek interval** (1–20 seconds) for on-screen buttons, double tap (cumulative), notification/media session and iOS remote commands, with a dynamic icon.
 - **"Still watching?" prompt** (Netflix style): after a configurable number of consecutive auto-played episodes, optionally only at night (22:00–04:00), with a 10-second countdown before the player closes. A separate time-based version for **Live TV** (15 min – 6 h).
 - **Audio delay** (ported from NuvioTV): ±60 s in 25 ms steps, remembered **per audio output** (speaker, Bluetooth, HDMI…), with support for the `behaviorHints.audioDelayMs` stream hint from addons and plugins. Works with ExoPlayer and mpv.
+- **Chapters** (ported from luqmanfadlli's fork): chapter marks on the seek bar, the current chapter title above it and a **Chapters** panel to jump to any chapter, on phone, tablet and the TV app. Read from MKV/MP4 files with ExoPlayer and directly from mpv (Android libmpv and iOS).
+- **Private Viewing** (ported from luqmanfadlli's fork): a switch in Playback → Player that stops saving watch progress, Continue Watching and watched status and stops scrobbling to connected trackers, for the in-app player and for external player results. Per profile and per device (not synced).
 
 ## Streams
 

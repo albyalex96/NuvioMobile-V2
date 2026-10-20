@@ -1,5 +1,6 @@
 package com.nuvio.app.features.player
 
+import co.touchlab.kermit.Logger
 import com.nuvio.app.core.build.AppFeaturePolicy
 import com.nuvio.app.features.player.skip.AutoSkipSegmentType
 import com.nuvio.app.features.player.skip.NextEpisodeThresholdMode
@@ -100,6 +101,7 @@ data class PlayerSettingsUiState(
     val nextEpisodeThresholdPercent: Float = 99f,
     val nextEpisodeThresholdMinutesBeforeEnd: Float = 2f,
     val preloadNextEpisodeSources: Boolean = false,
+    val privateViewingEnabled: Boolean = false,
     val stillWatchingPromptEnabled: Boolean = false,
     val stillWatchingEpisodeCount: Int = DEFAULT_STILL_WATCHING_EPISODE_COUNT,
     val stillWatchingNightOnly: Boolean = false,
@@ -189,6 +191,7 @@ object PlayerSettingsRepository {
     private var nextEpisodeThresholdPercent = 99f
     private var nextEpisodeThresholdMinutesBeforeEnd = 2f
     private var preloadNextEpisodeSources = false
+    private var privateViewingEnabled = false
     private var stillWatchingPromptEnabled = false
     private var stillWatchingEpisodeCount = DEFAULT_STILL_WATCHING_EPISODE_COUNT
     private var stillWatchingNightOnly = false
@@ -284,6 +287,7 @@ object PlayerSettingsRepository {
         nextEpisodeThresholdPercent = 99f
         nextEpisodeThresholdMinutesBeforeEnd = 2f
         preloadNextEpisodeSources = false
+        privateViewingEnabled = false
         stillWatchingPromptEnabled = false
         stillWatchingEpisodeCount = DEFAULT_STILL_WATCHING_EPISODE_COUNT
         stillWatchingNightOnly = false
@@ -445,6 +449,7 @@ object PlayerSettingsRepository {
         nextEpisodeThresholdPercent = PlayerSettingsStorage.loadNextEpisodeThresholdPercent() ?: 99f
         nextEpisodeThresholdMinutesBeforeEnd = PlayerSettingsStorage.loadNextEpisodeThresholdMinutesBeforeEnd() ?: 2f
         preloadNextEpisodeSources = PlayerSettingsStorage.loadPreloadNextEpisodeSources() ?: false
+        privateViewingEnabled = PlayerSettingsStorage.loadPrivateViewingEnabled() ?: false
         stillWatchingPromptEnabled = PlayerSettingsStorage.loadStillWatchingPromptEnabled() ?: false
         stillWatchingEpisodeCount = (PlayerSettingsStorage.loadStillWatchingEpisodeCount() ?: DEFAULT_STILL_WATCHING_EPISODE_COUNT)
             .coerceIn(STILL_WATCHING_EPISODE_COUNT_RANGE)
@@ -1013,6 +1018,15 @@ object PlayerSettingsRepository {
         PlayerSettingsStorage.savePreloadNextEpisodeSources(enabled)
     }
 
+    fun setPrivateViewingEnabled(enabled: Boolean) {
+        ensureLoaded()
+        if (privateViewingEnabled == enabled) return
+        privateViewingEnabled = enabled
+        publish()
+        PlayerSettingsStorage.savePrivateViewingEnabled(enabled)
+        Logger.i("PrivateViewing") { "Private viewing ${if (enabled) "enabled" else "disabled"}" }
+    }
+
     fun setStillWatchingPromptEnabled(enabled: Boolean) {
         ensureLoaded()
         if (stillWatchingPromptEnabled == enabled) return
@@ -1313,6 +1327,7 @@ object PlayerSettingsRepository {
             nextEpisodeThresholdPercent = nextEpisodeThresholdPercent,
             nextEpisodeThresholdMinutesBeforeEnd = nextEpisodeThresholdMinutesBeforeEnd,
             preloadNextEpisodeSources = preloadNextEpisodeSources,
+            privateViewingEnabled = privateViewingEnabled,
             stillWatchingPromptEnabled = stillWatchingPromptEnabled,
             stillWatchingEpisodeCount = stillWatchingEpisodeCount,
             stillWatchingNightOnly = stillWatchingNightOnly,

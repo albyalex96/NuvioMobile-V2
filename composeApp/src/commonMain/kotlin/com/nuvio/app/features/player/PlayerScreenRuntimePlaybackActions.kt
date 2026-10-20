@@ -213,9 +213,10 @@ private fun TrackingScrobbleItemInputs.buildMedia(): TrackingMediaReference =
 internal val PlayerScreenRuntime.isLocalFilePlayback: Boolean
     get() = activeProviderAddonId == LOCAL_FILE_PROVIDER_ID
 
-// Live TV channels and unlinked local files have no watch progress and are never scrobbled.
+// Live TV channels and unlinked local files have no watch progress and are never scrobbled,
+// and nothing is recorded or scrobbled while private viewing is on.
 internal val PlayerScreenRuntime.shouldTrackWatchProgress: Boolean
-    get() = !isLiveTvPlayback && !isLocalFilePlayback
+    get() = !isLiveTvPlayback && !isLocalFilePlayback && !playerSettingsUiState.privateViewingEnabled
 
 internal fun PlayerScreenRuntime.currentTrackingMedia(): TrackingMediaReference =
     snapshotTrackingScrobbleItemInputs().buildMedia()

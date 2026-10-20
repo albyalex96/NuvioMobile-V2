@@ -1226,6 +1226,7 @@ private fun addAdditionalSearchEntries(
     val playerRows = buildList {
         add(PlaybackSearchRow("loading-status", stringResource(Res.string.playback_show_loading_status), stringResource(Res.string.playback_show_loading_status_sub)))
         add(PlaybackSearchRow("parental-guide", stringResource(Res.string.settings_playback_parental_guide), stringResource(Res.string.settings_playback_parental_guide_description)))
+        add(PlaybackSearchRow("private-viewing", stringResource(Res.string.settings_playback_private_viewing), stringResource(Res.string.settings_playback_private_viewing_description)))
         add(PlaybackSearchRow("player-preference", stringResource(Res.string.settings_playback_player_preference)))
         if (!isIos) {
             add(PlaybackSearchRow("external-forward-subtitles", stringResource(Res.string.settings_playback_external_player_forward_subtitles), stringResource(Res.string.settings_playback_external_player_forward_subtitles_description)))

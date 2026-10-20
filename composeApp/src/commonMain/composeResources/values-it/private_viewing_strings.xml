@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_playback_private_viewing">Visione privata</string>
+    <string name="settings_playback_private_viewing_description">Non salva i progressi di visione, Continua a guardare e lo stato \"visto\", e non invia la riproduzione ai tracker collegati.</string>
+</resources>

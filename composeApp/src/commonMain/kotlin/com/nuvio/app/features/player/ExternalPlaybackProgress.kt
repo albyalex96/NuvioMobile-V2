@@ -1,5 +1,6 @@
 package com.nuvio.app.features.player
 
+import co.touchlab.kermit.Logger
 import com.nuvio.app.features.tracking.TrackingScrobbleAction
 import com.nuvio.app.features.tracking.TrackingScrobbleCoordinator
 import com.nuvio.app.features.tracking.TrackingScrobbleEvent
@@ -34,6 +35,10 @@ internal suspend fun recordExternalPlaybackProgress(
     result: ExternalPlaybackResult,
     fallbackSession: WatchProgressPlaybackSession?,
 ) {
+    if (PlayerSettingsRepository.uiState.value.privateViewingEnabled) {
+        Logger.i("PrivateViewing") { "External player result not recorded: private viewing is on" }
+        return
+    }
     val session = result.playbackSession ?: fallbackSession ?: return
     // A completed playback may carry no position at all (MX Player), so only drop position-less
     // results that were not reported as played to the end.
