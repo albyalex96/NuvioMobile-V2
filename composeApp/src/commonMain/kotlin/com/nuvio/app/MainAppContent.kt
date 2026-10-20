@@ -123,6 +123,7 @@ import com.nuvio.app.features.home.components.shouldBlurContinueWatchingArtwork
 import com.nuvio.app.features.library.LibraryItem
 import com.nuvio.app.features.library.LibraryRepository
 import com.nuvio.app.features.library.LibrarySection
+import com.nuvio.app.features.library.calendar.LibraryCalendarScreen
 import com.nuvio.app.features.library.rememberLibrarySectionTitleResolver
 import com.nuvio.app.features.library.LibrarySortOption
 import com.nuvio.app.features.library.LibrarySourceMode
@@ -386,6 +387,7 @@ internal fun MainAppContent(
     val continueWatchingSettingsTitle = stringResource(Res.string.compose_settings_page_continue_watching)
     val debridSettingsTitle = stringResource(Res.string.compose_settings_page_debrid)
     val downloadsTitle = stringResource(Res.string.compose_settings_root_downloads_title)
+    val calendarTitle = stringResource(Res.string.library_calendar_title)
     val downloadFileMissingText = stringResource(Res.string.downloads_file_missing)
     val addonsSettingsTitle = stringResource(Res.string.compose_settings_page_addons)
     val pluginsSettingsTitle = stringResource(Res.string.compose_settings_page_plugins)
@@ -1612,6 +1614,7 @@ internal fun MainAppContent(
                                     }
                                 },
                                 onDownloadsClick = { navController.navigate(DownloadsRoute(downloadsTitle)) },
+                                onCalendarClick = { navController.navigate(LibraryCalendarRoute(calendarTitle)) },
                                 onContinueWatchingClick = onContinueWatchingClick,
                                 onContinueWatchingLongPress = onContinueWatchingLongPress,
                                 onLiveTvChannelClick = onLiveTvChannelClick,
@@ -1807,6 +1810,15 @@ internal fun MainAppContent(
                         navController = navController,
                         useNativeNavigation = useNativeNavigation,
                         onOpenDownload = { openDownloadedItem(it) },
+                    )
+                }
+                entry<LibraryCalendarRoute> { route ->
+                    val onBack = rememberGuardedPopBackStack(navController, route)
+                    LibraryCalendarScreen(
+                        onBack = onBack,
+                        onOpenTitle = { type, id, title ->
+                            navController.navigate(DetailRoute(type = type, id = id, title = title))
+                        },
                     )
                 }
                 entry<DownloadShowRoute> { route ->

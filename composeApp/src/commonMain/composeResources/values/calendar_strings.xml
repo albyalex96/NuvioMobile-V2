@@ -1,0 +1,27 @@
+<resources>
+    <string name="library_calendar_title">Calendar</string>
+    <string name="library_calendar_open">Open release calendar</string>
+    <string name="library_calendar_refresh">Refresh calendar</string>
+    <string name="library_calendar_show_list">Show as list</string>
+    <string name="library_calendar_show_month">Show by month</string>
+    <string name="library_calendar_upcoming">Upcoming</string>
+    <string name="library_calendar_recent">Recent</string>
+    <string name="library_calendar_today">Today</string>
+    <string name="library_calendar_tomorrow">Tomorrow</string>
+    <string name="library_calendar_yesterday">Yesterday</string>
+    <string name="library_calendar_previous_month">Previous month</string>
+    <string name="library_calendar_next_month">Next month</string>
+    <string name="library_calendar_go_to_today">Go to today</string>
+    <string name="library_calendar_updated_at">Updated %1$s</string>
+    <string name="library_calendar_never_updated">Not updated yet</string>
+    <string name="library_calendar_progress">Updating %1$d of %2$d…</string>
+    <string name="library_calendar_failed_items">%1$d items could not be updated</string>
+    <string name="library_calendar_movie">Movie</string>
+    <string name="library_calendar_releases_count">%1$d releases</string>
+    <string name="library_calendar_empty_title">No releases</string>
+    <string name="library_calendar_empty_upcoming">No upcoming episodes or movies for the titles in your library.</string>
+    <string name="library_calendar_empty_recent">Nothing came out in the last 90 days for the titles in your library.</string>
+    <string name="library_calendar_empty_day">No releases on this day.</string>
+    <string name="library_calendar_empty_library">Save series and movies to your library to see their releases here.</string>
+    <string name="library_calendar_loading">Loading the calendar…</string>
+</resources>

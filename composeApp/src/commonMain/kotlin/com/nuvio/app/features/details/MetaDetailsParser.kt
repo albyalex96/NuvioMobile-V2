@@ -41,6 +41,7 @@ internal object MetaDetailsParser {
             logo = meta.string("logo"),
             description = meta.string("description"),
             releaseInfo = meta.string("releaseInfo"),
+            released = meta.string("released"),
             lastAirDate = meta.string("lastAirDate"),
             status = meta.string("status"),
             imdbRating = meta.string("imdbRating"),

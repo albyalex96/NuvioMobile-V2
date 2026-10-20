@@ -1,0 +1,27 @@
+<resources>
+    <string name="library_calendar_title">Calendario</string>
+    <string name="library_calendar_open">Apri il calendario delle uscite</string>
+    <string name="library_calendar_refresh">Aggiorna il calendario</string>
+    <string name="library_calendar_show_list">Mostra come lista</string>
+    <string name="library_calendar_show_month">Mostra per mese</string>
+    <string name="library_calendar_upcoming">In arrivo</string>
+    <string name="library_calendar_recent">Recenti</string>
+    <string name="library_calendar_today">Oggi</string>
+    <string name="library_calendar_tomorrow">Domani</string>
+    <string name="library_calendar_yesterday">Ieri</string>
+    <string name="library_calendar_previous_month">Mese precedente</string>
+    <string name="library_calendar_next_month">Mese successivo</string>
+    <string name="library_calendar_go_to_today">Vai a oggi</string>
+    <string name="library_calendar_updated_at">Aggiornato %1$s</string>
+    <string name="library_calendar_never_updated">Non ancora aggiornato</string>
+    <string name="library_calendar_progress">Aggiornamento %1$d di %2$d…</string>
+    <string name="library_calendar_failed_items">%1$d titoli non sono stati aggiornati</string>
+    <string name="library_calendar_movie">Film</string>
+    <string name="library_calendar_releases_count">%1$d uscite</string>
+    <string name="library_calendar_empty_title">Nessuna uscita</string>
+    <string name="library_calendar_empty_upcoming">Nessun episodio o film in arrivo per i titoli della tua libreria.</string>
+    <string name="library_calendar_empty_recent">Negli ultimi 90 giorni non è uscito nulla per i titoli della tua libreria.</string>
+    <string name="library_calendar_empty_day">Nessuna uscita in questo giorno.</string>
+    <string name="library_calendar_empty_library">Salva serie e film nella libreria per vederne qui le uscite.</string>
+    <string name="library_calendar_loading">Caricamento del calendario…</string>
+</resources>
