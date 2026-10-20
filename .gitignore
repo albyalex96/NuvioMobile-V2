@@ -30,6 +30,7 @@ asset
 scripts/scrape_android_compose_animation_docs.py
 tools
 AGENTS.md
+MEMORY.md
 PERFORMANCE_FINDINGS.md
 scripts/*
 !scripts/sign-ios-device-app.py
