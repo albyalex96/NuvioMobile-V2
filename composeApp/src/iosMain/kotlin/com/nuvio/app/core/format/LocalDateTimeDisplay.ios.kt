@@ -30,3 +30,12 @@ internal actual fun formatLocalDateTimeWithPatterns(
     }.stringFromDate(date)
     return "$dateText $timeText"
 }
+
+internal actual fun formatLocalTimeWithPattern(
+    epochMs: Long,
+    localeTag: String,
+    timePattern: String,
+): String = NSDateFormatter().apply {
+    locale = NSLocale(localeIdentifier = localeTag)
+    dateFormat = timePattern
+}.stringFromDate(NSDate.dateWithTimeIntervalSince1970(epochMs / 1_000.0))

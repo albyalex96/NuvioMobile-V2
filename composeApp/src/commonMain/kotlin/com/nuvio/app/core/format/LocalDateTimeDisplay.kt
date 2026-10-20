@@ -21,3 +21,19 @@ internal expect fun formatLocalDateTimeWithPatterns(
     datePattern: String?,
     timePattern: String,
 ): String
+
+fun formatLocalTime(
+    epochMs: Long,
+    localeTag: String = Locale.current.toLanguageTag(),
+): String = formatLocalTimeWithPattern(
+    epochMs = epochMs,
+    localeTag = localeTag,
+    timePattern = DateFormatPreset.TIME_PATTERN,
+)
+
+/** Formats [epochMs] as a time of day in the device time zone. */
+internal expect fun formatLocalTimeWithPattern(
+    epochMs: Long,
+    localeTag: String,
+    timePattern: String,
+): String

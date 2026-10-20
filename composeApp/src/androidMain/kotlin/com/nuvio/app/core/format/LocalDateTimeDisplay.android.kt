@@ -21,3 +21,10 @@ internal actual fun formatLocalDateTimeWithPatterns(
     }
     return "${dateFormatter.format(dateTime)} ${DateTimeFormatter.ofPattern(timePattern, locale).format(dateTime)}"
 }
+
+internal actual fun formatLocalTimeWithPattern(
+    epochMs: Long,
+    localeTag: String,
+    timePattern: String,
+): String = DateTimeFormatter.ofPattern(timePattern, Locale.forLanguageTag(localeTag))
+    .format(Instant.ofEpochMilli(epochMs).atZone(ZoneId.systemDefault()))

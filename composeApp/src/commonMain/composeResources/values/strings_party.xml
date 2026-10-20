@@ -75,4 +75,12 @@
     <string name="party_shared_by">Shared by %1$s</string>
     <string name="party_links_action">Open invite links in this app</string>
     <string name="party_links_description">Invite links (%1$s/party/…) open in the browser until you allow this app to open them.</string>
+    <string name="party_tab_party">Party</string>
+    <string name="party_tab_chat">Chat</string>
+    <string name="party_chat_empty_title">No messages yet</string>
+    <string name="party_chat_empty_message">Only people in this party can see the chat.</string>
+    <string name="party_chat_placeholder">Message</string>
+    <string name="party_chat_send">Send</string>
+    <string name="party_chat_not_sent">Not sent. Tap to retry</string>
+    <string name="party_chat_new_messages">New messages</string>
 </resources>

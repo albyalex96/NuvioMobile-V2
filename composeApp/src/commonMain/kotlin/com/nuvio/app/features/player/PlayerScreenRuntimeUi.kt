@@ -437,10 +437,7 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
             },
             // Live TV channels have no shared timeline, so they cannot host a watch party.
             onPartyClick = if (partyAvailable && !isLiveTvPlayback) {
-                {
-                    showPartyPanel = true
-                    controlsVisible = false
-                }
+                { openPartyPanel() }
             } else {
                 null
             },
