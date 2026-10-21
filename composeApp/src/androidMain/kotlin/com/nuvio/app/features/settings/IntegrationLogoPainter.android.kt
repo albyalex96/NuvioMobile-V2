@@ -16,6 +16,7 @@ import nuvio.composeapp.generated.resources.subdl_logo
 import nuvio.composeapp.generated.resources.telegram_logo
 import nuvio.composeapp.generated.resources.skipdb_logo
 import nuvio.composeapp.generated.resources.opensubtitles_logo
+import nuvio.composeapp.generated.resources.cloudstream_logo
 import nuvio.composeapp.generated.resources.introdb_favicon
 import nuvio.composeapp.generated.resources.rating_tmdb
 import org.jetbrains.compose.resources.painterResource as composePainterResource
@@ -37,4 +38,5 @@ internal actual fun integrationLogoPainter(logo: IntegrationLogo): Painter =
         IntegrationLogo.Telegram -> composePainterResource(Res.drawable.telegram_logo)
         IntegrationLogo.SkipDb -> composePainterResource(Res.drawable.skipdb_logo)
         IntegrationLogo.OpenSubtitles -> composePainterResource(Res.drawable.opensubtitles_logo)
+        IntegrationLogo.Cloudstream -> composePainterResource(Res.drawable.cloudstream_logo)
     }

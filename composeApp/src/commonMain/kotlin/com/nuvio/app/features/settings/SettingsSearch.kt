@@ -509,13 +509,6 @@ internal fun settingsSearchEntries(
         ),
         icon = Icons.Rounded.Extension,
     )
-    addPage(
-        page = SettingsPage.MediaServers,
-        key = "media-servers",
-        title = stringResource(Res.string.compose_settings_page_media_servers),
-        description = stringResource(Res.string.settings_content_discovery_media_servers_description),
-        icon = Icons.Rounded.Dns,
-    )
     if (pluginsEnabled) {
         addPage(
             page = SettingsPage.Plugins,
@@ -525,6 +518,20 @@ internal fun settingsSearchEntries(
             icon = Icons.Rounded.Hub,
         )
     }
+    addPage(
+        page = SettingsPage.Cloudstream,
+        key = "cloudstream",
+        title = stringResource(Res.string.compose_settings_page_cloudstream),
+        description = stringResource(Res.string.settings_content_discovery_cloudstream_description),
+        icon = Icons.Rounded.Extension,
+    )
+    addPage(
+        page = SettingsPage.MediaServers,
+        key = "media-servers",
+        title = stringResource(Res.string.compose_settings_page_media_servers),
+        description = stringResource(Res.string.settings_content_discovery_media_servers_description),
+        icon = Icons.Rounded.Dns,
+    )
     addPage(
         page = SettingsPage.Homescreen,
         key = "home-layout",

@@ -872,6 +872,7 @@ private fun MobileSettingsScreen(
                     onAddonsClick = onAddonsClick,
                     onPluginsClick = onPluginsClick,
                     onMediaServersClick = { onPageChange(SettingsPage.MediaServers) },
+                    onCloudstreamClick = { onPageChange(SettingsPage.Cloudstream) },
                 )
                 SettingsPage.Addons -> addonsSettingsContent()
                 SettingsPage.MediaServers -> mediaServersSettingsContent(
@@ -934,6 +935,7 @@ private fun MobileSettingsScreen(
                 SettingsPage.AniList,
                 SettingsPage.AiAssistant,
                 SettingsPage.Telegram,
+                SettingsPage.Cloudstream,
                 -> workInProgressIntegrationContent(isTablet = false, page = page)
                 SettingsPage.TraktAuthentication -> trackingSettingsContent(
                     isTablet = false,
@@ -1387,6 +1389,7 @@ private fun TabletSettingsScreen(
                         onAddonsClick = { openInlinePage(SettingsPage.Addons) },
                         onPluginsClick = { openInlinePage(SettingsPage.Plugins) },
                         onMediaServersClick = { openInlinePage(SettingsPage.MediaServers) },
+                        onCloudstreamClick = { openInlinePage(SettingsPage.Cloudstream) },
                     )
                     SettingsPage.Addons -> addonsSettingsContent()
                     SettingsPage.MediaServers -> mediaServersSettingsContent(
@@ -1449,6 +1452,7 @@ private fun TabletSettingsScreen(
                     SettingsPage.AniList,
                     SettingsPage.AiAssistant,
                     SettingsPage.Telegram,
+                    SettingsPage.Cloudstream,
                     -> workInProgressIntegrationContent(isTablet = true, page = page)
                     SettingsPage.TraktAuthentication -> trackingSettingsContent(
                         isTablet = true,

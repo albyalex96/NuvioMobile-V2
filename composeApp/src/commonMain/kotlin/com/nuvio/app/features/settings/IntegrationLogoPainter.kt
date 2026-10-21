@@ -18,6 +18,7 @@ internal enum class IntegrationLogo {
     Telegram,
     SkipDb,
     OpenSubtitles,
+    Cloudstream,
 }
 
 @Composable

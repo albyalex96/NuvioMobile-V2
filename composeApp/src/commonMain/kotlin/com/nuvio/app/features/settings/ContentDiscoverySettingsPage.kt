@@ -12,10 +12,12 @@ import com.nuvio.app.core.build.AppFeaturePolicy
 import com.nuvio.app.features.search.SearchHistoryRepository
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.compose_settings_page_addons
+import nuvio.composeapp.generated.resources.compose_settings_page_cloudstream
 import nuvio.composeapp.generated.resources.compose_settings_page_media_servers
 import nuvio.composeapp.generated.resources.compose_settings_page_plugins
 import nuvio.composeapp.generated.resources.settings_content_discovery_addons_description
 import nuvio.composeapp.generated.resources.settings_content_discovery_addons_description_appstore
+import nuvio.composeapp.generated.resources.settings_content_discovery_cloudstream_description
 import nuvio.composeapp.generated.resources.settings_content_discovery_media_servers_description
 import nuvio.composeapp.generated.resources.settings_content_discovery_plugins_description
 import nuvio.composeapp.generated.resources.settings_content_discovery_section_sources
@@ -30,6 +32,7 @@ internal fun LazyListScope.contentDiscoveryContent(
     onAddonsClick: () -> Unit,
     onPluginsClick: () -> Unit,
     onMediaServersClick: () -> Unit,
+    onCloudstreamClick: () -> Unit,
 ) {
     item {
         val recentSearchesEnabled by remember {
@@ -72,13 +75,6 @@ internal fun LazyListScope.contentDiscoveryContent(
                     isTablet = isTablet,
                     onClick = onAddonsClick,
                 )
-                SettingsNavigationRow(
-                    title = stringResource(Res.string.compose_settings_page_media_servers),
-                    description = stringResource(Res.string.settings_content_discovery_media_servers_description),
-                    icon = Icons.Rounded.Dns,
-                    isTablet = isTablet,
-                    onClick = onMediaServersClick,
-                )
                 if (showPluginsEntry) {
                     SettingsNavigationRow(
                         title = stringResource(Res.string.compose_settings_page_plugins),
@@ -88,6 +84,20 @@ internal fun LazyListScope.contentDiscoveryContent(
                         onClick = onPluginsClick,
                     )
                 }
+                SettingsNavigationRow(
+                    title = stringResource(Res.string.compose_settings_page_cloudstream),
+                    description = stringResource(Res.string.settings_content_discovery_cloudstream_description),
+                    iconPainter = integrationLogoPainter(IntegrationLogo.Cloudstream),
+                    isTablet = isTablet,
+                    onClick = onCloudstreamClick,
+                )
+                SettingsNavigationRow(
+                    title = stringResource(Res.string.compose_settings_page_media_servers),
+                    description = stringResource(Res.string.settings_content_discovery_media_servers_description),
+                    icon = Icons.Rounded.Dns,
+                    isTablet = isTablet,
+                    onClick = onMediaServersClick,
+                )
             }
         }
     }

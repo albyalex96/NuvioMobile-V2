@@ -24,6 +24,8 @@
     <string name="settings_integrations_subdl_description">Cerca i sottotitoli su SubDL</string>
     <string name="settings_integrations_ai_assistant_description">Chiedi a un assistente consigli su cosa guardare</string>
     <string name="settings_integrations_telegram_description">Collega Nuvio a Telegram</string>
+    <string name="compose_settings_page_cloudstream">CloudStream</string>
+    <string name="settings_content_discovery_cloudstream_description">Installa e usa le estensioni di CloudStream come sorgenti</string>
     <string name="settings_work_in_progress_badge">Lavori in corso</string>
     <string name="settings_work_in_progress_title">%1$s sta arrivando</string>
     <string name="settings_work_in_progress_message">Questa integrazione è in fase di sviluppo. Sarà disponibile in un prossimo aggiornamento.</string>
