@@ -1524,12 +1524,29 @@ private fun addAdditionalSearchEntries(
         row(SettingsPage.OpenSubtitles, item.key, item.title, item.description, openSubtitlesPage, openSubtitlesSearchSection, icon = Icons.Rounded.Subtitles)
     }
 
+    val subDlPage = stringResource(Res.string.compose_settings_page_subdl)
+    addPage(SettingsPage.SubDl, "subdl", subDlPage, stringResource(Res.string.settings_integrations_subdl_description), generalCategory, Icons.Rounded.Subtitles)
+    val subDlSearchSection = stringResource(Res.string.subdl_section_search)
+    listOf(
+        PlaybackSearchRow("subdl-enabled", stringResource(Res.string.subdl_enabled), stringResource(Res.string.subdl_enabled_description)),
+        PlaybackSearchRow("subdl-key", stringResource(Res.string.subdl_api_key), stringResource(Res.string.subdl_api_key_description)),
+    ).forEach { item ->
+        row(SettingsPage.SubDl, item.key, item.title, item.description, subDlPage, subDlPage, icon = Icons.Rounded.Subtitles)
+    }
+    listOf(
+        PlaybackSearchRow("subdl-languages", stringResource(Res.string.subdl_languages), stringResource(Res.string.subdl_languages_description)),
+        PlaybackSearchRow("subdl-hearing-impaired", stringResource(Res.string.subdl_hearing_impaired), stringResource(Res.string.subdl_hearing_impaired_description)),
+        PlaybackSearchRow("subdl-ai-translated", stringResource(Res.string.subdl_ai_translated), stringResource(Res.string.subdl_ai_translated_description)),
+        PlaybackSearchRow("subdl-season-packs", stringResource(Res.string.subdl_season_packs), stringResource(Res.string.subdl_season_packs_description)),
+    ).forEach { item ->
+        row(SettingsPage.SubDl, item.key, item.title, item.description, subDlPage, subDlSearchSection, icon = Icons.Rounded.Subtitles)
+    }
+
     // Integrations: placeholder pages (work in progress)
     addPage(SettingsPage.SkipDb, "skipdb", stringResource(Res.string.compose_settings_page_skipdb), stringResource(Res.string.settings_integrations_skipdb_description), generalCategory, Icons.Rounded.SkipNext)
     addPage(SettingsPage.MyAnimeList, "myanimelist", stringResource(Res.string.compose_settings_page_myanimelist), stringResource(Res.string.settings_integrations_myanimelist_description), generalCategory, Icons.Rounded.ViewList)
     addPage(SettingsPage.Kitsu, "kitsu", stringResource(Res.string.compose_settings_page_kitsu), stringResource(Res.string.settings_integrations_kitsu_description), generalCategory, Icons.Rounded.ViewList)
     addPage(SettingsPage.AniList, "anilist", stringResource(Res.string.compose_settings_page_anilist), stringResource(Res.string.settings_integrations_anilist_description), generalCategory, Icons.Rounded.ViewList)
-    addPage(SettingsPage.SubDl, "subdl", stringResource(Res.string.compose_settings_page_subdl), stringResource(Res.string.settings_integrations_subdl_description), generalCategory, Icons.Rounded.Subtitles)
     addPage(SettingsPage.AiAssistant, "ai-assistant", stringResource(Res.string.compose_settings_page_ai_assistant), stringResource(Res.string.settings_integrations_ai_assistant_description), generalCategory, Icons.Rounded.AutoAwesome)
     addPage(SettingsPage.Telegram, "telegram", stringResource(Res.string.compose_settings_page_telegram), stringResource(Res.string.settings_integrations_telegram_description), generalCategory, Icons.Rounded.Send)
 

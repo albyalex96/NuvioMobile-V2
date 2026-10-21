@@ -433,6 +433,7 @@ private fun SubtitleOptionRow(
             sourceKind = when (option.subtitle.source) {
                 AddonSubtitleSource.Addon -> SubtitleSourceKind.Addon
                 AddonSubtitleSource.OpenSubtitles -> SubtitleSourceKind.OpenSubtitles
+                AddonSubtitleSource.SubDl -> SubtitleSourceKind.SubDl
             }
             title = languageLabelForCode(option.subtitle.language)
             metadata = option.subtitle.display.takeIf { it.isNotBlank() && it != title }
@@ -496,10 +497,14 @@ private enum class SubtitleSourceKind {
     BuiltIn,
     Addon,
     OpenSubtitles,
+    SubDl,
 }
 
 /** Brand-like colour of the chips of subtitles found by the OpenSubtitles integration. */
 private val OpenSubtitlesChipColor = Color(0xFF2E9D63)
+
+/** Brand-like colour of the chips of subtitles found by the SubDL integration. */
+private val SubDlChipColor = Color(0xFF2F6FDB)
 
 @Composable
 private fun SubtitleSourceChip(
@@ -509,7 +514,12 @@ private fun SubtitleSourceChip(
 ) {
     val tokens = MaterialTheme.nuvio
     val shape = RoundedCornerShape(999.dp)
-    val isIntegration = kind == SubtitleSourceKind.OpenSubtitles
+    val integrationColor = when (kind) {
+        SubtitleSourceKind.OpenSubtitles -> OpenSubtitlesChipColor
+        SubtitleSourceKind.SubDl -> SubDlChipColor
+        SubtitleSourceKind.BuiltIn, SubtitleSourceKind.Addon -> null
+    }
+    val isIntegration = integrationColor != null
     val contentColor = when {
         isIntegration -> Color.White
         selected -> tokens.colors.onAccent.copy(alpha = 0.9f)
@@ -521,7 +531,7 @@ private fun SubtitleSourceChip(
             .clip(shape)
             .background(
                 when {
-                    isIntegration -> OpenSubtitlesChipColor.copy(alpha = if (selected) 1f else 0.85f)
+                    integrationColor != null -> integrationColor.copy(alpha = if (selected) 1f else 0.85f)
                     selected -> tokens.colors.onAccent.copy(alpha = 0.14f)
                     else -> Color.White.copy(alpha = 0.08f)
                 },
@@ -538,8 +548,10 @@ private fun SubtitleSourceChip(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         when (kind) {
-            SubtitleSourceKind.OpenSubtitles -> Image(
-                painter = integrationLogoPainter(IntegrationLogo.OpenSubtitles),
+            SubtitleSourceKind.OpenSubtitles, SubtitleSourceKind.SubDl -> Image(
+                painter = integrationLogoPainter(
+                    if (kind == SubtitleSourceKind.SubDl) IntegrationLogo.SubDl else IntegrationLogo.OpenSubtitles,
+                ),
                 contentDescription = null,
                 modifier = Modifier
                     .size(12.dp)

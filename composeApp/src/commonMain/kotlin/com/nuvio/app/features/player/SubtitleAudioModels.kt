@@ -39,6 +39,7 @@ data class AddonSubtitle(
 enum class AddonSubtitleSource {
     Addon,
     OpenSubtitles,
+    SubDl,
 }
 
 const val SUBTITLE_DELAY_MIN_MS = -60_000

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="subdl_section_search">Ricerca</string>
+    <string name="subdl_enabled">Abilita SubDL</string>
+    <string name="subdl_enabled_description">Cerca i sottotitoli su SubDL e mostrali nel pannello sottotitoli del player</string>
+    <string name="subdl_api_key">Chiave API</string>
+    <string name="subdl_api_key_description">Accedi su subdl.com, apri il tuo pannello e copia la chiave API. Viene sincronizzata col profilo.</string>
+    <string name="subdl_api_key_invalid">SubDL ha rifiutato questa chiave API</string>
+    <string name="subdl_languages">Lingue</string>
+    <string name="subdl_languages_description">Lingue da cercare su SubDL</string>
+    <string name="subdl_languages_player_default">Lingue preferite dei sottotitoli del player</string>
+    <string name="subdl_languages_clear">Usa le lingue del player</string>
+    <string name="subdl_hearing_impaired">Sottotitoli per non udenti</string>
+    <string name="subdl_hearing_impaired_description">Includi i sottotitoli con la descrizione dei suoni (SDH)</string>
+    <string name="subdl_ai_translated">Traduzioni automatiche</string>
+    <string name="subdl_ai_translated_description">Includi i sottotitoli tradotti con l'IA</string>
+    <string name="subdl_season_packs">Pacchetti stagione</string>
+    <string name="subdl_season_packs_description">Includi gli archivi con un'intera stagione: il file dell'episodio viene scelto in automatico</string>
+    <string name="subdl_download_failed">Impossibile scaricare il sottotitolo SubDL (limite giornaliero raggiunto o file non disponibile)</string>
+</resources>

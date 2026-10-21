@@ -39,6 +39,8 @@ import com.nuvio.app.features.discord.DiscordRpcProfileSync
 import com.nuvio.app.features.opensubtitles.OpenSubtitlesProfileSync
 import com.nuvio.app.features.player.skip.TimestampIntegrationsProfileSync
 import com.nuvio.app.features.opensubtitles.OpenSubtitlesRepository
+import com.nuvio.app.features.subdl.SubDlProfileSync
+import com.nuvio.app.features.subdl.SubDlRepository
 import com.nuvio.app.features.discord.DiscordRpcRepository
 import com.nuvio.app.features.plugins.PluginRepository
 import com.nuvio.app.features.tmdb.TmdbSettingsStorage
@@ -221,6 +223,7 @@ object ProfileSettingsSync {
             HomeCatalogSettingsRepository.uiState.map(HomeHeroProfileSync::syncSignature).distinctUntilChanged(),
             DiscordRpcRepository.uiState.map(DiscordRpcProfileSync::syncSignature).distinctUntilChanged(),
             OpenSubtitlesRepository.uiState.map(OpenSubtitlesProfileSync::syncSignature).distinctUntilChanged(),
+            SubDlRepository.uiState.map(SubDlProfileSync::syncSignature).distinctUntilChanged(),
             DebridSettingsRepository.uiState.map { "debrid" },
             TmdbSettingsRepository.uiState.map { "tmdb" },
             MdbListSettingsRepository.uiState.map { "mdblist" },
@@ -286,6 +289,7 @@ object ProfileSettingsSync {
                         HomeHeroProfileSync.exportToSyncPayload() +
                         DiscordRpcProfileSync.exportToSyncPayload() +
                         OpenSubtitlesProfileSync.exportToSyncPayload() +
+                        SubDlProfileSync.exportToSyncPayload() +
                         TimestampIntegrationsProfileSync.exportToSyncPayload(),
                 ),
                 debridSettings = withoutProfileCredentials(
@@ -353,6 +357,7 @@ object ProfileSettingsSync {
         HomeHeroProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
         DiscordRpcProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
         OpenSubtitlesProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
+        SubDlProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
         TimestampIntegrationsProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
 
         DebridSettingsStorage.replaceFromSyncPayload(

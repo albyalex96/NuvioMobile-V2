@@ -927,11 +927,11 @@ private fun MobileSettingsScreen(
                 SettingsPage.AnimeSkip -> animeSkipSettingsContent(isTablet = false)
                 SettingsPage.IntroDb -> introDbSettingsContent(isTablet = false)
                 SettingsPage.OpenSubtitles -> openSubtitlesSettingsContent(isTablet = false)
+                SettingsPage.SubDl -> subDlSettingsContent(isTablet = false)
                 SettingsPage.SkipDb,
                 SettingsPage.MyAnimeList,
                 SettingsPage.Kitsu,
                 SettingsPage.AniList,
-                SettingsPage.SubDl,
                 SettingsPage.AiAssistant,
                 SettingsPage.Telegram,
                 -> workInProgressIntegrationContent(isTablet = false, page = page)
@@ -1442,11 +1442,11 @@ private fun TabletSettingsScreen(
                     SettingsPage.AnimeSkip -> animeSkipSettingsContent(isTablet = true)
                     SettingsPage.IntroDb -> introDbSettingsContent(isTablet = true)
                     SettingsPage.OpenSubtitles -> openSubtitlesSettingsContent(isTablet = true)
+                    SettingsPage.SubDl -> subDlSettingsContent(isTablet = true)
                     SettingsPage.SkipDb,
                     SettingsPage.MyAnimeList,
                     SettingsPage.Kitsu,
                     SettingsPage.AniList,
-                    SettingsPage.SubDl,
                     SettingsPage.AiAssistant,
                     SettingsPage.Telegram,
                     -> workInProgressIntegrationContent(isTablet = true, page = page)
