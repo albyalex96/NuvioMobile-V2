@@ -37,6 +37,7 @@ import com.nuvio.app.features.home.HomeCatalogSettingsRepository
 import com.nuvio.app.features.home.HomeHeroProfileSync
 import com.nuvio.app.features.discord.DiscordRpcProfileSync
 import com.nuvio.app.features.opensubtitles.OpenSubtitlesProfileSync
+import com.nuvio.app.features.player.skip.TimestampIntegrationsProfileSync
 import com.nuvio.app.features.opensubtitles.OpenSubtitlesRepository
 import com.nuvio.app.features.discord.DiscordRpcRepository
 import com.nuvio.app.features.plugins.PluginRepository
@@ -284,7 +285,8 @@ object ProfileSettingsSync {
                         LiveTvProfileSync.exportToSyncPayload() +
                         HomeHeroProfileSync.exportToSyncPayload() +
                         DiscordRpcProfileSync.exportToSyncPayload() +
-                        OpenSubtitlesProfileSync.exportToSyncPayload(),
+                        OpenSubtitlesProfileSync.exportToSyncPayload() +
+                        TimestampIntegrationsProfileSync.exportToSyncPayload(),
                 ),
                 debridSettings = withoutProfileCredentials(
                     PROFILE_DEBRID_SETTINGS_FEATURE,
@@ -351,6 +353,7 @@ object ProfileSettingsSync {
         HomeHeroProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
         DiscordRpcProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
         OpenSubtitlesProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
+        TimestampIntegrationsProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
 
         DebridSettingsStorage.replaceFromSyncPayload(
             preservingLocalProfileCredentials(

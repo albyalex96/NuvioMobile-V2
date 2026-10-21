@@ -1,0 +1,60 @@
+package com.nuvio.app.features.player.skip
+
+import co.touchlab.kermit.Logger
+import com.nuvio.app.core.sync.decodeSyncBoolean
+import com.nuvio.app.core.sync.decodeSyncString
+import com.nuvio.app.core.sync.encodeSyncBoolean
+import com.nuvio.app.core.sync.encodeSyncString
+import com.nuvio.app.features.player.PlayerSettingsRepository
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+
+/**
+ * Profile sync of the AnimeSkip and IntroDB settings (toggles and credentials), carried inside the
+ * `stream_badge_settings` payload of the profile settings blob like the other local extras: the
+ * custom credential RPCs are not reliable on the server, so the client ID and the API key travel
+ * with the blob instead.
+ */
+internal object TimestampIntegrationsProfileSync {
+    private const val ANIMESKIP_ENABLED_KEY = "timestamp_animeskip_enabled"
+    private const val ANIMESKIP_CLIENT_ID_KEY = "timestamp_animeskip_client_id"
+    private const val INTRODB_SUBMIT_ENABLED_KEY = "timestamp_introdb_submit_enabled"
+    private const val INTRODB_API_KEY_KEY = "timestamp_introdb_api_key"
+
+    private val log = Logger.withTag("TimestampIntegrations")
+
+    fun exportToSyncPayload(): JsonObject {
+        PlayerSettingsRepository.ensureLoaded()
+        val settings = PlayerSettingsRepository.uiState.value
+        return buildJsonObject {
+            put(ANIMESKIP_ENABLED_KEY, encodeSyncBoolean(settings.animeSkipEnabled))
+            put(ANIMESKIP_CLIENT_ID_KEY, encodeSyncString(settings.animeSkipClientId.trim()))
+            put(INTRODB_SUBMIT_ENABLED_KEY, encodeSyncBoolean(settings.introSubmitEnabled))
+            put(INTRODB_API_KEY_KEY, encodeSyncString(settings.introDbApiKey.trim()))
+        }
+    }
+
+    /** Applies each remote value only when present, so blobs from older clients keep the local ones. */
+    fun applyFromSyncPayload(payload: JsonObject) {
+        var applied = 0
+        payload.decodeSyncBoolean(ANIMESKIP_ENABLED_KEY)?.let {
+            PlayerSettingsRepository.setAnimeSkipEnabled(it)
+            applied++
+        }
+        payload.decodeSyncString(ANIMESKIP_CLIENT_ID_KEY)?.let {
+            PlayerSettingsRepository.setAnimeSkipClientId(it.trim())
+            applied++
+        }
+        payload.decodeSyncBoolean(INTRODB_SUBMIT_ENABLED_KEY)?.let {
+            PlayerSettingsRepository.setIntroSubmitEnabled(it)
+            applied++
+        }
+        payload.decodeSyncString(INTRODB_API_KEY_KEY)?.let {
+            PlayerSettingsRepository.setIntroDbApiKey(it.trim())
+            applied++
+        }
+        if (applied > 0) {
+            log.d { "Applied $applied AnimeSkip/IntroDB settings from the profile blob" }
+        }
+    }
+}

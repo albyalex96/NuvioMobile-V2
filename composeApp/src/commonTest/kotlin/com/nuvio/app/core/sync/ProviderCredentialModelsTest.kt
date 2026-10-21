@@ -2,7 +2,6 @@ package com.nuvio.app.core.sync
 
 import com.nuvio.app.features.debrid.DebridSettings
 import com.nuvio.app.features.mdblist.MdbListSettings
-import com.nuvio.app.features.player.PlayerSettingsUiState
 import com.nuvio.app.features.tmdb.TmdbSettings
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -132,6 +131,5 @@ class ProviderCredentialModelsTest {
         debrid = DebridSettings(),
         tmdb = tmdb,
         mdbList = MdbListSettings(),
-        player = PlayerSettingsUiState(),
     )
 }

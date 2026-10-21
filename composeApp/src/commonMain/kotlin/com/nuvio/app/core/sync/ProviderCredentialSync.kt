@@ -9,8 +9,6 @@ import com.nuvio.app.features.debrid.DebridSettings
 import com.nuvio.app.features.debrid.DebridSettingsRepository
 import com.nuvio.app.features.mdblist.MdbListSettings
 import com.nuvio.app.features.mdblist.MdbListSettingsRepository
-import com.nuvio.app.features.player.PlayerSettingsRepository
-import com.nuvio.app.features.player.PlayerSettingsUiState
 import com.nuvio.app.features.profiles.ProfileRepository
 import com.nuvio.app.features.tmdb.TmdbSettings
 import com.nuvio.app.features.tmdb.TmdbSettingsRepository
@@ -155,14 +153,12 @@ object ProviderCredentialSync {
         DebridSettingsRepository.uiState,
         TmdbSettingsRepository.uiState,
         MdbListSettingsRepository.uiState,
-        PlayerSettingsRepository.uiState,
-    ) { _, debrid, tmdb, mdbList, player ->
+    ) { _, debrid, tmdb, mdbList ->
         buildSnapshot(
             profileId = ProfileRepository.activeProfileId,
             debrid = debrid,
             tmdb = tmdb,
             mdbList = mdbList,
-            player = player,
         )
     }
 
@@ -173,7 +169,6 @@ object ProviderCredentialSync {
             debrid = DebridSettingsRepository.snapshot(),
             tmdb = TmdbSettingsRepository.snapshot(),
             mdbList = MdbListSettingsRepository.snapshot(),
-            player = PlayerSettingsRepository.uiState.value,
         )
         check(ProfileRepository.activeProfileId == profileId)
         return snapshot
@@ -184,7 +179,6 @@ object ProviderCredentialSync {
         debrid: DebridSettings,
         tmdb: TmdbSettings,
         mdbList: MdbListSettings,
-        player: PlayerSettingsUiState,
     ): ProviderCredentialSnapshot = ProviderCredentialSnapshot(
         profileId = profileId,
         values = buildList {
@@ -199,20 +193,6 @@ object ProviderCredentialSync {
             }
             add(ProviderCredentialValue(ProviderCredentialIds.TMDB, PROVIDER_API_KEY_FIELD, tmdb.apiKey.trim()))
             add(ProviderCredentialValue(ProviderCredentialIds.MDBLIST, PROVIDER_API_KEY_FIELD, mdbList.apiKey.trim()))
-            add(
-                ProviderCredentialValue(
-                    ProviderCredentialIds.ANIMESKIP,
-                    PROVIDER_CLIENT_ID_FIELD,
-                    player.animeSkipClientId.trim(),
-                ),
-            )
-            add(
-                ProviderCredentialValue(
-                    ProviderCredentialIds.INTRODB,
-                    PROVIDER_API_KEY_FIELD,
-                    player.introDbApiKey.trim(),
-                ),
-            )
         },
     )
 
@@ -234,12 +214,6 @@ object ProviderCredentialSync {
                 }
                 credential.provider == ProviderCredentialIds.MDBLIST -> {
                     MdbListSettingsRepository.setApiKey(credential.value)
-                }
-                credential.provider == ProviderCredentialIds.ANIMESKIP -> {
-                    PlayerSettingsRepository.setAnimeSkipClientId(credential.value)
-                }
-                credential.provider == ProviderCredentialIds.INTRODB -> {
-                    PlayerSettingsRepository.setIntroDbApiKey(credential.value)
                 }
             }
         }
@@ -298,6 +272,5 @@ object ProviderCredentialSync {
         DebridSettingsRepository.ensureLoaded()
         TmdbSettingsRepository.ensureLoaded()
         MdbListSettingsRepository.ensureLoaded()
-        PlayerSettingsRepository.ensureLoaded()
     }
 }
