@@ -1,9 +1,12 @@
 package com.nuvio.app.features.player
 
+import com.nuvio.app.features.opensubtitles.OPENSUBTITLES_PROVIDER_NAME
+import com.nuvio.app.features.opensubtitles.OpenSubtitlesSubtitleSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,16 +42,35 @@ object SubtitleRepository {
             _addonSubtitles.value = emptyList()
 
             val requests = addonSubtitleRequests(type, videoId)
-            if (requests.isEmpty()) {
+            val includeOpenSubtitles = OpenSubtitlesSubtitleSource.isActiveFor(type, videoId)
+            if (requests.isEmpty() && !includeOpenSubtitles) {
                 _isLoading.value = false
                 return@launch
             }
 
-            _loadingProgress.value = SubtitleLoadingProgress(total = requests.size)
-            loadAddonSubtitles(requests) { request, subtitles ->
-                _addonSubtitles.update { it + subtitles }
-                _loadingProgress.update { progress ->
-                    progress?.copy(completed = progress.completed + 1, addonName = request.addonName)
+            val total = requests.size + if (includeOpenSubtitles) 1 else 0
+            _loadingProgress.value = SubtitleLoadingProgress(total = total)
+            coroutineScope {
+                if (includeOpenSubtitles) {
+                    launch {
+                        val subtitles = OpenSubtitlesSubtitleSource.fetch(type, videoId)
+                        // Integration results always come after the addon ones.
+                        _addonSubtitles.update { it + subtitles }
+                        _loadingProgress.update { progress ->
+                            progress?.copy(completed = progress.completed + 1, addonName = OPENSUBTITLES_PROVIDER_NAME)
+                        }
+                    }
+                }
+                if (requests.isNotEmpty()) {
+                    loadAddonSubtitles(requests) { request, subtitles ->
+                        _addonSubtitles.update { current ->
+                            val (integrations, addons) = current.partition { it.source != AddonSubtitleSource.Addon }
+                            addons + subtitles + integrations
+                        }
+                        _loadingProgress.update { progress ->
+                            progress?.copy(completed = progress.completed + 1, addonName = request.addonName)
+                        }
+                    }
                 }
             }
 

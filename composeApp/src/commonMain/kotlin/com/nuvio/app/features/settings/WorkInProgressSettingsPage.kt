@@ -67,7 +67,6 @@ internal fun LazyListScope.workInProgressIntegrationContent(
             SettingsPage.MyAnimeList -> IntegrationLogo.MyAnimeList
             SettingsPage.Kitsu -> IntegrationLogo.Kitsu
             SettingsPage.AniList -> IntegrationLogo.AniList
-            SettingsPage.OpenSubtitles -> IntegrationLogo.OpenSubtitles
             SettingsPage.SubDl -> IntegrationLogo.SubDl
             SettingsPage.Telegram -> IntegrationLogo.Telegram
             else -> null

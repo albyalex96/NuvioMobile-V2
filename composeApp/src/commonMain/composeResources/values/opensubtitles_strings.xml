@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="opensubtitles_section_search">Search</string>
+    <string name="opensubtitles_enabled">Enable OpenSubtitles</string>
+    <string name="opensubtitles_enabled_description">Look for subtitles on OpenSubtitles and show them in the player subtitle panel</string>
+    <string name="opensubtitles_api_key">API key</string>
+    <string name="opensubtitles_api_key_description">Create a consumer on opensubtitles.com/consumers and paste its API key. It is synced with your profile.</string>
+    <string name="opensubtitles_api_key_invalid">OpenSubtitles rejected this API key</string>
+    <string name="opensubtitles_languages">Languages</string>
+    <string name="opensubtitles_languages_description">Languages to fetch from OpenSubtitles</string>
+    <string name="opensubtitles_languages_player_default">Player preferred subtitle languages</string>
+    <string name="opensubtitles_languages_clear">Use player languages</string>
+    <string name="opensubtitles_hearing_impaired">Hearing impaired subtitles</string>
+    <string name="opensubtitles_hearing_impaired_description">Include subtitles with sound descriptions (SDH)</string>
+    <string name="opensubtitles_machine_translated">Automatic translations</string>
+    <string name="opensubtitles_machine_translated_description">Include subtitles translated by AI or machine translation</string>
+    <string name="opensubtitles_download_failed">Could not download the OpenSubtitles subtitle (daily limit reached or invalid key)</string>
+</resources>

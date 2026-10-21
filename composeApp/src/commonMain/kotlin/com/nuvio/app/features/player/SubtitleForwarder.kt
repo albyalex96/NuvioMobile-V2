@@ -32,10 +32,13 @@ object SubtitleForwarder {
 
                 val allSubtitles = SubtitleRepository.addonSubtitles.value
 
+                // OpenSubtitles files need a quota-limited download link: not forwarded.
                 val filtered = allSubtitles.filter { subtitle ->
-                    languageMatchesPreference(subtitle.language, preferredLanguage) ||
-                        (secondaryLanguage != null &&
-                            languageMatchesPreference(subtitle.language, secondaryLanguage))
+                    subtitle.source == AddonSubtitleSource.Addon && (
+                        languageMatchesPreference(subtitle.language, preferredLanguage) ||
+                            (secondaryLanguage != null &&
+                                languageMatchesPreference(subtitle.language, secondaryLanguage))
+                        )
                 }
 
                 filtered.map { subtitle ->

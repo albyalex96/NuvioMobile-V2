@@ -6,10 +6,12 @@ import androidx.compose.runtime.LaunchedEffect
 import com.nuvio.app.features.autosync.AutoSyncPlayerController
 import com.nuvio.app.features.autosync.AutoSyncPreferencesRepository
 import com.nuvio.app.features.autosync.AutoSyncSubtitleCandidate
+import com.nuvio.app.features.opensubtitles.isOpenSubtitlesPlaceholderUrl
 import kotlinx.coroutines.flow.collect
 
+// OpenSubtitles files are left out: each check would spend a quota-limited download.
 private fun List<AddonSubtitle>.toAutoSyncCandidates(): List<AutoSyncSubtitleCandidate> =
-    map { subtitle ->
+    filter { it.source == AddonSubtitleSource.Addon }.map { subtitle ->
         AutoSyncSubtitleCandidate(
             url = subtitle.url,
             language = subtitle.language,
@@ -25,7 +27,8 @@ internal fun PlayerScreenRuntime.configureAutoSyncController(
 ) {
     controller.setAutoSyncSubtitleCandidates(currentAutoSyncCandidates())
     controller.setAutoSyncAppliedListener { subtitleUrl, delayMs ->
-        val appliedSubtitle = addonSubtitles.firstOrNull { it.url == subtitleUrl }
+        val listedUrl = listedExternalSubtitleUrl(subtitleUrl)
+        val appliedSubtitle = addonSubtitles.firstOrNull { it.url == listedUrl }
         selectedAddonSubtitleId = appliedSubtitle?.selectionKey ?: subtitleUrl
         selectedSubtitleIndex = -1
         useCustomSubtitles = true
@@ -81,10 +84,16 @@ internal fun PlayerScreenRuntime.BindAutoSyncRuntimeEffects() {
 /** The user picked an addon subtitle: let AutoSync check it without replacing their choice. */
 internal fun PlayerScreenRuntime.attachSelectedAddonSubtitleWithAutoSync(url: String) {
     subtitleAutoSyncState = SubtitleAutoSyncUiState()
+    if (isOpenSubtitlesPlaceholderUrl(url)) {
+        // Cached local file: AutoSync only works on remote add-on subtitles.
+        attachExternalSubtitleUrl(url) { playerController?.setSubtitleUri(it) }
+        return
+    }
     playerController?.setSubtitleUriWithSelectedAutoSync(url)
 }
 
 internal fun PlayerScreenRuntime.maybeAutoSyncRestoredSubtitleAtStart(url: String): Boolean {
+    if (isOpenSubtitlesPlaceholderUrl(url)) return false
     val controller = playerController ?: return false
     if (controller !is AutoSyncPlayerController) return false
     if (!AutoSyncPreferencesRepository.claimStartupRun(hashCode(), activePlaybackIdentity)) {
@@ -98,6 +107,7 @@ internal fun PlayerScreenRuntime.maybeAutoSyncPreferredSubtitleAtStart(
     subtitle: AddonSubtitle,
 ): Boolean {
     if (isUserExplicitSubtitleSelection) return false
+    if (isOpenSubtitlesPlaceholderUrl(subtitle.url)) return false
     val preferredLanguage =
         normalizeLanguageCode(playerSettingsUiState.preferredSubtitleLanguage) ?: return false
     if (

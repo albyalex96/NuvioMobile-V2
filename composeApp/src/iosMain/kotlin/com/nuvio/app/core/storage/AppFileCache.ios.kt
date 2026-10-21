@@ -16,6 +16,8 @@ internal actual object AppFileCache {
     actual fun read(path: String): String? =
         NSString.stringWithContentsOfFile("$root/$path", NSUTF8StringEncoding, null)
 
+    actual fun fileUri(path: String): String? = "file://$root/$path"
+
     actual fun write(path: String, payload: String) {
         val target = "$root/$path"
         NSFileManager.defaultManager.createDirectoryAtPath(target.substringBeforeLast('/'), true, null, null)

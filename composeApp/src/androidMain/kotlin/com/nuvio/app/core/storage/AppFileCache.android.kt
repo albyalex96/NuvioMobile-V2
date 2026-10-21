@@ -19,6 +19,9 @@ internal actual object AppFileCache {
             ?.takeIf { it.isFile && it.length() > 0L }
             ?.let { runCatching { it.readText() }.getOrNull() }
 
+    actual fun fileUri(path: String): String? =
+        root?.resolve(path)?.let { android.net.Uri.fromFile(it).toString() }
+
     actual fun write(path: String, payload: String) {
         val target = root?.resolve(path) ?: return
         val directory = target.parentFile ?: return

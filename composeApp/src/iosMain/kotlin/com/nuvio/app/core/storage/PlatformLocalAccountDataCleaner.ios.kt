@@ -23,6 +23,8 @@ internal actual object PlatformLocalAccountDataCleaner {
         "watch_progress_payload_",
     )
     private val profileScopedBaseKeys = listOf(
+        // OpenSubtitles (OpenSubtitlesStorage.ios.kt)
+        "opensubtitles_settings_payload",
         "episode_shuffle",
         "catalog_settings_payload",
         "discover_catalog_key",

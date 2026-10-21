@@ -41,6 +41,7 @@ internal actual object PlatformLocalAccountDataCleaner {
         "nuvio_member_access",
         "nuvio_live_tv",
         "nuvio_discord_rpc",
+        "nuvio_opensubtitles",
     )
 
     private var appContext: Context? = null

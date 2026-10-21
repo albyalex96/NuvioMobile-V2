@@ -36,6 +36,8 @@ import com.nuvio.app.features.plugins.PluginGroupingSync
 import com.nuvio.app.features.home.HomeCatalogSettingsRepository
 import com.nuvio.app.features.home.HomeHeroProfileSync
 import com.nuvio.app.features.discord.DiscordRpcProfileSync
+import com.nuvio.app.features.opensubtitles.OpenSubtitlesProfileSync
+import com.nuvio.app.features.opensubtitles.OpenSubtitlesRepository
 import com.nuvio.app.features.discord.DiscordRpcRepository
 import com.nuvio.app.features.plugins.PluginRepository
 import com.nuvio.app.features.tmdb.TmdbSettingsStorage
@@ -217,6 +219,7 @@ object ProfileSettingsSync {
             LiveTvRepository.uiState.map { "live_tv_${LiveTvProfileSync.syncSignature(it)}" }.distinctUntilChanged(),
             HomeCatalogSettingsRepository.uiState.map(HomeHeroProfileSync::syncSignature).distinctUntilChanged(),
             DiscordRpcRepository.uiState.map(DiscordRpcProfileSync::syncSignature).distinctUntilChanged(),
+            OpenSubtitlesRepository.uiState.map(OpenSubtitlesProfileSync::syncSignature).distinctUntilChanged(),
             DebridSettingsRepository.uiState.map { "debrid" },
             TmdbSettingsRepository.uiState.map { "tmdb" },
             MdbListSettingsRepository.uiState.map { "mdblist" },
@@ -280,7 +283,8 @@ object ProfileSettingsSync {
                         MediaProxySettingsRepository.exportToSyncPayload() +
                         LiveTvProfileSync.exportToSyncPayload() +
                         HomeHeroProfileSync.exportToSyncPayload() +
-                        DiscordRpcProfileSync.exportToSyncPayload(),
+                        DiscordRpcProfileSync.exportToSyncPayload() +
+                        OpenSubtitlesProfileSync.exportToSyncPayload(),
                 ),
                 debridSettings = withoutProfileCredentials(
                     PROFILE_DEBRID_SETTINGS_FEATURE,
@@ -346,6 +350,7 @@ object ProfileSettingsSync {
         LiveTvProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
         HomeHeroProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
         DiscordRpcProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
+        OpenSubtitlesProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
 
         DebridSettingsStorage.replaceFromSyncPayload(
             preservingLocalProfileCredentials(

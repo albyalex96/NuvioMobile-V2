@@ -117,7 +117,12 @@ internal class SidecarSubtitleController(
         sidecarSubtitleJob = scope.launch {
             try {
                 val rawBody = rawBodyLoader?.invoke() ?: withContext(Dispatchers.IO) {
-                    httpGetTextWithHeaders(url = url, headers = headers)
+                    // Cached integration files (OpenSubtitles) are local: OkHttp cannot read file://.
+                    if (url.startsWith("file:", ignoreCase = true)) {
+                        java.io.File(java.net.URI(url)).readText()
+                    } else {
+                        httpGetTextWithHeaders(url = url, headers = headers)
+                    }
                 }
                 if (!isCurrent()) return@launch
 

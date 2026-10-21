@@ -32,7 +32,14 @@ data class AddonSubtitle(
     val display: String,
     val addonName: String? = null,
     val isSelected: Boolean = false,
+    val source: AddonSubtitleSource = AddonSubtitleSource.Addon,
 )
+
+/** Who provided an external subtitle: a Stremio addon (or the stream) or an integration. */
+enum class AddonSubtitleSource {
+    Addon,
+    OpenSubtitles,
+}
 
 const val SUBTITLE_DELAY_MIN_MS = -60_000
 const val SUBTITLE_DELAY_MAX_MS = 60_000

@@ -195,6 +195,7 @@ object ProfileRepository {
         com.nuvio.app.features.livetv.LiveTvRepository.onProfileChanged()
         ServerRepository.onProfileChanged()
         com.nuvio.app.features.discord.DiscordRpcRepository.onProfileChanged()
+        com.nuvio.app.features.opensubtitles.OpenSubtitlesRepository.onProfileChanged()
         ProfileSettingsSync.onProfileChanged()
     }
 

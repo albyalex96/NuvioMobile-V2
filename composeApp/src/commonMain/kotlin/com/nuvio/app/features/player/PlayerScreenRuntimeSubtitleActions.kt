@@ -30,7 +30,7 @@ internal fun PlayerScreenRuntime.loadSubtitleAutoSyncCues(force: Boolean = false
     subtitleAutoSyncState = subtitleAutoSyncState.copy(isLoading = true, errorMessage = null)
     scope.launch {
         val result = runCatching {
-            val body = httpGetTextWithHeaders(
+            val body = openSubtitlesText(subtitle.url) ?: httpGetTextWithHeaders(
                 url = subtitle.url,
                 headers = sanitizePlaybackHeaders(activeSourceHeaders),
             )

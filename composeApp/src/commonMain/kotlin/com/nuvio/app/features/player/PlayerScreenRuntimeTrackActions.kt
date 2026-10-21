@@ -141,7 +141,7 @@ internal fun PlayerScreenRuntime.restorePersistedTrackPreferenceIfNeeded(): Bool
                     selectedSubtitleIndex = -1
                     useCustomSubtitles = true
                     if (!maybeAutoSyncRestoredSubtitleAtStart(subtitle.url)) { // AutoSync hook
-                        playerController?.setSubtitleUri(subtitle.url)
+                        attachExternalSubtitleUrl(subtitle.url) { playerController?.setSubtitleUri(it) }
                     }
                     preferredSubtitleSelectionApplied = true
                     isUserExplicitSubtitleSelection = true
@@ -268,7 +268,7 @@ private fun PlayerScreenRuntime.tryAutoSelectPreferredSubtitleFromAvailableTrack
                 selectedSubtitleIndex = -1
                 useCustomSubtitles = true
                 if (!maybeAutoSyncPreferredSubtitleAtStart(primaryAddonMatch)) { // AutoSync hook
-                    playerController?.setSubtitleUri(primaryAddonMatch.url)
+                    attachExternalSubtitleUrl(primaryAddonMatch.url) { playerController?.setSubtitleUri(it) }
                 }
                 return
             }
@@ -311,7 +311,7 @@ private fun PlayerScreenRuntime.tryAutoSelectPreferredSubtitleFromAvailableTrack
             selectedAddonSubtitleId = forcedAddonMatch.selectionKey
             selectedSubtitleIndex = -1
             useCustomSubtitles = true
-            playerController?.setSubtitleUri(forcedAddonMatch.url)
+            attachExternalSubtitleUrl(forcedAddonMatch.url) { playerController?.setSubtitleUri(it) }
         } else {
             disableAutomaticSubtitleSelection()
         }
@@ -351,7 +351,7 @@ private fun PlayerScreenRuntime.tryAutoSelectPreferredSubtitleFromAvailableTrack
         selectedSubtitleIndex = -1
         useCustomSubtitles = true
         if (!maybeAutoSyncPreferredSubtitleAtStart(addonMatch)) { // AutoSync hook
-            playerController?.setSubtitleUri(addonMatch.url)
+            attachExternalSubtitleUrl(addonMatch.url) { playerController?.setSubtitleUri(it) }
         }
     } else if (!preferredSubtitleSelectionApplied) {
         disableAutomaticSubtitleSelection()

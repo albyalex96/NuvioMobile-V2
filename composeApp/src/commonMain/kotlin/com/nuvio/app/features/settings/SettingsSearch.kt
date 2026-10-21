@@ -1504,12 +1504,28 @@ private fun addAdditionalSearchEntries(
         row(SettingsPage.IntroDb, item.key, item.title, item.description, introDbPage, introDbPage, icon = Icons.Rounded.SkipNext)
     }
 
+    val openSubtitlesPage = stringResource(Res.string.compose_settings_page_opensubtitles)
+    addPage(SettingsPage.OpenSubtitles, "opensubtitles", openSubtitlesPage, stringResource(Res.string.settings_integrations_opensubtitles_description), generalCategory, Icons.Rounded.Subtitles)
+    val openSubtitlesSearchSection = stringResource(Res.string.opensubtitles_section_search)
+    listOf(
+        PlaybackSearchRow("opensubtitles-enabled", stringResource(Res.string.opensubtitles_enabled), stringResource(Res.string.opensubtitles_enabled_description)),
+        PlaybackSearchRow("opensubtitles-key", stringResource(Res.string.opensubtitles_api_key), stringResource(Res.string.opensubtitles_api_key_description)),
+    ).forEach { item ->
+        row(SettingsPage.OpenSubtitles, item.key, item.title, item.description, openSubtitlesPage, openSubtitlesPage, icon = Icons.Rounded.Subtitles)
+    }
+    listOf(
+        PlaybackSearchRow("opensubtitles-languages", stringResource(Res.string.opensubtitles_languages), stringResource(Res.string.opensubtitles_languages_description)),
+        PlaybackSearchRow("opensubtitles-hearing-impaired", stringResource(Res.string.opensubtitles_hearing_impaired), stringResource(Res.string.opensubtitles_hearing_impaired_description)),
+        PlaybackSearchRow("opensubtitles-machine-translated", stringResource(Res.string.opensubtitles_machine_translated), stringResource(Res.string.opensubtitles_machine_translated_description)),
+    ).forEach { item ->
+        row(SettingsPage.OpenSubtitles, item.key, item.title, item.description, openSubtitlesPage, openSubtitlesSearchSection, icon = Icons.Rounded.Subtitles)
+    }
+
     // Integrations: placeholder pages (work in progress)
     addPage(SettingsPage.SkipDb, "skipdb", stringResource(Res.string.compose_settings_page_skipdb), stringResource(Res.string.settings_integrations_skipdb_description), generalCategory, Icons.Rounded.SkipNext)
     addPage(SettingsPage.MyAnimeList, "myanimelist", stringResource(Res.string.compose_settings_page_myanimelist), stringResource(Res.string.settings_integrations_myanimelist_description), generalCategory, Icons.Rounded.ViewList)
     addPage(SettingsPage.Kitsu, "kitsu", stringResource(Res.string.compose_settings_page_kitsu), stringResource(Res.string.settings_integrations_kitsu_description), generalCategory, Icons.Rounded.ViewList)
     addPage(SettingsPage.AniList, "anilist", stringResource(Res.string.compose_settings_page_anilist), stringResource(Res.string.settings_integrations_anilist_description), generalCategory, Icons.Rounded.ViewList)
-    addPage(SettingsPage.OpenSubtitles, "opensubtitles", stringResource(Res.string.compose_settings_page_opensubtitles), stringResource(Res.string.settings_integrations_opensubtitles_description), generalCategory, Icons.Rounded.Subtitles)
     addPage(SettingsPage.SubDl, "subdl", stringResource(Res.string.compose_settings_page_subdl), stringResource(Res.string.settings_integrations_subdl_description), generalCategory, Icons.Rounded.Subtitles)
     addPage(SettingsPage.AiAssistant, "ai-assistant", stringResource(Res.string.compose_settings_page_ai_assistant), stringResource(Res.string.settings_integrations_ai_assistant_description), generalCategory, Icons.Rounded.AutoAwesome)
     addPage(SettingsPage.Telegram, "telegram", stringResource(Res.string.compose_settings_page_telegram), stringResource(Res.string.settings_integrations_telegram_description), generalCategory, Icons.Rounded.Send)

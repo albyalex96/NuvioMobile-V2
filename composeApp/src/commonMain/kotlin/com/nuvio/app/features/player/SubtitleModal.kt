@@ -3,6 +3,7 @@ package com.nuvio.app.features.player
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,11 +26,14 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.CloudDownload
+import androidx.compose.material.icons.rounded.Extension
+import androidx.compose.material.icons.rounded.Subtitles
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -49,6 +53,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.core.ui.withDuplicateSafeLazyKeys
+import com.nuvio.app.features.settings.IntegrationLogo
+import com.nuvio.app.features.settings.integrationLogoPainter
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.addon_title
 import nuvio.composeapp.generated.resources.compose_player_built_in
@@ -402,12 +408,14 @@ private fun SubtitleOptionRow(
 ) {
     val tokens = MaterialTheme.nuvio
     val sourceLabel: String
+    val sourceKind: SubtitleSourceKind
     val title: String
     val metadata: String?
 
     when (option) {
         is SubtitleSelectionOption.BuiltIn -> {
             sourceLabel = stringResource(Res.string.compose_player_built_in)
+            sourceKind = SubtitleSourceKind.BuiltIn
             title = localizedTrackDisplayName(
                 option.track.label,
                 option.track.language,
@@ -422,6 +430,10 @@ private fun SubtitleOptionRow(
 
         is SubtitleSelectionOption.Addon -> {
             sourceLabel = option.subtitle.addonName ?: stringResource(Res.string.addon_title)
+            sourceKind = when (option.subtitle.source) {
+                AddonSubtitleSource.Addon -> SubtitleSourceKind.Addon
+                AddonSubtitleSource.OpenSubtitles -> SubtitleSourceKind.OpenSubtitles
+            }
             title = languageLabelForCode(option.subtitle.language)
             metadata = option.subtitle.display.takeIf { it.isNotBlank() && it != title }
         }
@@ -445,7 +457,7 @@ private fun SubtitleOptionRow(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                SubtitleSourceChip(label = sourceLabel, selected = selected)
+                SubtitleSourceChip(label = sourceLabel, kind = sourceKind, selected = selected)
                 (option as? SubtitleSelectionOption.Addon)?.let {
                     AutoSyncedChip(it.subtitle.url, selected) // AutoSync hook
                 }
@@ -480,33 +492,69 @@ private fun SubtitleOptionRow(
     }
 }
 
+private enum class SubtitleSourceKind {
+    BuiltIn,
+    Addon,
+    OpenSubtitles,
+}
+
+/** Brand-like colour of the chips of subtitles found by the OpenSubtitles integration. */
+private val OpenSubtitlesChipColor = Color(0xFF2E9D63)
+
 @Composable
 private fun SubtitleSourceChip(
     label: String,
+    kind: SubtitleSourceKind,
     selected: Boolean,
 ) {
     val tokens = MaterialTheme.nuvio
     val shape = RoundedCornerShape(999.dp)
+    val isIntegration = kind == SubtitleSourceKind.OpenSubtitles
+    val contentColor = when {
+        isIntegration -> Color.White
+        selected -> tokens.colors.onAccent.copy(alpha = 0.9f)
+        else -> Color.White.copy(alpha = 0.78f)
+    }
 
-    Box(
+    Row(
         modifier = Modifier
             .clip(shape)
             .background(
-                if (selected) tokens.colors.onAccent.copy(alpha = 0.14f)
-                else Color.White.copy(alpha = 0.08f),
-            )
-            .then(
-                if (selected) {
-                    Modifier.border(1.dp, tokens.colors.onAccent.copy(alpha = 0.22f), shape)
-                } else {
-                    Modifier
+                when {
+                    isIntegration -> OpenSubtitlesChipColor.copy(alpha = if (selected) 1f else 0.85f)
+                    selected -> tokens.colors.onAccent.copy(alpha = 0.14f)
+                    else -> Color.White.copy(alpha = 0.08f)
                 },
             )
-            .padding(horizontal = 8.dp, vertical = 3.dp),
+            .then(
+                when {
+                    isIntegration && selected -> Modifier.border(1.dp, Color.White.copy(alpha = 0.45f), shape)
+                    selected -> Modifier.border(1.dp, tokens.colors.onAccent.copy(alpha = 0.22f), shape)
+                    else -> Modifier
+                },
+            )
+            .padding(start = 6.dp, end = 8.dp, top = 3.dp, bottom = 3.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
+        when (kind) {
+            SubtitleSourceKind.OpenSubtitles -> Image(
+                painter = integrationLogoPainter(IntegrationLogo.OpenSubtitles),
+                contentDescription = null,
+                modifier = Modifier
+                    .size(12.dp)
+                    .clip(CircleShape),
+            )
+            SubtitleSourceKind.BuiltIn, SubtitleSourceKind.Addon -> Icon(
+                imageVector = if (kind == SubtitleSourceKind.Addon) Icons.Rounded.Extension else Icons.Rounded.Subtitles,
+                contentDescription = null,
+                tint = contentColor,
+                modifier = Modifier.size(12.dp),
+            )
+        }
         Text(
             text = label,
-            color = if (selected) tokens.colors.onAccent.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.78f),
+            color = contentColor,
             style = MaterialTheme.typography.labelSmall,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,

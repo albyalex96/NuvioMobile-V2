@@ -85,6 +85,7 @@ internal object LocalAccountDataCleaner {
         P2pSettingsRepository.clearLocalState()
         com.nuvio.app.features.livetv.LiveTvRepository.clearLocalState()
         com.nuvio.app.features.discord.DiscordRpcRepository.clearLocalState()
+        com.nuvio.app.features.opensubtitles.OpenSubtitlesRepository.clearLocalState()
         CatalogRepository.clear()
         StreamsRepository.clear()
         MetaDetailsRepository.clear()
