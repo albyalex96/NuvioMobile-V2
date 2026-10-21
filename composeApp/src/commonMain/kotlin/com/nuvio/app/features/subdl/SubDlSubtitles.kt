@@ -12,6 +12,9 @@ import com.nuvio.app.features.player.resolvePreferredSubtitleLanguageTargets
 import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.atomicfu.locks.synchronized
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -124,6 +127,7 @@ internal fun subDlQueryFor(type: String, videoId: String): SubDlQuery? {
 /** Languages to ask for: the chosen ones, or the player's preferred subtitle languages. */
 internal fun subDlSearchLanguages(settings: SubDlSettings): List<String> {
     val chosen = settings.languages.ifEmpty {
+        PlayerSettingsRepository.ensureLoaded()
         val player = PlayerSettingsRepository.uiState.value
         resolvePreferredSubtitleLanguageTargets(
             preferredSubtitleLanguage = player.preferredSubtitleLanguage,
@@ -161,6 +165,20 @@ internal fun List<SubDlSubtitleItem>.filterFor(query: SubDlQuery, settings: SubD
         item.episode == null || item.episode == 0 || item.episode == query.episode
     }
 
+/**
+ * Strict check for the results of a whole-season search, where an item without an episode number
+ * may be any episode: packs, items of the episode, or items whose name says `S05E08` / `5x08`.
+ */
+internal fun SubDlSubtitleItem.belongsToEpisode(query: SubDlQuery): Boolean {
+    val season = query.season ?: return true
+    val episode = query.episode ?: return true
+    if (isSeasonPack(query)) return true
+    if (this.episode != null && this.episode != 0) return this.episode == episode
+    val names = listOfNotNull(releaseName, name).joinToString(" ")
+    return Regex("(?i)s0*$season[ ._-]*e0*$episode(?!\\d)").containsMatchIn(names) ||
+        Regex("(?i)(?<!\\d)0*${season}x0*$episode(?!\\d)").containsMatchIn(names)
+}
+
 internal fun SubDlSubtitleItem.toAddonSubtitle(query: SubDlQuery): AddonSubtitle? {
     val path = url?.takeIf { it.isNotBlank() } ?: return null
     val placeholder = SubDlPlaceholder(archivePath = path, season = query.season, episode = query.episode)
@@ -197,7 +215,7 @@ internal object SubDlSubtitleSource {
         }
         val languages = subDlSearchLanguages(settings)
         return try {
-            val items = SubDlApi.search(settings.apiKey, query, languages)
+            val items = searchEachLanguage(settings, query, languages)
             val subtitles = items
                 .filterFor(query, settings)
                 // Single-episode files first: packs need the right file picked from the archive.
@@ -206,7 +224,8 @@ internal object SubDlSubtitleSource {
                 .distinctBy { it.url }
             log.i {
                 "Found ${subtitles.size} subtitles for $videoId (${items.size} before filters, " +
-                    "languages=${languages.ifEmpty { listOf("all") }})"
+                    "languages=${languages.ifEmpty { listOf("all") }}, " +
+                    "by language=${subtitles.groupingBy { it.language }.eachCount()})"
             }
             subtitles
         } catch (error: CancellationException) {
@@ -215,6 +234,64 @@ internal object SubDlSubtitleSource {
             log.e(error) { "Search failed for $videoId" }
             emptyList()
         }
+    }
+
+    /**
+     * One search per language, merged in preference order: SubDL returns at most 30 subtitles per
+     * search, so asking several languages together lets the most common one (usually English) fill
+     * the page and hide the preferred one. Fails only when every search fails.
+     */
+    private suspend fun searchEachLanguage(
+        settings: SubDlSettings,
+        query: SubDlQuery,
+        languages: List<String>,
+    ): List<SubDlSubtitleItem> {
+        // null = no language filter (SubDL returns every language).
+        val searches: List<String?> = languages.ifEmpty { listOf(null) }
+        val results = coroutineScope {
+            searches.map { language ->
+                async { language to runCatching { searchLanguage(settings, query, language) } }
+            }.awaitAll()
+        }
+        results.forEach { (language, result) ->
+            result.exceptionOrNull()?.let { error ->
+                if (error is CancellationException) throw error
+                log.w(error) { "Search failed for language ${language ?: "all"}" }
+            }
+        }
+        if (results.all { it.second.isFailure }) throw results.first().second.exceptionOrNull()!!
+        return results.flatMap { it.second.getOrDefault(emptyList()) }
+    }
+
+    /**
+     * Searches one language. For an episode with no usable result it also searches the whole
+     * season: many subtitles (Italian ones above all) are only on SubDL as season packs, which the
+     * episode search does not return.
+     */
+    private suspend fun searchLanguage(
+        settings: SubDlSettings,
+        query: SubDlQuery,
+        language: String?,
+    ): List<SubDlSubtitleItem> {
+        val languages = listOfNotNull(language)
+        val label = language ?: "all"
+        val items = SubDlApi.search(settings.apiKey, query, languages)
+        val usable = items.filterFor(query, settings).size
+        log.d { "Language $label: ${items.size} subtitles, $usable usable" }
+        if (!query.isEpisode || usable > 0) return items
+        val seasonItems = try {
+            SubDlApi.search(settings.apiKey, query.copy(episode = null), languages)
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            log.w(error) { "Season search failed for language $label" }
+            return items
+        }
+        log.d {
+            "Language $label: season ${query.season} search gave ${seasonItems.size} subtitles, " +
+                "${seasonItems.filterFor(query, settings).size} usable for episode ${query.episode}"
+        }
+        return items + seasonItems.filter { it.belongsToEpisode(query) }
     }
 }
 

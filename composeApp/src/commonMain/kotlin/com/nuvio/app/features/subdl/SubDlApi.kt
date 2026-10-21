@@ -84,10 +84,11 @@ internal object SubDlApi {
             add("api_key" to apiKey)
             query.imdbId?.let { add("imdb_id" to it) }
             if (query.imdbId == null) query.tmdbId?.let { add("tmdb_id" to it.toString()) }
-            if (query.isEpisode) {
+            if (query.season != null) {
                 add("type" to "tv")
                 add("season_number" to query.season.toString())
-                add("episode_number" to query.episode.toString())
+                // Without the episode the search covers the whole season (packs included).
+                query.episode?.let { add("episode_number" to it.toString()) }
             } else {
                 add("type" to "movie")
             }

@@ -104,4 +104,26 @@ class SubDlSubtitlesTest {
         assertEquals("ciao", decodeSubtitleBytes(utf16))
         assertTrue(decodeSubtitleBytes(ByteArray(0)).isEmpty())
     }
+
+    @Test
+    fun seasonSearchKeepsOnlyTheEpisode() {
+        val query = SubDlQuery(imdbId = "tt1586680", season = 5, episode = 8)
+        assertTrue(SubDlSubtitleItem(url = "/a.zip", fullSeason = true).belongsToEpisode(query))
+        assertTrue(SubDlSubtitleItem(url = "/b.zip", episode = 8).belongsToEpisode(query))
+        assertTrue(!SubDlSubtitleItem(url = "/c.zip", episode = 3).belongsToEpisode(query))
+        assertTrue(SubDlSubtitleItem(url = "/d.zip", releaseName = "Shameless.US.S05E08.HDTV").belongsToEpisode(query))
+        assertTrue(SubDlSubtitleItem(url = "/e.zip", releaseName = "Shameless 5x08 ita").belongsToEpisode(query))
+        assertTrue(!SubDlSubtitleItem(url = "/f.zip", releaseName = "Shameless.US.S05E18.HDTV").belongsToEpisode(query))
+        assertTrue(!SubDlSubtitleItem(url = "/g.zip", releaseName = "Shameless.US.S05.ita").belongsToEpisode(query))
+    }
+
+    @Test
+    fun searchUrlCoversSeasonOnlyQueries() {
+        val episode = SubDlApi.searchUrl("k", SubDlQuery(imdbId = "tt1", season = 5, episode = 8), listOf("IT"))
+        assertTrue("type=tv" in episode && "season_number=5" in episode && "episode_number=8" in episode)
+        val season = SubDlApi.searchUrl("k", SubDlQuery(imdbId = "tt1", season = 5), listOf("IT"))
+        assertTrue("type=tv" in season && "season_number=5" in season && "episode_number" !in season)
+        val movie = SubDlApi.searchUrl("k", SubDlQuery(imdbId = "tt1"), emptyList())
+        assertTrue("type=movie" in movie && "languages" !in movie)
+    }
 }

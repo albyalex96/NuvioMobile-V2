@@ -11,6 +11,9 @@ import com.nuvio.app.features.player.resolvePreferredSubtitleLanguageTargets
 import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.atomicfu.locks.synchronized
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -80,6 +83,7 @@ internal fun openSubtitlesQueryFor(type: String, videoId: String): OpenSubtitles
 /** Languages to ask for: the chosen ones, or the player's preferred subtitle languages. */
 internal fun openSubtitlesSearchLanguages(settings: OpenSubtitlesSettings): List<String> {
     val chosen = settings.languages.ifEmpty {
+        PlayerSettingsRepository.ensureLoaded()
         val player = PlayerSettingsRepository.uiState.value
         resolvePreferredSubtitleLanguageTargets(
             preferredSubtitleLanguage = player.preferredSubtitleLanguage,
@@ -128,12 +132,13 @@ internal object OpenSubtitlesSubtitleSource {
         }
         val languages = openSubtitlesSearchLanguages(settings)
         return try {
-            val items = OpenSubtitlesApi.search(settings.apiKey, query, languages, settings)
-            val subtitles = items
-                .sortedWith(
-                    compareByDescending<OpenSubtitlesSearchItem> { it.attributes.fromTrusted }
-                        .thenByDescending { it.attributes.downloadCount },
-                )
+            val subtitles = searchEachLanguage(settings, query, languages)
+                .flatMap { items ->
+                    items.sortedWith(
+                        compareByDescending<OpenSubtitlesSearchItem> { it.attributes.fromTrusted }
+                            .thenByDescending { it.attributes.downloadCount },
+                    )
+                }
                 .flatMap { it.toAddonSubtitles() }
                 .distinctBy { it.url }
             log.i { "Found ${subtitles.size} subtitles for $videoId (languages=${languages.ifEmpty { listOf("all") }})" }
@@ -144,6 +149,36 @@ internal object OpenSubtitlesSubtitleSource {
             log.e(error) { "Search failed for $videoId" }
             emptyList()
         }
+    }
+
+    /**
+     * One search per language, in preference order (each list sorted on its own): OpenSubtitles
+     * returns one page of results, so asking several languages together lets the most downloaded
+     * one (usually English) fill the page and hide the preferred one. Fails only when every
+     * search fails.
+     */
+    private suspend fun searchEachLanguage(
+        settings: OpenSubtitlesSettings,
+        query: OpenSubtitlesQuery,
+        languages: List<String>,
+    ): List<List<OpenSubtitlesSearchItem>> {
+        if (languages.size <= 1) return listOf(OpenSubtitlesApi.search(settings.apiKey, query, languages, settings))
+        val results = coroutineScope {
+            languages.map { language ->
+                async {
+                    language to runCatching { OpenSubtitlesApi.search(settings.apiKey, query, listOf(language), settings) }
+                }
+            }.awaitAll()
+        }
+        results.forEach { (language, result) ->
+            result.exceptionOrNull()?.let { error ->
+                if (error is CancellationException) throw error
+                log.w(error) { "Search failed for language $language" }
+            }
+            result.getOrNull()?.let { log.d { "Language $language: ${it.size} results" } }
+        }
+        if (results.all { it.second.isFailure }) throw results.first().second.exceptionOrNull()!!
+        return results.map { it.second.getOrDefault(emptyList()) }
     }
 }
 
