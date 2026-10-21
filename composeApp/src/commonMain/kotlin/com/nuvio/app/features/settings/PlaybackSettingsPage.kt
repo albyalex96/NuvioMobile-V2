@@ -61,6 +61,7 @@ import com.nuvio.app.features.player.exoNativeMemoryInfo
 import com.nuvio.app.features.player.isExoNativeMemorySupported
 import com.nuvio.app.features.player.playbackCacheUsableSpaceBytes
 import com.nuvio.app.features.player.AndroidPlaybackEngine
+import com.nuvio.app.features.player.SubtitleSizeFormFactor
 import com.nuvio.app.features.player.AudioLanguageOption
 import com.nuvio.app.features.player.AvailableLanguageOptions
 import com.nuvio.app.features.player.ExternalPlayerApp
@@ -649,18 +650,31 @@ private fun PlaybackSettingsSection(
             val subtitleRenderingEnabled = !autoPlayPlayerSettings.externalPlayerEnabled
             SettingsGroup(isTablet = isTablet) {
                 val subtitleStyle = autoPlayPlayerSettings.subtitleStyle
-                SettingsSliderRow(
-                    title = stringResource(Res.string.settings_playback_subtitle_size),
-                    value = subtitleStyle.fontSizeSp,
-                    valueText = { size -> stringResource(Res.string.compose_player_font_size_value, size) },
-                    valueRange = subtitleFontSizeRangeSp,
-                    step = 2,
-                    isTablet = isTablet,
-                    enabled = subtitleRenderingEnabled,
-                    onValueChange = { value ->
-                        PlayerSettingsRepository.setSubtitleStyle(subtitleStyle.copy(fontSizeSp = value))
-                    },
-                )
+                // One size per device class (phone, tablet, TV), each synced with the profile;
+                // this device's class comes first.
+                val subtitleSizeFormFactors = SubtitleSizeFormFactor.entries.sortedBy {
+                    it != autoPlayPlayerSettings.subtitleSizeFormFactor
+                }
+                subtitleSizeFormFactors.forEachIndexed { index, formFactor ->
+                    if (index > 0) SettingsGroupDivider(isTablet = isTablet)
+                    val formFactorTitle = stringResource(subtitleSizeTitleRes(formFactor))
+                    SettingsSliderRow(
+                        title = if (formFactor == autoPlayPlayerSettings.subtitleSizeFormFactor) {
+                            stringResource(Res.string.settings_playback_subtitle_size_this_device, formFactorTitle)
+                        } else {
+                            formFactorTitle
+                        },
+                        value = autoPlayPlayerSettings.subtitleFontSizesSp[formFactor] ?: subtitleStyle.fontSizeSp,
+                        valueText = { size -> stringResource(Res.string.compose_player_font_size_value, size) },
+                        valueRange = subtitleFontSizeRangeSp,
+                        step = 2,
+                        isTablet = isTablet,
+                        enabled = subtitleRenderingEnabled,
+                        onValueChange = { value ->
+                            PlayerSettingsRepository.setSubtitleFontSize(formFactor, value)
+                        },
+                    )
+                }
                 SettingsGroupDivider(isTablet = isTablet)
                 SettingsSliderRow(
                     title = stringResource(Res.string.settings_playback_subtitle_vertical_offset),
@@ -2918,4 +2932,10 @@ private fun formatStillWatchingLiveTvMinutes(minutes: Int): String {
         rest == 0 -> "$hours h"
         else -> "$hours h $rest min"
     }
+}
+
+internal fun subtitleSizeTitleRes(formFactor: SubtitleSizeFormFactor): StringResource = when (formFactor) {
+    SubtitleSizeFormFactor.Mobile -> Res.string.settings_playback_subtitle_size_mobile
+    SubtitleSizeFormFactor.Tablet -> Res.string.settings_playback_subtitle_size_tablet
+    SubtitleSizeFormFactor.Tv -> Res.string.settings_playback_subtitle_size_tv
 }

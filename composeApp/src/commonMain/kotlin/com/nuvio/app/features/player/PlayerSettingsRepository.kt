@@ -61,6 +61,10 @@ data class PlayerSettingsUiState(
     val preferredSubtitleLanguage: String = SubtitleLanguageOption.NONE,
     val secondaryPreferredSubtitleLanguage: String? = null,
     val subtitleStyle: SubtitleStyleState = SubtitleStyleState.DEFAULT,
+    /** Subtitle size of each device class; [subtitleStyle] carries the one of this device. */
+    val subtitleFontSizesSp: Map<SubtitleSizeFormFactor, Int> =
+        SubtitleSizeFormFactor.entries.associateWith { SubtitleStyleState.DEFAULT.fontSizeSp },
+    val subtitleSizeFormFactor: SubtitleSizeFormFactor = SubtitleSizeFormFactor.Mobile,
     val streamReuseLastLinkEnabled: Boolean = false,
     val streamReuseLastLinkCacheHours: Int = 24,
     val androidPlaybackEngine: AndroidPlaybackEngine = AndroidPlaybackEngine.Auto,
@@ -151,6 +155,8 @@ object PlayerSettingsRepository {
     private var preferredSubtitleLanguage = SubtitleLanguageOption.NONE
     private var secondaryPreferredSubtitleLanguage: String? = null
     private var subtitleStyle = SubtitleStyleState.DEFAULT
+    private var subtitleFontSizesSp = defaultSubtitleFontSizes()
+    private var subtitleSizeFormFactor = SubtitleSizeFormFactor.Mobile
     private var streamReuseLastLinkEnabled = false
     private var streamReuseLastLinkCacheHours = 24
     private var androidPlaybackEngine = AndroidPlaybackEngine.Auto
@@ -246,6 +252,7 @@ object PlayerSettingsRepository {
         preferredSubtitleLanguage = SubtitleLanguageOption.NONE
         secondaryPreferredSubtitleLanguage = null
         subtitleStyle = SubtitleStyleState.DEFAULT
+        subtitleFontSizesSp = defaultSubtitleFontSizes()
         streamReuseLastLinkEnabled = false
         streamReuseLastLinkCacheHours = 24
         androidPlaybackEngine = AndroidPlaybackEngine.Auto
@@ -356,8 +363,7 @@ object PlayerSettingsRepository {
                 ?: SubtitleStyleState.DEFAULT.outlineWidth,
             bold = PlayerSettingsStorage.loadSubtitleBold()
                 ?: SubtitleStyleState.DEFAULT.bold,
-            fontSizeSp = (PlayerSettingsStorage.loadSubtitleFontSizeSp()
-                ?: SubtitleStyleState.DEFAULT.fontSizeSp).coerceIn(subtitleFontSizeRangeSp),
+            fontSizeSp = SubtitleStyleState.DEFAULT.fontSizeSp,
             bottomOffset = PlayerSettingsStorage.loadSubtitleBottomOffset()
                 ?: SubtitleStyleState.DEFAULT.bottomOffset,
             stripSdh = PlayerSettingsStorage.loadSubtitleStripSdh()
@@ -367,6 +373,15 @@ object PlayerSettingsRepository {
             showOnlyPreferredLanguages = PlayerSettingsStorage.loadSubtitleShowOnlyPreferredLanguages()
                 ?: SubtitleStyleState.DEFAULT.showOnlyPreferredLanguages,
         )
+        subtitleSizeFormFactor = currentSubtitleSizeFormFactor()
+        // Sizes saved before the per-device split live in the legacy key: every class starts from it.
+        val legacySubtitleFontSizeSp = PlayerSettingsStorage.loadSubtitleFontSizeSp()
+            ?: SubtitleStyleState.DEFAULT.fontSizeSp
+        subtitleFontSizesSp = SubtitleSizeFormFactor.entries.associateWith { formFactor ->
+            (PlayerSettingsStorage.loadSubtitleFontSizeSp(formFactor) ?: legacySubtitleFontSizeSp)
+                .coerceIn(subtitleFontSizeRangeSp)
+        }
+        subtitleStyle = subtitleStyle.copy(fontSizeSp = subtitleFontSizesSp.getValue(subtitleSizeFormFactor))
         streamReuseLastLinkEnabled = PlayerSettingsStorage.loadStreamReuseLastLinkEnabled() ?: false
         streamReuseLastLinkCacheHours = PlayerSettingsStorage.loadStreamReuseLastLinkCacheHours() ?: 24
         androidPlaybackEngine = PlayerSettingsStorage.loadAndroidPlaybackEngine()
@@ -645,8 +660,14 @@ object PlayerSettingsRepository {
         ensureLoaded()
         val normalized = style.copy(fontSizeSp = style.fontSizeSp.coerceIn(subtitleFontSizeRangeSp))
         if (subtitleStyle == normalized) return
+        val sizeChanged = subtitleStyle.fontSizeSp != normalized.fontSizeSp
         subtitleStyle = normalized
+        subtitleFontSizesSp = subtitleFontSizesSp + (subtitleSizeFormFactor to normalized.fontSizeSp)
         publish()
+        if (sizeChanged) {
+            PlayerSettingsStorage.saveSubtitleFontSizeSp(subtitleSizeFormFactor, normalized.fontSizeSp)
+            Logger.d(SUBTITLE_SIZE_LOG_TAG) { "Subtitle size of ${subtitleSizeFormFactor.storageSuffix} set to ${normalized.fontSizeSp} sp" }
+        }
         PlayerSettingsStorage.saveSubtitleTextColor(normalized.textColor.toStorageHexString())
         PlayerSettingsStorage.saveSubtitleBackgroundColor(normalized.backgroundColor.toStorageHexString())
         PlayerSettingsStorage.saveSubtitleOutlineColor(normalized.outlineColor.toStorageHexString())
@@ -658,6 +679,21 @@ object PlayerSettingsRepository {
         PlayerSettingsStorage.saveSubtitleStripSdh(normalized.stripSdh)
         PlayerSettingsStorage.saveSubtitleUseForcedSubtitles(normalized.useForcedSubtitles)
         PlayerSettingsStorage.saveSubtitleShowOnlyPreferredLanguages(normalized.showOnlyPreferredLanguages)
+    }
+
+    /** Size of one device class, editable from any device; this device's one also updates the style. */
+    fun setSubtitleFontSize(formFactor: SubtitleSizeFormFactor, fontSizeSp: Int) {
+        ensureLoaded()
+        if (formFactor == subtitleSizeFormFactor) {
+            setSubtitleStyle(subtitleStyle.copy(fontSizeSp = fontSizeSp))
+            return
+        }
+        val normalized = fontSizeSp.coerceIn(subtitleFontSizeRangeSp)
+        if (subtitleFontSizesSp[formFactor] == normalized) return
+        subtitleFontSizesSp = subtitleFontSizesSp + (formFactor to normalized)
+        publish()
+        PlayerSettingsStorage.saveSubtitleFontSizeSp(formFactor, normalized)
+        Logger.d(SUBTITLE_SIZE_LOG_TAG) { "Subtitle size of ${formFactor.storageSuffix} set to $normalized sp" }
     }
 
     fun setStreamReuseLastLinkEnabled(enabled: Boolean) {
@@ -1287,6 +1323,8 @@ object PlayerSettingsRepository {
             preferredSubtitleLanguage = preferredSubtitleLanguage,
             secondaryPreferredSubtitleLanguage = secondaryPreferredSubtitleLanguage,
             subtitleStyle = subtitleStyle,
+            subtitleFontSizesSp = subtitleFontSizesSp,
+            subtitleSizeFormFactor = subtitleSizeFormFactor,
             streamReuseLastLinkEnabled = streamReuseLastLinkEnabled,
             streamReuseLastLinkCacheHours = streamReuseLastLinkCacheHours,
             androidPlaybackEngine = androidPlaybackEngine,
@@ -1371,3 +1409,8 @@ internal fun normalizeStillWatchingLiveTvMinutes(minutes: Int): Int {
     val steps = ((clamped - first) + STILL_WATCHING_LIVE_TV_MINUTES_STEP / 2) / STILL_WATCHING_LIVE_TV_MINUTES_STEP
     return (first + steps * STILL_WATCHING_LIVE_TV_MINUTES_STEP).coerceIn(STILL_WATCHING_LIVE_TV_MINUTES_RANGE)
 }
+
+private const val SUBTITLE_SIZE_LOG_TAG = "SubtitleSize"
+
+private fun defaultSubtitleFontSizes(): Map<SubtitleSizeFormFactor, Int> =
+    SubtitleSizeFormFactor.entries.associateWith { SubtitleStyleState.DEFAULT.fontSizeSp }

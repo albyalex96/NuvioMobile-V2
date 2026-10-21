@@ -1273,6 +1273,9 @@ private fun addAdditionalSearchEntries(
     val subtitleRenderingSection = stringResource(Res.string.settings_playback_section_subtitle_rendering)
     val subtitleRenderingRows = listOf(
         PlaybackSearchRow("subtitle-size", stringResource(Res.string.settings_playback_subtitle_size)),
+        PlaybackSearchRow("subtitle-size-mobile", stringResource(Res.string.settings_playback_subtitle_size_mobile), stringResource(Res.string.settings_playback_subtitle_size_per_device_description)),
+        PlaybackSearchRow("subtitle-size-tablet", stringResource(Res.string.settings_playback_subtitle_size_tablet), stringResource(Res.string.settings_playback_subtitle_size_per_device_description)),
+        PlaybackSearchRow("subtitle-size-tv", stringResource(Res.string.settings_playback_subtitle_size_tv), stringResource(Res.string.settings_playback_subtitle_size_per_device_description)),
         PlaybackSearchRow("subtitle-offset", stringResource(Res.string.settings_playback_subtitle_vertical_offset)),
         PlaybackSearchRow("subtitle-bold", stringResource(Res.string.settings_playback_subtitle_bold), stringResource(Res.string.settings_playback_subtitle_bold_description)),
         PlaybackSearchRow("subtitle-text-color", stringResource(Res.string.settings_playback_subtitle_text_color)),

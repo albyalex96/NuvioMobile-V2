@@ -45,6 +45,8 @@ actual object PlayerSettingsStorage {
     private const val subtitleOutlineWidthKey = "subtitle_outline_width"
     private const val subtitleBoldKey = "subtitle_bold"
     private const val subtitleFontSizeSpKey = "subtitle_font_size_sp"
+    private fun subtitleFontSizeSpKey(formFactor: SubtitleSizeFormFactor) =
+        "${subtitleFontSizeSpKey}_${formFactor.storageSuffix}"
     private const val subtitleBottomOffsetKey = "subtitle_bottom_offset"
     private const val subtitleStripSdhKey = "subtitle_strip_sdh"
     private const val subtitleUseForcedSubtitlesKey = "subtitle_use_forced_subtitles"
@@ -140,6 +142,7 @@ actual object PlayerSettingsStorage {
         subtitleOutlineWidthKey,
         subtitleBoldKey,
         subtitleFontSizeSpKey,
+        *SubtitleSizeFormFactor.entries.map(::subtitleFontSizeSpKey).toTypedArray(),
         subtitleBottomOffsetKey,
         subtitleStripSdhKey,
         subtitleUseForcedSubtitlesKey,
@@ -582,6 +585,23 @@ actual object PlayerSettingsStorage {
         preferences
             ?.edit()
             ?.putInt(ProfileScopedKey.of(subtitleFontSizeSpKey), fontSizeSp)
+            ?.apply()
+    }
+
+    actual fun loadSubtitleFontSizeSp(formFactor: SubtitleSizeFormFactor): Int? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(subtitleFontSizeSpKey(formFactor))
+            if (sharedPreferences.contains(key)) {
+                sharedPreferences.getInt(key, SubtitleStyleState.DEFAULT.fontSizeSp)
+            } else {
+                null
+            }
+        }
+
+    actual fun saveSubtitleFontSizeSp(formFactor: SubtitleSizeFormFactor, fontSizeSp: Int) {
+        preferences
+            ?.edit()
+            ?.putInt(ProfileScopedKey.of(subtitleFontSizeSpKey(formFactor)), fontSizeSp)
             ?.apply()
     }
 
@@ -1480,6 +1500,9 @@ actual object PlayerSettingsStorage {
         loadSubtitleOutlineWidth()?.let { put(subtitleOutlineWidthKey, encodeSyncInt(it)) }
         loadSubtitleBold()?.let { put(subtitleBoldKey, encodeSyncBoolean(it)) }
         loadSubtitleFontSizeSp()?.let { put(subtitleFontSizeSpKey, encodeSyncInt(it)) }
+        SubtitleSizeFormFactor.entries.forEach { formFactor ->
+            loadSubtitleFontSizeSp(formFactor)?.let { put(subtitleFontSizeSpKey(formFactor), encodeSyncInt(it)) }
+        }
         loadSubtitleBottomOffset()?.let { put(subtitleBottomOffsetKey, encodeSyncInt(it)) }
         loadSubtitleStripSdh()?.let { put(subtitleStripSdhKey, encodeSyncBoolean(it)) }
         loadSubtitleUseForcedSubtitles()?.let { put(subtitleUseForcedSubtitlesKey, encodeSyncBoolean(it)) }
@@ -1570,6 +1593,9 @@ actual object PlayerSettingsStorage {
         payload.decodeSyncInt(subtitleOutlineWidthKey)?.let(::saveSubtitleOutlineWidth)
         payload.decodeSyncBoolean(subtitleBoldKey)?.let(::saveSubtitleBold)
         payload.decodeSyncInt(subtitleFontSizeSpKey)?.let(::saveSubtitleFontSizeSp)
+        SubtitleSizeFormFactor.entries.forEach { formFactor ->
+            payload.decodeSyncInt(subtitleFontSizeSpKey(formFactor))?.let { saveSubtitleFontSizeSp(formFactor, it) }
+        }
         payload.decodeSyncInt(subtitleBottomOffsetKey)?.let(::saveSubtitleBottomOffset)
         payload.decodeSyncBoolean(subtitleStripSdhKey)?.let(::saveSubtitleStripSdh)
         payload.decodeSyncBoolean(subtitleUseForcedSubtitlesKey)?.let(::saveSubtitleUseForcedSubtitles)
