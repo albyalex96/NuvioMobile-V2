@@ -20,6 +20,7 @@ internal actual object DiscordRpcStorage {
     private const val tokenKey = "token"
     private const val rejectedTokenKey = "rejected_token_fingerprint"
     private const val syncedTokenKey = "synced_token_fingerprint"
+    private const val profileSyncTokenKey = "profile_sync_token"
     private const val keyAlias = "com.nuvio.media.discord.token.v1"
 
     private val log = Logger.withTag(DISCORD_RPC_LOG_TAG)
@@ -61,36 +62,52 @@ internal actual object DiscordRpcStorage {
         saveString(ProfileScopedKey.of(syncedTokenKey), fingerprint)
     }
 
-    actual fun loadToken(): String? = synchronized(lock) {
+    actual fun loadToken(): String? = loadEncrypted(tokenKey)
+
+    actual fun saveToken(token: String?) {
+        saveEncrypted(tokenKey, token?.takeIf { it.isNotBlank() })
+    }
+
+    actual fun loadProfileSyncToken(): String? = loadEncrypted(profileSyncTokenKey)
+
+    actual fun saveProfileSyncToken(token: String?) {
+        saveEncrypted(profileSyncTokenKey, token?.trim())
+    }
+
+    // The account cleaner (`PlatformLocalAccountDataCleaner`) already wipes the whole preferences file.
+    actual fun clearProfileSyncTokens() = Unit
+
+    private fun loadEncrypted(keyBase: String): String? = synchronized(lock) {
         val prefs = preferences ?: return@synchronized null
-        val key = ProfileScopedKey.of(tokenKey)
+        val key = ProfileScopedKey.of(keyBase)
         val value = prefs.getString(key, null) ?: return@synchronized null
         try {
             val parts = value.split('.', limit = 2)
             require(parts.size == 2)
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
             cipher.init(Cipher.DECRYPT_MODE, secretKey(), GCMParameterSpec(128, decode(parts[0])))
-            cipher.updateAAD(AAD)
+            cipher.updateAAD(aad(keyBase))
             cipher.doFinal(decode(parts[1])).toString(Charsets.UTF_8)
         } catch (error: Exception) {
-            log.w(error) { "Stored Discord token unreadable, removing it" }
+            log.w(error) { "Stored Discord value '$keyBase' unreadable, removing it" }
             prefs.edit().remove(key).commit()
             null
         }
     }
 
-    actual fun saveToken(token: String?) {
+    /** Encrypts [value] (an empty string is kept as such); null removes it. */
+    private fun saveEncrypted(keyBase: String, value: String?) {
         synchronized(lock) {
             val prefs = preferences ?: return
-            val key = ProfileScopedKey.of(tokenKey)
+            val key = ProfileScopedKey.of(keyBase)
             val editor = prefs.edit()
-            if (token.isNullOrBlank()) {
+            if (value == null) {
                 editor.remove(key)
             } else {
                 val cipher = Cipher.getInstance("AES/GCM/NoPadding")
                 cipher.init(Cipher.ENCRYPT_MODE, secretKey())
-                cipher.updateAAD(AAD)
-                val encrypted = cipher.doFinal(token.toByteArray(Charsets.UTF_8))
+                cipher.updateAAD(aad(keyBase))
+                val encrypted = cipher.doFinal(value.toByteArray(Charsets.UTF_8))
                 editor.putString(key, "${encode(cipher.iv)}.${encode(encrypted)}")
             }
             editor.commit()
@@ -117,7 +134,7 @@ internal actual object DiscordRpcStorage {
         }
     }
 
-    private val AAD = "$keyAlias:$tokenKey".toByteArray(Charsets.UTF_8)
+    private fun aad(keyBase: String): ByteArray = "$keyAlias:$keyBase".toByteArray(Charsets.UTF_8)
 
     private fun encode(value: ByteArray): String = Base64.encodeToString(value, Base64.NO_WRAP)
 

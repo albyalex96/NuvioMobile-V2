@@ -196,6 +196,10 @@ internal object DiscordRpcRepository {
             ?.let { payload -> runCatching { json.decodeFromString<DiscordRpcUser>(payload) }.getOrNull() }
         val storedToken = runCatching { DiscordRpcStorage.loadToken() }.getOrNull()?.takeIf { it.isNotBlank() }
         token = storedToken
+        // Logins made before the token moved to the profile blob seed it from this device.
+        if (storedToken != null && DiscordRpcStorage.loadProfileSyncToken() == null) {
+            DiscordRpcStorage.saveProfileSyncToken(storedToken)
+        }
         _uiState.value = DiscordRpcUiState(
             isSupported = DiscordRpcPlatform.isSupported,
             isLoggedIn = storedToken != null,
@@ -226,6 +230,7 @@ internal object DiscordRpcRepository {
             stopRpc()
             token = null
             hasLoaded = false
+            DiscordRpcStorage.clearProfileSyncTokens()
             DiscordExternalAssets.clear()
             _uiState.value = DiscordRpcUiState(isSupported = DiscordRpcPlatform.isSupported)
         }
@@ -255,6 +260,8 @@ internal object DiscordRpcRepository {
             DiscordRpcStorage.saveUserPayload(json.encodeToString(user))
             DiscordRpcStorage.saveRejectedTokenFingerprint(null)
             if (fromRemote) DiscordRpcStorage.saveSyncedTokenFingerprint(tokenFingerprint(normalized))
+            // A web login replaces the token carried in the profile blob (pushed by ProfileSettingsSync).
+            if (!fromRemote) DiscordRpcStorage.saveProfileSyncToken(normalized)
             token = normalized
             log.i { "Logged in as ${user.displayName} (${if (fromRemote) "synced from profile" else "web login"})" }
             _uiState.update {
@@ -267,7 +274,6 @@ internal object DiscordRpcRepository {
                     settings = enabledSettings,
                 )
             }
-            if (!fromRemote) DiscordCredentialSync.requestPush(normalized)
             scheduleUpdate(force = true)
         }
     }
@@ -276,21 +282,23 @@ internal object DiscordRpcRepository {
         ensureLoaded()
         scope.launch {
             log.i { "Logged out by the user" }
-            signOut(expired = false)
             // Only an explicit logout clears the token synced with the profile.
-            DiscordCredentialSync.requestPush("")
+            DiscordRpcStorage.saveProfileSyncToken("")
+            signOut(expired = false)
         }
     }
 
-    /** Current token, used to seed the profile sync when the server has none yet. */
-    fun currentToken(): String? {
+    /** Token to carry in the profile blob: null = none known yet (not exported), empty = logged out. */
+    fun profileSyncToken(): String? {
         ensureLoaded()
-        return token
+        return DiscordRpcStorage.loadProfileSyncToken()
     }
 
-    /** Token from the profile sync: blank = logged out on another device. Never pushed back. */
+    /** Token from the profile blob: blank = logged out on another device. */
     fun applyRemoteToken(remoteToken: String) {
         ensureLoaded()
+        DiscordRpcStorage.saveProfileSyncToken(remoteToken.trim())
+        if (!DiscordRpcPlatform.isSupported) return
         scope.launch {
             val normalized = remoteToken.trim()
             when {

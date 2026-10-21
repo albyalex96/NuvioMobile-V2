@@ -38,4 +38,21 @@ internal actual object DiscordRpcStorage {
     actual fun loadSyncedTokenFingerprint(): String? = null
 
     actual fun saveSyncedTokenFingerprint(fingerprint: String?) = Unit
+
+    // Memory only (never in NSUserDefaults): iOS just carries the synced token through the profile
+    // blob, so pushing a blob from an iPhone does not drop the Android devices' Discord login.
+    private val profileSyncTokens = mutableMapOf<String, String>()
+
+    actual fun loadProfileSyncToken(): String? = profileSyncTokens[ProfileScopedKey.of(profileSyncTokenKey)]
+
+    actual fun saveProfileSyncToken(token: String?) {
+        val key = ProfileScopedKey.of(profileSyncTokenKey)
+        if (token == null) profileSyncTokens.remove(key) else profileSyncTokens[key] = token.trim()
+    }
+
+    actual fun clearProfileSyncTokens() {
+        profileSyncTokens.clear()
+    }
+
+    private const val profileSyncTokenKey = "discord_rpc_profile_sync_token"
 }

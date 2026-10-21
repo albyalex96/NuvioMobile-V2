@@ -16,4 +16,15 @@ internal expect object DiscordRpcStorage {
     /** Fingerprint of the token last pushed to / applied from the profile sync. */
     fun loadSyncedTokenFingerprint(): String?
     fun saveSyncedTokenFingerprint(fingerprint: String?)
+
+    /**
+     * Token this device carries in the profile settings blob: null = unknown (nothing exported),
+     * empty = logged out explicitly. Kept apart from [loadToken] because a token Discord rejects
+     * on this device is dropped locally but must not log out the other devices of the profile.
+     */
+    fun loadProfileSyncToken(): String?
+    fun saveProfileSyncToken(token: String?)
+
+    /** Account sign-out: forgets the profile sync tokens of every profile. */
+    fun clearProfileSyncTokens()
 }
