@@ -16,6 +16,8 @@ internal enum class IntegrationLogo {
     AniList,
     SubDl,
     Telegram,
+    SkipDb,
+    OpenSubtitles,
 }
 
 @Composable

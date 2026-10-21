@@ -127,9 +127,9 @@ jobs:
       - name: Build full ${{ inputs.build_type }} APK
         run: |
           if [[ "${BUILD_TYPE}" == "release" ]]; then
-            ./gradlew ":${GRADLE_MODULE}:assembleFullRelease" --stacktrace
+            ./gradlew ":${GRADLE_MODULE}:assembleFullRelease" --stacktrace -Dorg.gradle.jvmargs="-Xmx8g -XX:MaxMetaspaceSize=1536m -Dfile.encoding=UTF-8" -Pkotlin.daemon.jvmargs=-Xmx3g
           else
-            ./gradlew ":${GRADLE_MODULE}:assembleFullDebug" --stacktrace
+            ./gradlew ":${GRADLE_MODULE}:assembleFullDebug" --stacktrace -Dorg.gradle.jvmargs="-Xmx8g -XX:MaxMetaspaceSize=1536m -Dfile.encoding=UTF-8" -Pkotlin.daemon.jvmargs=-Xmx3g
           fi
 
       - name: Upload artifacts

@@ -24,6 +24,7 @@ import nuvio.composeapp.generated.resources.compose_settings_page_discord_rpc
 import nuvio.composeapp.generated.resources.compose_settings_page_anime_skip
 import nuvio.composeapp.generated.resources.compose_settings_page_introdb
 import nuvio.composeapp.generated.resources.compose_settings_page_myanimelist
+import nuvio.composeapp.generated.resources.compose_settings_page_skipdb
 import nuvio.composeapp.generated.resources.compose_settings_page_kitsu
 import nuvio.composeapp.generated.resources.compose_settings_page_anilist
 import nuvio.composeapp.generated.resources.compose_settings_page_opensubtitles
@@ -220,6 +221,11 @@ internal enum class SettingsPage(
     ),
     IntroDb(
         titleRes = Res.string.compose_settings_page_introdb,
+        category = SettingsCategory.General,
+        parentPage = Integrations,
+    ),
+    SkipDb(
+        titleRes = Res.string.compose_settings_page_skipdb,
         category = SettingsCategory.General,
         parentPage = Integrations,
     ),

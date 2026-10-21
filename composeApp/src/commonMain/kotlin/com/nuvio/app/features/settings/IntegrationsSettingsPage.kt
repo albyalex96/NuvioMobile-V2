@@ -5,7 +5,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.LiveTv
-import androidx.compose.material.icons.rounded.Subtitles
 import com.nuvio.app.features.discord.DiscordRpcPlatform
 import nuvio.composeapp.generated.resources.compose_settings_page_ai_assistant
 import nuvio.composeapp.generated.resources.compose_settings_page_anilist
@@ -15,6 +14,7 @@ import nuvio.composeapp.generated.resources.compose_settings_page_introdb
 import nuvio.composeapp.generated.resources.compose_settings_page_kitsu
 import nuvio.composeapp.generated.resources.compose_settings_page_myanimelist
 import nuvio.composeapp.generated.resources.compose_settings_page_opensubtitles
+import nuvio.composeapp.generated.resources.compose_settings_page_skipdb
 import nuvio.composeapp.generated.resources.compose_settings_page_subdl
 import nuvio.composeapp.generated.resources.compose_settings_page_telegram
 import nuvio.composeapp.generated.resources.settings_integrations_ai_assistant_description
@@ -29,6 +29,7 @@ import nuvio.composeapp.generated.resources.settings_integrations_section_extra
 import nuvio.composeapp.generated.resources.settings_integrations_section_lists
 import nuvio.composeapp.generated.resources.settings_integrations_section_subtitles
 import nuvio.composeapp.generated.resources.settings_integrations_section_timestamps
+import nuvio.composeapp.generated.resources.settings_integrations_skipdb_description
 import nuvio.composeapp.generated.resources.settings_integrations_subdl_description
 import nuvio.composeapp.generated.resources.settings_integrations_telegram_description
 import nuvio.composeapp.generated.resources.compose_settings_page_live_tv
@@ -92,6 +93,14 @@ internal fun LazyListScope.integrationsContent(
                     isTablet = isTablet,
                     onClick = { onPageClick(SettingsPage.IntroDb) },
                 )
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsNavigationRow(
+                    title = stringResource(Res.string.compose_settings_page_skipdb),
+                    description = stringResource(Res.string.settings_integrations_skipdb_description),
+                    iconPainter = integrationLogoPainter(IntegrationLogo.SkipDb),
+                    isTablet = isTablet,
+                    onClick = { onPageClick(SettingsPage.SkipDb) },
+                )
             }
         }
     }
@@ -136,7 +145,7 @@ internal fun LazyListScope.integrationsContent(
                 SettingsNavigationRow(
                     title = stringResource(Res.string.compose_settings_page_opensubtitles),
                     description = stringResource(Res.string.settings_integrations_opensubtitles_description),
-                    icon = Icons.Rounded.Subtitles,
+                    iconPainter = integrationLogoPainter(IntegrationLogo.OpenSubtitles),
                     isTablet = isTablet,
                     onClick = { onPageClick(SettingsPage.OpenSubtitles) },
                 )

@@ -926,6 +926,7 @@ private fun MobileSettingsScreen(
                 )
                 SettingsPage.AnimeSkip -> animeSkipSettingsContent(isTablet = false)
                 SettingsPage.IntroDb -> introDbSettingsContent(isTablet = false)
+                SettingsPage.SkipDb,
                 SettingsPage.MyAnimeList,
                 SettingsPage.Kitsu,
                 SettingsPage.AniList,
@@ -1440,6 +1441,7 @@ private fun TabletSettingsScreen(
                     )
                     SettingsPage.AnimeSkip -> animeSkipSettingsContent(isTablet = true)
                     SettingsPage.IntroDb -> introDbSettingsContent(isTablet = true)
+                    SettingsPage.SkipDb,
                     SettingsPage.MyAnimeList,
                     SettingsPage.Kitsu,
                     SettingsPage.AniList,

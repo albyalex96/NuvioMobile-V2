@@ -6,6 +6,8 @@
     <string name="settings_integrations_section_extra">Extra</string>
     <string name="compose_settings_page_anime_skip">AnimeSkip</string>
     <string name="compose_settings_page_introdb">IntroDB</string>
+    <string name="compose_settings_page_skipdb">SkipDB</string>
+    <string name="settings_integrations_skipdb_description">Timestamp aperti e condivisi dalla community per saltare i segmenti</string>
     <string name="compose_settings_page_myanimelist">MyAnimeList</string>
     <string name="compose_settings_page_kitsu">Kitsu</string>
     <string name="compose_settings_page_anilist">AniList</string>

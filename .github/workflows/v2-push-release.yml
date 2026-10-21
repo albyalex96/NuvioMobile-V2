@@ -104,7 +104,7 @@ jobs:
           done
 
       - name: Build full release APKs
-        run: ./gradlew :androidApp:assembleFullRelease --stacktrace
+        run: ./gradlew :androidApp:assembleFullRelease --stacktrace -Dorg.gradle.jvmargs="-Xmx8g -XX:MaxMetaspaceSize=1536m -Dfile.encoding=UTF-8" -Pkotlin.daemon.jvmargs=-Xmx3g
 
       - name: Rename APKs
         env:
@@ -195,7 +195,7 @@ jobs:
           printf '\nNUVIO_RELEASE_STORE_FILE=%s\n' "${keystore_path}" >> local.properties
 
       - name: Build TV release APKs
-        run: ./gradlew :tvApp:assembleFullRelease --stacktrace
+        run: ./gradlew :tvApp:assembleFullRelease --stacktrace -Dorg.gradle.jvmargs="-Xmx8g -XX:MaxMetaspaceSize=1536m -Dfile.encoding=UTF-8" -Pkotlin.daemon.jvmargs=-Xmx3g
 
       - name: Rename APKs
         # The "TV" token in the file name is how the in-app updater tells TV APKs apart

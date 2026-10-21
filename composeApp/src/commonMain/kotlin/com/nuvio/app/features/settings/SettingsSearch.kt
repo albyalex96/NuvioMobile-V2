@@ -1505,6 +1505,7 @@ private fun addAdditionalSearchEntries(
     }
 
     // Integrations: placeholder pages (work in progress)
+    addPage(SettingsPage.SkipDb, "skipdb", stringResource(Res.string.compose_settings_page_skipdb), stringResource(Res.string.settings_integrations_skipdb_description), generalCategory, Icons.Rounded.SkipNext)
     addPage(SettingsPage.MyAnimeList, "myanimelist", stringResource(Res.string.compose_settings_page_myanimelist), stringResource(Res.string.settings_integrations_myanimelist_description), generalCategory, Icons.Rounded.ViewList)
     addPage(SettingsPage.Kitsu, "kitsu", stringResource(Res.string.compose_settings_page_kitsu), stringResource(Res.string.settings_integrations_kitsu_description), generalCategory, Icons.Rounded.ViewList)
     addPage(SettingsPage.AniList, "anilist", stringResource(Res.string.compose_settings_page_anilist), stringResource(Res.string.settings_integrations_anilist_description), generalCategory, Icons.Rounded.ViewList)

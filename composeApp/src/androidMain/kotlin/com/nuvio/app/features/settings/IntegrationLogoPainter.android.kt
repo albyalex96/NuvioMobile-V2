@@ -14,6 +14,8 @@ import nuvio.composeapp.generated.resources.kitsu_logo
 import nuvio.composeapp.generated.resources.anilist_logo
 import nuvio.composeapp.generated.resources.subdl_logo
 import nuvio.composeapp.generated.resources.telegram_logo
+import nuvio.composeapp.generated.resources.skipdb_logo
+import nuvio.composeapp.generated.resources.opensubtitles_logo
 import nuvio.composeapp.generated.resources.introdb_favicon
 import nuvio.composeapp.generated.resources.rating_tmdb
 import org.jetbrains.compose.resources.painterResource as composePainterResource
@@ -33,4 +35,6 @@ internal actual fun integrationLogoPainter(logo: IntegrationLogo): Painter =
         IntegrationLogo.AniList -> composePainterResource(Res.drawable.anilist_logo)
         IntegrationLogo.SubDl -> composePainterResource(Res.drawable.subdl_logo)
         IntegrationLogo.Telegram -> composePainterResource(Res.drawable.telegram_logo)
+        IntegrationLogo.SkipDb -> composePainterResource(Res.drawable.skipdb_logo)
+        IntegrationLogo.OpenSubtitles -> composePainterResource(Res.drawable.opensubtitles_logo)
     }

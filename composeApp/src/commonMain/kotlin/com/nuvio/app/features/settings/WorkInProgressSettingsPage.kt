@@ -25,7 +25,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Construction
-import androidx.compose.material.icons.rounded.Subtitles
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -64,9 +63,11 @@ internal fun LazyListScope.workInProgressIntegrationContent(
             log.d { "Opened placeholder page for ${page.name}" }
         }
         val logo = when (page) {
+            SettingsPage.SkipDb -> IntegrationLogo.SkipDb
             SettingsPage.MyAnimeList -> IntegrationLogo.MyAnimeList
             SettingsPage.Kitsu -> IntegrationLogo.Kitsu
             SettingsPage.AniList -> IntegrationLogo.AniList
+            SettingsPage.OpenSubtitles -> IntegrationLogo.OpenSubtitles
             SettingsPage.SubDl -> IntegrationLogo.SubDl
             SettingsPage.Telegram -> IntegrationLogo.Telegram
             else -> null
@@ -76,7 +77,6 @@ internal fun LazyListScope.workInProgressIntegrationContent(
             name = stringResource(page.titleRes),
             iconPainter = logo?.let { integrationLogoPainter(it) },
             icon = when (page) {
-                SettingsPage.OpenSubtitles -> Icons.Rounded.Subtitles
                 SettingsPage.AiAssistant -> Icons.Rounded.AutoAwesome
                 else -> null
             },
