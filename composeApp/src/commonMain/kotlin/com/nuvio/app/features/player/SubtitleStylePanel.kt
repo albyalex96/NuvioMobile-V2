@@ -10,19 +10,32 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -30,6 +43,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.ui.nuvio
@@ -54,6 +68,10 @@ import nuvio.composeapp.generated.resources.compose_player_select_addon_subtitle
 import nuvio.composeapp.generated.resources.compose_player_style
 import nuvio.composeapp.generated.resources.compose_player_subtitle_delay
 import nuvio.composeapp.generated.resources.compose_player_text_opacity
+import nuvio.composeapp.generated.resources.subtitle_sync_hint
+import nuvio.composeapp.generated.resources.subtitle_sync_lines_count
+import nuvio.composeapp.generated.resources.subtitle_sync_load_earlier
+import nuvio.composeapp.generated.resources.subtitle_sync_load_later
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -332,6 +350,13 @@ private fun SubtitleColorPicker(
     }
 }
 
+private const val AUTO_SYNC_INITIAL_LINES_AROUND = 10
+private const val AUTO_SYNC_LINES_PAGE = 20
+
+/** Index of the cue starting closest to [positionMs] in start-sorted [cues], -1 when empty. */
+internal fun nearestSubtitleCueIndex(cues: List<SubtitleSyncCue>, positionMs: Long): Int =
+    cues.indices.minByOrNull { abs(cues[it].startTimeMs - positionMs) } ?: -1
+
 @Composable
 private fun SubtitleAutoSyncSection(
     selectedAddonSubtitle: AddonSubtitle?,
@@ -342,10 +367,27 @@ private fun SubtitleAutoSyncSection(
 ) {
     val tokens = MaterialTheme.nuvio
     val capturedPositionMs = state.capturedPositionMs
-    val nearestCues = if (capturedPositionMs == null) {
-        emptyList()
-    } else {
-        state.cues.sortedBy { abs(it.startTimeMs - capturedPositionMs) }.take(5)
+    val sortedCues = remember(state.cues) { state.cues.sortedBy { it.startTimeMs } }
+    val nearestIndex = remember(sortedCues, capturedPositionMs) {
+        capturedPositionMs?.let { nearestSubtitleCueIndex(sortedCues, it) } ?: -1
+    }
+    // Window of lines around the captured one, widened on demand at both ends. Items are keyed,
+    // so the list keeps the visible line in place when earlier lines are added above it.
+    var linesBefore by remember(sortedCues, capturedPositionMs) { mutableIntStateOf(AUTO_SYNC_INITIAL_LINES_AROUND) }
+    var linesAfter by remember(sortedCues, capturedPositionMs) { mutableIntStateOf(AUTO_SYNC_INITIAL_LINES_AROUND) }
+    var appliedCue by remember(sortedCues, capturedPositionMs) { mutableStateOf<SubtitleSyncCue?>(null) }
+    val firstIndex = if (nearestIndex < 0) 0 else (nearestIndex - linesBefore).coerceAtLeast(0)
+    val lastIndex = if (nearestIndex < 0) -1 else (nearestIndex + linesAfter).coerceAtMost(sortedCues.lastIndex)
+    val visibleCues = if (lastIndex < firstIndex) emptyList() else sortedCues.subList(firstIndex, lastIndex + 1)
+    val hasEarlier = firstIndex > 0
+    val hasLater = lastIndex in 0 until sortedCues.lastIndex
+    val listState = rememberLazyListState()
+
+    // Bring the captured line near the top of the list when a new moment is captured.
+    LaunchedEffect(nearestIndex, capturedPositionMs) {
+        if (nearestIndex < 0) return@LaunchedEffect
+        val target = nearestIndex - firstIndex + if (hasEarlier) 1 else 0
+        listState.scrollToItem((target - 2).coerceAtLeast(0))
     }
 
     SubtitleStyleSection(title = stringResource(Res.string.compose_player_auto_sync)) {
@@ -379,38 +421,153 @@ private fun SubtitleAutoSyncSection(
                 )
             }
 
-            capturedPositionMs != null && nearestCues.isEmpty() -> {
+            capturedPositionMs != null && visibleCues.isEmpty() -> {
                 SubtitleHelperText(stringResource(Res.string.compose_player_no_subtitle_lines_found))
+            }
+
+            capturedPositionMs != null -> {
+                SubtitleHelperText(stringResource(Res.string.subtitle_sync_hint))
             }
         }
 
-        nearestCues.forEach { cue ->
-            Row(
+        if (capturedPositionMs != null && visibleCues.isNotEmpty()) {
+            LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color.White.copy(alpha = 0.06f))
-                    .clickable { onCueSelected(cue) }
-                    .padding(horizontal = 10.dp, vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.Top,
+                    .heightIn(max = 280.dp)
+                    .clip(RoundedCornerShape(10.dp)),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                Text(
-                    text = formatCueTimestamp(cue.startTimeMs),
-                    color = tokens.colors.accent,
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                )
-                Text(
-                    text = cue.text,
-                    modifier = Modifier.weight(1f),
-                    color = Color.White,
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                if (hasEarlier) {
+                    item(key = "load_earlier") {
+                        SubtitleLoadMoreRow(
+                            label = stringResource(Res.string.subtitle_sync_load_earlier),
+                            icon = Icons.Rounded.KeyboardArrowUp,
+                            onClick = { linesBefore += AUTO_SYNC_LINES_PAGE },
+                        )
+                    }
+                }
+                itemsIndexed(
+                    items = visibleCues,
+                    key = { index, cue -> "cue_${firstIndex + index}_${cue.startTimeMs}" },
+                ) { index, cue ->
+                    SubtitleSyncCueRow(
+                        cue = cue,
+                        offsetMs = cue.startTimeMs - capturedPositionMs,
+                        isNearest = firstIndex + index == nearestIndex,
+                        isApplied = cue == appliedCue,
+                        onClick = {
+                            appliedCue = cue
+                            onCueSelected(cue)
+                        },
+                    )
+                }
+                if (hasLater) {
+                    item(key = "load_later") {
+                        SubtitleLoadMoreRow(
+                            label = stringResource(Res.string.subtitle_sync_load_later),
+                            icon = Icons.Rounded.KeyboardArrowDown,
+                            onClick = { linesAfter += AUTO_SYNC_LINES_PAGE },
+                        )
+                    }
+                }
             }
+            Text(
+                text = stringResource(Res.string.subtitle_sync_lines_count, visibleCues.size, sortedCues.size),
+                color = Color.White.copy(alpha = 0.5f),
+                style = MaterialTheme.typography.labelSmall,
+            )
         }
+    }
+}
+
+@Composable
+private fun SubtitleSyncCueRow(
+    cue: SubtitleSyncCue,
+    offsetMs: Long,
+    isNearest: Boolean,
+    isApplied: Boolean,
+    onClick: () -> Unit,
+) {
+    val tokens = MaterialTheme.nuvio
+    val shape = RoundedCornerShape(8.dp)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(
+                when {
+                    isApplied -> tokens.colors.accent.copy(alpha = 0.35f)
+                    isNearest -> Color.White.copy(alpha = 0.14f)
+                    else -> Color.White.copy(alpha = 0.06f)
+                },
+            )
+            .then(if (isNearest) Modifier.border(1.dp, tokens.colors.accent.copy(alpha = 0.6f), shape) else Modifier)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Column {
+            Text(
+                text = formatCueTimestamp(cue.startTimeMs),
+                color = tokens.colors.accent,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Text(
+                text = formatCueOffset(offsetMs),
+                color = Color.White.copy(alpha = 0.55f),
+                style = MaterialTheme.typography.labelSmall,
+            )
+        }
+        Text(
+            text = cue.text,
+            modifier = Modifier.weight(1f),
+            color = Color.White,
+            style = MaterialTheme.typography.bodySmall,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis,
+        )
+        if (isApplied) {
+            Icon(
+                imageVector = Icons.Rounded.Check,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun SubtitleLoadMoreRow(
+    label: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color.White.copy(alpha = 0.04f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = Color.White.copy(alpha = 0.75f),
+            modifier = Modifier.size(18.dp),
+        )
+        Text(
+            text = label,
+            color = Color.White.copy(alpha = 0.75f),
+            style = MaterialTheme.typography.labelMedium,
+        )
     }
 }
 
@@ -478,9 +635,21 @@ private fun formatSubtitleDelay(delayMs: Int): String {
 
 private fun formatCueTimestamp(timeMs: Long): String {
     val totalSeconds = (timeMs / 1000L).coerceAtLeast(0L)
-    val minutes = totalSeconds / 60L
+    val hours = totalSeconds / 3600L
+    val minutes = (totalSeconds % 3600L) / 60L
     val seconds = totalSeconds % 60L
-    return "$minutes:${seconds.toString().padStart(2, '0')}"
+    return if (hours > 0) {
+        "$hours:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}"
+    } else {
+        "$minutes:${seconds.toString().padStart(2, '0')}"
+    }
+}
+
+/** Distance of a line from the captured moment, e.g. `-1.2s`, `+0.4s`. */
+internal fun formatCueOffset(offsetMs: Long): String {
+    val sign = if (offsetMs >= 0) "+" else "-"
+    val tenths = (abs(offsetMs) + 50) / 100
+    return "$sign${tenths / 10}.${tenths % 10}s"
 }
 
 private val SubtitleOutlineColorSwatches = listOf(

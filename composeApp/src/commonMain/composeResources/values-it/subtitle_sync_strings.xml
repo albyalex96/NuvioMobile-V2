@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="subtitle_sync_load_earlier">Carica battute precedenti</string>
+    <string name="subtitle_sync_load_later">Carica battute successive</string>
+    <string name="subtitle_sync_hint">Tocca la battuta che hai appena sentito: i sottotitoli vengono spostati per allinearla</string>
+    <string name="subtitle_sync_lines_count">%1$d di %2$d battute</string>
+</resources>

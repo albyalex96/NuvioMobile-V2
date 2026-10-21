@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="subtitle_sync_load_earlier">Load earlier lines</string>
+    <string name="subtitle_sync_load_later">Load later lines</string>
+    <string name="subtitle_sync_hint">Tap the line you just heard: the subtitles are shifted to match it</string>
+    <string name="subtitle_sync_lines_count">%1$d of %2$d lines</string>
+</resources>
