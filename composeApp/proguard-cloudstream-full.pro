@@ -66,3 +66,18 @@
 -dontwarn org.mozilla.javascript.**
 -dontwarn com.google.re2j.**
 
+
+# HTTP and HTML libraries that CloudStream providers link against by their original names
+# (NiceHttp exposes OkHttp types; most providers parse pages with Jsoup). Without these,
+# release builds crash with NoClassDefFoundError (e.g. okhttp3.Request$Builder).
+-keep class okhttp3.** { *; }
+-keep interface okhttp3.** { *; }
+-dontwarn okhttp3.**
+-keep class okio.** { *; }
+-keep interface okio.** { *; }
+-dontwarn okio.**
+-keep class org.jsoup.** { *; }
+-keep interface org.jsoup.** { *; }
+-dontwarn org.jsoup.**
+-keep class org.conscrypt.** { *; }
+-dontwarn org.conscrypt.**

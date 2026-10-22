@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.ContextWrapper
 import android.content.res.AssetManager
 import android.content.res.Resources
+import android.os.Looper
 import co.touchlab.kermit.Logger
 import com.lagradost.api.setContext
 import com.lagradost.cloudstream3.APIHolder
@@ -37,6 +38,7 @@ import dalvik.system.PathClassLoader
 import java.io.File
 import java.lang.ref.WeakReference
 import java.util.Collections
+import java.util.WeakHashMap
 import java.util.zip.ZipFile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -59,11 +61,51 @@ internal actual object CloudStreamPlatformRuntime {
     private val loaded = linkedMapOf<String, LoadedPlugin>()
     private var appContext: Context? = null
     private var activityReference: WeakReference<Activity>? = null
+    private val pluginClassLoaders = Collections.newSetFromMap(WeakHashMap<ClassLoader, Boolean>())
+    @Volatile private var crashGuardInstalled = false
+    private const val MAX_CRASH_CAUSE_DEPTH = 8
+    private const val MAX_CRASH_FRAMES = 40
 
     actual fun initialize(context: Any?) {
         val androidContext = context as? Context ?: return
         appContext = androidContext.applicationContext
         activityReference = (androidContext as? Activity)?.let(::WeakReference)
+        installPluginCrashGuard()
+    }
+
+    /**
+     * Plugins are third-party code that may launch their own coroutines or threads: an uncaught
+     * error there (e.g. a missing host class) must not take the whole app down. Failures thrown
+     * from classes owned by a plugin class loader on a background thread are logged and dropped.
+     */
+    private fun installPluginCrashGuard() {
+        if (crashGuardInstalled) return
+        crashGuardInstalled = true
+        val previous = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, error ->
+            if (thread !== Looper.getMainLooper().thread && isPluginFailure(error)) {
+                log.e(error) { "CloudStream plugin failure contained thread=${thread.name}" }
+            } else {
+                previous?.uncaughtException(thread, error)
+            }
+        }
+    }
+
+    private fun isPluginFailure(error: Throwable): Boolean {
+        val loaders = synchronized(pluginClassLoaders) { pluginClassLoaders.toList() }
+        if (loaders.isEmpty()) return false
+        val checked = mutableSetOf<String>()
+        return generateSequence(error) { it.cause }
+            .take(MAX_CRASH_CAUSE_DEPTH)
+            .flatMap { it.stackTrace.asSequence().take(MAX_CRASH_FRAMES) }
+            .map(StackTraceElement::getClassName)
+            .filter(checked::add)
+            .any { className ->
+                loaders.any { loader ->
+                    runCatching { Class.forName(className, false, loader).classLoader === loader }
+                        .getOrDefault(false)
+                }
+            }
     }
 
     actual suspend fun provider(plugin: CloudStreamPluginItem): CloudStreamProvider? {
@@ -125,6 +167,7 @@ internal actual object CloudStreamPlatformRuntime {
         val pluginClassName = manifest.pluginClassName?.takeIf(String::isNotBlank)
             ?: error("CloudStream manifest has no pluginClassName")
         val loader = PathClassLoader(file.absolutePath, context.classLoader)
+        synchronized(pluginClassLoaders) { pluginClassLoaders += loader }
         val pluginClass = loader.loadClass(pluginClassName)
         require(BasePlugin::class.java.isAssignableFrom(pluginClass)) {
             "CloudStream entry point does not extend BasePlugin"
