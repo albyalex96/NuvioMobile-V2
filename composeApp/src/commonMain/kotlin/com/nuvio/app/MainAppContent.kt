@@ -61,6 +61,7 @@ import com.nuvio.app.core.build.AppFeaturePolicy
 import com.nuvio.app.core.deeplink.AppDeepLink
 import com.nuvio.app.core.deeplink.AppDeepLinkRepository
 import com.nuvio.app.core.deeplink.ContinueWatchingLaunchAction
+import com.nuvio.app.features.search.ExternalSearchLauncher
 import co.touchlab.kermit.Logger
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
 import com.nuvio.app.core.network.NetworkCondition
@@ -829,6 +830,18 @@ internal fun MainAppContent(
                         appGateController?.appReady?.first { it }
                         navController.navigate(PartyRoute(code = deepLink.code, title = watchPartyTitle)) {
                             launchSingleTop = true
+                        }
+                        AppDeepLinkRepository.markConsumed(deepLink)
+                    }
+
+                    is AppDeepLink.Search -> {
+                        appGateController?.appReady?.first { it }
+                        ExternalSearchLauncher.request(deepLink.query)
+                        activateTab(AppScreenTab.Search)
+                        val match = ExternalSearchLauncher.awaitExactMatch(deepLink.query)
+                        // Opens the title only if the user is still looking at the results.
+                        if (match != null && selectedTab == AppScreenTab.Search && navBackStack.lastOrNull() is TabsRoute) {
+                            navController.openPreview(match)
                         }
                         AppDeepLinkRepository.markConsumed(deepLink)
                     }

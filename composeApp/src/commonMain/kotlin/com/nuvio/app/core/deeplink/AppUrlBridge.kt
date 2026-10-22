@@ -28,6 +28,11 @@ internal sealed interface AppDeepLink {
         val code: String,
     ) : AppDeepLink
 
+    /** A search started from outside the app (Android TV voice search / Google Assistant). */
+    data class Search(
+        val query: String,
+    ) : AppDeepLink
+
     /** A "continue watching" entry opened from outside the app (Android TV launcher). */
     data class ContinueWatching(
         val item: ContinueWatchingItem,
@@ -90,6 +95,9 @@ fun buildMetaDeepLinkUrl(
 }
 
 fun buildDownloadsDeepLinkUrl(): String = "nuvio://downloads"
+
+fun buildSearchDeepLinkUrl(query: String): String =
+    "nuvio://search?q=${query.trim().encodeURLParameter()}"
 
 /**
  * `nuvio://continue?...` link of a continue-watching entry. It carries everything needed to
@@ -162,6 +170,11 @@ internal fun parseAppDeepLink(url: String): AppDeepLink? {
 
         "continue" -> parseContinueWatchingDeepLink(parsedUrl)
 
+        "search" -> (firstParameter(parsedUrl, "q", "query") ?: pathSegments.firstOrNull())
+            ?.let(::cleanExternalSearchQuery)
+            ?.takeIf(String::isNotBlank)
+            ?.let(AppDeepLink::Search)
+
         "auth" -> null
 
         else -> {
@@ -173,6 +186,18 @@ internal fun parseAppDeepLink(url: String): AppDeepLink? {
         }
     }
 }
+
+/**
+ * Assistant queries may still carry the app name ("criminal minds su nuvio"): it is not part
+ * of the title, so it is dropped.
+ */
+internal fun cleanExternalSearchQuery(query: String): String =
+    query.trim()
+        .replace(externalSearchAppSuffix, "")
+        .trim()
+
+private val externalSearchAppSuffix =
+    Regex("""\s+(?:su|on|in|con|with)\s+nuvio(?:\s+enhanced)?(?:\s+tv)?\s*$""", RegexOption.IGNORE_CASE)
 
 private fun partyDeepLink(code: String?): AppDeepLink.Party? =
     code?.let(::normalizePartyCode)?.takeIf { it.length == PARTY_CODE_LENGTH }?.let(AppDeepLink::Party)

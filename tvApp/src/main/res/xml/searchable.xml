@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Makes the app searchable by the system: Google Assistant / remote voice search. -->
+<searchable xmlns:android="http://schemas.android.com/apk/res/android"
+    android:label="@string/tv_app_name"
+    android:voiceSearchMode="showVoiceSearchButton|launchRecognizer" />

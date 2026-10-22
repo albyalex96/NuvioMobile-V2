@@ -1,5 +1,6 @@
 package com.nuvio.tv
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.KeyEvent
 import androidx.activity.compose.setContent
@@ -7,6 +8,7 @@ import co.touchlab.kermit.Logger
 import com.nuvio.app.MainActivity
 import com.nuvio.app.tv.TvAppRuntime
 import com.nuvio.tv.player.TvPlayerKeyRouter
+import com.nuvio.tv.search.TvVoiceSearchIntents
 import com.nuvio.tv.settings.TvLayoutSettingsRepository
 
 /**
@@ -24,6 +26,13 @@ class TvActivity : MainActivity() {
         // Replaces the phone content set by MainActivity: the view is not attached yet,
         // so the phone UI is never composed.
         setContent { TvApp() }
+        // A recreated activity already handled its launch intent.
+        if (savedInstanceState == null) TvVoiceSearchIntents.handle(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        TvVoiceSearchIntents.handle(intent)
     }
 
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {

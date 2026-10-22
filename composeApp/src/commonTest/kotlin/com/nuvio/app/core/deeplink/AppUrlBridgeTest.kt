@@ -19,6 +19,15 @@ class AppUrlBridgeTest {
     }
 
     @Test
+    fun `parses external search links and drops the app name`() {
+        assertEquals(AppDeepLink.Search("Criminal Minds"), parseAppDeepLink(buildSearchDeepLinkUrl("Criminal Minds")))
+        assertEquals(AppDeepLink.Search("criminal minds"), parseAppDeepLink("nuvio://search?q=criminal%20minds%20su%20Nuvio"))
+        assertEquals(AppDeepLink.Search("Dune"), parseAppDeepLink("nuvio://search?query=Dune%20on%20Nuvio%20Enhanced%20TV"))
+        assertEquals(AppDeepLink.Search("Lost"), parseAppDeepLink("nuvio://search/Lost"))
+        assertNull(parseAppDeepLink("nuvio://search?q=%20"))
+    }
+
+    @Test
     fun `parses existing notification meta deeplink`() {
         assertEquals(
             AppDeepLink.Meta(type = "series", id = "tt0944947"),
