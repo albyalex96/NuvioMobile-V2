@@ -5,6 +5,8 @@ import com.nuvio.app.features.details.MetaVideo
 import com.nuvio.app.features.streams.StreamItem
 
 internal const val PlaybackProgressPersistIntervalMs = 60_000L
+// TVs can lose power without notice (standby, power strip): save more often there.
+internal const val TvPlaybackProgressPersistIntervalMs = 15_000L
 internal const val PlayerDoubleTapSeekResetDelayMs = 800L
 internal const val PlayerLockedOverlayDurationMs = 2_000L
 internal const val PlayerLeftGestureBoundary = 0.4f

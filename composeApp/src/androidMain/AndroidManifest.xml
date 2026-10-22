@@ -5,6 +5,7 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <!-- Settings → Downloads shows the folder picker only where the system provides one. -->
     <queries>
@@ -14,6 +15,10 @@
     </queries>
 
     <application>
+        <!-- Keeps the process alive a few seconds at TV standby to finish the progress upload. -->
+        <service
+            android:name="com.nuvio.app.features.player.ProgressUploadKeepAliveService"
+            android:exported="false" />
         <service
             android:name="com.nuvio.app.features.downloads.DownloadsTransferJobService"
             android:permission="android.permission.BIND_JOB_SERVICE"

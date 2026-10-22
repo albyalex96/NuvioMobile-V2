@@ -356,6 +356,7 @@ internal fun PlayerScreenRuntime.BindPlayerRuntimeEffects() {
     BindPlayerMetadataAndSkipEffects()
     BindPartyEffects()
     BindDiscordRpcEffects()
+    BindPlayerLifecycleEffects()
 
     DisposableEffect(activeSourceUrl) {
         val effectSourceUrl = activeSourceUrl

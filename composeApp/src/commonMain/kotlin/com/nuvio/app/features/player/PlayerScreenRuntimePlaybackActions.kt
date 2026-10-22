@@ -14,6 +14,7 @@ import com.nuvio.app.features.watchprogress.WatchProgressPlaybackSession
 import com.nuvio.app.features.watchprogress.WatchProgressRepository
 import com.nuvio.app.features.watchprogress.buildPlaybackVideoId
 import com.nuvio.app.features.watching.domain.isShortPlaceholderDuration
+import com.nuvio.app.tv.TvAppRuntime
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -385,6 +386,15 @@ internal fun PlayerScreenRuntime.flushWatchProgress(
     )
 }
 
+/** Saves the current position (locally and remotely) without changing the scrobble state. */
+internal fun PlayerScreenRuntime.saveWatchProgressSnapshot() {
+    if (!shouldTrackWatchProgress) return
+    WatchProgressRepository.flushPlaybackProgress(
+        session = playbackSession,
+        snapshot = playbackSnapshot,
+    )
+}
+
 internal fun PlayerScreenRuntime.scheduleProgressSyncAfterSeek() {
     if (!shouldTrackWatchProgress) return
     val shouldRestartScrobbleAfterSeek = shouldPlay || playbackSnapshot.isPlaying
@@ -442,7 +452,8 @@ internal fun PlayerScreenRuntime.scheduleProgressSyncAfterSeek() {
 internal fun PlayerScreenRuntime.persistPlaybackProgressTick() {
     if (!shouldTrackWatchProgress) return
     val now = WatchProgressClock.nowEpochMs()
-    if (now - lastProgressPersistEpochMs < PlaybackProgressPersistIntervalMs) return
+    val intervalMs = if (TvAppRuntime.isTvApp) TvPlaybackProgressPersistIntervalMs else PlaybackProgressPersistIntervalMs
+    if (now - lastProgressPersistEpochMs < intervalMs) return
     lastProgressPersistEpochMs = now
     WatchProgressRepository.upsertPlaybackProgress(
         session = playbackSession,

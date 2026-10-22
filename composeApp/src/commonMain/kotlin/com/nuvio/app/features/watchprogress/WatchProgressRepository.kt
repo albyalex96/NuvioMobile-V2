@@ -39,6 +39,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.atomicfu.locks.SynchronizedObject
 import kotlinx.atomicfu.locks.synchronized
@@ -46,6 +47,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withTimeoutOrNull
 
 private const val WATCH_PROGRESS_METADATA_RESOLUTION_CONCURRENCY = 4
 private const val WATCH_PROGRESS_METADATA_RESOLUTION_LIMIT = 64
@@ -229,6 +231,17 @@ internal class RemoteProgressWriteDeduplicator(
     }
 }
 
+/**
+ * Local entries saved but never confirmed by the server (for example the upload was lost
+ * when the TV went to standby). Media-server items are never pushed.
+ */
+internal fun pendingProgressUploads(
+    entries: Collection<WatchProgressEntry>,
+    dirtyProgressKeys: Set<String>,
+): List<WatchProgressEntry> = entries.filter { entry ->
+    entry.resolvedProgressKey() in dirtyProgressKeys && !ServerItemRef.isServerId(entry.parentMetaId)
+}
+
 object WatchProgressRepository {
     private val syncScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val accountScopeLock = SynchronizedObject()
@@ -258,6 +271,8 @@ object WatchProgressRepository {
     private var deltaInitialized = false
     private val remoteWriteDeduplicator = RemoteProgressWriteDeduplicator()
     internal var syncAdapter: ProgressSyncAdapter = SupabaseProgressSyncAdapter
+    private val inFlightPushesLock = SynchronizedObject()
+    private val inFlightPushes = mutableSetOf<Job>()
 
     init {
         ensureTrackingProvidersRegistered()
@@ -547,6 +562,10 @@ object WatchProgressRepository {
                         operationGeneration = operationGeneration,
                     )
                 }
+                pushPendingProgress(
+                    profileId = profileId,
+                    operationGeneration = operationGeneration,
+                )
                 true
             } catch (error: CancellationException) {
                 throw error
@@ -1403,10 +1422,48 @@ object WatchProgressRepository {
         return storedEntries.resolveIdentityForUpsert(entry)
     }
 
+    /**
+     * Sends again the progress the server never confirmed. Runs after every Nuvio pull, so an
+     * upload lost at TV standby goes out when the app comes back. Failures keep the entries
+     * dirty for the next pull.
+     */
+    private suspend fun pushPendingProgress(profileId: Int, operationGeneration: Long) {
+        if (!isActiveOperation(profileId, operationGeneration)) return
+        val pending = pendingProgressUploads(localEntriesSnapshot(), dirtyProgressKeysSnapshot())
+        if (pending.isEmpty()) return
+        log.i { "Pushing ${pending.size} pending watch progress entries for profile $profileId" }
+        try {
+            syncAdapter.push(profileId = profileId, entries = pending)
+            recordSuccessfulPush(
+                profileId = profileId,
+                operationGeneration = operationGeneration,
+                entries = pending,
+            )
+            log.i { "Pending watch progress pushed (${pending.size} entries)" }
+        } catch (error: CancellationException) {
+            throw error
+        } catch (error: Throwable) {
+            log.w { "Pending watch progress push failed, retrying at the next sync: ${error.message}" }
+        }
+    }
+
+    /**
+     * Waits at most [timeoutMs] for the progress uploads already started. Returns true when
+     * none is left running.
+     */
+    suspend fun awaitProgressUploads(timeoutMs: Long): Boolean {
+        val jobs = synchronized(inFlightPushesLock) { inFlightPushes.toList() }
+        if (jobs.isEmpty()) return true
+        return withTimeoutOrNull(timeoutMs) {
+            jobs.joinAll()
+            true
+        } ?: false
+    }
+
     private fun pushScrobbleToServer(entry: WatchProgressEntry, profileId: Int) {
         if (ServerItemRef.isServerId(entry.parentMetaId)) return
         val operationGeneration = profileGeneration.takeIf { profileId == currentProfileId }
-        accountScopeSnapshot().launch {
+        val job = accountScopeSnapshot().launch {
             runCatching {
                 syncAdapter.push(profileId = profileId, entries = listOf(entry))
                 recordSuccessfulPush(
@@ -1417,6 +1474,10 @@ object WatchProgressRepository {
             }.onFailure { e ->
                 log.e(e) { "Failed to push watch progress scrobble" }
             }
+        }
+        synchronized(inFlightPushesLock) { inFlightPushes += job }
+        job.invokeOnCompletion {
+            synchronized(inFlightPushesLock) { inFlightPushes -= job }
         }
     }
 

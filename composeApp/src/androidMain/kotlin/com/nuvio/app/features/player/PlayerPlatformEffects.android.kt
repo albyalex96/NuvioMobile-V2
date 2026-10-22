@@ -1,8 +1,11 @@
 package com.nuvio.app.features.player
 
 import android.app.Activity
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.ContextWrapper
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.ActivityInfo
 import android.media.AudioManager
 import androidx.activity.ComponentActivity
@@ -15,6 +18,7 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.platform.LocalContext
@@ -23,6 +27,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.app.PictureInPictureModeChangedInfo
+import androidx.core.content.ContextCompat
 import androidx.core.util.Consumer
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -224,4 +229,31 @@ private class AndroidPlayerGestureController(
         }.getOrDefault(127)
             .coerceIn(0, 255)
             .toFloat() / 255f
+}
+
+@Composable
+internal actual fun OnPlayerScreenOff(onScreenOff: () -> Unit) {
+    val context = LocalContext.current.applicationContext
+    val latestOnScreenOff by rememberUpdatedState(onScreenOff)
+    DisposableEffect(context) {
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context, intent: Intent) {
+                if (intent.action == Intent.ACTION_SCREEN_OFF) latestOnScreenOff()
+            }
+        }
+        // System broadcasts still reach a non-exported receiver.
+        ContextCompat.registerReceiver(
+            context,
+            receiver,
+            IntentFilter(Intent.ACTION_SCREEN_OFF),
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
+        onDispose { runCatching { context.unregisterReceiver(receiver) } }
+    }
+}
+
+@Composable
+internal actual fun rememberProgressUploadKeepAlive(): () -> Unit {
+    val context = LocalContext.current.applicationContext
+    return remember(context) { { ProgressUploadKeepAliveService.start(context) } }
 }

@@ -136,3 +136,10 @@ private class IOSPlayerGestureController : PlayerGestureController {
         UIScreen.mainScreen.brightness = originalBrightness
     }
 }
+
+// iOS has no screen-off broadcast: backgrounding already goes through the lifecycle events.
+@Composable
+internal actual fun OnPlayerScreenOff(onScreenOff: () -> Unit) = Unit
+
+@Composable
+internal actual fun rememberProgressUploadKeepAlive(): () -> Unit = remember { {} }

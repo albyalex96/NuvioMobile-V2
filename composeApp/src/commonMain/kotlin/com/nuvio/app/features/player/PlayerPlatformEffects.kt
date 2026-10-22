@@ -41,6 +41,17 @@ expect fun ManagePlayerPictureInPicture(
 @Composable
 expect fun rememberIsInPictureInPicture(): Boolean
 
+/** Calls [onScreenOff] when the device screen turns off (Android `ACTION_SCREEN_OFF`). */
+@Composable
+internal expect fun OnPlayerScreenOff(onScreenOff: () -> Unit)
+
+/**
+ * Returns an action that keeps the app running for a few seconds so the progress upload
+ * started when leaving the player can finish (Android TV standby).
+ */
+@Composable
+internal expect fun rememberProgressUploadKeepAlive(): () -> Unit
+
 @Composable
 fun rememberPlayerGestureController(restoreBrightness: Boolean): PlayerGestureController? {
     val controller = rememberPlatformPlayerGestureController() ?: return null

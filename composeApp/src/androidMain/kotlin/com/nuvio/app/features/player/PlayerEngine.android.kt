@@ -34,6 +34,7 @@ import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.getString
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.nuvio.app.tv.TvAppRuntime
 import androidx.media3.common.C
 import androidx.media3.common.Format
 import androidx.media3.common.MediaItem
@@ -770,13 +771,16 @@ private fun ExoPlayerSurface(
         val activity = context.findActivity()
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_START -> exoPlayer.playWhenReady = latestPlayWhenReady.value
+                // On TV the player stays paused on return (the runtime clears playWhenReady).
+                Lifecycle.Event.ON_START -> if (!TvAppRuntime.isTvApp) {
+                    exoPlayer.playWhenReady = latestPlayWhenReady.value
+                }
                 Lifecycle.Event.ON_STOP -> {
                     val isInPictureInPicture =
                         Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && activity?.isInPictureInPictureMode == true
                     val isFinishing = activity?.isFinishing == true
                     val hasActiveNowPlayingSession = nowPlayingController.isActive
-                    if ((!isInPictureInPicture && !hasActiveNowPlayingSession) || isFinishing) {
+                    if (TvAppRuntime.isTvApp || (!isInPictureInPicture && !hasActiveNowPlayingSession) || isFinishing) {
                         exoPlayer.pause()
                     }
                 }
@@ -1158,13 +1162,16 @@ private fun LibmpvPlayerSurface(
         val observer = LifecycleEventObserver { _, event ->
             val view = playerViewRef ?: return@LifecycleEventObserver
             when (event) {
-                Lifecycle.Event.ON_START -> view.setPaused(!latestPlayWhenReady.value)
+                // On TV the player stays paused on return (the runtime clears playWhenReady).
+                Lifecycle.Event.ON_START -> if (!TvAppRuntime.isTvApp) {
+                    view.setPaused(!latestPlayWhenReady.value)
+                }
                 Lifecycle.Event.ON_STOP -> {
                     val isInPictureInPicture =
                         Build.VERSION.SDK_INT >= Build.VERSION_CODES.N && activity?.isInPictureInPictureMode == true
                     val isFinishing = activity?.isFinishing == true
                     val hasActiveNowPlayingSession = nowPlayingController?.isActive == true
-                    if ((!isInPictureInPicture && !hasActiveNowPlayingSession) || isFinishing) {
+                    if (TvAppRuntime.isTvApp || (!isInPictureInPicture && !hasActiveNowPlayingSession) || isFinishing) {
                         view.setPaused(true)
                     }
                 }
