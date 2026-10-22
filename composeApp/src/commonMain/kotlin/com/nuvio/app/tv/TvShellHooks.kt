@@ -171,6 +171,7 @@ internal fun buildTvHomeModel(
     collectionsMap: Map<String, Collection>,
     continueWatchingItems: List<ContinueWatchingItem>,
     upcomingItems: List<ContinueWatchingItem>,
+    top10Titles: Map<com.nuvio.app.features.home.Top10Kind, String>,
     showContinueWatching: Boolean,
     isInitialLoading: Boolean,
     hasContentSources: Boolean,
@@ -184,7 +185,10 @@ internal fun buildTvHomeModel(
     onFolderClick: ((collectionId: String, folderId: String) -> Unit)?,
     onRetry: () -> Unit,
 ): TvHomeModel {
-    val rows = enabledHomeItems.mapNotNull { item ->
+    val top10Rows = homeUiState.top10Rows.map { row ->
+        TvHomeRow.Top10(key = row.key, title = top10Titles[row.kind].orEmpty(), items = row.items)
+    }
+    val rows = top10Rows + enabledHomeItems.mapNotNull { item ->
         if (item.isCollection) {
             collectionsMap[item.key]?.let { collection -> TvHomeRow.Folders(key = item.key, collection = collection) }
         } else {

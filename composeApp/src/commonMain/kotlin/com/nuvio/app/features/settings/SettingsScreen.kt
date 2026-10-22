@@ -873,7 +873,9 @@ private fun MobileSettingsScreen(
                     onPluginsClick = onPluginsClick,
                     onMediaServersClick = { onPageChange(SettingsPage.MediaServers) },
                     onCloudstreamClick = { onPageChange(SettingsPage.Cloudstream) },
+                    onTop10Click = { onPageChange(SettingsPage.Top10) },
                 )
+                SettingsPage.Top10 -> top10SettingsContent(isTablet = false)
                 SettingsPage.Addons -> addonsSettingsContent()
                 SettingsPage.MediaServers -> mediaServersSettingsContent(
                     isTablet = false,
@@ -1390,7 +1392,9 @@ private fun TabletSettingsScreen(
                         onPluginsClick = { openInlinePage(SettingsPage.Plugins) },
                         onMediaServersClick = { openInlinePage(SettingsPage.MediaServers) },
                         onCloudstreamClick = { openInlinePage(SettingsPage.Cloudstream) },
+                        onTop10Click = { openInlinePage(SettingsPage.Top10) },
                     )
+                    SettingsPage.Top10 -> top10SettingsContent(isTablet = true)
                     SettingsPage.Addons -> addonsSettingsContent()
                     SettingsPage.MediaServers -> mediaServersSettingsContent(
                         isTablet = true,

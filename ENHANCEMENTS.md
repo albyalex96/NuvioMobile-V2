@@ -92,6 +92,7 @@ Ported from [luqmanfadlli/NuvioMobile-Enhanced](https://github.com/luqmanfadlli/
 - **Expandable episode overviews** with an animated layout in both episode list styles.
 - **Landscape posters** applied everywhere (grids, catalogs, library, search, collection folders) without ever cropping portrait posters; collection folders respect their own shape.
 - **Gradient primary action buttons** with icons (Play, Resume, Choose episodes, View details).
+- **Top 10 rows** on the home (phone, tablet and TV): two ranked rows with the first 10 titles of a movie catalog and a series catalog, drawn with big numbers next to the posters. Catalogs chosen in Settings → Content discovery → Top 10, synced per profile.
 - New Live TV navigation icon.
 - **Complete Italian translation.**
 

@@ -49,6 +49,8 @@ data class HomeUiState(
     val isLoading: Boolean = false,
     val heroItems: List<MetaPreview> = emptyList(),
     val sections: List<HomeCatalogSection> = emptyList(),
+    /** "Top 10" rows (Settings -> Content discovery -> Top 10), drawn before the catalog rows. */
+    val top10Rows: List<HomeTop10Row> = emptyList(),
     val errorMessage: String? = null,
 )
 

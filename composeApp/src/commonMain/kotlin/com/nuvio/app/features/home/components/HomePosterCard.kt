@@ -18,9 +18,11 @@ fun HomePosterCard(
     onClick: (() -> Unit)? = null,
     onLongClick: (() -> Unit)? = null,
     showLandscapeOverlay: Boolean = true,
+    /** Ignores the "landscape posters" setting (Top 10 rows keep the portrait posters next to the rank). */
+    forcePortrait: Boolean = false,
 ) {
     val posterCardStyle = rememberPosterCardStyleUiState()
-    val isLandscapeMode = useLandscapeBackdropMode || posterCardStyle.catalogLandscapeModeEnabled
+    val isLandscapeMode = !forcePortrait && (useLandscapeBackdropMode || posterCardStyle.catalogLandscapeModeEnabled)
     val effectiveLandscapePoster = if (posterCardStyle.alwaysShowLandscapeClearlogo) null else item.landscapePoster
     val landscapeArtwork = item.landscapeArtworkUrl(posterCardStyle.alwaysShowLandscapeClearlogo)
     // Without 16:9 artwork the portrait/square poster is letterboxed in the frame instead of cropped.
@@ -42,7 +44,11 @@ fun HomePosterCard(
         imageUrl = imageUrl,
         modifier = modifier,
         fallbackImageUrl = fallbackImageUrl,
-        shape = if (isLandscapeMode) NuvioPosterShape.Landscape else item.posterShape.toNuvioPosterShape(),
+        shape = when {
+            isLandscapeMode -> NuvioPosterShape.Landscape
+            forcePortrait && item.posterShape == PosterShape.Landscape -> NuvioPosterShape.Poster
+            else -> item.posterShape.toNuvioPosterShape()
+        },
         fitImage = fitPosterInLandscape,
         detailLine = if (isLandscapeMode || posterCardStyle.hideLabelsEnabled) null else item.releaseInfo?.let { formatReleaseDateForDisplay(it) },
         showTitleBelow = !posterCardStyle.hideLabelsEnabled,

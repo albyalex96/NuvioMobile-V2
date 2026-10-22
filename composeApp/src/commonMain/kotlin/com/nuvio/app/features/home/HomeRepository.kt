@@ -17,6 +17,7 @@ import com.nuvio.app.features.collection.findCollectionCatalog
 import com.nuvio.app.features.servers.ServerCatalog
 import com.nuvio.app.features.trakt.TraktPublicListSourceResolver
 import com.nuvio.app.features.watchprogress.CurrentDateProvider
+import co.touchlab.kermit.Logger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -32,6 +33,8 @@ import kotlin.math.absoluteValue
 import kotlin.random.Random
 
 object HomeRepository {
+    private val top10Log = Logger.withTag(TOP10_LOG_TAG)
+    private var lastTop10Signature: String? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
@@ -84,6 +87,7 @@ object HomeRepository {
             val prioritizedRequests = prioritizeDefinitions(
                 definitions = requests,
                 snapshot = HomeCatalogSettingsRepository.snapshot(),
+                top10Settings = Top10Repository.snapshot(),
             )
             val loadedSections = linkedMapOf<String, HomeCatalogSection>().apply {
                 putAll(cachedSections)
@@ -168,6 +172,7 @@ object HomeRepository {
         collectionHeroRequestKey = null
         lastPublishedCatalogHeroEmpty = true
         lastErrorMessage = null
+        lastTop10Signature = null
         _uiState.value = HomeUiState()
     }
 
@@ -222,12 +227,42 @@ object HomeRepository {
             emptyList()
         }
 
+        // The Top 10 catalogs are loaded with the others, even when hidden from the home layout.
+        val definitionsByKey = currentDefinitions.associateBy(HomeCatalogDefinition::key)
+        val top10Rows = buildTop10Rows(Top10Repository.snapshot()) { catalogKey ->
+            val definition = definitionsByKey[catalogKey] ?: return@buildTop10Rows null
+            cachedSections[definition.cacheKey]
+                ?.withPosterOverlay()
+                ?.withReleaseFilter()
+                ?.copy(title = definition.titleFor(snapshot.showCatalogType))
+        }
+        logTop10Rows(top10Rows, isLoading)
+
         _uiState.value = HomeUiState(
             isLoading = isLoading,
             heroItems = heroItems,
             sections = sections,
+            top10Rows = top10Rows,
             errorMessage = if (sections.isEmpty()) lastErrorMessage else null,
         )
+    }
+
+    private fun logTop10Rows(rows: List<HomeTop10Row>, isLoading: Boolean) {
+        val settings = Top10Repository.snapshot()
+        if (!settings.enabled) {
+            lastTop10Signature = null
+            return
+        }
+        val signature = rows.joinToString { "${it.kind}=${it.items.size}" }
+        if (signature == lastTop10Signature) return
+        lastTop10Signature = signature
+        val missing = Top10Kind.entries.filter { kind ->
+            settings.catalogKey(kind).isNotBlank() && rows.none { it.kind == kind }
+        }
+        if (missing.isNotEmpty() && !isLoading) {
+            top10Log.w { "Top 10 catalog not available for ${missing.joinToString()} (addon removed or catalog empty)" }
+        }
+        top10Log.d { "Top 10 rows: ${signature.ifBlank { "none" }}" }
     }
 
     private suspend fun HomeCatalogDefinition.toSection(forceRefresh: Boolean): HomeCatalogSection {
@@ -467,17 +502,26 @@ private const val HOME_CATALOG_PUBLISH_INTERVAL = 2
 private fun prioritizeDefinitions(
     definitions: List<HomeCatalogDefinition>,
     snapshot: HomeCatalogSettingsSnapshot,
+    top10Settings: Top10Settings,
 ): List<HomeCatalogDefinition> {
+    val top10Keys = if (top10Settings.enabled) {
+        Top10Kind.entries.map(top10Settings::catalogKey).filterTo(mutableSetOf()) { it.isNotBlank() }
+    } else {
+        emptySet()
+    }
     val orderedDefinitions = definitions.sortedBy { definition ->
         snapshot.preferences[definition.key]?.order ?: Int.MAX_VALUE
     }
     val (priority, remainder) = orderedDefinitions.partition { definition ->
         val preference = snapshot.preferences[definition.key]
-        if (preference == null) {
+        if (definition.key in top10Keys) {
+            true
+        } else if (preference == null) {
             true
         } else {
             preference.enabled || (snapshot.heroEnabled && preference.heroSourceEnabled)
         }
     }
-    return priority + remainder
+    // Stable sort: the Top 10 catalogs go in the first batch, the rest keeps the home order.
+    return priority.sortedBy { definition -> definition.key !in top10Keys } + remainder
 }

@@ -19,6 +19,7 @@ import nuvio.composeapp.generated.resources.compose_settings_page_addons
 import nuvio.composeapp.generated.resources.compose_settings_page_advanced
 import nuvio.composeapp.generated.resources.compose_settings_page_appearance
 import nuvio.composeapp.generated.resources.compose_settings_page_cloudstream
+import nuvio.composeapp.generated.resources.compose_settings_page_top10
 import nuvio.composeapp.generated.resources.compose_settings_page_content_discovery
 import nuvio.composeapp.generated.resources.compose_settings_page_debrid
 import nuvio.composeapp.generated.resources.compose_settings_page_discord_rpc
@@ -167,6 +168,11 @@ internal enum class SettingsPage(
     ),
     Cloudstream(
         titleRes = Res.string.compose_settings_page_cloudstream,
+        category = SettingsCategory.General,
+        parentPage = ContentDiscovery,
+    ),
+    Top10(
+        titleRes = Res.string.compose_settings_page_top10,
         category = SettingsCategory.General,
         parentPage = ContentDiscovery,
     ),

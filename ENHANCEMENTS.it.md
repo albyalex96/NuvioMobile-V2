@@ -92,6 +92,7 @@ Portata da [luqmanfadlli/NuvioMobile-Enhanced](https://github.com/luqmanfadlli/N
 - **Trame degli episodi espandibili** con layout animato in entrambi gli stili dell'elenco episodi.
 - **Locandine orizzontali** applicate ovunque (griglie, cataloghi, libreria, ricerca, cartelle delle collezioni) senza mai tagliare le locandine verticali; le cartelle delle collezioni rispettano la propria forma.
 - **Pulsanti d'azione principali con gradiente** e icone (Riproduci, Riprendi, Scegli episodi, Visualizza dettagli).
+- **Righe Top 10** nella Home (telefono, tablet e TV): due righe in classifica con i primi 10 titoli di un catalogo film e di un catalogo serie, con grandi numeri accanto alle locandine. Cataloghi scelti in Impostazioni → Scoperta contenuti → Top 10, sincronizzati per profilo.
 - Nuova icona di navigazione per la Live TV.
 - **Traduzione italiana completa.**
 

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="compose_settings_page_top10">Top 10</string>
+    <string name="top10_settings_description">Ranked rows of the 10 most popular movies and shows on the home</string>
+    <string name="top10_section_general">General</string>
+    <string name="top10_enabled">Show Top 10 rows</string>
+    <string name="top10_enabled_description">Add two rows at the top of the home with the first 10 titles of the chosen catalogs, numbered 1 to 10</string>
+    <string name="top10_section_catalogs">Catalogs</string>
+    <string name="top10_movies_catalog">Movies catalog</string>
+    <string name="top10_movies_catalog_description">Catalog used for the Top 10 Movies row</string>
+    <string name="top10_series_catalog">Series catalog</string>
+    <string name="top10_series_catalog_description">Catalog used for the Top 10 TV Shows row</string>
+    <string name="top10_catalog_not_set">Not set</string>
+    <string name="top10_catalog_unavailable">%1$s (not available)</string>
+    <string name="top10_choose_catalog">Choose catalog</string>
+    <string name="top10_catalog_none">None</string>
+    <string name="top10_catalog_none_description">Hide this row</string>
+    <string name="top10_no_catalogs">No catalogs available. Install an addon with catalogs first.</string>
+    <string name="top10_row_movies">Top 10 Movies</string>
+    <string name="top10_row_series">Top 10 TV Shows</string>
+</resources>

@@ -30,6 +30,7 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Hub
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.Leaderboard
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Forum
@@ -524,6 +525,41 @@ internal fun settingsSearchEntries(
         title = stringResource(Res.string.compose_settings_page_cloudstream),
         description = stringResource(Res.string.settings_content_discovery_cloudstream_description),
         icon = Icons.Rounded.Extension,
+    )
+    val top10Page = stringResource(Res.string.compose_settings_page_top10)
+    addPage(
+        page = SettingsPage.Top10,
+        key = "top10",
+        title = top10Page,
+        description = stringResource(Res.string.top10_settings_description),
+        icon = Icons.Rounded.Leaderboard,
+    )
+    addRow(
+        page = SettingsPage.Top10,
+        key = "top10-enabled",
+        title = stringResource(Res.string.top10_enabled),
+        description = stringResource(Res.string.top10_enabled_description),
+        pageLabel = top10Page,
+        section = stringResource(Res.string.top10_section_general),
+        icon = Icons.Rounded.Leaderboard,
+    )
+    addRow(
+        page = SettingsPage.Top10,
+        key = "top10-movies-catalog",
+        title = stringResource(Res.string.top10_movies_catalog),
+        description = stringResource(Res.string.top10_movies_catalog_description),
+        pageLabel = top10Page,
+        section = stringResource(Res.string.top10_section_catalogs),
+        icon = Icons.Rounded.Leaderboard,
+    )
+    addRow(
+        page = SettingsPage.Top10,
+        key = "top10-series-catalog",
+        title = stringResource(Res.string.top10_series_catalog),
+        description = stringResource(Res.string.top10_series_catalog_description),
+        pageLabel = top10Page,
+        section = stringResource(Res.string.top10_section_catalogs),
+        icon = Icons.Rounded.Leaderboard,
     )
     addPage(
         page = SettingsPage.MediaServers,

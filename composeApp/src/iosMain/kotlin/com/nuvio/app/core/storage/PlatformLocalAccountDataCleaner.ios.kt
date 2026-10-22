@@ -27,6 +27,8 @@ internal actual object PlatformLocalAccountDataCleaner {
         "opensubtitles_settings_payload",
         // SubDL (SubDlStorage.ios.kt)
         "subdl_settings_payload",
+        // Top 10 home rows (Top10Storage.ios.kt)
+        "home_top10_settings_payload",
         "episode_shuffle",
         "catalog_settings_payload",
         "discover_catalog_key",

@@ -43,6 +43,7 @@ internal actual object PlatformLocalAccountDataCleaner {
         "nuvio_discord_rpc",
         "nuvio_opensubtitles",
         "nuvio_subdl",
+        "nuvio_home_top10",
     )
 
     private var appContext: Context? = null

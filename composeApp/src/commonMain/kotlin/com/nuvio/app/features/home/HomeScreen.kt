@@ -48,6 +48,8 @@ import com.nuvio.app.features.details.MetaVideo
 import com.nuvio.app.features.details.SeriesPrimaryAction
 import com.nuvio.app.features.details.seriesPrimaryAction
 import com.nuvio.app.features.home.components.HomeCatalogRowSection
+import com.nuvio.app.features.home.components.HomeTop10Section
+import com.nuvio.app.features.home.components.top10RowTitle
 import com.nuvio.app.features.home.components.HomeContinueWatchingSection
 import com.nuvio.app.features.home.components.HomeEmptyStateCard
 import com.nuvio.app.features.home.components.HomeHeroReservedSpace
@@ -927,7 +929,9 @@ fun HomeScreen(
             item.isCollection && collectionsMap[item.key] != null
         }
     }
-    val hasRenderableHomeRows = homeUiState.sections.isNotEmpty() || hasRenderableCollectionRows
+    val hasRenderableHomeRows = homeUiState.sections.isNotEmpty() ||
+        homeUiState.top10Rows.isNotEmpty() ||
+        hasRenderableCollectionRows
     val showHeroSlot = shouldShowHomeHeroSlot(
         heroEnabled = homeSettingsUiState.heroEnabled,
         hasHeroItems = homeUiState.heroItems.isNotEmpty(),
@@ -957,6 +961,7 @@ fun HomeScreen(
                 collectionsMap = collectionsMap,
                 continueWatchingItems = continueWatchingItems,
                 upcomingItems = upcomingItems,
+                top10Titles = Top10Kind.entries.associateWith { kind -> top10RowTitle(kind) },
                 showContinueWatching = continueWatchingPreferences.isVisible,
                 isInitialLoading = isInitialHomeContentLoading,
                 hasContentSources = hasActiveAddons || hasServerLibraries || hasRenderableCollectionRows,
@@ -1196,6 +1201,21 @@ fun HomeScreen(
                         onItemLongPress = onContinueWatchingLongPress,
                         disintegrationRequest = continueWatchingDisintegrationRequest,
                     )
+
+                    homeUiState.top10Rows.forEach { top10Row ->
+                        item(key = top10Row.key, contentType = "top10") {
+                            HomeTop10Section(
+                                row = top10Row,
+                                title = top10RowTitle(top10Row.kind),
+                                modifier = Modifier.padding(bottom = 12.dp),
+                                sectionPadding = homeSectionPadding,
+                                watchedKeys = watchedUiState.watchedKeys,
+                                fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
+                                onPosterClick = onPosterClick,
+                                onPosterLongClick = onPosterLongClick,
+                            )
+                        }
+                    }
 
                     keyedEnabledHomeItems.forEach { keyedSettingsItem ->
                         val settingsItem = keyedSettingsItem.value

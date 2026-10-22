@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="compose_settings_page_top10">Top 10</string>
+    <string name="top10_settings_description">Righe in classifica con i 10 film e serie più popolari nella Home</string>
+    <string name="top10_section_general">Generale</string>
+    <string name="top10_enabled">Mostra le righe Top 10</string>
+    <string name="top10_enabled_description">Aggiunge in cima alla Home due righe con i primi 10 titoli dei cataloghi scelti, numerati da 1 a 10</string>
+    <string name="top10_section_catalogs">Cataloghi</string>
+    <string name="top10_movies_catalog">Catalogo film</string>
+    <string name="top10_movies_catalog_description">Catalogo usato per la riga Top 10 Film</string>
+    <string name="top10_series_catalog">Catalogo serie</string>
+    <string name="top10_series_catalog_description">Catalogo usato per la riga Top 10 Serie TV</string>
+    <string name="top10_catalog_not_set">Non impostato</string>
+    <string name="top10_catalog_unavailable">%1$s (non disponibile)</string>
+    <string name="top10_choose_catalog">Scegli il catalogo</string>
+    <string name="top10_catalog_none">Nessuno</string>
+    <string name="top10_catalog_none_description">Nasconde questa riga</string>
+    <string name="top10_no_catalogs">Nessun catalogo disponibile. Installa prima un addon con dei cataloghi.</string>
+    <string name="top10_row_movies">Top 10 Film</string>
+    <string name="top10_row_series">Top 10 Serie TV</string>
+</resources>

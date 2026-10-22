@@ -102,6 +102,13 @@ sealed interface TvHomeRow {
         override val key: String,
         val collection: Collection,
     ) : TvHomeRow
+
+    /** "Top 10" row: [items] are already ranked (rank = index + 1). */
+    class Top10(
+        override val key: String,
+        val title: String,
+        val items: List<MetaPreview>,
+    ) : TvHomeRow
 }
 
 @Immutable

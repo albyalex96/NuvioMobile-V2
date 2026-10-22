@@ -197,6 +197,7 @@ object ProfileRepository {
         com.nuvio.app.features.discord.DiscordRpcRepository.onProfileChanged()
         com.nuvio.app.features.opensubtitles.OpenSubtitlesRepository.onProfileChanged()
         com.nuvio.app.features.subdl.SubDlRepository.onProfileChanged()
+        com.nuvio.app.features.home.Top10Repository.onProfileChanged()
         ProfileSettingsSync.onProfileChanged()
     }
 

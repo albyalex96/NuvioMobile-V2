@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
@@ -72,6 +73,8 @@ import com.nuvio.app.features.collection.CollectionFolder
 import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.home.PosterShape
 import com.nuvio.app.features.home.stableKey
+import com.nuvio.app.features.home.components.Top10RankNumber
+import com.nuvio.app.features.home.components.top10RankSpace
 import com.nuvio.app.features.watchprogress.ContinueWatchingItem
 import com.nuvio.app.tv.TvHomeModel
 import com.nuvio.app.tv.TvHomeRow
@@ -416,6 +419,14 @@ private fun TvHomeContent(model: TvHomeModel) {
                             requesterFor = ::requesterFor,
                             onFocused = { focusedPosterKey = null },
                         )
+                        is TvHomeRow.Top10 -> Top10Row(
+                            row = row,
+                            model = model,
+                            settings = settings,
+                            metrics = metrics,
+                            requesterFor = ::requesterFor,
+                            onFocused = ::onCardFocused,
+                        )
                     }
                 }
             }
@@ -693,6 +704,54 @@ private fun CatalogRow(
     }
 }
 
+/**
+ * "Top 10" row: portrait posters with the big rank number behind their left edge. The posters
+ * never expand to the backdrop here, so the numbers keep their place while moving the focus.
+ */
+@Composable
+private fun Top10Row(
+    row: TvHomeRow.Top10,
+    model: TvHomeModel,
+    settings: TvLayoutSettings,
+    metrics: TvCardMetrics,
+    requesterFor: (String) -> FocusRequester,
+    onFocused: (String, HeroInfo) -> Unit,
+) {
+    TvContentRow(title = row.title) {
+        itemsIndexed(row.items, key = { _, item -> "${row.key}:${item.stableKey()}" }) { index, item ->
+            val key = "${row.key}:${item.stableKey()}"
+            val rank = index + 1
+            val rankSpace = top10RankSpace(rank, metrics.posterWidth)
+            Box {
+                Top10RankNumber(
+                    rank = rank,
+                    height = metrics.posterHeight,
+                    width = rankSpace + metrics.posterWidth * TOP10_RANK_OVERLAP,
+                    modifier = Modifier.align(Alignment.TopStart),
+                )
+                TvRowPosterCard(
+                    imageUrl = item.poster,
+                    title = item.name,
+                    width = metrics.posterWidth,
+                    height = metrics.posterHeight,
+                    shape = metrics.shape,
+                    showLabel = settings.posterLabels,
+                    watched = model.isPosterWatched(item),
+                    onClick = { model.onPosterClick(item) },
+                    onLongClick = model.onPosterLongClick?.let { longClick -> { longClick(item) } },
+                    onFocused = { onFocused(key, heroOf(item)) },
+                    modifier = Modifier
+                        .padding(start = rankSpace)
+                        .focusRequester(requesterFor(key)),
+                )
+            }
+        }
+    }
+}
+
+/** Part of the rank number that slides under the poster (same as the phone row). */
+private const val TOP10_RANK_OVERLAP = 0.22f
+
 @Composable
 private fun FoldersRow(
     row: TvHomeRow.Folders,
@@ -785,6 +844,7 @@ private fun firstFocusableKey(model: TvHomeModel): String? {
     return when (val row = model.rows.firstOrNull()) {
         is TvHomeRow.Catalog -> row.items.firstOrNull()?.let { "${row.key}:${it.stableKey()}" }
         is TvHomeRow.Folders -> row.collection.folders.firstOrNull()?.let { "${row.key}:${it.id}" }
+        is TvHomeRow.Top10 -> row.items.firstOrNull()?.let { "${row.key}:${it.stableKey()}" }
         null -> null
     }
 }
