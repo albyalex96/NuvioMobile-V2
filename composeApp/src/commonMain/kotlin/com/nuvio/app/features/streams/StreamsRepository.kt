@@ -88,7 +88,8 @@ object StreamsRepository {
             episode = episode,
             manualSelection = manualSelection,
         )
-        val requestKey = "$requestToken::pluginsGrouped=${pluginUiState.groupStreamsByRepository}"
+        val requestKey = "$requestToken::pluginsGrouped=${pluginUiState.groupStreamsByRepository}" +
+            "::${CloudStreamStreams.requestSignature()}"
         val currentState = _uiState.value
         if (
             !forceRefresh &&
@@ -165,11 +166,22 @@ object StreamsRepository {
             return
         }
 
+        val isNativeCloudStreamRequest = CloudStreamStreams.isNativeRequest(videoId)
         val isNativeServerRequest = ServerStreams.isNativeRequest(videoId)
-        val serverSources = ServerStreams.sources(type, videoId, season, episode, forceRefresh)
+        val isNativeRequest = isNativeServerRequest || isNativeCloudStreamRequest
+        val serverSources = if (isNativeCloudStreamRequest) {
+            emptyList()
+        } else {
+            ServerStreams.sources(type, videoId, season, episode, forceRefresh)
+        }
+        val cloudStreamSources = if (isNativeServerRequest) {
+            emptyList()
+        } else {
+            CloudStreamStreams.sources(type, videoId, parentMetaId, season, episode)
+        }
         val preferredGroupIds = serverSources.filter { it.preferred }.mapTo(mutableSetOf()) { it.addonId }
-        val installedAddons = if (isNativeServerRequest) emptyList() else AddonRepository.uiState.value.addons.enabledAddons()
-        val pluginScrapers = if (AppFeaturePolicy.pluginsEnabled && !isNativeServerRequest) {
+        val installedAddons = if (isNativeRequest) emptyList() else AddonRepository.uiState.value.addons.enabledAddons()
+        val pluginScrapers = if (AppFeaturePolicy.pluginsEnabled && !isNativeRequest) {
             PluginRepository.getEnabledScrapersForType(type)
         } else {
             emptyList()
@@ -179,7 +191,7 @@ object StreamsRepository {
             groupByRepository = pluginUiState.groupStreamsByRepository,
         )
 
-        if (installedAddons.isEmpty() && pluginProviderGroups.isEmpty() && serverSources.isEmpty()) {
+        if (installedAddons.isEmpty() && pluginProviderGroups.isEmpty() && serverSources.isEmpty() && cloudStreamSources.isEmpty()) {
             _uiState.value = StreamsUiState(
                 requestToken = requestToken,
                 isAnyLoading = false,
@@ -201,9 +213,9 @@ object StreamsRepository {
                 )
             }
 
-        log.d { "Found ${streamAddons.size} addons for stream type=$type id=$videoId" }
+        log.d { "Found ${streamAddons.size} addons and ${cloudStreamSources.size} CloudStream groups for stream type=$type id=$videoId" }
 
-        if (streamAddons.isEmpty() && pluginProviderGroups.isEmpty() && serverSources.isEmpty()) {
+        if (streamAddons.isEmpty() && pluginProviderGroups.isEmpty() && serverSources.isEmpty() && cloudStreamSources.isEmpty()) {
             _uiState.value = StreamsUiState(
                 requestToken = requestToken,
                 isAnyLoading = false,
@@ -229,7 +241,8 @@ object StreamsRepository {
                 streams = emptyList(),
                 isLoading = true,
             )
-        } + serverSources.map { it.loadingGroup() }, installedAddonOrder, preferredGroupIds)
+        } + serverSources.map { it.loadingGroup() } + cloudStreamSources.map { it.loadingGroup() },
+            installedAddonOrder, preferredGroupIds)
         val isInitiallyLoading = initialGroups.any { it.isLoading }
         _uiState.value = StreamsUiState(
             requestToken = requestToken,
@@ -250,7 +263,8 @@ object StreamsRepository {
             val pluginFirstErrorByAddonId = mutableMapOf<String, String>()
             val totalTasks = streamAddons.size +
                 pluginProviderGroups.sumOf { it.scrapers.size } +
-                serverSources.size
+                serverSources.size +
+                cloudStreamSources.size
 
             val installedAddonNames = installedAddonOrder.toSet()
             val installedAddonIds = streamAddons.map { it.addonId }.toSet()
@@ -511,6 +525,10 @@ object StreamsRepository {
             }
 
             serverSources.forEach { source ->
+                launch { publishCompletion(StreamLoadCompletion.Addon(source.load())) }
+            }
+
+            cloudStreamSources.forEach { source ->
                 launch { publishCompletion(StreamLoadCompletion.Addon(source.load())) }
             }
 

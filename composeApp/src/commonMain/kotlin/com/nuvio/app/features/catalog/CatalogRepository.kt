@@ -2,6 +2,7 @@ package com.nuvio.app.features.catalog
 
 import com.nuvio.app.core.poster.CustomPosterUrlRepository
 import com.nuvio.app.core.poster.withCustomPosterUrls
+import com.nuvio.app.features.cloudstream.CloudStreamCatalog
 import com.nuvio.app.features.collection.CollectionRepository
 import com.nuvio.app.features.collection.TmdbCollectionSourceResolver
 import com.nuvio.app.features.collection.catalogRouteKey
@@ -151,6 +152,8 @@ object CatalogRepository {
                     )
 
                     is CatalogTarget.Server -> ServerCatalog.page(target, skip = requestedSkip)
+
+                    is CatalogTarget.CloudStream -> CloudStreamCatalog.page(target, skip = requestedSkip)
 
                     is CatalogTarget.Library -> error(getString(Res.string.catalog_load_failed))
                 }.withUnreleasedFilter(request.hideUnreleasedContent)

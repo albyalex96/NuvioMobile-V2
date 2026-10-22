@@ -36,6 +36,7 @@ data class DiscoverCatalogOption(
     val genreRequired: Boolean = false,
     val supportsPagination: Boolean = false,
     val server: CatalogTarget.Server? = null,
+    val cloudStream: CatalogTarget.CloudStream? = null,
 )
 
 data class DiscoverUiState(

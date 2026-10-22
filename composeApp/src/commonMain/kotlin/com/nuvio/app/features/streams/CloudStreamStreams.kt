@@ -1,0 +1,819 @@
+package com.nuvio.app.features.streams
+
+import co.touchlab.kermit.Logger
+import com.nuvio.app.core.build.AppFeaturePolicy
+import com.nuvio.app.features.cloudstream.CloudStreamEpisode
+import com.nuvio.app.features.cloudstream.CloudStreamLoadItem
+import com.nuvio.app.features.cloudstream.CloudStreamPlaybackSource
+import com.nuvio.app.features.cloudstream.CloudStreamPluginItem
+import com.nuvio.app.features.cloudstream.CloudStreamRepository
+import com.nuvio.app.features.cloudstream.CloudStreamSearchItem
+import com.nuvio.app.features.cloudstream.CloudStreamSearchRouteIndex
+import com.nuvio.app.features.cloudstream.CloudStreamTvType
+import com.nuvio.app.features.cloudstream.parseCloudStreamRouteId
+import com.nuvio.app.features.cloudstream.sha256Hex
+import com.nuvio.app.features.cloudstream.sortCloudStreamEpisodes
+import com.nuvio.app.features.cloudstream.toStreamItem
+import com.nuvio.app.features.details.MetaDetailsRepository
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
+import kotlinx.coroutines.withTimeoutOrNull
+
+private val cloudStreamFetchLog = Logger.withTag("CloudStreamFetch")
+private val cloudStreamProviderScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+// Provider count must not be capped: a repository can contain many narrowly scoped
+// providers. Keep network and DEX work bounded with a semaphore instead.
+private val cloudStreamProviderSemaphore = Semaphore(CLOUDSTREAM_STREAM_PROVIDER_CONCURRENCY)
+
+/**
+ * A CloudStream stream source, shaped like the media server sources so the stream screen and
+ * the player source panel load it alongside addons and plugins.
+ */
+internal class CloudStreamStreamSource(
+    val addonId: String,
+    val addonName: String,
+    private val loader: suspend () -> AddonStreamGroup,
+) {
+    fun loadingGroup(): AddonStreamGroup =
+        AddonStreamGroup(addonName = addonName, addonId = addonId, streams = emptyList(), isLoading = true)
+
+    suspend fun load(): AddonStreamGroup = try {
+        loader()
+    } catch (error: Throwable) {
+        if (error is CancellationException) currentCoroutineContext().ensureActive()
+        cloudStreamFetchLog.w(error) { "CloudStream source failed group=$addonName" }
+        AddonStreamGroup(
+            addonName = addonName,
+            addonId = addonId,
+            streams = emptyList(),
+            isLoading = false,
+            error = error.message,
+        )
+    }
+}
+
+internal object CloudStreamStreams {
+    /** Items opened from a CloudStream catalog carry a route id that only their provider can resolve. */
+    fun isNativeRequest(videoId: String): Boolean = parseCloudStreamRouteId(videoId) != null
+
+    fun isCloudStreamSourceId(addonId: String?): Boolean =
+        addonId?.startsWith(CLOUDSTREAM_ADDON_ID_PREFIX) == true ||
+            addonId?.startsWith(CLOUDSTREAM_REPOSITORY_ADDON_ID_PREFIX) == true
+
+    fun canServe(type: String, videoId: String): Boolean {
+        if (!AppFeaturePolicy.pluginsEnabled) return false
+        CloudStreamRepository.initialize()
+        val plugins = CloudStreamRepository.uiState.value.plugins.filter(CloudStreamPluginItem::isRunnable)
+        parseCloudStreamRouteId(videoId)?.let { route -> return plugins.any { it.metadata.id.value == route.providerId } }
+        return plugins.any { it.supportsCloudStreamRequest(type, request = null) }
+    }
+
+    /** Changes when the set of usable providers or the grouping changes, for stream request keys. */
+    fun requestSignature(): String {
+        if (!AppFeaturePolicy.pluginsEnabled) return ""
+        CloudStreamRepository.initialize()
+        val state = CloudStreamRepository.uiState.value
+        return "cloudstream=${state.registryRevision}:${state.groupStreamsByRepository}"
+    }
+
+    fun sources(
+        type: String,
+        videoId: String,
+        parentMetaId: String?,
+        season: Int?,
+        episode: Int?,
+    ): List<CloudStreamStreamSource> {
+        if (!AppFeaturePolicy.pluginsEnabled) return emptyList()
+        CloudStreamRepository.initialize()
+        val state = CloudStreamRepository.uiState.value
+        parseCloudStreamRouteId(videoId)?.let { route ->
+            val plugin = state.plugins.firstOrNull { it.metadata.id.value == route.providerId && it.isRunnable }
+                ?: return emptyList()
+            val addonId = cloudStreamAddonId(route.providerId)
+            val providerName = plugin.displayName()
+            return listOf(
+                CloudStreamStreamSource(addonId = addonId, addonName = providerName) {
+                    val sources = CloudStreamRepository.loadLinks(route.providerId, route.data).getOrThrow()
+                    val streams = cloudStreamSourcesToStreamItems(route.providerId, providerName, sources)
+                    cloudStreamFetchLog.i { "CloudStream direct links provider=${route.providerId} streams=${streams.size}" }
+                    AddonStreamGroup(
+                        addonName = providerName,
+                        addonId = addonId,
+                        streams = streams.sortedForGroupedDisplay(),
+                        isLoading = false,
+                        error = if (streams.isEmpty()) "No links found" else null,
+                    )
+                },
+            )
+        }
+
+        val request = buildCloudStreamSearchRequest(
+            type = type,
+            videoId = videoId,
+            parentMetaId = parentMetaId,
+            season = season,
+            episode = episode,
+        )
+        val groups = cloudStreamProviderGroupsForRequest(
+            type = type,
+            request = request,
+            groupByRepository = state.groupStreamsByRepository,
+            repoNameByUrl = state.repositories.associate { it.manifest.sourceUrl to it.manifest.name },
+        )
+        if (groups.isNotEmpty()) {
+            cloudStreamFetchLog.d { "CloudStream stream groups=${groups.size} type=$type id=$videoId title=${request?.title}" }
+        }
+        return groups.map { group ->
+            CloudStreamStreamSource(addonId = group.addonId, addonName = group.addonName) {
+                withTimeoutOrNull(CLOUDSTREAM_GROUP_TIMEOUT_MS) {
+                    resolveCloudStreamProviderStreams(providerGroup = group, request = request)
+                } ?: group.toCloudStreamGroup(streams = emptyList(), error = "${group.addonName} timed out")
+            }
+        }
+    }
+}
+
+private fun CloudStreamPluginItem.displayName(): String = metadata.name.ifBlank { metadata.internalName }
+
+private fun buildCloudStreamSearchRequest(
+    type: String,
+    videoId: String,
+    parentMetaId: String?,
+    season: Int?,
+    episode: Int?,
+): CloudStreamSearchRequest? {
+    val metaLookupId = parentMetaId?.takeIf { it.isNotBlank() } ?: videoId
+    // The player source panel has no parent id: fall back to the details screen that opened it.
+    val meta = MetaDetailsRepository.peek(type, metaLookupId)
+        ?: MetaDetailsRepository.uiState.value.meta?.takeIf { meta ->
+            meta.id == metaLookupId || meta.videos.any { it.id == videoId }
+        }
+    val title = meta?.name?.trim()?.takeIf { it.isNotBlank() } ?: return null
+    val episodeTitle = meta.videos
+        .firstOrNull { video ->
+            (season == null || video.season == season) &&
+                (episode == null || video.episode == episode)
+        }
+        ?.title
+        ?.trim()
+        ?.takeIf { it.isNotBlank() }
+    val externalId = sequenceOf(videoId, parentMetaId, metaLookupId)
+        .filterNotNull()
+        .map { id -> id.trim().substringBefore(':') }
+        .firstOrNull { id -> id.matches(Regex("^tt\\d{5,12}$", RegexOption.IGNORE_CASE)) }
+
+    return CloudStreamSearchRequest(
+        title = title,
+        type = type,
+        year = meta.releaseInfo.cloudStreamReleaseYear() ?: title.cloudStreamReleaseYear(),
+        season = season,
+        episode = episode,
+        episodeTitle = episodeTitle,
+        externalId = externalId,
+        genres = meta.genres,
+    )
+}
+
+internal data class CloudStreamProviderGroup(
+    val addonId: String,
+    val addonName: String,
+    val providerIds: List<String>,
+) {
+    val providerId: String get() = providerIds.first()
+}
+
+internal data class CloudStreamSearchRequest(
+    val title: String,
+    val aliases: List<String> = emptyList(),
+    val type: String,
+    val year: Int?,
+    val season: Int?,
+    val episode: Int?,
+    val episodeTitle: String? = null,
+    val externalId: String? = null,
+    val genres: List<String> = emptyList(),
+) {
+    val titleCandidates: List<String> =
+        (listOf(title) + aliases)
+            .mapNotNull { candidate -> candidate.trim().takeIf(String::isNotBlank) }
+            .distinctBy { candidate -> candidate.normalizedCloudStreamSearchTitle() }
+
+    val cacheKey: String =
+        "${type.trim().lowercase()}::${titleCandidates.joinToString("|") { it.lowercase() }}::" +
+            "${year ?: ""}::${season ?: ""}::${episode ?: ""}::${episodeTitle.orEmpty().trim().lowercase()}::" +
+            "${externalId.orEmpty().lowercase()}::${genres.joinToString(",") { it.trim().lowercase() }}"
+}
+
+internal fun cloudStreamAddonId(providerId: String): String =
+    "$CLOUDSTREAM_ADDON_ID_PREFIX${sha256Hex(providerId.encodeToByteArray()).take(16)}"
+
+internal fun cloudStreamProviderGroupsForRequest(
+    type: String,
+    request: CloudStreamSearchRequest?,
+    groupByRepository: Boolean = false,
+    repoNameByUrl: Map<String, String> = emptyMap(),
+): List<CloudStreamProviderGroup> {
+    CloudStreamRepository.initialize()
+    val eligible = CloudStreamRepository.uiState.value.plugins
+        .filter(CloudStreamPluginItem::isRunnable)
+        .filter { plugin -> plugin.supportsCloudStreamRequest(type, request) }
+        .sortedWith(
+            compareBy<CloudStreamPluginItem> { plugin ->
+                plugin.cloudStreamTypePriority(type)
+            }.thenBy { plugin ->
+                plugin.metadata.name.lowercase()
+            },
+        )
+
+    if (!groupByRepository) {
+        return eligible.map { plugin ->
+            CloudStreamProviderGroup(
+                addonId = cloudStreamAddonId(plugin.metadata.id.value),
+                addonName = plugin.metadata.name.ifBlank { plugin.metadata.internalName },
+                providerIds = listOf(plugin.metadata.id.value),
+            )
+        }.distinctBy { it.addonId }
+    }
+
+    return eligible.groupBy { it.metadata.repositoryManifestUrl }
+        .map { (repoUrl, plugins) ->
+            val repoName = repoNameByUrl[repoUrl].orEmpty()
+                .ifBlank { repoUrl.cloudStreamRepositoryLabel() }
+            val sortedPlugins = plugins.sortedBy { it.metadata.name.lowercase() }
+            CloudStreamProviderGroup(
+                addonId = "$CLOUDSTREAM_REPOSITORY_ADDON_ID_PREFIX${repoUrl.lowercase()}",
+                addonName = repoName,
+                providerIds = sortedPlugins.map { it.metadata.id.value },
+            )
+        }
+        .sortedBy { it.addonName.lowercase() }
+}
+
+internal suspend fun resolveCloudStreamProviderStreams(
+    providerGroup: CloudStreamProviderGroup,
+    request: CloudStreamSearchRequest?,
+): AddonStreamGroup {
+    val searchRequest = request?.takeIf { it.title.isNotBlank() }
+        ?: return providerGroup.toCloudStreamGroup(
+            streams = emptyList(),
+            error = "CloudStream search title is unavailable",
+        )
+
+    val allStreams = mutableListOf<StreamItem>()
+
+    for (pid in providerGroup.providerIds) {
+        val plugin = CloudStreamRepository.uiState.value.plugins.find { it.metadata.id.value == pid }
+        val providerName = plugin?.let {
+            it.metadata.name.ifBlank { it.metadata.internalName }
+        } ?: providerGroup.addonName
+        val providerStreams = cloudStreamProviderSemaphore.withPermit {
+            resolveSingleCloudStreamProvider(
+                providerId = pid,
+                addonName = providerName,
+                searchRequest = searchRequest,
+            )
+        }
+        if (providerStreams != null) {
+            allStreams.addAll(providerStreams.map { stream ->
+                stream.copy(
+                    addonId = providerGroup.addonId,
+                    sourceName = providerName,
+                )
+            })
+        }
+    }
+
+    return providerGroup.toCloudStreamGroup(
+        streams = allStreams,
+        error = if (allStreams.isEmpty()) {
+            "No links found"
+        } else {
+            null
+        },
+    )
+}
+
+private suspend fun resolveSingleCloudStreamProvider(
+    providerId: String,
+    addonName: String,
+    searchRequest: CloudStreamSearchRequest,
+): List<StreamItem>? {
+    // Third-party plugins can execute blocking code that ignores coroutine cancellation.
+    // Run them in a detached supervisor so a timed-out plugin cannot retain the caller's
+    // semaphore permit and prevent every provider behind it from being scanned.
+    val providerTask = cloudStreamProviderScope.async {
+        runCatchingUnlessCancelled {
+            var lastError: Throwable? = null
+            suspend fun resolveMatch(
+                match: CloudStreamSearchItem,
+                allowProviderRankedFallback: Boolean,
+            ): List<StreamItem>? {
+                val loaded = runCatchingUnlessCancelled {
+                    CloudStreamRepository.load(providerId, match.data).getOrThrow()
+                }.onFailure { error -> lastError = error }
+                    .getOrNull()
+                    ?: return null
+                if (!loaded.matchesCloudStreamRequest(
+                        request = searchRequest,
+                        searchItem = match,
+                        allowProviderRankedFallback = allowProviderRankedFallback,
+                    )
+                ) return null
+
+                val linkData = loaded.linkDataForCloudStreamRequest(searchRequest)
+                if (linkData == null) {
+                    lastError = IllegalStateException("CloudStream episode not found")
+                    return null
+                }
+
+                val sources = runCatchingUnlessCancelled {
+                    CloudStreamRepository.loadLinks(providerId, linkData).getOrThrow()
+                }.onFailure { error -> lastError = error }
+                    .getOrNull()
+                    ?: return null
+                return cloudStreamSourcesToStreamItems(
+                    providerId = providerId,
+                    providerName = addonName,
+                    sources = sources,
+                ).takeIf { streams -> streams.isNotEmpty() }
+                    ?: run {
+                        lastError = IllegalStateException("No links found")
+                        null
+                    }
+            }
+
+            val indexedRoutes = CloudStreamSearchRouteIndex.find(
+                providerId = providerId,
+                titles = searchRequest.titleCandidates,
+                type = searchRequest.type,
+                year = searchRequest.year,
+            )
+            for (route in indexedRoutes) {
+                resolveMatch(route, allowProviderRankedFallback = true)?.let {
+                    return@runCatchingUnlessCancelled it
+                }
+            }
+
+            searchRequest.externalId?.let { externalId ->
+                val loaded = runCatchingUnlessCancelled {
+                    CloudStreamRepository.loadByExternalId(providerId, externalId).getOrThrow()
+                }.onFailure { error -> lastError = error }
+                    .getOrNull()
+                if (loaded != null) {
+                    val linkData = loaded.linkDataForCloudStreamRequest(searchRequest)
+                    if (linkData != null) {
+                        val directSources = runCatchingUnlessCancelled {
+                            CloudStreamRepository.loadLinks(providerId, linkData).getOrThrow()
+                        }.onFailure { error -> lastError = error }
+                            .getOrNull()
+                        if (directSources != null) {
+                            val directStreams = cloudStreamSourcesToStreamItems(
+                                providerId = providerId,
+                                providerName = addonName,
+                                sources = directSources,
+                            )
+                            if (directStreams.isNotEmpty()) return@runCatchingUnlessCancelled directStreams
+                        }
+                    }
+                }
+            }
+            for (query in searchRequest.searchQueries()) {
+                val searchResults = runCatchingUnlessCancelled {
+                    CloudStreamRepository.search(query, providerId)
+                        .firstOrNull()
+                        ?.getOrThrow()
+                        .orEmpty()
+                        .distinctBy { item -> item.type to item.data }
+                }.onFailure { error -> lastError = error }
+                    .getOrDefault(emptyList())
+
+                val strictMatches = searchResults.bestCloudStreamMatches(searchRequest)
+                val matches = strictMatches.ifEmpty {
+                    searchResults.providerRankedCloudStreamFallbacks(searchRequest)
+                }
+                if (matches.isEmpty()) continue
+                val isProviderRankedFallback = strictMatches.isEmpty()
+
+                for (match in matches) {
+                    resolveMatch(match, isProviderRankedFallback)?.let {
+                        return@runCatchingUnlessCancelled it
+                    }
+                }
+            }
+
+            throw lastError ?: IllegalStateException("No verified CloudStream search result found")
+        }
+    }
+    val resolved = try {
+        withTimeoutOrNull(CLOUDSTREAM_PROVIDER_STREAM_TIMEOUT_MS) {
+            providerTask.await()
+        } ?: Result.failure(IllegalStateException("CloudStream provider timed out"))
+    } finally {
+        if (!providerTask.isCompleted) providerTask.cancel()
+    }
+
+    return resolved.fold(
+        onSuccess = { streams ->
+            cloudStreamFetchLog.d { "CloudStream provider=$providerId streams=${streams.size}" }
+            streams
+        },
+        onFailure = { error ->
+            cloudStreamFetchLog.d { "CloudStream provider=$providerId found nothing: ${error.message}" }
+            null
+        },
+    )
+}
+
+internal suspend fun cloudStreamSourcesToStreamItems(
+    providerId: String,
+    providerName: String,
+    sources: List<CloudStreamPlaybackSource>,
+): List<StreamItem> =
+    sources
+        .map { source ->
+            source.toStreamItem(
+                providerId = providerId,
+                providerName = providerName,
+            )
+        }
+        .distinctBy { stream ->
+            listOf(
+                stream.addonId,
+                stream.sourceName.orEmpty(),
+                stream.streamLabel,
+                stream.playableDirectUrl.orEmpty(),
+            )
+        }
+
+private fun CloudStreamPluginItem.supportsCloudStreamRequest(
+    type: String,
+    request: CloudStreamSearchRequest?,
+): Boolean {
+    val requestedType = normalizeCloudStreamNuvioType(type)
+    val supportedTypes = metadata.tvTypes.toSet()
+    if (supportedTypes.isEmpty() || CloudStreamTvType.Other in supportedTypes) return true
+
+    val normalizedGenres = request?.genres.orEmpty().map { it.trim().lowercase() }.toSet()
+    val isAnime = normalizedGenres.any { genre -> genre == "anime" }
+    val isAnimation = normalizedGenres.any { genre -> genre == "animation" || genre == "animasyon" }
+    val isDocumentary = normalizedGenres.any { genre -> genre == "documentary" || genre == "belgesel" }
+
+    return when (requestedType) {
+        "movie" -> when {
+            isAnime -> supportedTypes.any { it == CloudStreamTvType.AnimeMovie || it == CloudStreamTvType.Movie }
+            isAnimation -> supportedTypes.any {
+                it == CloudStreamTvType.AnimeMovie || it == CloudStreamTvType.Cartoon || it == CloudStreamTvType.Movie
+            }
+            isDocumentary -> supportedTypes.any { it == CloudStreamTvType.Documentary || it == CloudStreamTvType.Movie }
+            else -> CloudStreamTvType.Movie in supportedTypes
+        }
+        "series" -> when {
+            isAnime -> supportedTypes.any {
+                it == CloudStreamTvType.Anime || it == CloudStreamTvType.Ova || it == CloudStreamTvType.TvSeries
+            }
+            isAnimation -> supportedTypes.any {
+                it == CloudStreamTvType.Anime || it == CloudStreamTvType.Ova ||
+                    it == CloudStreamTvType.Cartoon || it == CloudStreamTvType.TvSeries
+            }
+            else -> CloudStreamTvType.TvSeries in supportedTypes
+        }
+        "live" -> CloudStreamTvType.Live in supportedTypes || CloudStreamTvType.Music in supportedTypes
+        else -> supportedTypes.any { cloudType -> normalizeCloudStreamNuvioType(cloudType.nuvioType) == requestedType }
+    }
+}
+
+private fun CloudStreamPluginItem.cloudStreamTypePriority(type: String): Int {
+    val requestedType = normalizeCloudStreamNuvioType(type)
+    val types = metadata.tvTypes.toSet()
+    return when (requestedType) {
+        "movie" -> when {
+            CloudStreamTvType.Movie in types -> 0
+            CloudStreamTvType.AnimeMovie in types -> 1
+            CloudStreamTvType.Documentary in types -> 2
+            types.isEmpty() || CloudStreamTvType.Other in types -> 3
+            else -> 4
+        }
+        "series" -> when {
+            CloudStreamTvType.TvSeries in types -> 0
+            CloudStreamTvType.AsianDrama in types -> 1
+            CloudStreamTvType.Anime in types || CloudStreamTvType.Cartoon in types || CloudStreamTvType.Ova in types -> 2
+            types.isEmpty() || CloudStreamTvType.Other in types -> 3
+            else -> 4
+        }
+        else -> if (types.isEmpty() || types.any { it.nuvioType == requestedType }) 0 else 1
+    }
+}
+
+private fun CloudStreamProviderGroup.toCloudStreamGroup(
+    streams: List<StreamItem>,
+    error: String? = null,
+): AddonStreamGroup = AddonStreamGroup(
+    addonName = addonName,
+    addonId = addonId,
+    streams = streams.sortedForGroupedDisplay(),
+    isLoading = false,
+    error = error,
+)
+
+internal fun List<CloudStreamSearchItem>.bestCloudStreamMatch(
+    searchTitle: String,
+    type: String,
+): CloudStreamSearchItem? {
+    return bestCloudStreamMatches(
+        CloudStreamSearchRequest(
+            title = searchTitle,
+            type = type,
+            year = searchTitle.cloudStreamReleaseYear(),
+            season = null,
+            episode = null,
+        ),
+    ).firstOrNull()
+}
+
+internal fun List<CloudStreamSearchItem>.bestCloudStreamMatches(
+    request: CloudStreamSearchRequest,
+): List<CloudStreamSearchItem> {
+    val requestedType = normalizeCloudStreamNuvioType(request.type)
+    val typedCandidates = filter { item -> item.type.matchesCloudStreamType(requestedType) }
+    val candidates = typedCandidates.ifEmpty { this }
+    val requestedTitles = request.titleCandidates
+        .map { title -> title.normalizedCloudStreamSearchTitle() }
+        .filter { title -> title.isNotBlank() }
+        .distinct()
+    return candidates
+        .mapNotNull { item ->
+            requestedTitles
+                .mapIndexedNotNull { index, requestedTitle ->
+                    item.matchScore(requestedTitle, request.year)?.let { score ->
+                        score + if (index == 0) 5 else 0
+                    }
+                }
+                .maxOrNull()
+                ?.let { score -> item to score }
+        }
+        .sortedWith(
+            compareByDescending<Pair<CloudStreamSearchItem, Int>> { (_, score) -> score }
+                .thenBy { (item, _) -> item.name.length },
+        )
+        .map { (item, _) -> item }
+        .distinctBy { item -> item.data }
+        .take(CLOUDSTREAM_SEARCH_CANDIDATE_LIMIT)
+}
+
+private fun List<CloudStreamSearchItem>.providerRankedCloudStreamFallbacks(
+    request: CloudStreamSearchRequest,
+): List<CloudStreamSearchItem> {
+    val requestedType = normalizeCloudStreamNuvioType(request.type)
+    val typedCandidates = filter { item -> item.type.matchesCloudStreamType(requestedType) }
+    // A significant number of real CloudStream providers label every search card as
+    // Movie and only reveal TvSeries from load(url). This mirrors CloudStream itself:
+    // trust provider search ranking here, then validate the actual LoadResponse type.
+    val candidates = typedCandidates.ifEmpty { this }
+    return candidates
+        .filter { item ->
+            val candidateYear = item.year
+                ?: item.name.normalizedCloudStreamSearchTitle().trailingCloudStreamReleaseYear()
+            request.year == null || candidateYear == null || candidateYear == request.year
+        }
+        // Provider search endpoints already return relevance-ranked results. A localized
+        // title (for example "Les Evades") must not be discarded solely because it is
+        // different from the metadata title used for the query.
+        .distinctBy { item -> item.data }
+        .take(CLOUDSTREAM_SEARCH_CANDIDATE_LIMIT)
+}
+
+private fun CloudStreamSearchItem.matchScore(requestedTitle: String, requestedYear: Int?): Int? {
+    val candidateTitle = name.normalizedCloudStreamSearchTitle()
+    val requestedCanonical = requestedTitle.cloudStreamCanonicalTitle()
+    val candidateCanonical = candidateTitle.cloudStreamCanonicalTitle()
+    if (requestedCanonical.isBlank() || candidateCanonical.isBlank()) return null
+
+    val candidateYear = year ?: candidateTitle.trailingCloudStreamReleaseYear()
+    if (requestedYear != null && candidateYear != null && requestedYear != candidateYear) return null
+
+    val yearBonus = when {
+        requestedYear != null && candidateYear == requestedYear -> 25
+        candidateYear != null -> 1
+        else -> 0
+    }
+    return when {
+        candidateTitle == requestedTitle -> 100 + yearBonus
+        candidateCanonical == requestedCanonical -> 90 + yearBonus
+        else -> null
+    }
+}
+
+internal fun CloudStreamLoadItem.linkDataForCloudStreamRequest(
+    request: CloudStreamSearchRequest,
+): String? {
+    val requestedType = normalizeCloudStreamNuvioType(request.type)
+    val sortedEpisodes = sortCloudStreamEpisodes(episodes)
+    if (requestedType != "series" || sortedEpisodes.isEmpty()) return data
+
+    if (request.season == null && request.episode == null) {
+        return sortedEpisodes.firstOrNull()?.data
+    }
+
+    val titledEpisode = sortedEpisodes.bestEpisodeTitleMatch(request)
+    if (request.season != null && request.episode != null) {
+        val exactEpisodes = sortedEpisodes.filter { item ->
+            item.season == request.season && item.episode == request.episode
+        }
+        return exactEpisodes.bestEpisodeTitleMatch(request)?.data
+            ?: exactEpisodes.firstOrNull()?.data
+            ?: titledEpisode?.takeIf { item -> item.episode == request.episode }?.data
+            ?: sortedEpisodes.safeUnknownSeasonEpisodeMatch(request)?.data
+    }
+
+    if (request.episode != null) {
+        val episodeMatches = sortedEpisodes.filter { item -> item.episode == request.episode }
+        return episodeMatches.bestEpisodeTitleMatch(request)?.data
+            ?: episodeMatches.firstOrNull()?.data
+            ?: titledEpisode?.data
+    }
+
+    if (request.season != null) {
+        val seasonMatches = sortedEpisodes.filter { item -> item.season == request.season }
+        return seasonMatches.bestEpisodeTitleMatch(request)?.data
+            ?: seasonMatches.firstOrNull()?.data
+    }
+
+    return null
+}
+
+private fun List<CloudStreamEpisode>.bestEpisodeTitleMatch(
+    request: CloudStreamSearchRequest,
+): CloudStreamEpisode? {
+    val requestedTitle = request.episodeTitle
+        ?.normalizedCloudStreamSearchTitle()
+        ?.takeIf { it.isNotBlank() }
+        ?.takeUnless { it.isGenericCloudStreamEpisodeTitle() }
+        ?: return null
+
+    return firstOrNull { item ->
+        val candidateTitle = item.name.normalizedCloudStreamSearchTitle()
+        candidateTitle.matchesRequestedCloudStreamEpisodeTitle(requestedTitle)
+    }
+}
+
+private fun List<CloudStreamEpisode>.safeUnknownSeasonEpisodeMatch(
+    request: CloudStreamSearchRequest,
+): CloudStreamEpisode? {
+    val episodeNumber = request.episode ?: return null
+    val unknownSeasonMatches = filter { item ->
+        item.season == null && item.episode == episodeNumber
+    }
+    if (unknownSeasonMatches.isEmpty()) return null
+
+    unknownSeasonMatches.bestEpisodeTitleMatch(request)?.let { return it }
+
+    val explicitSeasons = mapNotNull { item -> item.season?.takeIf { it > 0 } }.toSet()
+    if (explicitSeasons.size > 1) return null
+
+    val requestedSeason = request.season
+    return unknownSeasonMatches.singleOrNull()
+        ?.takeIf { requestedSeason == null || requestedSeason == 1 || requestedSeason in explicitSeasons }
+}
+
+internal fun CloudStreamLoadItem.matchesCloudStreamRequest(
+    request: CloudStreamSearchRequest,
+    searchItem: CloudStreamSearchItem,
+    allowProviderRankedFallback: Boolean = false,
+): Boolean {
+    val requestedType = normalizeCloudStreamNuvioType(request.type)
+    if (!type.matchesCloudStreamType(requestedType)) return false
+
+    val requestedTitles = request.titleCandidates
+        .map { title -> title.normalizedCloudStreamSearchTitle() }
+        .filter { title -> title.isNotBlank() }
+        .distinct()
+    val loadedTitle = name.normalizedCloudStreamSearchTitle()
+    val titleMatches = requestedTitles.any { requestedTitle ->
+        loadedTitle.matchesRequestedCloudStreamTitle(requestedTitle)
+    }
+    if (!titleMatches && !allowProviderRankedFallback) {
+        return false
+    }
+
+    val requestedYear = request.year
+    val searchYear = searchItem.year ?: searchItem.name.normalizedCloudStreamSearchTitle().trailingCloudStreamReleaseYear()
+    val loadedYear = year ?: loadedTitle.trailingCloudStreamReleaseYear()
+    if (requestedYear != null) {
+        if (searchYear != null && searchYear != requestedYear) return false
+        if (loadedYear != null && loadedYear != requestedYear) return false
+        if (requestedType == "movie" && searchYear != requestedYear && loadedYear != requestedYear) return false
+    }
+
+    return titleMatches || allowProviderRankedFallback
+}
+
+private fun CloudStreamTvType.matchesCloudStreamType(type: String): Boolean =
+    normalizeCloudStreamNuvioType(nuvioType) == type
+
+private fun normalizeCloudStreamNuvioType(type: String): String = when (type.trim().lowercase()) {
+    "tv", "show" -> "series"
+    "livetv", "channel" -> "live"
+    else -> type.trim().lowercase().ifBlank { "other" }
+}
+
+internal fun String?.cloudStreamReleaseYear(): Int? =
+    this
+        ?.let { cloudStreamReleaseYearRegex.find(it) }
+        ?.value
+        ?.toIntOrNull()
+        ?.takeIf { it in 1900..2099 }
+
+private fun CloudStreamSearchRequest.searchQueries(): List<String> {
+    return titleCandidates.flatMap { candidate ->
+        val title = candidate.trim()
+        val yearQuery = year?.let { "$title $it" }
+        // Most CloudStream providers implement literal site searches. The unmodified
+        // title must be attempted first; adding a year often turns a valid result into
+        // an empty page on WordPress-style providers such as Bollyflix.
+        listOfNotNull(title, yearQuery)
+    }
+        .map { it.trim() }
+        .filter { it.isNotBlank() }
+        .distinctBy { it.normalizedCloudStreamSearchTitle() }
+}
+
+private fun String.normalizedCloudStreamSearchTitle(): String =
+    lowercase()
+        .map { char -> if (char.isLetterOrDigit()) char else ' ' }
+        .joinToString("")
+        .trim()
+        .split(Regex("\\s+"))
+        .filter { it.isNotBlank() }
+        .joinToString(" ")
+
+private fun String.cloudStreamCanonicalTitle(): String =
+    withoutTrailingCloudStreamReleaseYear()
+        .withoutLeadingCloudStreamArticle()
+
+private fun String.matchesRequestedCloudStreamTitle(requestedTitle: String): Boolean =
+    this == requestedTitle || cloudStreamCanonicalTitle() == requestedTitle.cloudStreamCanonicalTitle()
+
+private fun String.matchesRequestedCloudStreamEpisodeTitle(requestedTitle: String): Boolean {
+    val candidate = cloudStreamCanonicalTitle()
+    val requested = requestedTitle.cloudStreamCanonicalTitle()
+    if (candidate.isBlank() || requested.isBlank()) return false
+    return candidate == requested ||
+        candidate.startsWith("$requested ") ||
+        candidate.endsWith(" $requested")
+}
+
+private fun String.isGenericCloudStreamEpisodeTitle(): Boolean =
+    matches(cloudStreamGenericEpisodeTitleRegex)
+
+private fun String.withoutTrailingCloudStreamReleaseYear(): String {
+    val tokens = split(' ').filter { it.isNotBlank() }
+    if (tokens.size <= 1) return this
+    val last = tokens.last()
+    val year = last.toIntOrNull()
+    return if (year != null && year in 1900..2099) {
+        tokens.dropLast(1).joinToString(" ")
+    } else {
+        this
+    }
+}
+
+private fun String.withoutLeadingCloudStreamArticle(): String {
+    val tokens = split(' ').filter { it.isNotBlank() }
+    if (tokens.size <= 1) return this
+    return if (tokens.first() in cloudStreamLeadingArticles) {
+        tokens.drop(1).joinToString(" ")
+    } else {
+        this
+    }
+}
+
+private fun String.trailingCloudStreamReleaseYear(): Int? {
+    val tokens = split(' ').filter { it.isNotBlank() }
+    if (tokens.size <= 1) return null
+    return tokens.last().toIntOrNull()?.takeIf { it in 1900..2099 }
+}
+
+// CloudStream providers own stage-specific timeout hints. The host timeout only
+// prevents a permanently stuck provider; it must leave enough room for the
+// callback-based loadLinks contract, whose upstream default is measured in minutes.
+private const val CLOUDSTREAM_PROVIDER_STREAM_TIMEOUT_MS = 120_000L
+private const val CLOUDSTREAM_GROUP_TIMEOUT_MS = 150_000L
+private const val CLOUDSTREAM_SEARCH_CANDIDATE_LIMIT = 3
+private const val CLOUDSTREAM_STREAM_PROVIDER_CONCURRENCY = 12
+private const val CLOUDSTREAM_ADDON_ID_PREFIX = "cloudstream:"
+private const val CLOUDSTREAM_REPOSITORY_ADDON_ID_PREFIX = "cloudstream-repo:"
+
+private fun String.cloudStreamRepositoryLabel(): String =
+    substringAfter("://").substringBefore('/').removePrefix("www.").ifBlank { "CloudStream" }
+
+private val cloudStreamLeadingArticles = setOf("a", "an", "the")
+private val cloudStreamReleaseYearRegex = Regex("""\b(?:19|20)\d{2}\b""")
+private val cloudStreamGenericEpisodeTitleRegex = Regex("""(?i)(?:s\d{1,2}\s*e\d{1,3}|(?:episode|ep|bolum|bölüm)\s*\d{1,4})""")

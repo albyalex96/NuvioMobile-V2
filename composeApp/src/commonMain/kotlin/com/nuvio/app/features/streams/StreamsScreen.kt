@@ -1,5 +1,6 @@
 package com.nuvio.app.features.streams
 
+import com.nuvio.app.features.cloudstream.CloudStreamBadge
 import com.nuvio.app.core.format.formatEpisodeCodeWithSelectedFormat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -957,6 +958,7 @@ private fun LazyListScope.streamSection(
                 addonName = group.addonName,
                 isLoading = group.isLoading,
                 fetchingText = fetchingText,
+                isCloudStream = CloudStreamStreams.isCloudStreamSourceId(group.addonId),
             )
         }
     }
@@ -1051,6 +1053,7 @@ private fun StreamSectionHeader(
     isLoading: Boolean,
     fetchingText: String,
     modifier: Modifier = Modifier,
+    isCloudStream: Boolean = false,
 ) {
     Row(
         modifier = modifier
@@ -1059,14 +1062,24 @@ private fun StreamSectionHeader(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(
-            text = addonName,
-            style = MaterialTheme.typography.bodyMedium.copy(
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-            ),
-            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.9f),
-        )
+        Row(
+            modifier = Modifier.weight(1f, fill = false),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Text(
+                text = addonName,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                ),
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.9f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            if (isCloudStream) CloudStreamBadge()
+        }
         AnimatedVisibility(visible = isLoading, enter = fadeIn(), exit = fadeOut()) {
             Text(
                 text = fetchingText,

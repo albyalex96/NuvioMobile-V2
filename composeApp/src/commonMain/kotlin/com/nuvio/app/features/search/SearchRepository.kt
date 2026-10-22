@@ -8,6 +8,7 @@ import com.nuvio.app.features.addons.ManagedAddon
 import com.nuvio.app.features.addons.enabledAddons
 import com.nuvio.app.features.addons.firstEnabledManifestError
 import com.nuvio.app.features.addons.hasPendingEnabledManifests
+import com.nuvio.app.features.cloudstream.CloudStreamCatalog
 import com.nuvio.app.features.servers.ServerCatalog
 import com.nuvio.app.features.servers.ServerMediaKind
 import com.nuvio.app.features.servers.serverMessage
@@ -37,6 +38,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.getString
 
@@ -91,7 +93,12 @@ object SearchRepository {
         val addonManifestErrorMessage = enabledAddons.firstEnabledManifestError()
         val activeAddons = enabledAddons.filter { it.manifest != null }
         val serverSearches = ServerCatalog.searchTargets()
-        if (activeAddons.isEmpty() && serverSearches.isEmpty()) {
+        val cloudStreamSearches = if (normalizedQuery.length >= CLOUDSTREAM_SEARCH_MIN_QUERY_LENGTH) {
+            CloudStreamCatalog.searchProviders()
+        } else {
+            emptyList()
+        }
+        if (activeAddons.isEmpty() && serverSearches.isEmpty() && cloudStreamSearches.isEmpty()) {
             activeJob?.cancel()
             lastRequestKey = null
             _uiState.value = SearchUiState(
@@ -110,7 +117,7 @@ object SearchRepository {
             addons = activeAddons,
             query = normalizedQuery,
         )
-        if (requests.isEmpty() && serverSearches.isEmpty()) {
+        if (requests.isEmpty() && serverSearches.isEmpty() && cloudStreamSearches.isEmpty()) {
             activeJob?.cancel()
             lastRequestKey = null
             _uiState.value = SearchUiState(
@@ -136,12 +143,24 @@ object SearchRepository {
                 append("|server:${ref.connection.id}:${ref.kind.contentType}:")
                 append(ref.connection.selectedLibraries(ref.kind).joinToString(",") { it.id })
             }
+            cloudStreamSearches.forEach { plugin -> append("|cloudstream:${plugin.metadata.id.storageKey}") }
         }
         val loaders: List<suspend () -> HomeCatalogSection> =
             requests.map { request -> suspend { request.toSection(forceRefresh = forceRefresh) } } +
                 serverSearches.map { ref ->
                     suspend {
                         ServerCatalog.searchSection(ref, normalizedQuery).also { section ->
+                            require(section.items.isNotEmpty()) {
+                                getString(Res.string.search_error_no_results_for_catalog, section.title)
+                            }
+                        }
+                    }
+                } +
+                cloudStreamSearches.map { plugin ->
+                    suspend {
+                        withTimeout(CLOUDSTREAM_SEARCH_PROVIDER_TIMEOUT_MS) {
+                            CloudStreamCatalog.searchSection(plugin, normalizedQuery)
+                        }.also { section ->
                             require(section.items.isNotEmpty()) {
                                 getString(Res.string.search_error_no_results_for_catalog, section.title)
                             }
@@ -246,7 +265,8 @@ object SearchRepository {
         val addonManifestErrorMessage = enabledAddons.firstEnabledManifestError()
         val activeAddons = enabledAddons.filter { it.manifest != null }
         val serverLibraries = ServerCatalog.titleLibraries()
-        if (activeAddons.isEmpty() && serverLibraries.isEmpty()) {
+        val cloudStreamOptions = CloudStreamCatalog.discoverOptions()
+        if (activeAddons.isEmpty() && serverLibraries.isEmpty() && cloudStreamOptions.isEmpty()) {
             activeDiscoverJob?.cancel()
             discoverSources = emptyList()
             lastDiscoverRequestKey = null
@@ -274,7 +294,7 @@ object SearchRepository {
                 supportsPagination = true,
                 server = ref.target,
             )
-        }
+        } + cloudStreamOptions
         val current = _discoverUiState.value
         val hideUnreleasedContent = HomeCatalogSettingsRepository.snapshot().hideUnreleasedContent
         val requestKey = DiscoverRequestKey(
@@ -548,8 +568,11 @@ object SearchRepository {
         activeDiscoverJob = scope.launch {
             runCatching {
                 val server = selectedCatalog.server
+                val cloudStream = selectedCatalog.cloudStream
                 if (server != null) {
                     ServerCatalog.page(server, skip = requestedSkip)
+                } else if (cloudStream != null) {
+                    CloudStreamCatalog.page(cloudStream, skip = requestedSkip)
                 } else {
                     fetchCatalogPage(
                         manifestUrl = selectedCatalog.manifestUrl,
@@ -703,3 +726,6 @@ private fun String.typeSortKey(): String =
         "anime" -> "2_anime"
         else -> "9_$this"
     }
+
+private const val CLOUDSTREAM_SEARCH_MIN_QUERY_LENGTH = 3
+private const val CLOUDSTREAM_SEARCH_PROVIDER_TIMEOUT_MS = 15_000L

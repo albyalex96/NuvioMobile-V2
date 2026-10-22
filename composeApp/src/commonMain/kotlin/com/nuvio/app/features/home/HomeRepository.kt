@@ -8,6 +8,7 @@ import com.nuvio.app.features.catalog.fetchCatalogPage
 import com.nuvio.app.core.poster.CustomPosterUrlRepository
 import com.nuvio.app.core.poster.reapplyCustomPosterUrls
 import com.nuvio.app.core.poster.withCustomPosterUrls
+import com.nuvio.app.features.cloudstream.CloudStreamCatalog
 import com.nuvio.app.features.collection.Collection
 import com.nuvio.app.features.collection.CollectionRepository
 import com.nuvio.app.features.collection.CollectionSource
@@ -267,6 +268,7 @@ object HomeRepository {
 
     private suspend fun HomeCatalogDefinition.toSection(forceRefresh: Boolean): HomeCatalogSection {
         serverConnectionId?.let { connectionId -> return toServerSection(connectionId) }
+        if (cloudStreamTarget != null) return CloudStreamCatalog.section(this, HOME_CATALOG_PREVIEW_FETCH_LIMIT)
         CustomPosterUrlRepository.ensureLoaded()
         val pattern = CustomPosterUrlRepository.patternForScreen(com.nuvio.app.core.poster.CustomPosterScreen.HOME)
         val page = fetchCatalogPage(

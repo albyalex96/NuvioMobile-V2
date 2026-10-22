@@ -2,6 +2,7 @@ package com.nuvio.app.features.tmdb
 
 import co.touchlab.kermit.Logger
 import com.nuvio.app.features.addons.httpGetText
+import io.ktor.http.encodeURLParameter
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.SerialName
@@ -97,6 +98,36 @@ object TmdbService {
         return resultId
     }
 
+    /** Best TMDB match for a title (and optional year), used when a source exposes no external id. */
+    suspend fun searchTmdbId(title: String, year: Int?, mediaType: String): Int? {
+        val trimmed = title.trim().takeIf(String::isNotBlank) ?: return null
+        val apiKey = TmdbSettingsRepository.effectiveApiKey()
+        val normalizedType = normalizeMediaType(mediaType).takeIf { it == "movie" || it == "tv" } ?: "movie"
+        val yearKey = if (normalizedType == "tv") "first_air_date_year" else "year"
+        val query = buildMap {
+            put("query", trimmed.encodeURLParameter())
+            year?.let { put(yearKey, it.toString()) }
+        }
+        val results = fetch<TmdbSearchResponse>(endpoint = "search/$normalizedType", apiKey = apiKey, query = query)
+            ?.results
+            .orEmpty()
+            .ifEmpty {
+                if (year == null) return@ifEmpty emptyList()
+                fetch<TmdbSearchResponse>(
+                    endpoint = "search/$normalizedType",
+                    apiKey = apiKey,
+                    query = mapOf("query" to trimmed.encodeURLParameter()),
+                )?.results.orEmpty()
+            }
+        val normalizedTitle = trimmed.lowercase()
+        val match = results.firstOrNull { result ->
+            listOfNotNull(result.title, result.name, result.originalTitle, result.originalName)
+                .any { it.trim().lowercase() == normalizedTitle }
+        } ?: results.firstOrNull()
+        log.d { "TMDB title search type=$normalizedType title=$trimmed year=$year match=${match?.id}" }
+        return match?.id?.takeIf { it > 0 }
+    }
+
     private suspend inline fun <reified T> fetch(
         endpoint: String,
         apiKey: String,
@@ -148,6 +179,20 @@ private data class TmdbFindResponse(
 @Serializable
 private data class TmdbExternalResult(
     val id: Int,
+)
+
+@Serializable
+private data class TmdbSearchResponse(
+    val results: List<TmdbSearchResult> = emptyList(),
+)
+
+@Serializable
+private data class TmdbSearchResult(
+    val id: Int,
+    val title: String? = null,
+    val name: String? = null,
+    @SerialName("original_title") val originalTitle: String? = null,
+    @SerialName("original_name") val originalName: String? = null,
 )
 
 @Serializable

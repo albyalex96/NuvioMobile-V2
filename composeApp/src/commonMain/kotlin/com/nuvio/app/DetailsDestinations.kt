@@ -3,10 +3,21 @@ package com.nuvio.app
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.nuvio.app.core.ui.NuvioLoadingIndicator
+import com.nuvio.app.features.cloudstream.CloudStreamDetailsResolver
 import com.nuvio.app.features.details.MetaDetailsScreen
 import com.nuvio.app.features.details.PersonDetailScreen
 import com.nuvio.app.features.details.TmdbEntityBrowseScreen
@@ -78,9 +89,27 @@ internal fun DetailsDestination(
     val directorRole = stringResource(Res.string.person_role_director)
     val writerRole = stringResource(Res.string.person_role_writer)
     val creatorRole = stringResource(Res.string.person_role_creator)
+    // CloudStream catalog items can open on the standard details page (CloudStream setting):
+    // their route id is swapped for the matching IMDb/TMDB id before the screen loads.
+    val resolveCloudStream = remember(route.type, route.id) {
+        CloudStreamDetailsResolver.shouldResolve(route.type, route.id)
+    }
+    var detailsId by remember(route.id) { mutableStateOf(route.id.takeUnless { resolveCloudStream }) }
+    if (detailsId == null) {
+        LaunchedEffect(route.type, route.id) {
+            detailsId = CloudStreamDetailsResolver.resolve(route.type, route.id) ?: route.id
+        }
+        Box(
+            modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
+            contentAlignment = Alignment.Center,
+        ) {
+            NuvioLoadingIndicator()
+        }
+        return
+    }
     MetaDetailsScreen(
         type = route.type,
-        id = route.id,
+        id = detailsId ?: route.id,
         onBack = onBack,
         onPlay = onPlay,
         onPlayManually = onPlayManually,

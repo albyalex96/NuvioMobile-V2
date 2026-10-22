@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -54,6 +55,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
@@ -379,6 +381,8 @@ fun NuvioInfoBadge(
     icon: ImageVector? = null,
     containerColor: Color = Color.Unspecified,
     contentColor: Color = Color.Unspecified,
+    /** Full-color logo drawn before the text instead of a tinted [icon]. */
+    iconPainter: Painter? = null,
 ) {
     val tokens = MaterialTheme.nuvio
     val resolvedContentColor = contentColor.takeOrElse { tokens.colors.textMuted }
@@ -391,7 +395,14 @@ fun NuvioInfoBadge(
             .padding(horizontal = NuvioTokens.Space.s10, vertical = NuvioTokens.Space.s6),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        if (icon != null) {
+        if (iconPainter != null) {
+            Image(
+                painter = iconPainter,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+            )
+            Spacer(modifier = Modifier.width(NuvioTokens.Space.s6))
+        } else if (icon != null) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,

@@ -203,6 +203,9 @@ import com.nuvio.app.tv.TvPosterMenuHook
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import com.nuvio.app.features.servers.ServerMatcher
+import com.nuvio.app.features.cloudstream.CloudStreamDetailsResolver
+import com.nuvio.app.features.cloudstream.CloudStreamCatalog
+import com.nuvio.app.features.cloudstream.CloudStreamRepository
 import com.nuvio.app.features.servers.ServerRepository
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -286,7 +289,10 @@ internal fun MainAppContent(
         }
         LaunchedEffect(posterNavigation.active?.to) {
             posterNavigation.active?.to?.let { route ->
-                MetaDetailsRepository.load(route.type, route.id)
+                // CloudStream items opened on the full details page load once their id is resolved.
+                if (!CloudStreamDetailsResolver.shouldResolve(route.type, route.id)) {
+                    MetaDetailsRepository.load(route.type, route.id)
+                }
             }
         }
         DisposableEffect(posterNavigation) {
@@ -421,7 +427,13 @@ internal fun MainAppContent(
         ServerRepository.uiState
     }.collectAsStateWithLifecycle()
 
-    LaunchedEffect(appContentGeneration, homeCatalogRefreshKey, serversUiState.revision) {
+    val cloudStreamUiState by remember {
+        CloudStreamRepository.initialize()
+        CloudStreamRepository.uiState
+    }.collectAsStateWithLifecycle()
+    val cloudStreamCatalogKey = remember(cloudStreamUiState) { CloudStreamCatalog.revision() }
+
+    LaunchedEffect(appContentGeneration, homeCatalogRefreshKey, serversUiState.revision, cloudStreamCatalogKey) {
         if (!ownsAppRuntime) return@LaunchedEffect
         val enabledAddons = addonsUiState.addons.enabledAddons()
         if (enabledAddons.isWaitingForFirstEnabledManifest()) return@LaunchedEffect

@@ -12,6 +12,10 @@ import com.nuvio.app.features.home.HomeCatalogSettingsRepository
 import com.nuvio.app.features.home.filterReleasedItems
 import com.nuvio.app.features.mdblist.MdbListMetadataService
 import com.nuvio.app.features.mdblist.MdbListSettingsRepository
+import com.nuvio.app.features.cloudstream.CloudStreamRepository
+import com.nuvio.app.features.cloudstream.CloudStreamRouteData
+import com.nuvio.app.features.cloudstream.parseCloudStreamRouteId
+import com.nuvio.app.features.cloudstream.toMetaDetails
 import com.nuvio.app.features.servers.ServerCatalog
 import com.nuvio.app.features.servers.ServerItemRef
 import com.nuvio.app.features.servers.ServerUserStateProjection
@@ -60,6 +64,10 @@ object MetaDetailsRepository {
         val requestKey = "$type:$id"
         ServerItemRef.parse(id)?.let { ref ->
             loadServerMeta(requestKey, ref)
+            return
+        }
+        parseCloudStreamRouteId(id)?.let { route ->
+            loadCloudStreamMeta(requestKey, route)
             return
         }
         val currentState = _uiState.value
@@ -215,6 +223,11 @@ object MetaDetailsRepository {
                 .getOrNull()
                 ?.also { if (cacheResult) cachedMetaByRequestKey[requestKey] = CachedMetaEntry(baseMeta = it) }
         }
+        parseCloudStreamRouteId(id)?.let { route ->
+            return withTimeoutOrNull(CLOUDSTREAM_FETCH_TIMEOUT_MS) {
+                CloudStreamRepository.load(route.providerId, route.data).getOrNull()?.toMetaDetails()
+            }?.also { if (cacheResult) cachedMetaByRequestKey[requestKey] = CachedMetaEntry(baseMeta = it) }
+        }
 
         val metaLookupId = resolveMetaLookupId(itemId = id, itemType = type)
         val manifests = findReadyMetaManifests(type = type, id = metaLookupId)
@@ -269,6 +282,39 @@ object MetaDetailsRepository {
         }
     }
 
+    /** Items from CloudStream catalogs: details come straight from the provider that listed them. */
+    private fun loadCloudStreamMeta(requestKey: String, route: CloudStreamRouteData) {
+        cachedMetaByRequestKey[requestKey]?.let { cached ->
+            activeRequestKey = requestKey
+            _uiState.value = MetaDetailsUiState(meta = cached.baseMeta)
+            return
+        }
+        if (_uiState.value.isLoading && activeRequestKey == requestKey) return
+        activeRequestKey = requestKey
+        _uiState.value = MetaDetailsUiState(isLoading = true)
+        scope.launch {
+            val result = withTimeoutOrNull(CLOUDSTREAM_FETCH_TIMEOUT_MS) {
+                CloudStreamRepository.load(route.providerId, route.data)
+            } ?: Result.failure(IllegalStateException("CloudStream provider timed out"))
+            if (activeRequestKey != requestKey) return@launch
+            result.fold(
+                onSuccess = { loaded ->
+                    val meta = loaded.toMetaDetails()
+                    cachedMetaByRequestKey[requestKey] = CachedMetaEntry(baseMeta = meta)
+                    _uiState.value = MetaDetailsUiState(meta = meta)
+                },
+                onFailure = { error ->
+                    log.w(error) { "CloudStream details failed provider=${route.providerId}" }
+                    _uiState.value = MetaDetailsUiState(
+                        errorMessage = error.message ?: getString(Res.string.cloudstream_details_failed),
+                    )
+                    activeRequestKey = null
+                },
+            )
+        }
+    }
+
+    private const val CLOUDSTREAM_FETCH_TIMEOUT_MS = 30_000L
     private const val FETCH_TIMEOUT_MS = 5_000L
     private const val METADATA_PROVIDER_READY_TIMEOUT_MS = 10_000L
     private const val TMDB_ENRICH_TIMEOUT_MS = 5_000L
