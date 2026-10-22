@@ -63,4 +63,11 @@ class UpdatePreferencesTest {
         assertEquals(UpdateChannel.BETA, UpdatePreferences("1.1.0-beta.1").channel.value)
         assertEquals("beta", AppUpdaterPlatform.getUpdateChannel())
     }
+
+    @Test
+    fun autoDownloadIsOffByDefaultAndPersists() {
+        assertEquals(false, UpdatePreferences("1.1.0").autoDownload.value)
+        UpdatePreferences("1.1.0").setAutoDownload(true)
+        assertEquals(true, UpdatePreferences("1.1.0").autoDownload.value)
+    }
 }

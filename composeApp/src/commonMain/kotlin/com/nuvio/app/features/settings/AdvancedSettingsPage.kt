@@ -15,6 +15,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nuvio.app.core.build.AppFeaturePolicy
 import com.nuvio.app.core.mediaproxy.LanMediaProxy
 import com.nuvio.app.core.ui.DialogButton
 import com.nuvio.app.core.ui.DialogButtons
@@ -23,6 +24,8 @@ import com.nuvio.app.core.ui.DialogSurface
 import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.profiles.ProfileRepository
+import com.nuvio.app.features.updater.AppUpdaterPlatform
+import com.nuvio.app.features.updater.UpdatePreferences
 import com.nuvio.app.features.watchprogress.ContinueWatchingEnrichmentCache
 import com.nuvio.app.features.watchprogress.WatchProgressRepository
 import kotlinx.coroutines.launch
@@ -30,6 +33,8 @@ import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_cancel
 import nuvio.composeapp.generated.resources.media_proxy_entry_description
 import nuvio.composeapp.generated.resources.media_proxy_title
+import nuvio.composeapp.generated.resources.settings_advanced_auto_download_updates
+import nuvio.composeapp.generated.resources.settings_advanced_auto_download_updates_description
 import nuvio.composeapp.generated.resources.settings_advanced_section_network
 import nuvio.composeapp.generated.resources.settings_advanced_clear_cw_cache
 import nuvio.composeapp.generated.resources.settings_advanced_clear_cw_cache_done
@@ -39,6 +44,7 @@ import nuvio.composeapp.generated.resources.settings_advanced_remember_last_prof
 import nuvio.composeapp.generated.resources.settings_advanced_section_cache
 import nuvio.composeapp.generated.resources.settings_advanced_section_diagnostics
 import nuvio.composeapp.generated.resources.settings_advanced_section_startup
+import nuvio.composeapp.generated.resources.settings_advanced_section_updates
 import nuvio.composeapp.generated.resources.settings_advanced_sentry_reports
 import nuvio.composeapp.generated.resources.settings_advanced_sentry_reports_subtitle
 import nuvio.composeapp.generated.resources.settings_app_logs_entry_description
@@ -77,6 +83,25 @@ internal fun LazyListScope.advancedSettingsContent(
                     isTablet = isTablet,
                     onCheckedChange = ProfileRepository::setRememberLastProfileEnabled,
                 )
+            }
+        }
+    }
+    if (AppFeaturePolicy.inAppUpdaterEnabled && AppUpdaterPlatform.isSupported) {
+        item {
+            SettingsSection(
+                title = stringResource(Res.string.settings_advanced_section_updates),
+                isTablet = isTablet,
+            ) {
+                SettingsGroup(isTablet = isTablet) {
+                    val autoDownload by UpdatePreferences.shared.autoDownload.collectAsStateWithLifecycle()
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.settings_advanced_auto_download_updates),
+                        description = stringResource(Res.string.settings_advanced_auto_download_updates_description),
+                        checked = autoDownload,
+                        isTablet = isTablet,
+                        onCheckedChange = UpdatePreferences.shared::setAutoDownload,
+                    )
+                }
             }
         }
     }

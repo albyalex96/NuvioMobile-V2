@@ -27,6 +27,9 @@ object AndroidAppUpdaterPlatform {
     private const val preferencesName = "nuvio_updater"
     private const val ignoredTagKey = "ignored_release_tag"
     private const val updateChannelKey = "update_channel"
+    private const val autoDownloadKey = "auto_download"
+    private const val pendingDownloadKey = "pending_download"
+    private const val partialSuffix = ".part"
 
     private val httpClient = OkHttpClient.Builder()
         .connectTimeout(60, TimeUnit.SECONDS)
@@ -64,10 +67,32 @@ object AndroidAppUpdaterPlatform {
         preferences().edit().putString(updateChannelKey, channel).apply()
     }
 
-    fun deleteDownloadedApk(path: String) {
-        File(path).delete()
+    fun getAutoDownload(): Boolean = preferences().getBoolean(autoDownloadKey, false)
+
+    fun setAutoDownload(enabled: Boolean) {
+        preferences().edit().putBoolean(autoDownloadKey, enabled).apply()
     }
 
+    fun getPendingDownload(): String? = preferences().getString(pendingDownloadKey, null)
+
+    fun setPendingDownload(value: String?) {
+        preferences().edit().apply {
+            if (value == null) remove(pendingDownloadKey) else putString(pendingDownloadKey, value)
+        }.apply()
+    }
+
+    fun downloadedApkExists(path: String): Boolean = File(path).let { it.isFile && it.length() > 0L }
+
+    fun deleteDownloadedApk(path: String) {
+        File(path).delete()
+        File(path + partialSuffix).delete()
+    }
+
+    /**
+     * Downloads into `filesDir/updates` (not the cache, which the system may clear) through a
+     * `.part` file, so a download interrupted by a crash or a restart resumes with an HTTP Range
+     * request instead of starting over.
+     */
     suspend fun downloadApk(
         assetUrl: String,
         assetName: String,
@@ -76,41 +101,61 @@ object AndroidAppUpdaterPlatform {
         runCatching {
             val context = requireContext()
             val safeName = assetName.replace(Regex("[^a-zA-Z0-9._-]"), "_")
-            val destination = File(File(context.cacheDir, "updates"), safeName)
-            destination.parentFile?.mkdirs()
-            if (destination.exists()) {
-                destination.delete()
+            val directory = File(context.filesDir, "updates")
+            directory.mkdirs()
+            val destination = File(directory, safeName)
+            val partial = File(directory, safeName + partialSuffix)
+            directory.listFiles()?.forEach { file ->
+                if (file.name != partial.name) file.delete()
             }
+            File(context.cacheDir, "updates").deleteRecursively()
 
-            val request = Request.Builder()
-                .url(assetUrl)
-                .build()
+            var resumeFrom = if (partial.isFile) partial.length() else 0L
+            var completed = false
+            while (!completed) {
+                val request = Request.Builder()
+                    .url(assetUrl)
+                    .apply { if (resumeFrom > 0L) header("Range", "bytes=$resumeFrom-") }
+                    .build()
 
-            httpClient.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    error(runBlocking { getString(Res.string.updates_download_failed_http, response.code) })
-                }
-
-                val body = response.body ?: error(runBlocking { getString(Res.string.updates_empty_download_body) })
-                val totalBytes = body.contentLength().takeIf { it > 0L }
-                body.byteStream().use { input ->
-                    FileOutputStream(destination).use { output ->
-                        val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
-                        var downloadedBytes = 0L
-                        while (true) {
-                            currentCoroutineContext().ensureActive()
-                            val read = input.read(buffer)
-                            currentCoroutineContext().ensureActive()
-                            if (read <= 0) break
-                            output.write(buffer, 0, read)
-                            downloadedBytes += read
-                            onProgress(downloadedBytes, totalBytes)
-                        }
-                        output.flush()
+                httpClient.newCall(request).execute().use { response ->
+                    if (response.code == 416 && resumeFrom > 0L) {
+                        // The partial file no longer matches the remote asset: start over.
+                        partial.delete()
+                        resumeFrom = 0L
+                        return@use
                     }
+                    if (!response.isSuccessful) {
+                        error(runBlocking { getString(Res.string.updates_download_failed_http, response.code) })
+                    }
+
+                    val body = response.body ?: error(runBlocking { getString(Res.string.updates_empty_download_body) })
+                    val append = resumeFrom > 0L && response.code == 206
+                    val startBytes = if (append) resumeFrom else 0L
+                    val totalBytes = body.contentLength().takeIf { it > 0L }?.let { it + startBytes }
+                    body.byteStream().use { input ->
+                        FileOutputStream(partial, append).use { output ->
+                            val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+                            var downloadedBytes = startBytes
+                            while (true) {
+                                currentCoroutineContext().ensureActive()
+                                val read = input.read(buffer)
+                                currentCoroutineContext().ensureActive()
+                                if (read <= 0) break
+                                output.write(buffer, 0, read)
+                                downloadedBytes += read
+                                onProgress(downloadedBytes, totalBytes)
+                            }
+                            output.flush()
+                        }
+                    }
+                    completed = true
                 }
             }
 
+            check(partial.renameTo(destination)) {
+                runBlocking { getString(Res.string.updates_downloaded_file_missing) }
+            }
             destination.absolutePath
         }
     }

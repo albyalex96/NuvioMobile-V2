@@ -68,6 +68,7 @@ import com.nuvio.app.tv.TvAppRuntime
 import com.nuvio.app.features.ai.AiProvider
 import com.nuvio.app.supportsPosterNavigationMotion
 import com.nuvio.app.core.mediaproxy.LanMediaProxy
+import com.nuvio.app.features.updater.AppUpdaterPlatform
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
@@ -461,6 +462,18 @@ internal fun settingsSearchEntries(
         category = advancedCategory,
         icon = Icons.Rounded.Tune,
     )
+    if (AppFeaturePolicy.inAppUpdaterEnabled && AppUpdaterPlatform.isSupported) {
+        addRow(
+            page = SettingsPage.Advanced,
+            key = "auto-download-updates",
+            title = stringResource(Res.string.settings_advanced_auto_download_updates),
+            description = stringResource(Res.string.settings_advanced_auto_download_updates_description),
+            pageLabel = advancedPage,
+            section = stringResource(Res.string.settings_advanced_section_updates),
+            category = advancedCategory,
+            icon = Icons.Rounded.Tune,
+        )
+    }
     if (SentrySettingsRepository.isSupported) {
         addRow(
             page = SettingsPage.Advanced,

@@ -19,6 +19,16 @@ actual object AppUpdaterPlatform {
 
     actual fun setUpdateChannel(channel: String) = Unit
 
+    actual fun getAutoDownload(): Boolean = false
+
+    actual fun setAutoDownload(enabled: Boolean) = Unit
+
+    actual fun getPendingDownload(): String? = null
+
+    actual fun setPendingDownload(value: String?) = Unit
+
+    actual fun downloadedApkExists(path: String): Boolean = false
+
     actual fun deleteDownloadedApk(path: String) = Unit
 
     actual suspend fun downloadApk(

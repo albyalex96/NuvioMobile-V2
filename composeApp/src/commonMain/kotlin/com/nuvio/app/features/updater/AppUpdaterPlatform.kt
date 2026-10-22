@@ -14,6 +14,16 @@ expect object AppUpdaterPlatform {
 
     fun setUpdateChannel(channel: String)
 
+    fun getAutoDownload(): Boolean
+
+    fun setAutoDownload(enabled: Boolean)
+
+    fun getPendingDownload(): String?
+
+    fun setPendingDownload(value: String?)
+
+    fun downloadedApkExists(path: String): Boolean
+
     fun deleteDownloadedApk(path: String)
 
     suspend fun downloadApk(

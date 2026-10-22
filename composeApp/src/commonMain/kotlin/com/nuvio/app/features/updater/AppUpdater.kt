@@ -3,6 +3,7 @@ package com.nuvio.app.features.updater
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import co.touchlab.kermit.Logger
 import com.nuvio.app.core.build.AppFeaturePolicy
 import com.nuvio.app.core.build.AppVersionConfig
 import com.nuvio.app.core.i18n.localizedByteUnit
@@ -16,11 +17,14 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.Serializable
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.getString
 
+@Serializable
 data class AppUpdate(
     val tag: String,
     val title: String,
@@ -49,7 +53,10 @@ class AppUpdaterController internal constructor(
     private val scope: CoroutineScope,
     private val preferences: UpdatePreferences = UpdatePreferences.shared,
     private val fetchUpdate: suspend (UpdateChannel) -> Result<AppUpdate> = AppUpdaterRepository::getLatestChannelUpdate,
+    private val downloadApk: suspend (AppUpdate, (downloadedBytes: Long, totalBytes: Long?) -> Unit) -> Result<String> =
+        { update, onProgress -> AppUpdaterPlatform.downloadApk(update.assetUrl, update.assetName, onProgress) },
 ) {
+    private val log = Logger.withTag("AppUpdater")
     private val _uiState = MutableStateFlow(AppUpdaterUiState(updateChannel = preferences.channel.value))
     val uiState: StateFlow<AppUpdaterUiState> = _uiState.asStateFlow()
 
@@ -57,13 +64,18 @@ class AppUpdaterController internal constructor(
     private var updateCheckJob: Job? = null
     private var downloadJob: Job? = null
 
+    /** True while the current download was started automatically and must not install on completion. */
+    private var backgroundDownload = false
+
     init {
+        restorePendingDownload()
         scope.launch(start = CoroutineStart.UNDISPATCHED) {
             preferences.channel.collect { channel ->
                 if (channel != _uiState.value.updateChannel) {
                     updateCheckJob?.cancel()
                     downloadJob?.cancel()
-                    _uiState.value.downloadedApkPath?.let(AppUpdaterPlatform::deleteDownloadedApk)
+                    backgroundDownload = false
+                    discardPendingDownload(_uiState.value.downloadedApkPath)
                     _uiState.value = AppUpdaterUiState(updateChannel = channel)
                     if (!AppUpdaterPlatform.isDebugBuild) {
                         checkForUpdates(force = true, showNoUpdateFeedback = false)
@@ -71,6 +83,64 @@ class AppUpdaterController internal constructor(
                 }
             }
         }
+        scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            preferences.autoDownload.drop(1).collect { enabled ->
+                log.i { "Background update download ${if (enabled) "enabled" else "disabled"}" }
+                if (enabled) {
+                    startAutoDownloadIfNeeded()
+                } else if (backgroundDownload && _uiState.value.isDownloading) {
+                    log.i { "Cancelling background update download" }
+                    downloadJob?.cancel()
+                    backgroundDownload = false
+                    _uiState.update { state -> state.copy(isDownloading = false, downloadProgress = null) }
+                }
+            }
+        }
+    }
+
+    /**
+     * An APK downloaded in a previous session (also before a crash or a restart) is offered again
+     * right away, without waiting for the network check.
+     */
+    private fun restorePendingDownload() {
+        if (!AppFeaturePolicy.inAppUpdaterEnabled || !AppUpdaterPlatform.isSupported) return
+        val pending = preferences.pendingDownload() ?: return
+        val valid = pending.channel == preferences.channel.value.storedValue &&
+            VersionUtils.isRemoteNewer(pending.update.tag, AppVersionConfig.VERSION_NAME) &&
+            AppUpdaterPlatform.downloadedApkExists(pending.apkPath)
+        if (!valid) {
+            log.i { "Discarding stale downloaded update ${pending.update.tag}" }
+            discardPendingDownload(pending.apkPath)
+            return
+        }
+        log.i { "Restored downloaded update ${pending.update.tag}, ready to install" }
+        _uiState.update { state ->
+            state.copy(
+                update = pending.update,
+                isUpdateAvailable = true,
+                downloadedApkPath = pending.apkPath,
+                showDialog = AppUpdaterPlatform.getIgnoredTag() != pending.update.tag,
+            )
+        }
+    }
+
+    private fun discardPendingDownload(apkPath: String?) {
+        apkPath?.let(AppUpdaterPlatform::deleteDownloadedApk)
+        preferences.pendingDownload()?.let { pending ->
+            if (pending.apkPath != apkPath) AppUpdaterPlatform.deleteDownloadedApk(pending.apkPath)
+            preferences.setPendingDownload(null)
+        }
+    }
+
+    private fun startAutoDownloadIfNeeded() {
+        val state = _uiState.value
+        val update = state.update ?: return
+        if (!state.isUpdateAvailable || state.isDownloading || state.downloadedApkPath != null ||
+            state.isDebugTest || AppUpdaterPlatform.getIgnoredTag() == update.tag
+        ) {
+            return
+        }
+        startDownload(update, background = true)
     }
 
     fun ensureAutoCheckStarted() {
@@ -93,7 +163,11 @@ class AppUpdaterController internal constructor(
             return
         }
 
-        if (_uiState.value.isDownloading) return
+        if (_uiState.value.isDownloading) {
+            // A manual check during a silent download reveals its progress in the banner.
+            if (force) _uiState.update { state -> state.copy(showDialog = true) }
+            return
+        }
         updateCheckJob?.cancel()
         val channel = preferences.channel.value
         updateCheckJob = scope.launch {
@@ -114,7 +188,17 @@ class AppUpdaterController internal constructor(
             result.onSuccess { update ->
                 val remoteNewer = VersionUtils.isRemoteNewer(update.tag, AppVersionConfig.VERSION_NAME)
                 val ignored = ignoredTag != null && ignoredTag == update.tag
-                val shouldShowDialog = remoteNewer && (force || !ignored)
+                val previous = _uiState.value
+                val keepDownloaded = previous.downloadedApkPath != null &&
+                    remoteNewer && previous.update?.tag == update.tag
+                if (previous.downloadedApkPath != null && !keepDownloaded) {
+                    log.i { "Downloaded update ${previous.update?.tag} superseded by ${update.tag}" }
+                    discardPendingDownload(previous.downloadedApkPath)
+                }
+                val autoDownload = remoteNewer && !ignored && !keepDownloaded &&
+                    preferences.autoDownload.value
+                // Background downloads stay silent: the banner appears once the APK is ready.
+                val shouldShowDialog = remoteNewer && (force || !ignored) && (force || !autoDownload)
 
                 _uiState.update { state ->
                     state.copy(
@@ -123,19 +207,31 @@ class AppUpdaterController internal constructor(
                         isUpdateAvailable = remoteNewer,
                         isDownloading = false,
                         downloadProgress = null,
-                        downloadedApkPath = state.downloadedApkPath.takeIf {
-                            remoteNewer && state.update?.tag == update.tag
-                        },
+                        downloadedApkPath = state.downloadedApkPath.takeIf { keepDownloaded },
                         showDialog = shouldShowDialog,
                         showUnknownSourcesDialog = false,
                         errorMessage = null,
                     )
                 }
 
+                if (autoDownload) {
+                    log.i { "Update ${update.tag} available, downloading in background" }
+                    startDownload(update, background = true)
+                }
+
                 if (showNoUpdateFeedback && !remoteNewer) {
                     NuvioToastController.show(noUpdateMessage(channel))
                 }
             }.onFailure { error ->
+                if (_uiState.value.downloadedApkPath != null) {
+                    // Offline or GitHub unavailable: keep offering the APK already downloaded.
+                    log.w(error) { "Update check failed, keeping the downloaded update" }
+                    _uiState.update { state -> state.copy(isChecking = false) }
+                    if (showNoUpdateFeedback) {
+                        NuvioToastController.show(error.message ?: getString(Res.string.updates_check_failed))
+                    }
+                    return@launch
+                }
                 _uiState.update { state ->
                     state.copy(
                         isChecking = false,
@@ -195,10 +291,14 @@ class AppUpdaterController internal constructor(
             runDebugDownloadTest()
             return
         }
+        startDownload(update, background = false)
+    }
 
+    private fun startDownload(update: AppUpdate, background: Boolean) {
         val previousDownload = downloadJob
         previousDownload?.cancel()
         val channel = preferences.channel.value
+        backgroundDownload = background
         downloadJob = scope.launch {
             previousDownload?.join()
             val downloadContext = currentCoroutineContext()
@@ -210,10 +310,7 @@ class AppUpdaterController internal constructor(
                 )
             }
 
-            val result = AppUpdaterPlatform.downloadApk(
-                assetUrl = update.assetUrl,
-                assetName = update.assetName,
-            ) { downloadedBytes, totalBytes ->
+            val result = downloadApk(update) { downloadedBytes, totalBytes ->
                 downloadContext.ensureActive()
                 val progress = if (totalBytes != null && totalBytes > 0L) {
                     (downloadedBytes.toFloat() / totalBytes.toFloat()).coerceIn(0f, 1f)
@@ -226,17 +323,40 @@ class AppUpdaterController internal constructor(
             }
             currentCoroutineContext().ensureActive()
             if (channel != preferences.channel.value) return@launch
+            backgroundDownload = false
             result.onSuccess { path ->
+                log.i { "Update ${update.tag} downloaded${if (background) " in background" else ""}" }
+                preferences.setPendingDownload(
+                    PendingUpdateDownload(channel = channel.storedValue, apkPath = path, update = update),
+                )
                 _uiState.update { state ->
                     state.copy(
                         isDownloading = false,
                         downloadProgress = null,
                         downloadedApkPath = path,
                         errorMessage = null,
+                        showDialog = if (background) {
+                            state.showDialog || AppUpdaterPlatform.getIgnoredTag() != update.tag
+                        } else {
+                            state.showDialog
+                        },
                     )
                 }
-                installDownloadedUpdate()
+                if (!background) installDownloadedUpdate()
             }.onFailure { error ->
+                log.e(error) { "Update ${update.tag} download failed${if (background) " in background" else ""}" }
+                if (background) {
+                    // The partial file stays on disk and the next attempt resumes it; meanwhile
+                    // the regular banner lets the user retry by hand.
+                    _uiState.update { state ->
+                        state.copy(
+                            isDownloading = false,
+                            downloadProgress = null,
+                            showDialog = state.showDialog || AppUpdaterPlatform.getIgnoredTag() != update.tag,
+                        )
+                    }
+                    return@launch
+                }
                 _uiState.update { state ->
                     state.copy(
                         isDownloading = false,

@@ -572,6 +572,9 @@
     <string name="settings_advanced_clear_cw_cache">Clear Continue Watching Cache</string>
     <string name="settings_advanced_clear_cw_cache_subtitle">Remove cached Continue Watching data and refresh watch progress</string>
     <string name="settings_advanced_clear_cw_cache_done">Cache cleared</string>
+    <string name="settings_advanced_section_updates">UPDATES</string>
+    <string name="settings_advanced_auto_download_updates">Download updates in background</string>
+    <string name="settings_advanced_auto_download_updates_description">Download new versions automatically and keep them until you install them, even after a crash or restart. Only the install banner is shown.</string>
     <string name="settings_licenses_attributions_section_app">APP LICENSE</string>
     <string name="settings_licenses_attributions_section_data">DATA &amp; SERVICES</string>
     <string name="settings_licenses_attributions_section_playback">PLAYBACK LICENSE</string>

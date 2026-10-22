@@ -1581,6 +1581,9 @@
   <string name="sentry_turn_off">Disattiva</string>
   <string name="sentry_turn_on">Attiva</string>
   <string name="settings_advanced_clear_cw_cache_done">Cache cancellata</string>
+  <string name="settings_advanced_section_updates">AGGIORNAMENTI</string>
+  <string name="settings_advanced_auto_download_updates">Scarica aggiornamenti in background</string>
+  <string name="settings_advanced_auto_download_updates_description">Scarica automaticamente le nuove versioni e le conserva finché non le installi, anche dopo un crash o un riavvio. Viene mostrato solo il banner per installare.</string>
   <string name="downloads_open_directory">Apri cartella dei download</string>
   <string name="downloads_open_directory_failed">Impossibile aprire la cartella dei download</string>
   <string name="settings_appearance_app_language_device">Lingua del dispositivo</string>

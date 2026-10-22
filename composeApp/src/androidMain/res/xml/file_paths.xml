@@ -3,6 +3,9 @@
     <cache-path
         name="nuvio_updates"
         path="updates/" />
+    <files-path
+        name="nuvio_updates_persistent"
+        path="updates/" />
     <cache-path
         name="nuvio_subtitles"
         path="subtitles/" />

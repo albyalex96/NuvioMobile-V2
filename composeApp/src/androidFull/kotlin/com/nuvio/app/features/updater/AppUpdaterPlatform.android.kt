@@ -19,6 +19,20 @@ actual object AppUpdaterPlatform {
         AndroidAppUpdaterPlatform.setUpdateChannel(channel)
     }
 
+    actual fun getAutoDownload(): Boolean = AndroidAppUpdaterPlatform.getAutoDownload()
+
+    actual fun setAutoDownload(enabled: Boolean) {
+        AndroidAppUpdaterPlatform.setAutoDownload(enabled)
+    }
+
+    actual fun getPendingDownload(): String? = AndroidAppUpdaterPlatform.getPendingDownload()
+
+    actual fun setPendingDownload(value: String?) {
+        AndroidAppUpdaterPlatform.setPendingDownload(value)
+    }
+
+    actual fun downloadedApkExists(path: String): Boolean = AndroidAppUpdaterPlatform.downloadedApkExists(path)
+
     actual fun deleteDownloadedApk(path: String) {
         AndroidAppUpdaterPlatform.deleteDownloadedApk(path)
     }

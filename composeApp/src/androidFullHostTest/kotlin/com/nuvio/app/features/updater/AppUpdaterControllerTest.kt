@@ -12,6 +12,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.withContext
 import org.junit.runner.RunWith
+import java.io.File
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
@@ -126,8 +127,113 @@ class AppUpdaterControllerTest {
         assertEquals(AppUpdaterUiState(updateChannel = UpdateChannel.BETA), controller.uiState.value)
     }
 
+    @Test
+    fun backgroundDownloadStaysSilentAndShowsOnlyTheInstallBanner() {
+        preferences.setAutoDownload(true)
+        val apk = fakeApk()
+        val download = CompletableDeferred<Result<String>>()
+        val controller = controller(
+            fetch = { Result.success(update("999.0.0")) },
+            download = { _, _ -> download.await() },
+        )
+
+        controller.checkForUpdates(force = false, showNoUpdateFeedback = false)
+        assertTrue(controller.uiState.value.isDownloading)
+        assertFalse(controller.uiState.value.showDialog)
+
+        download.complete(Result.success(apk.absolutePath))
+
+        assertFalse(controller.uiState.value.isDownloading)
+        assertEquals(apk.absolutePath, controller.uiState.value.downloadedApkPath)
+        assertTrue(controller.uiState.value.showDialog)
+        assertEquals("999.0.0", preferences.pendingDownload()?.update?.tag)
+    }
+
+    @Test
+    fun downloadedUpdateSurvivesRestartWithoutNetwork() {
+        preferences.setAutoDownload(true)
+        val apk = fakeApk()
+        controller(
+            fetch = { Result.success(update("999.0.0")) },
+            download = { _, _ -> Result.success(apk.absolutePath) },
+        ).checkForUpdates(force = false, showNoUpdateFeedback = false)
+
+        val restarted = controller(
+            fetch = { Result.failure(IllegalStateException("offline")) },
+            download = { _, _ -> error("The downloaded APK must be reused") },
+        )
+        assertEquals(apk.absolutePath, restarted.uiState.value.downloadedApkPath)
+        assertTrue(restarted.uiState.value.showDialog)
+
+        restarted.checkForUpdates(force = false, showNoUpdateFeedback = false)
+        assertEquals(apk.absolutePath, restarted.uiState.value.downloadedApkPath)
+        assertEquals("999.0.0", restarted.uiState.value.update?.tag)
+        assertTrue(restarted.uiState.value.showDialog)
+    }
+
+    @Test
+    fun staleDownloadedUpdateIsDiscardedOnStartup() {
+        val apk = fakeApk()
+        preferences.setPendingDownload(
+            PendingUpdateDownload(
+                channel = preferences.channel.value.storedValue,
+                apkPath = apk.absolutePath,
+                update = update(AppVersionConfig.VERSION_NAME),
+            ),
+        )
+
+        val controller = controller { Result.failure(NoChannelReleaseException()) }
+
+        assertNull(controller.uiState.value.downloadedApkPath)
+        assertNull(preferences.pendingDownload())
+        assertFalse(apk.exists())
+    }
+
+    @Test
+    fun newerReleaseReplacesTheDownloadedOne() {
+        preferences.setAutoDownload(true)
+        val oldApk = fakeApk("old.apk")
+        val newApk = fakeApk("new.apk")
+        var tag = "999.0.0"
+        val controller = controller(
+            fetch = { Result.success(update(tag)) },
+            download = { update, _ -> Result.success(if (update.tag == "999.0.0") oldApk.absolutePath else newApk.absolutePath) },
+        )
+        controller.checkForUpdates(force = false, showNoUpdateFeedback = false)
+        assertEquals(oldApk.absolutePath, controller.uiState.value.downloadedApkPath)
+
+        tag = "999.1.0"
+        controller.checkForUpdates(force = false, showNoUpdateFeedback = false)
+
+        assertFalse(oldApk.exists())
+        assertEquals(newApk.absolutePath, controller.uiState.value.downloadedApkPath)
+        assertEquals("999.1.0", preferences.pendingDownload()?.update?.tag)
+    }
+
+    @Test
+    fun disabledAutoDownloadOnlyShowsTheUpdateBanner() {
+        val controller = controller(
+            fetch = { Result.success(update("999.0.0")) },
+            download = { _, _ -> error("Auto-download is off") },
+        )
+        controller.checkForUpdates(force = false, showNoUpdateFeedback = false)
+
+        assertTrue(controller.uiState.value.showDialog)
+        assertFalse(controller.uiState.value.isDownloading)
+        assertNull(controller.uiState.value.downloadedApkPath)
+    }
+
+    private fun fakeApk(name: String = "update.apk"): File =
+        File(File(RuntimeEnvironment.getApplication().filesDir, "updates").apply { mkdirs() }, name)
+            .apply { writeText("apk") }
+
     private fun controller(fetch: suspend (UpdateChannel) -> Result<AppUpdate>) =
-        AppUpdaterController(scope, preferences, fetch)
+        controller(fetch = fetch, download = { _, _ -> error("Unexpected download") })
+
+    private fun controller(
+        fetch: suspend (UpdateChannel) -> Result<AppUpdate>,
+        download: suspend (AppUpdate, (Long, Long?) -> Unit) -> Result<String>,
+    ) = AppUpdaterController(scope, preferences, fetch, download)
 
     private fun update(tag: String) = AppUpdate(
         tag = tag,

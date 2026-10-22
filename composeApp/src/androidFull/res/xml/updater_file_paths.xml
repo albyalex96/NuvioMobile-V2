@@ -3,4 +3,7 @@
     <cache-path
         name="nuvio_updates"
         path="updates/" />
+    <files-path
+        name="nuvio_updates_persistent"
+        path="updates/" />
 </paths>
