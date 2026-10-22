@@ -6,6 +6,7 @@ import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.LiveTv
 import com.nuvio.app.features.discord.DiscordRpcPlatform
+import com.nuvio.app.tv.TvAppRuntime
 import nuvio.composeapp.generated.resources.compose_settings_page_ai_assistant
 import nuvio.composeapp.generated.resources.compose_settings_page_anilist
 import nuvio.composeapp.generated.resources.compose_settings_page_anime_skip
@@ -18,6 +19,7 @@ import nuvio.composeapp.generated.resources.compose_settings_page_skipdb
 import nuvio.composeapp.generated.resources.compose_settings_page_subdl
 import nuvio.composeapp.generated.resources.compose_settings_page_telegram
 import nuvio.composeapp.generated.resources.settings_integrations_ai_assistant_description
+import nuvio.composeapp.generated.resources.settings_integrations_ai_assistant_tv_unavailable
 import nuvio.composeapp.generated.resources.settings_integrations_anilist_description
 import nuvio.composeapp.generated.resources.settings_integrations_anime_skip_description
 import nuvio.composeapp.generated.resources.settings_integrations_discord_description
@@ -182,10 +184,17 @@ internal fun LazyListScope.integrationsContent(
                     onClick = { onPageClick(SettingsPage.Debrid) },
                 )
                 SettingsGroupDivider(isTablet = isTablet)
+                // The assistant chat is not available on TV: the row stays visible but cannot be opened.
+                val aiAssistantAvailable = !TvAppRuntime.isTvApp
                 SettingsNavigationRow(
                     title = stringResource(Res.string.compose_settings_page_ai_assistant),
-                    description = stringResource(Res.string.settings_integrations_ai_assistant_description),
+                    description = if (aiAssistantAvailable) {
+                        stringResource(Res.string.settings_integrations_ai_assistant_description)
+                    } else {
+                        stringResource(Res.string.settings_integrations_ai_assistant_tv_unavailable)
+                    },
                     icon = Icons.Rounded.AutoAwesome,
+                    enabled = aiAssistantAvailable,
                     isTablet = isTablet,
                     onClick = { onPageClick(SettingsPage.AiAssistant) },
                 )

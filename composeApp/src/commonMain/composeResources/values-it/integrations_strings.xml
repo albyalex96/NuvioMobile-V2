@@ -22,7 +22,8 @@
     <string name="settings_integrations_anilist_description">Sincronizza la tua lista anime con AniList</string>
     <string name="settings_integrations_opensubtitles_description">Cerca i sottotitoli su OpenSubtitles</string>
     <string name="settings_integrations_subdl_description">Cerca i sottotitoli su SubDL</string>
-    <string name="settings_integrations_ai_assistant_description">Chiedi a un assistente consigli su cosa guardare</string>
+    <string name="settings_integrations_ai_assistant_description">Parla di film e serie con il tuo provider AI</string>
+    <string name="settings_integrations_ai_assistant_tv_unavailable">Non disponibile su TV</string>
     <string name="settings_integrations_telegram_description">Collega Nuvio a Telegram</string>
     <string name="compose_settings_page_cloudstream">CloudStream</string>
     <string name="settings_content_discovery_cloudstream_description">Installa e usa le estensioni di CloudStream come sorgenti</string>

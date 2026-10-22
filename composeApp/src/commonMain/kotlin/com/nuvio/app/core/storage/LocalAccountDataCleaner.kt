@@ -88,6 +88,7 @@ internal object LocalAccountDataCleaner {
         com.nuvio.app.features.discord.DiscordRpcRepository.clearLocalState()
         com.nuvio.app.features.opensubtitles.OpenSubtitlesRepository.clearLocalState()
         com.nuvio.app.features.subdl.SubDlRepository.clearLocalState()
+        com.nuvio.app.features.ai.AiAssistantRepository.clearLocalState()
         com.nuvio.app.features.home.Top10Repository.clearLocalState()
         CatalogRepository.clear()
         StreamsRepository.clear()

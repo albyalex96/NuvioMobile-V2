@@ -39,7 +39,10 @@ import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlaylistAddCheckCircle
 import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import com.nuvio.app.core.ui.NuvioLoadingIndicator
 import androidx.compose.material3.MaterialTheme
@@ -95,6 +98,9 @@ import dev.chrisbanes.haze.rememberHazeState
 import com.nuvio.app.features.details.components.DetailActions
 import com.nuvio.app.features.details.components.DetailPlayButtonKind
 import com.nuvio.app.features.details.components.CommentDetailSheet
+import com.nuvio.app.features.details.components.AiAssistantSheet
+import com.nuvio.app.features.ai.AiAssistantRepository
+import com.nuvio.app.tv.TvAppRuntime
 import com.nuvio.app.features.details.components.DetailAdditionalInfoSection
 import com.nuvio.app.features.details.components.DetailCastSection
 import com.nuvio.app.features.details.components.DetailCommentsSection
@@ -246,6 +252,11 @@ fun MetaDetailsScreen(
     var selectedEpisodeZoomAnchor by remember(type, id) { mutableStateOf<PosterZoomAnchor?>(null) }
     val episodeOverlayHazeState = rememberHazeState()
     var selectedSeasonForActions by remember(type, id) { mutableStateOf<Int?>(null) }
+    var showAiAssistantSheet by remember(type, id) { mutableStateOf(false) }
+    val aiAssistantSettings by remember {
+        AiAssistantRepository.ensureLoaded()
+        AiAssistantRepository.uiState
+    }.collectAsStateWithLifecycle()
     val commentsEnabled by remember {
         TraktCommentsSettings.ensureLoaded()
         TraktCommentsSettings.enabled
@@ -1408,6 +1419,23 @@ fun MetaDetailsScreen(
                             onToggleSaved = toggleSaved,
                         )
 
+                        if (aiAssistantSettings.enabled && !TvAppRuntime.isTvApp && meta.supportsAiAssistant()) {
+                            SmallFloatingActionButton(
+                                onClick = { showAiAssistantSheet = true },
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(end = 18.dp, bottom = nuvioSafeBottomPadding(20.dp))
+                                    .zIndex(2f),
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.AutoAwesome,
+                                    contentDescription = stringResource(Res.string.ai_chat_open),
+                                )
+                            }
+                        }
+
                         selectedEpisodeForActions
                             ?.takeIf { selectedEpisodeZoomAnchor == null }
                             ?.let { selectedEpisode ->
@@ -1667,6 +1695,14 @@ fun MetaDetailsScreen(
                                     }
                                 },
                                 onDismiss = { selectedComment = null },
+                            )
+                        }
+
+                        if (showAiAssistantSheet) {
+                            AiAssistantSheet(
+                                meta = meta,
+                                settings = aiAssistantSettings,
+                                onDismiss = { showAiAssistantSheet = false },
                             )
                         }
                     }
@@ -2609,3 +2645,7 @@ private fun Color.blendTowards(target: Color, fraction: Float): Color {
         alpha = alpha + (target.alpha - alpha) * clamped,
     )
 }
+
+/** The assistant answers from title metadata, which only movies and series reliably provide. */
+private fun MetaDetails.supportsAiAssistant(): Boolean =
+    type.trim().lowercase() in setOf("movie", "film", "series", "show", "tv", "tvshow")

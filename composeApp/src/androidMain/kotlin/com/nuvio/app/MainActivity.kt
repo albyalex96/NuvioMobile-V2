@@ -25,6 +25,7 @@ import com.nuvio.app.features.debrid.DebridSettingsStorage
 import com.nuvio.app.features.discord.DiscordRpcStorage
 import com.nuvio.app.features.opensubtitles.OpenSubtitlesStorage
 import com.nuvio.app.features.subdl.SubDlStorage
+import com.nuvio.app.features.ai.AiAssistantStorage
 import com.nuvio.app.features.home.Top10Storage
 import com.nuvio.app.features.downloads.DownloadsLiveStatusPlatform
 import com.nuvio.app.features.downloads.DownloadsPlatformDownloader
@@ -141,6 +142,7 @@ open class MainActivity : AppCompatActivity() {
         DiscordRpcStorage.initialize(applicationContext)
         OpenSubtitlesStorage.initialize(applicationContext)
         SubDlStorage.initialize(applicationContext)
+        AiAssistantStorage.initialize(applicationContext)
         Top10Storage.initialize(applicationContext)
         SimklAuthStorage.initialize(applicationContext)
         SimklSyncStorage.initialize(applicationContext)

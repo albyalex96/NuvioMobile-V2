@@ -40,6 +40,8 @@ import com.nuvio.app.features.opensubtitles.OpenSubtitlesProfileSync
 import com.nuvio.app.features.player.skip.TimestampIntegrationsProfileSync
 import com.nuvio.app.features.opensubtitles.OpenSubtitlesRepository
 import com.nuvio.app.features.subdl.SubDlProfileSync
+import com.nuvio.app.features.ai.AiAssistantProfileSync
+import com.nuvio.app.features.ai.AiAssistantRepository
 import com.nuvio.app.features.home.Top10ProfileSync
 import com.nuvio.app.features.cloudstream.CloudStreamProfileSync
 import com.nuvio.app.features.cloudstream.CloudStreamRepository
@@ -228,6 +230,7 @@ object ProfileSettingsSync {
             DiscordRpcRepository.uiState.map(DiscordRpcProfileSync::syncSignature).distinctUntilChanged(),
             OpenSubtitlesRepository.uiState.map(OpenSubtitlesProfileSync::syncSignature).distinctUntilChanged(),
             SubDlRepository.uiState.map(SubDlProfileSync::syncSignature).distinctUntilChanged(),
+            AiAssistantRepository.uiState.map(AiAssistantProfileSync::syncSignature).distinctUntilChanged(),
             Top10Repository.uiState.map(Top10ProfileSync::syncSignature).distinctUntilChanged(),
             CloudStreamRepository.uiState.map(CloudStreamProfileSync::syncSignature).distinctUntilChanged(),
             DebridSettingsRepository.uiState.map { "debrid" },
@@ -296,6 +299,7 @@ object ProfileSettingsSync {
                         DiscordRpcProfileSync.exportToSyncPayload() +
                         OpenSubtitlesProfileSync.exportToSyncPayload() +
                         SubDlProfileSync.exportToSyncPayload() +
+                        AiAssistantProfileSync.exportToSyncPayload() +
                         Top10ProfileSync.exportToSyncPayload() +
                         CloudStreamProfileSync.exportToSyncPayload() +
                         TimestampIntegrationsProfileSync.exportToSyncPayload(),
@@ -366,6 +370,7 @@ object ProfileSettingsSync {
         DiscordRpcProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
         OpenSubtitlesProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
         SubDlProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
+        AiAssistantProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
         Top10ProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
         CloudStreamProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
         TimestampIntegrationsProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)

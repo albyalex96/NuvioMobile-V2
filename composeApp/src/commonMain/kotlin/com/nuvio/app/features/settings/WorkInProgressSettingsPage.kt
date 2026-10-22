@@ -23,7 +23,6 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Construction
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -74,10 +73,7 @@ internal fun LazyListScope.workInProgressIntegrationContent(
             isTablet = isTablet,
             name = stringResource(page.titleRes),
             iconPainter = logo?.let { integrationLogoPainter(it) },
-            icon = when (page) {
-                SettingsPage.AiAssistant -> Icons.Rounded.AutoAwesome
-                else -> null
-            },
+            icon = null,
             modifier = Modifier.fillParentMaxHeight(0.8f),
         )
     }

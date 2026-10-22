@@ -935,9 +935,9 @@ private fun MobileSettingsScreen(
                 SettingsPage.MyAnimeList,
                 SettingsPage.Kitsu,
                 SettingsPage.AniList,
-                SettingsPage.AiAssistant,
                 SettingsPage.Telegram,
                 -> workInProgressIntegrationContent(isTablet = false, page = page)
+                SettingsPage.AiAssistant -> aiAssistantSettingsContent(isTablet = false)
                 SettingsPage.Cloudstream -> cloudStreamSettingsContent()
                 SettingsPage.TraktAuthentication -> trackingSettingsContent(
                     isTablet = false,
@@ -1454,9 +1454,9 @@ private fun TabletSettingsScreen(
                     SettingsPage.MyAnimeList,
                     SettingsPage.Kitsu,
                     SettingsPage.AniList,
-                    SettingsPage.AiAssistant,
                     SettingsPage.Telegram,
                     -> workInProgressIntegrationContent(isTablet = true, page = page)
+                    SettingsPage.AiAssistant -> aiAssistantSettingsContent(isTablet = true)
                     SettingsPage.Cloudstream -> cloudStreamSettingsContent()
                     SettingsPage.TraktAuthentication -> trackingSettingsContent(
                         isTablet = true,

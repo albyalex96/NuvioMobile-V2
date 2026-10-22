@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Impostazioni -->
+    <string name="ai_settings_section_general">Assistente</string>
+    <string name="ai_settings_section_provider">Accesso al provider</string>
+    <string name="ai_settings_section_web_search">Ricerca web</string>
+    <string name="ai_settings_enable">Attiva assistente AI</string>
+    <string name="ai_settings_enable_description">Mostra il pulsante dell'assistente nelle pagine dettagli di film e serie</string>
+    <string name="ai_settings_sync_notice">Le chiavi API vengono salvate nel tuo profilo Nuvio e sincronizzate su tutti i dispositivi collegati. Le domande e i dettagli del titolo vengono inviati al provider che scegli.</string>
+    <string name="ai_settings_provider">Provider AI</string>
+    <string name="ai_settings_provider_description">Servizio che risponde alle domande, con la tua chiave API gratuita</string>
+    <string name="ai_settings_provider_configured">Chiave salvata</string>
+    <string name="ai_settings_provider_not_configured">Nessuna chiave</string>
+    <string name="ai_settings_fallback_help">Consigliato: salva una chiave sia per Cerebras sia per Groq. In caso di errori temporanei o quota esaurita, l'assistente prova da solo gli altri provider configurati.</string>
+    <string name="ai_settings_api_key">Chiave API</string>
+    <string name="ai_settings_api_key_help">Crea una chiave API gratuita sul sito del provider, incollala qui e salva.</string>
+    <string name="ai_settings_model">Modello</string>
+    <string name="ai_settings_model_help">Lascia vuoto per usare il modello consigliato (%1$s).</string>
+    <string name="ai_settings_model_default">%1$s (predefinito)</string>
+    <string name="ai_settings_get_key">Ottieni chiave gratuita</string>
+    <string name="ai_settings_web_search">Ricerca web automatica</string>
+    <string name="ai_settings_web_search_description">Cerca fonti affidabili per le domande a cui i dettagli del titolo non rispondono. Richiede una chiave Tavily.</string>
+    <string name="ai_settings_tavily_key">Chiave API Tavily</string>
+    <string name="ai_settings_tavily_description">Tavily offre 1.000 ricerche gratuite al mese senza carta di credito. Le fonti vengono mostrate sotto ogni risposta.</string>
+
+    <!-- Chat -->
+    <string name="ai_chat_title">Chiedi a Nuvio</string>
+    <string name="ai_chat_open">Assistente AI</string>
+    <string name="ai_chat_disclaimer">Chiedi qualsiasi cosa su questo titolo. Niente spoiler, a meno che non li chieda tu.</string>
+    <string name="ai_chat_configure">Per usare l'assistente apri Impostazioni &gt; Integrazioni &gt; Assistente AI, scegli un provider e salva la tua chiave API gratuita.</string>
+    <string name="ai_chat_hint">Chiedi qualcosa su questo titolo…</string>
+    <string name="ai_chat_send">Invia</string>
+    <string name="ai_chat_prompt_recommend">Vale la pena guardarlo? Senza spoiler</string>
+    <string name="ai_chat_prompt_explain">Cosa devo sapere prima di guardarlo?</string>
+    <string name="ai_chat_prompt_similar">Consigliami titoli simili</string>
+    <string name="ai_chat_error">L'assistente non è riuscito a rispondere. Controlla la chiave API e riprova.</string>
+</resources>

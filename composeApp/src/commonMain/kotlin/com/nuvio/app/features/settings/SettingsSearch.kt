@@ -65,6 +65,7 @@ import com.nuvio.app.isIos
 import com.nuvio.app.tv.LocalTvShell
 import com.nuvio.app.features.discord.DiscordRpcPlatform
 import com.nuvio.app.tv.TvAppRuntime
+import com.nuvio.app.features.ai.AiProvider
 import com.nuvio.app.supportsPosterNavigationMotion
 import com.nuvio.app.core.mediaproxy.LanMediaProxy
 import nuvio.composeapp.generated.resources.*
@@ -1637,12 +1638,26 @@ private fun addAdditionalSearchEntries(
         row(SettingsPage.SubDl, item.key, item.title, item.description, subDlPage, subDlSearchSection, icon = Icons.Rounded.Subtitles)
     }
 
+    // AI assistant (the page cannot be opened on TV, see IntegrationsSettingsPage)
+    if (!TvAppRuntime.isTvApp) {
+        val aiPage = stringResource(Res.string.compose_settings_page_ai_assistant)
+        addPage(SettingsPage.AiAssistant, "ai-assistant", aiPage, stringResource(Res.string.settings_integrations_ai_assistant_description), generalCategory, Icons.Rounded.AutoAwesome)
+        val aiGeneralSection = stringResource(Res.string.ai_settings_section_general)
+        val aiProviderSection = stringResource(Res.string.ai_settings_section_provider)
+        val aiWebSection = stringResource(Res.string.ai_settings_section_web_search)
+        row(SettingsPage.AiAssistant, "ai-enabled", stringResource(Res.string.ai_settings_enable), stringResource(Res.string.ai_settings_enable_description) + " " + stringResource(Res.string.ai_settings_sync_notice), aiPage, aiGeneralSection, icon = Icons.Rounded.AutoAwesome)
+        row(SettingsPage.AiAssistant, "ai-provider", stringResource(Res.string.ai_settings_provider), stringResource(Res.string.ai_settings_provider_description) + " " + stringResource(Res.string.ai_settings_fallback_help), aiPage, aiProviderSection, icon = Icons.Rounded.AutoAwesome)
+        row(SettingsPage.AiAssistant, "ai-api-key", stringResource(Res.string.ai_settings_api_key), stringResource(Res.string.ai_settings_api_key_help), aiPage, aiProviderSection, icon = Icons.Rounded.AutoAwesome)
+        row(SettingsPage.AiAssistant, "ai-model", stringResource(Res.string.ai_settings_model), stringResource(Res.string.ai_settings_model_help, AiProvider.entries.joinToString { it.defaultModel }), aiPage, aiProviderSection, icon = Icons.Rounded.AutoAwesome)
+        row(SettingsPage.AiAssistant, "ai-web-search", stringResource(Res.string.ai_settings_web_search), stringResource(Res.string.ai_settings_web_search_description), aiPage, aiWebSection, icon = Icons.Rounded.AutoAwesome)
+        row(SettingsPage.AiAssistant, "ai-tavily-key", stringResource(Res.string.ai_settings_tavily_key), stringResource(Res.string.ai_settings_tavily_description), aiPage, aiWebSection, icon = Icons.Rounded.AutoAwesome)
+    }
+
     // Integrations: placeholder pages (work in progress)
     addPage(SettingsPage.SkipDb, "skipdb", stringResource(Res.string.compose_settings_page_skipdb), stringResource(Res.string.settings_integrations_skipdb_description), generalCategory, Icons.Rounded.SkipNext)
     addPage(SettingsPage.MyAnimeList, "myanimelist", stringResource(Res.string.compose_settings_page_myanimelist), stringResource(Res.string.settings_integrations_myanimelist_description), generalCategory, Icons.Rounded.ViewList)
     addPage(SettingsPage.Kitsu, "kitsu", stringResource(Res.string.compose_settings_page_kitsu), stringResource(Res.string.settings_integrations_kitsu_description), generalCategory, Icons.Rounded.ViewList)
     addPage(SettingsPage.AniList, "anilist", stringResource(Res.string.compose_settings_page_anilist), stringResource(Res.string.settings_integrations_anilist_description), generalCategory, Icons.Rounded.ViewList)
-    addPage(SettingsPage.AiAssistant, "ai-assistant", stringResource(Res.string.compose_settings_page_ai_assistant), stringResource(Res.string.settings_integrations_ai_assistant_description), generalCategory, Icons.Rounded.AutoAwesome)
     addPage(SettingsPage.Telegram, "telegram", stringResource(Res.string.compose_settings_page_telegram), stringResource(Res.string.settings_integrations_telegram_description), generalCategory, Icons.Rounded.Send)
 
     // Downloads
