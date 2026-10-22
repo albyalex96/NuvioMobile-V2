@@ -2,14 +2,21 @@ package com.nuvio.app.features.streams.parser
 
 import com.nuvio.app.core.storage.ProfileScopedKey
 import com.nuvio.app.core.sync.decodeSyncBoolean
+import com.nuvio.app.core.sync.decodeSyncStringSet
 import com.nuvio.app.core.sync.encodeSyncBoolean
+import com.nuvio.app.core.sync.encodeSyncStringSet
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import platform.Foundation.NSUserDefaults
 
 internal actual object StreamParserSettingsStorage {
-    private val syncKeys = listOf(STREAM_PARSER_ENABLED_KEY, STREAM_PARSER_ANIMATIONS_ENABLED_KEY, STREAM_PARSER_SORT_BY_QUALITY_KEY)
+    private val syncKeys = listOf(
+        STREAM_PARSER_ENABLED_KEY,
+        STREAM_PARSER_ANIMATIONS_ENABLED_KEY,
+        STREAM_PARSER_SORT_BY_QUALITY_KEY,
+        STREAM_PARSER_HIDDEN_QUALITIES_KEY,
+    )
 
     actual fun loadEnabled(): Boolean? = loadBoolean(STREAM_PARSER_ENABLED_KEY)
 
@@ -27,6 +34,21 @@ internal actual object StreamParserSettingsStorage {
 
     actual fun saveSortByQuality(enabled: Boolean) {
         saveBoolean(STREAM_PARSER_SORT_BY_QUALITY_KEY, enabled)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    actual fun loadHiddenQualities(): Set<String>? {
+        val array = NSUserDefaults.standardUserDefaults.arrayForKey(
+            ProfileScopedKey.of(STREAM_PARSER_HIDDEN_QUALITIES_KEY)
+        ) as? List<String> ?: return null
+        return array.toSet()
+    }
+
+    actual fun saveHiddenQualities(qualities: Set<String>) {
+        NSUserDefaults.standardUserDefaults.setObject(
+            qualities.toList(),
+            forKey = ProfileScopedKey.of(STREAM_PARSER_HIDDEN_QUALITIES_KEY),
+        )
     }
 
     private fun loadBoolean(key: String): Boolean? {
@@ -47,6 +69,7 @@ internal actual object StreamParserSettingsStorage {
         loadEnabled()?.let { put(STREAM_PARSER_ENABLED_KEY, encodeSyncBoolean(it)) }
         loadAnimationsEnabled()?.let { put(STREAM_PARSER_ANIMATIONS_ENABLED_KEY, encodeSyncBoolean(it)) }
         loadSortByQuality()?.let { put(STREAM_PARSER_SORT_BY_QUALITY_KEY, encodeSyncBoolean(it)) }
+        loadHiddenQualities()?.let { put(STREAM_PARSER_HIDDEN_QUALITIES_KEY, encodeSyncStringSet(it)) }
     }
 
     actual fun replaceFromSyncPayload(payload: JsonObject) {
@@ -57,5 +80,6 @@ internal actual object StreamParserSettingsStorage {
         payload.decodeSyncBoolean(STREAM_PARSER_ENABLED_KEY)?.let(::saveEnabled)
         payload.decodeSyncBoolean(STREAM_PARSER_ANIMATIONS_ENABLED_KEY)?.let(::saveAnimationsEnabled)
         payload.decodeSyncBoolean(STREAM_PARSER_SORT_BY_QUALITY_KEY)?.let(::saveSortByQuality)
+        payload.decodeSyncStringSet(STREAM_PARSER_HIDDEN_QUALITIES_KEY)?.let(::saveHiddenQualities)
     }
 }

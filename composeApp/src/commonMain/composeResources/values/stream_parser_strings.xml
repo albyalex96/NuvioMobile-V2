@@ -7,6 +7,11 @@
     <string name="stream_parser_animations_description">Animate the quality, cached, torrent and proxy badges</string>
     <string name="stream_parser_sort_by_quality_title">Sort by video quality</string>
     <string name="stream_parser_sort_by_quality_description">Show every stream in a single list, highest resolution first, regardless of addon or plugin</string>
+    <string name="stream_parser_quality_filter_title">Shown qualities</string>
+    <string name="stream_parser_quality_filter_description">Choose which video resolutions appear in the stream results</string>
+    <string name="stream_parser_quality_filter_all">All</string>
+    <string name="stream_parser_quality_filter_none">None</string>
+    <string name="stream_parser_quality_filter_show_all">Show all</string>
     <string name="stream_parser_direct">Direct</string>
     <string name="stream_parser_cached">Cached</string>
     <string name="stream_parser_torrent">Torrent</string>

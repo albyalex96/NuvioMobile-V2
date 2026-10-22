@@ -1,5 +1,6 @@
 package com.nuvio.app.features.streams.parser
 
+import co.touchlab.kermit.Logger
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -10,12 +11,15 @@ data class StreamParserSettingsUiState(
     val animationsEnabled: Boolean = true,
     /** Independent from [enabled]: also applies to the classic stream card. */
     val sortByQuality: Boolean = false,
+    /** Resolutions hidden from the stream results; empty shows everything. */
+    val hiddenQualities: Set<StreamParserResolution> = emptySet(),
 )
 
 object StreamParserSettingsRepository {
     private val _uiState = MutableStateFlow(StreamParserSettingsUiState())
     val uiState: StateFlow<StreamParserSettingsUiState> = _uiState.asStateFlow()
 
+    private val log = Logger.withTag("StreamQualityFilter")
     private var hasLoaded = false
 
     fun ensureLoaded() {
@@ -53,6 +57,24 @@ object StreamParserSettingsRepository {
         StreamParserSettingsStorage.saveSortByQuality(enabled)
     }
 
+    fun setQualityVisible(quality: StreamParserResolution, visible: Boolean) {
+        ensureLoaded()
+        val current = _uiState.value.hiddenQualities
+        val updated = if (visible) current - quality else current + quality
+        if (updated == current) return
+        _uiState.value = _uiState.value.copy(hiddenQualities = updated)
+        StreamParserSettingsStorage.saveHiddenQualities(updated.mapTo(mutableSetOf()) { it.name })
+        log.i { "Quality ${quality.label} ${if (visible) "shown" else "hidden"}; hidden=${updated.map { it.label }}" }
+    }
+
+    fun showAllQualities() {
+        ensureLoaded()
+        if (_uiState.value.hiddenQualities.isEmpty()) return
+        _uiState.value = _uiState.value.copy(hiddenQualities = emptySet())
+        StreamParserSettingsStorage.saveHiddenQualities(emptySet())
+        log.i { "All qualities shown" }
+    }
+
     /** Sync hooks: the keys travel inside the existing `stream_badge_settings` payload. */
     fun exportToSyncPayload(): JsonObject = StreamParserSettingsStorage.exportToSyncPayload()
 
@@ -67,6 +89,16 @@ object StreamParserSettingsRepository {
             enabled = StreamParserSettingsStorage.loadEnabled() ?: false,
             animationsEnabled = StreamParserSettingsStorage.loadAnimationsEnabled() ?: true,
             sortByQuality = StreamParserSettingsStorage.loadSortByQuality() ?: false,
+            hiddenQualities = decodeHiddenQualities(StreamParserSettingsStorage.loadHiddenQualities()),
         )
+    }
+
+    private fun decodeHiddenQualities(names: Set<String>?): Set<StreamParserResolution> {
+        if (names.isNullOrEmpty()) return emptySet()
+        val qualities = StreamParserResolution.entries.filterTo(mutableSetOf()) { it.name in names }
+        if (qualities.size != names.size) {
+            log.w { "Ignored unknown hidden qualities: ${names - qualities.map { it.name }.toSet()}" }
+        }
+        return qualities
     }
 }

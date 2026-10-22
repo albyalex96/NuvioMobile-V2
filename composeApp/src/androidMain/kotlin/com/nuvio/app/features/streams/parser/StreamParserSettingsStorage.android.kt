@@ -4,7 +4,9 @@ import android.content.Context
 import android.content.SharedPreferences
 import com.nuvio.app.core.storage.ProfileScopedKey
 import com.nuvio.app.core.sync.decodeSyncBoolean
+import com.nuvio.app.core.sync.decodeSyncStringSet
 import com.nuvio.app.core.sync.encodeSyncBoolean
+import com.nuvio.app.core.sync.encodeSyncStringSet
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -12,7 +14,12 @@ import kotlinx.serialization.json.put
 internal actual object StreamParserSettingsStorage {
     // Shares the stream badge preferences file so the account data cleaner already wipes it.
     private const val preferencesName = "nuvio_stream_badge_settings"
-    private val syncKeys = listOf(STREAM_PARSER_ENABLED_KEY, STREAM_PARSER_ANIMATIONS_ENABLED_KEY, STREAM_PARSER_SORT_BY_QUALITY_KEY)
+    private val syncKeys = listOf(
+        STREAM_PARSER_ENABLED_KEY,
+        STREAM_PARSER_ANIMATIONS_ENABLED_KEY,
+        STREAM_PARSER_SORT_BY_QUALITY_KEY,
+        STREAM_PARSER_HIDDEN_QUALITIES_KEY,
+    )
 
     private var preferences: SharedPreferences? = null
 
@@ -38,6 +45,16 @@ internal actual object StreamParserSettingsStorage {
         saveBoolean(STREAM_PARSER_SORT_BY_QUALITY_KEY, enabled)
     }
 
+    actual fun loadHiddenQualities(): Set<String>? =
+        preferences?.getStringSet(ProfileScopedKey.of(STREAM_PARSER_HIDDEN_QUALITIES_KEY), null)
+
+    actual fun saveHiddenQualities(qualities: Set<String>) {
+        preferences
+            ?.edit()
+            ?.putStringSet(ProfileScopedKey.of(STREAM_PARSER_HIDDEN_QUALITIES_KEY), qualities)
+            ?.apply()
+    }
+
     private fun loadBoolean(key: String): Boolean? =
         preferences?.let { sharedPreferences ->
             val scopedKey = ProfileScopedKey.of(key)
@@ -59,6 +76,7 @@ internal actual object StreamParserSettingsStorage {
         loadEnabled()?.let { put(STREAM_PARSER_ENABLED_KEY, encodeSyncBoolean(it)) }
         loadAnimationsEnabled()?.let { put(STREAM_PARSER_ANIMATIONS_ENABLED_KEY, encodeSyncBoolean(it)) }
         loadSortByQuality()?.let { put(STREAM_PARSER_SORT_BY_QUALITY_KEY, encodeSyncBoolean(it)) }
+        loadHiddenQualities()?.let { put(STREAM_PARSER_HIDDEN_QUALITIES_KEY, encodeSyncStringSet(it)) }
     }
 
     actual fun replaceFromSyncPayload(payload: JsonObject) {
@@ -69,5 +87,6 @@ internal actual object StreamParserSettingsStorage {
         payload.decodeSyncBoolean(STREAM_PARSER_ENABLED_KEY)?.let(::saveEnabled)
         payload.decodeSyncBoolean(STREAM_PARSER_ANIMATIONS_ENABLED_KEY)?.let(::saveAnimationsEnabled)
         payload.decodeSyncBoolean(STREAM_PARSER_SORT_BY_QUALITY_KEY)?.let(::saveSortByQuality)
+        payload.decodeSyncStringSet(STREAM_PARSER_HIDDEN_QUALITIES_KEY)?.let(::saveHiddenQualities)
     }
 }

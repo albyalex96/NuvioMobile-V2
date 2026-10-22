@@ -60,6 +60,7 @@ internal actual object PlatformLocalAccountDataCleaner {
         "stream_parser_enabled",
         "stream_parser_animations_enabled",
         "stream_parser_sort_by_quality",
+        "stream_parser_hidden_qualities",
         "debrid_stream_badge_rules",
         "p2p_enabled",
         "enable_upload",

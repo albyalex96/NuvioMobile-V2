@@ -1282,6 +1282,7 @@ private fun addAdditionalSearchEntries(
         PlaybackSearchRow("stream-parser-enabled", stringResource(Res.string.stream_parser_enabled_title), stringResource(Res.string.stream_parser_enabled_description)),
         PlaybackSearchRow("stream-parser-animations", stringResource(Res.string.stream_parser_animations_title), stringResource(Res.string.stream_parser_animations_description)),
         PlaybackSearchRow("stream-parser-sort-quality", stringResource(Res.string.stream_parser_sort_by_quality_title), stringResource(Res.string.stream_parser_sort_by_quality_description)),
+        PlaybackSearchRow("stream-parser-quality-filter", stringResource(Res.string.stream_parser_quality_filter_title), stringResource(Res.string.stream_parser_quality_filter_description)),
     ).forEach { item ->
         row(SettingsPage.Streams, item.key, item.title, item.description, streamsPage, streamParserSection, icon = Icons.Rounded.Style)
     }
