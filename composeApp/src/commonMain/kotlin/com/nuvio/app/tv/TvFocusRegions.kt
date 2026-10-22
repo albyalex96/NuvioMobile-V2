@@ -9,11 +9,19 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.foundation.focusGroup
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalFocusManager
+import co.touchlab.kermit.Logger
 import com.nuvio.app.core.ui.LocalScreenActive
 import com.nuvio.app.core.ui.PlatformBackHandler
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -48,6 +56,8 @@ class TvFocusRequest(
     val force: Boolean,
 )
 
+private val log = Logger.withTag("TvFocus")
+
 object TvFocusRegions {
     private val activeRegions = mutableStateListOf<TvFocusRegion>()
     private val requestFlow = MutableSharedFlow<TvFocusRequest>(extraBufferCapacity = 8)
@@ -64,6 +74,12 @@ object TvFocusRegions {
     var chrome: TvFocusRegion? = null
 
     /**
+     * Banner shown above the whole app (e.g. the update banner): reached with D-pad up from the
+     * top edge of the page or from the glass top bar, never primary.
+     */
+    var banner: TvFocusRegion? = null
+
+    /**
      * Opens the navigation chrome when it is collapsed (the sidebar sets it): the chrome then
      * places the focus on the selected tab itself.
      */
@@ -77,6 +93,17 @@ object TvFocusRegions {
         } else {
             chrome?.let { request(it, force = true) }
         }
+    }
+
+    /** Moves the focus into the [banner], if one is shown. Returns false when there is none. */
+    fun requestBanner(): Boolean {
+        val target = banner ?: return false
+        if (target.hasFocus) return true
+        val moved = runCatching { target.requester.requestFocus(FocusDirection.Enter) }
+            .onFailure { log.w(it) { "Banner not ready for focus" } }
+            .getOrDefault(false)
+        if (moved) log.d { "Focus moved into the top banner" }
+        return moved
     }
 
     val requests: SharedFlow<TvFocusRequest> = requestFlow.asSharedFlow()
@@ -151,6 +178,46 @@ fun Modifier.tvChromeRegion(): Modifier {
         .onFocusChanged { state -> region.hasFocus = state.hasFocus }
         .focusRequester(region.requester)
         .focusGroup()
+}
+
+/**
+ * Marks a banner shown above the app content (see [TvFocusRegions.banner]). Down leaves it for
+ * the primary region of the page. No-op without a [TvShell].
+ */
+@Composable
+fun Modifier.tvBannerRegion(): Modifier {
+    if (LocalTvShell.current == null) return this
+    val region = rememberTvFocusRegion()
+    DisposableEffect(region) {
+        TvFocusRegions.banner = region
+        onDispose { if (TvFocusRegions.banner === region) TvFocusRegions.banner = null }
+    }
+    return this
+        .onKeyEvent { event ->
+            if (event.type == KeyEventType.KeyDown && event.key == Key.DirectionDown) {
+                TvFocusRegions.request(force = true)
+                true
+            } else {
+                false
+            }
+        }
+        .onFocusChanged { state -> region.hasFocus = state.hasFocus }
+        .focusRequester(region.requester)
+        .focusGroup()
+}
+
+/**
+ * Content below a [tvBannerRegion]: D-pad up that the page cannot use (top edge) moves the focus
+ * into the banner. No-op without a [TvShell] or while [enabled] is false.
+ */
+@Composable
+fun Modifier.tvFocusBannerFromTopEdge(enabled: Boolean): Modifier {
+    if (LocalTvShell.current == null || !enabled) return this
+    val focusManager = LocalFocusManager.current
+    return onKeyEvent { event ->
+        if (event.type != KeyEventType.KeyDown || event.key != Key.DirectionUp) return@onKeyEvent false
+        focusManager.moveFocus(FocusDirection.Up) || TvFocusRegions.requestBanner()
+    }
 }
 
 /**

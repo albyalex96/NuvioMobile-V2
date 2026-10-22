@@ -59,6 +59,8 @@ import com.nuvio.app.core.ui.themePalette
 import com.nuvio.app.core.ui.accentBrush
 import com.nuvio.app.core.ui.appTheme
 import com.nuvio.app.core.ui.nuvio
+import com.nuvio.app.tv.tvBannerRegion
+import com.nuvio.app.tv.tvFocusBannerFromTopEdge
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_close
 import nuvio.composeapp.generated.resources.action_continue
@@ -129,6 +131,8 @@ fun AppUpdaterHost(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
+                // TV: up from the top edge of the page reaches the banner.
+                .tvFocusBannerFromTopEdge(enabled = showBanner)
                 .then(
                     if (showBanner) {
                         Modifier.consumeWindowInsets(WindowInsets.statusBars)
@@ -216,7 +220,8 @@ private fun AppUpdateBanner(
                     size = Size(width = size.width, height = 1.dp.toPx()),
                 )
             }
-            .windowInsetsPadding(WindowInsets.statusBars),
+            .windowInsetsPadding(WindowInsets.statusBars)
+            .tvBannerRegion(),
     ) {
         Row(
             modifier = Modifier

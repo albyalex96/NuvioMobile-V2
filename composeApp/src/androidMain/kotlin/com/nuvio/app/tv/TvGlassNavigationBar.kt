@@ -243,7 +243,11 @@ fun TvGlassNavigationBar(
                     val step = when (event.key) {
                         Key.DirectionLeft -> if (isRtl) 1 else -1
                         Key.DirectionRight -> if (isRtl) -1 else 1
-                        Key.DirectionUp -> return@onPreviewKeyEvent true
+                        // Up never leaves the bar, except towards a banner above the app (update).
+                        Key.DirectionUp -> {
+                            TvFocusRegions.requestBanner()
+                            return@onPreviewKeyEvent true
+                        }
                         else -> return@onPreviewKeyEvent false
                     }
                     // Left/right stay inside the bar: the edges do not leak into the page below.
