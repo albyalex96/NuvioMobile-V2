@@ -88,14 +88,15 @@ internal fun LazyListScope.contentDiscoveryContent(
                         isTablet = isTablet,
                         onClick = onPluginsClick,
                     )
+                    // CloudStream ships with the same builds as plugins (it is absent from store builds).
+                    SettingsNavigationRow(
+                        title = stringResource(Res.string.compose_settings_page_cloudstream),
+                        description = stringResource(Res.string.settings_content_discovery_cloudstream_description),
+                        iconPainter = integrationLogoPainter(IntegrationLogo.Cloudstream),
+                        isTablet = isTablet,
+                        onClick = onCloudstreamClick,
+                    )
                 }
-                SettingsNavigationRow(
-                    title = stringResource(Res.string.compose_settings_page_cloudstream),
-                    description = stringResource(Res.string.settings_content_discovery_cloudstream_description),
-                    iconPainter = integrationLogoPainter(IntegrationLogo.Cloudstream),
-                    isTablet = isTablet,
-                    onClick = onCloudstreamClick,
-                )
                 SettingsNavigationRow(
                     title = stringResource(Res.string.compose_settings_page_media_servers),
                     description = stringResource(Res.string.settings_content_discovery_media_servers_description),

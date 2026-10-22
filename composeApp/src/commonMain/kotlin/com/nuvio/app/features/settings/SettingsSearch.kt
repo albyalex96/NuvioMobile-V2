@@ -519,13 +519,64 @@ internal fun settingsSearchEntries(
             icon = Icons.Rounded.Hub,
         )
     }
-    addPage(
-        page = SettingsPage.Cloudstream,
-        key = "cloudstream",
-        title = stringResource(Res.string.compose_settings_page_cloudstream),
-        description = stringResource(Res.string.settings_content_discovery_cloudstream_description),
-        icon = Icons.Rounded.Extension,
-    )
+    if (pluginsEnabled) {
+        val cloudStreamPage = stringResource(Res.string.compose_settings_page_cloudstream)
+        addPage(
+            page = SettingsPage.Cloudstream,
+            key = "cloudstream",
+            title = cloudStreamPage,
+            description = stringResource(Res.string.settings_content_discovery_cloudstream_description),
+            icon = Icons.Rounded.Extension,
+        )
+        // The CloudStream page is a custom layout (not *Row calls): its entries are listed by hand.
+        val cloudStreamOverview = stringResource(Res.string.cloudstream_section_overview)
+        val cloudStreamPlugins = stringResource(Res.string.cloudstream_section_plugins)
+        addRow(
+            page = SettingsPage.Cloudstream,
+            key = "cloudstream_group_by_repo",
+            title = stringResource(Res.string.cloudstream_group_by_repo_title),
+            description = stringResource(Res.string.cloudstream_group_by_repo_desc),
+            pageLabel = cloudStreamPage,
+            section = cloudStreamOverview,
+            icon = Icons.Rounded.Extension,
+        )
+        addRow(
+            page = SettingsPage.Cloudstream,
+            key = "cloudstream_full_details",
+            title = stringResource(Res.string.cloudstream_full_details_title),
+            description = stringResource(Res.string.cloudstream_full_details_desc),
+            pageLabel = cloudStreamPage,
+            section = cloudStreamOverview,
+            icon = Icons.Rounded.Extension,
+        )
+        addRow(
+            page = SettingsPage.Cloudstream,
+            key = "cloudstream_add_repo",
+            title = stringResource(Res.string.cloudstream_section_add_repo),
+            description = stringResource(Res.string.cloudstream_empty_repos_subtitle),
+            pageLabel = cloudStreamPage,
+            section = stringResource(Res.string.cloudstream_section_repos),
+            icon = Icons.Rounded.Extension,
+        )
+        addRow(
+            page = SettingsPage.Cloudstream,
+            key = "cloudstream_install_all",
+            title = stringResource(Res.string.cloudstream_install_all_title),
+            description = stringResource(Res.string.cloudstream_install_all_desc),
+            pageLabel = cloudStreamPage,
+            section = cloudStreamPlugins,
+            icon = Icons.Rounded.Extension,
+        )
+        addRow(
+            page = SettingsPage.Cloudstream,
+            key = "cloudstream_import_catalogs",
+            title = stringResource(Res.string.cloudstream_import_catalogs_title),
+            description = stringResource(Res.string.cloudstream_import_catalogs_desc),
+            pageLabel = cloudStreamPage,
+            section = cloudStreamPlugins,
+            icon = Icons.Rounded.Extension,
+        )
+    }
     val top10Page = stringResource(Res.string.compose_settings_page_top10)
     addPage(
         page = SettingsPage.Top10,

@@ -68,7 +68,6 @@ internal fun LazyListScope.workInProgressIntegrationContent(
             SettingsPage.Kitsu -> IntegrationLogo.Kitsu
             SettingsPage.AniList -> IntegrationLogo.AniList
             SettingsPage.Telegram -> IntegrationLogo.Telegram
-            SettingsPage.Cloudstream -> IntegrationLogo.Cloudstream
             else -> null
         }
         WorkInProgressPlaceholder(

@@ -937,8 +937,8 @@ private fun MobileSettingsScreen(
                 SettingsPage.AniList,
                 SettingsPage.AiAssistant,
                 SettingsPage.Telegram,
-                SettingsPage.Cloudstream,
                 -> workInProgressIntegrationContent(isTablet = false, page = page)
+                SettingsPage.Cloudstream -> cloudStreamSettingsContent()
                 SettingsPage.TraktAuthentication -> trackingSettingsContent(
                     isTablet = false,
                     traktUiState = traktAuthUiState,
@@ -1456,8 +1456,8 @@ private fun TabletSettingsScreen(
                     SettingsPage.AniList,
                     SettingsPage.AiAssistant,
                     SettingsPage.Telegram,
-                    SettingsPage.Cloudstream,
                     -> workInProgressIntegrationContent(isTablet = true, page = page)
+                    SettingsPage.Cloudstream -> cloudStreamSettingsContent()
                     SettingsPage.TraktAuthentication -> trackingSettingsContent(
                         isTablet = true,
                         traktUiState = traktAuthUiState,

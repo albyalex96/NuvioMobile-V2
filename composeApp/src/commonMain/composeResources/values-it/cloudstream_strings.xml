@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cloudstream_badge_label">CloudStream</string>
+    <string name="cloudstream_section_overview">Panoramica</string>
+    <string name="cloudstream_badge_repos">%1$d repository</string>
+    <string name="cloudstream_badge_installed">%1$d installati</string>
+    <string name="cloudstream_badge_enabled">%1$d provider attivi</string>
+    <string name="cloudstream_overview_description">I pacchetti .cs3 di CloudStream sono codice di terze parti scaricato dai repository che aggiungi. La build Android full li esegue con il runtime CloudStream integrato. Installa solo repository e plugin di cui ti fidi.</string>
+    <string name="cloudstream_group_by_repo_title">Raggruppa fonti per repository</string>
+    <string name="cloudstream_group_by_repo_desc">Mostra un gruppo di fonti per ogni repository CloudStream invece di uno per provider.</string>
+    <string name="cloudstream_full_details_title">Apri pagina dettagli completa</string>
+    <string name="cloudstream_full_details_desc">Apre i titoli dei cataloghi CloudStream con la stessa pagina dettagli usata nel resto dell'app (descrizioni, cast, voti) invece dei dettagli forniti dal plugin. Se il titolo non viene riconosciuto, vengono mostrati i dettagli del plugin.</string>
+
+    <string name="cloudstream_security_title">Avviso di sicurezza per codice di terze parti</string>
+    <string name="cloudstream_security_body">Repository e plugin non sono gestiti da Nuvio. Aggiungi solo fonti di cui ti fidi. Un provider non può essere attivato finché il suo pacchetto non viene verificato.</string>
+    <string name="cloudstream_security_accept">Ho letto e accetto l'avviso</string>
+
+    <string name="cloudstream_section_add_repo">Aggiungi repository</string>
+    <string name="cloudstream_section_edit_repo">Modifica link repository</string>
+    <string name="cloudstream_repo_placeholder">https://…/repo.json o codice breve</string>
+    <string name="cloudstream_repo_loading">Lettura repository in corso…</string>
+    <string name="cloudstream_repo_apply">Applica modifiche</string>
+    <string name="cloudstream_repo_add">Aggiungi repository</string>
+    <string name="cloudstream_repo_refreshing">Aggiornamento repository in corso.</string>
+    <string name="cloudstream_repo_added">%1$s aggiunto.</string>
+
+    <string name="cloudstream_section_repos">Repository</string>
+    <string name="cloudstream_empty_repos_title">Nessun repository</string>
+    <string name="cloudstream_empty_repos_subtitle">Aggiungi un repository CloudStream per sfogliarne e installarne i plugin.</string>
+    <string name="cloudstream_badge_plugins">%1$d plugin</string>
+    <string name="cloudstream_cd_edit_repo">Modifica repository</string>
+    <string name="cloudstream_cd_refresh_repo">Aggiorna repository</string>
+    <string name="cloudstream_cd_remove_repo">Rimuovi repository</string>
+
+    <string name="cloudstream_section_plugins">Plugin</string>
+    <string name="cloudstream_search_placeholder">Cerca plugin, descrizione o autore</string>
+    <string name="cloudstream_filter_all_languages">Tutte le lingue</string>
+    <string name="cloudstream_filter_all_types">Tutti i tipi</string>
+    <string name="cloudstream_filter_installed">Installati</string>
+    <string name="cloudstream_install_all">Installa e attiva tutto (%1$d)</string>
+    <string name="cloudstream_install_all_title">Installa e attiva tutti i plugin</string>
+    <string name="cloudstream_install_all_desc">Installa e attiva tutti i plugin compatibili mostrati dai filtri correnti.</string>
+    <string name="cloudstream_bulk_installing">Installazione multipla in corso…</string>
+    <string name="cloudstream_all_installed_active">Tutto installato e attivo</string>
+    <string name="cloudstream_bulk_failed">Installazione multipla non completata.</string>
+    <string name="cloudstream_no_plugins_to_install">Nessun plugin da installare.</string>
+    <string name="cloudstream_bulk_enabled">%1$d plugin attivati</string>
+    <string name="cloudstream_bulk_installed_updated">, %1$d pacchetti installati/aggiornati</string>
+    <string name="cloudstream_bulk_pending">, %1$d operazioni già in corso</string>
+    <string name="cloudstream_bulk_skipped">. %1$d plugin saltati: %2$s - %3$s</string>
+    <string name="cloudstream_bulk_none_enabled">Nessun plugin può essere attivato: %1$s - %2$s</string>
+    <string name="cloudstream_bulk_only_pending">%1$d operazioni già in corso.</string>
+    <string name="cloudstream_empty_plugins">Nessun plugin corrisponde ai filtri correnti.</string>
+
+    <string name="cloudstream_unknown_author">Autore non specificato</string>
+    <string name="cloudstream_no_description">Nessuna descrizione.</string>
+    <string name="cloudstream_version_current">Corrente v%1$d</string>
+    <string name="cloudstream_version_installed">Installato v%1$d</string>
+    <string name="cloudstream_sha_verified">SHA-256 verificato</string>
+    <string name="cloudstream_hash_unverified">Hash non verificato</string>
+    <string name="cloudstream_package_checked">Pacchetto verificato</string>
+    <string name="cloudstream_package_unchecked">Pacchetto non verificato</string>
+    <string name="cloudstream_compat_android">Compatibile Android</string>
+    <string name="cloudstream_compat_android_ios">Compatibile Android + iOS</string>
+    <string name="cloudstream_compat_unsupported">Runtime incompatibile</string>
+    <string name="cloudstream_auto_install_pending">In attesa di installazione (sync)</string>
+    <string name="cloudstream_downloading">Download in corso…</string>
+    <string name="cloudstream_update">Aggiorna</string>
+    <string name="cloudstream_reinstall">Reinstalla</string>
+    <string name="cloudstream_install">Installa</string>
+    <string name="cloudstream_remove">Rimuovi</string>
+    <string name="cloudstream_plugin_installed">%1$s è stato verificato e installato.</string>
+    <string name="cloudstream_import_catalogs_title">Importa cataloghi</string>
+    <string name="cloudstream_import_catalogs_desc">Mostra le categorie di questo provider come cataloghi in Home, Ricerca e Scopri.</string>
+    <string name="cloudstream_catalogs_count">%1$d cataloghi</string>
+    <string name="cloudstream_catalogs_loading">Lettura cataloghi in corso…</string>
+
+    <string name="cloudstream_failure_accept_warning">Accetta l'avviso di sicurezza per i plugin di terze parti.</string>
+    <string name="cloudstream_failure_not_found">Plugin non trovato.</string>
+    <string name="cloudstream_failure_down">Questo plugin sembra essere offline.</string>
+    <string name="cloudstream_failure_enable">Il pacchetto è stato installato, ma non può essere attivato perché la verifica o i controlli di compatibilità sono falliti.</string>
+
+    <string name="cloudstream_unsupported_title">Non supportato</string>
+    <string name="cloudstream_unsupported_desc">I plugin CloudStream sono pacchetti Android: funzionano solo nella build Android full. La configurazione degli altri dispositivi resta sincronizzata e da qui non viene modificata.</string>
+    <string name="cloudstream_details_failed">Impossibile caricare i dettagli da CloudStream.</string>
+</resources>
