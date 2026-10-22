@@ -60,6 +60,7 @@ android {
     productFlavors {
         create("full") {
             dimension = "distribution"
+            proguardFile("../composeApp/proguard-cloudstream-full.pro")
         }
         create("playstore") {
             dimension = "distribution"

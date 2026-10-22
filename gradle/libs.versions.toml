@@ -19,7 +19,7 @@ coil = "3.6.3"
 kermit = "2.0.5"
 junit = "4.13.2"
 kotlin = "2.4.10"
-kotlinx-coroutines = "1.10.2"
+kotlinx-coroutines = "1.11.0"
 kotlinx-serialization = "1.10.0"
 atomicfu = "0.32.1"
 kmpalette = "4.0.0-beta02"
@@ -32,6 +32,9 @@ play-services-cast-framework = "22.3.1"
 supabase = "3.4.1"
 quickjsKt = "1.0.15"
 ksoup = "0.2.6"
+jackson = "2.17.0"
+nicehttp = "0.4.16"
+conscrypt = "2.5.2"
 reorderable = "3.0.0"
 desugarJdkLibs = "2.1.5"
 sentry = "8.47.0"
@@ -97,6 +100,10 @@ supabase-storage = { module = "io.github.jan-tennert.supabase:storage-kt", versi
 supabase-realtime = { module = "io.github.jan-tennert.supabase:realtime-kt", version.ref = "supabase" }
 quickjs-kt = { module = "io.github.dokar3:quickjs-kt", version.ref = "quickjsKt" }
 ksoup = { module = "com.fleeksoft.ksoup:ksoup", version.ref = "ksoup" }
+jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson" }
+jackson-module-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin", version.ref = "jackson" }
+nicehttp = { module = "com.github.Blatzar:NiceHttp", version.ref = "nicehttp" }
+conscrypt-android = { module = "org.conscrypt:conscrypt-android", version.ref = "conscrypt" }
 reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
 desugar-jdk-libs = { module = "com.android.tools:desugar_jdk_libs", version.ref = "desugarJdkLibs" }
 sentry-android = { module = "io.sentry:sentry-android", version.ref = "sentry" }

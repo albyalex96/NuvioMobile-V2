@@ -468,6 +468,14 @@ kotlin {
                 if (androidDistribution == "full") {
                     implementation(files("libs/quickjs-kt-android-1.0.5-nuvio.aar"))
                     implementation(libs.ksoup)
+                    // CloudStream .cs3 runtime: API surface plus the libraries dynamically loaded providers link against.
+                    implementation(files("libs/cloudstream-runtime-api-4.8.0-3496e5f.aar"))
+                    implementation("androidx.annotation:annotation:1.10.0")
+                    implementation(libs.jackson.databind)
+                    implementation(libs.jackson.module.kotlin)
+                    implementation(libs.nicehttp)
+                    implementation(libs.conscrypt.android)
+                    implementation("com.uwetrottmann.tmdb2:tmdb-java:2.13.0")
                 }
             }
         }

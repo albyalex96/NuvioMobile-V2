@@ -25,6 +25,11 @@ dependencyResolutionManagement {
             }
         }
         mavenCentral()
+        // NiceHttp, required by the CloudStream runtime of the full Android build.
+        maven {
+            url = uri("https://jitpack.io")
+            content { includeGroup("com.github.Blatzar") }
+        }
     }
 }
 
