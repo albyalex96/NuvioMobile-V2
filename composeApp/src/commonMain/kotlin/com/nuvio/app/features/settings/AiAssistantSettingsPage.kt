@@ -1,5 +1,7 @@
 package com.nuvio.app.features.settings
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
@@ -55,80 +57,85 @@ private fun AiAssistantSettingsSection(
     val notSetLabel = stringResource(Res.string.settings_playback_not_set)
     val provider = settings.provider
 
-    SettingsSection(
-        title = stringResource(Res.string.ai_settings_section_general),
-        isTablet = isTablet,
+    // All the sections live in one lazy item: space them like the items of the settings list.
+    Column(
+        verticalArrangement = Arrangement.spacedBy(if (isTablet) 18.dp else MaterialTheme.nuvio.spacing.listGap),
     ) {
-        SettingsGroup(isTablet = isTablet) {
-            SettingsSwitchRow(
-                title = stringResource(Res.string.ai_settings_enable),
-                description = stringResource(Res.string.ai_settings_enable_description),
-                checked = settings.enabled,
-                isTablet = isTablet,
-                onCheckedChange = { enabled ->
-                    log.i { "AI assistant ${if (enabled) "enabled" else "disabled"}" }
-                    AiAssistantRepository.setEnabled(enabled)
-                },
-            )
-        }
-        AiSettingsFootnote(text = stringResource(Res.string.ai_settings_sync_notice), isTablet = isTablet)
-    }
-
-    if (settings.enabled) {
         SettingsSection(
-            title = stringResource(Res.string.ai_settings_section_provider),
-            isTablet = isTablet,
-        ) {
-            SettingsGroup(isTablet = isTablet) {
-                SettingsNavigationRow(
-                    title = stringResource(Res.string.ai_settings_provider),
-                    description = provider.displayName,
-                    isTablet = isTablet,
-                    onClick = { dialog = AiSettingsDialog.Provider },
-                )
-                SettingsGroupDivider(isTablet = isTablet)
-                SettingsNavigationRow(
-                    title = stringResource(Res.string.ai_settings_api_key),
-                    description = settings.apiKeyFor(provider).takeIf { it.isNotBlank() }?.let(::maskedSecret)
-                        ?: notSetLabel,
-                    isTablet = isTablet,
-                    onClick = { dialog = AiSettingsDialog.ApiKey },
-                )
-                SettingsGroupDivider(isTablet = isTablet)
-                SettingsNavigationRow(
-                    title = stringResource(Res.string.ai_settings_model),
-                    description = settings.modelDescription(provider),
-                    isTablet = isTablet,
-                    onClick = { dialog = AiSettingsDialog.Model },
-                )
-            }
-            AiSettingsFootnote(text = stringResource(Res.string.ai_settings_fallback_help), isTablet = isTablet)
-        }
-
-        SettingsSection(
-            title = stringResource(Res.string.ai_settings_section_web_search),
+            title = stringResource(Res.string.ai_settings_section_general),
             isTablet = isTablet,
         ) {
             SettingsGroup(isTablet = isTablet) {
                 SettingsSwitchRow(
-                    title = stringResource(Res.string.ai_settings_web_search),
-                    description = stringResource(Res.string.ai_settings_web_search_description),
-                    checked = settings.isWebSearchActive,
-                    enabled = settings.tavilyApiKey.isNotBlank(),
+                    title = stringResource(Res.string.ai_settings_enable),
+                    description = stringResource(Res.string.ai_settings_enable_description),
+                    checked = settings.enabled,
                     isTablet = isTablet,
                     onCheckedChange = { enabled ->
-                        log.i { "AI web search ${if (enabled) "enabled" else "disabled"}" }
-                        AiAssistantRepository.setWebSearchEnabled(enabled)
+                        log.i { "AI assistant ${if (enabled) "enabled" else "disabled"}" }
+                        AiAssistantRepository.setEnabled(enabled)
                     },
                 )
-                SettingsGroupDivider(isTablet = isTablet)
-                SettingsNavigationRow(
-                    title = stringResource(Res.string.ai_settings_tavily_key),
-                    description = settings.tavilyApiKey.takeIf { it.isNotBlank() }?.let(::maskedSecret)
-                        ?: notSetLabel,
-                    isTablet = isTablet,
-                    onClick = { dialog = AiSettingsDialog.TavilyKey },
-                )
+            }
+            AiSettingsFootnote(text = stringResource(Res.string.ai_settings_sync_notice), isTablet = isTablet)
+        }
+
+        if (settings.enabled) {
+            SettingsSection(
+                title = stringResource(Res.string.ai_settings_section_provider),
+                isTablet = isTablet,
+            ) {
+                SettingsGroup(isTablet = isTablet) {
+                    SettingsNavigationRow(
+                        title = stringResource(Res.string.ai_settings_provider),
+                        description = provider.displayName,
+                        isTablet = isTablet,
+                        onClick = { dialog = AiSettingsDialog.Provider },
+                    )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsNavigationRow(
+                        title = stringResource(Res.string.ai_settings_api_key),
+                        description = settings.apiKeyFor(provider).takeIf { it.isNotBlank() }?.let(::maskedSecret)
+                            ?: notSetLabel,
+                        isTablet = isTablet,
+                        onClick = { dialog = AiSettingsDialog.ApiKey },
+                    )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsNavigationRow(
+                        title = stringResource(Res.string.ai_settings_model),
+                        description = settings.modelDescription(provider),
+                        isTablet = isTablet,
+                        onClick = { dialog = AiSettingsDialog.Model },
+                    )
+                }
+                AiSettingsFootnote(text = stringResource(Res.string.ai_settings_fallback_help), isTablet = isTablet)
+            }
+
+            SettingsSection(
+                title = stringResource(Res.string.ai_settings_section_web_search),
+                isTablet = isTablet,
+            ) {
+                SettingsGroup(isTablet = isTablet) {
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.ai_settings_web_search),
+                        description = stringResource(Res.string.ai_settings_web_search_description),
+                        checked = settings.isWebSearchActive,
+                        enabled = settings.tavilyApiKey.isNotBlank(),
+                        isTablet = isTablet,
+                        onCheckedChange = { enabled ->
+                            log.i { "AI web search ${if (enabled) "enabled" else "disabled"}" }
+                            AiAssistantRepository.setWebSearchEnabled(enabled)
+                        },
+                    )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsNavigationRow(
+                        title = stringResource(Res.string.ai_settings_tavily_key),
+                        description = settings.tavilyApiKey.takeIf { it.isNotBlank() }?.let(::maskedSecret)
+                            ?: notSetLabel,
+                        isTablet = isTablet,
+                        onClick = { dialog = AiSettingsDialog.TavilyKey },
+                    )
+                }
             }
         }
     }
@@ -205,6 +212,7 @@ private fun AiSettingsFootnote(text: String, isTablet: Boolean) {
             start = if (isTablet) 20.dp else 16.dp,
             end = if (isTablet) 20.dp else 16.dp,
             top = 8.dp,
+            bottom = 8.dp,
         ),
     )
 }
