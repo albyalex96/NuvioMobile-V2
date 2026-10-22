@@ -47,6 +47,7 @@ import com.nuvio.app.features.player.PlayerPictureInPictureManager
 import com.nuvio.app.features.player.PipRemoteActionReceiver
 import com.nuvio.app.features.p2p.P2pSettingsStorage
 import com.nuvio.app.features.p2p.P2pStreamingEngine
+import com.nuvio.app.features.cloudstream.CloudStreamPlatformStorage
 import com.nuvio.app.features.plugins.PluginStorage
 import com.nuvio.app.features.profiles.AvatarStorage
 import com.nuvio.app.features.profiles.ProfilePinCacheStorage
@@ -154,6 +155,7 @@ open class MainActivity : AppCompatActivity() {
         StreamParserSettingsStorage.initialize(applicationContext)
         BingeGroupCacheStorage.initialize(applicationContext)
         PluginStorage.initialize(applicationContext)
+        CloudStreamPlatformStorage.initialize(this)
         CollectionMobileSettingsStorage.initialize(applicationContext)
         CollectionStorage.initialize(applicationContext)
         DownloadsStorage.initialize(applicationContext)

@@ -29,6 +29,11 @@ expect suspend fun httpGetTextWithHeaders(
     headers: Map<String, String>,
 ): String
 
+expect suspend fun httpGetBytesWithHeaders(
+    url: String,
+    headers: Map<String, String> = emptyMap(),
+): ByteArray
+
 expect suspend fun httpPostJsonWithHeaders(
     url: String,
     body: String,

@@ -62,6 +62,7 @@ internal object LocalAccountDataCleaner {
         ServerRepository.clearLocalState()
         if (AppFeaturePolicy.pluginsEnabled) {
             PluginRepository.clearLocalState()
+            com.nuvio.app.features.cloudstream.CloudStreamRepository.clearLocalState()
         }
         HomeRepository.clear()
         HomeCatalogSettingsRepository.clearLocalState()
