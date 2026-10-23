@@ -3,6 +3,7 @@
 package com.nuvio.app.features.player
 
 import androidx.media3.common.C
+import co.touchlab.kermit.Logger
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.StreamKey
@@ -53,6 +54,21 @@ internal class AudioDelayMediaSource(
     override fun onChildSourceInfoRefreshed(timeline: Timeline) {
         refreshSourceInfo(timeline)
     }
+}
+
+private val audioDelayLog = Logger.withTag(AUDIO_DELAY_LOG_TAG)
+
+/**
+ * Video track check that also works when the sample MIME type is still unknown (e.g. HLS
+ * without CODECS): falls back to the track group type, the codecs string and the frame size.
+ */
+private fun ExoTrackSelection.isVideoSelection(): Boolean {
+    val format = selectedFormat
+    val sampleType = MimeTypes.getTrackType(format.sampleMimeType)
+    if (sampleType != C.TRACK_TYPE_UNKNOWN) return sampleType == C.TRACK_TYPE_VIDEO
+    if (trackGroup.type != C.TRACK_TYPE_UNKNOWN) return trackGroup.type == C.TRACK_TYPE_VIDEO
+    return MimeTypes.getVideoMediaMimeType(format.codecs) != null ||
+        (format.width > 0 && format.height > 0)
 }
 
 /** Wraps every media source created by [delegate] in an [AudioDelayMediaSource]. */
@@ -126,14 +142,13 @@ private class AudioDelayMediaPeriod(
             positionUs,
         )
 
+        var videoStreams = 0
         for (index in streams.indices) {
             val childStream = childStreams[index]
             streams[index] = when {
                 childStream == null -> null
-                selections[index]
-                    ?.selectedFormat
-                    ?.sampleMimeType
-                    ?.let(MimeTypes::getTrackType) == C.TRACK_TYPE_VIDEO -> {
+                selections[index]?.isVideoSelection() == true -> {
+                    videoStreams++
                     val currentWrapper = streams[index] as? AudioDelaySampleStream
                     if (currentWrapper?.childStream === childStream) {
                         currentWrapper
@@ -143,6 +158,15 @@ private class AudioDelayMediaPeriod(
                 }
                 else -> childStream
             }
+        }
+        audioDelayLog.d {
+            "selectTracks: $videoStreams video stream(s) shifted; formats=" +
+                selections.joinToString { selection ->
+                    selection?.selectedFormat?.let { "${it.sampleMimeType ?: it.containerMimeType}/${it.codecs}" } ?: "-"
+                }
+        }
+        if (videoStreams == 0 && selections.any { it != null }) {
+            audioDelayLog.w { "No video stream recognized: audio delay cannot be applied to this source" }
         }
 
         return selectedPositionUs
@@ -191,10 +215,19 @@ private class AudioDelaySampleStream(
         childStream.maybeThrowError()
     }
 
+    /** Last delay applied to a sample, only to log when the shift actually changes. */
+    @Volatile
+    private var lastAppliedDelayUs = 0L
+
     override fun readData(formatHolder: FormatHolder, buffer: DecoderInputBuffer, readFlags: Int): Int {
         val result = childStream.readData(formatHolder, buffer, readFlags)
         if (result == C.RESULT_BUFFER_READ) {
-            buffer.timeUs -= audioDelayUsProvider()
+            val delayUs = audioDelayUsProvider()
+            if (delayUs != lastAppliedDelayUs) {
+                lastAppliedDelayUs = delayUs
+                audioDelayLog.i { "Video samples shifted by ${-delayUs / 1_000}ms (sample at ${buffer.timeUs / 1_000}ms)" }
+            }
+            buffer.timeUs -= delayUs
         }
         return result
     }

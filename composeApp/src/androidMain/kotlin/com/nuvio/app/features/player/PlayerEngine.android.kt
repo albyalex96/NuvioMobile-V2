@@ -1054,6 +1054,7 @@ private fun ExoPlayerSurface(
 
                 override fun setAudioDelayMs(delayMs: Int) {
                     audioDelayMs = delayMs.coerceIn(AUDIO_DELAY_MIN_MS, AUDIO_DELAY_MAX_MS)
+                    Logger.i(AUDIO_DELAY_LOG_TAG) { "ExoPlayer audio delay set to ${audioDelayMs}ms" }
                 }
             }),
         )
@@ -1789,6 +1790,9 @@ private class NuvioLibmpvView(
                         "audio-delay",
                         delayMs.coerceIn(AUDIO_DELAY_MIN_MS, AUDIO_DELAY_MAX_MS) / 1000.0,
                     )
+                    Logger.i(AUDIO_DELAY_LOG_TAG) {
+                        "libmpv audio-delay requested=${delayMs}ms now=${mpv.getPropertyDouble("audio-delay")}s"
+                    }
                 }
             }
         }
