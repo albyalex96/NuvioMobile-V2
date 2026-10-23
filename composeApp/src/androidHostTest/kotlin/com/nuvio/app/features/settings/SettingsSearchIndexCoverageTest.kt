@@ -120,6 +120,8 @@ class SettingsSearchIndexCoverageTest {
             // Lives on the root page next to "Check for updates", which is already indexed.
             "updates_channel_title",
             "updates_channel_description",
+            // Live "N of M providers enabled" counter; the row is indexed with its title and hint.
+            "settings_playback_provider_priority_order_description",
         )
     }
 }

@@ -30,6 +30,7 @@ internal sealed interface StreamLoadCompletion {
     data class Addon(val group: AddonStreamGroup) : StreamLoadCompletion
     data class PluginScraper(
         val addonId: String,
+        val providerKey: String,
         val streams: List<StreamItem>,
         val error: String?,
     ) : StreamLoadCompletion
@@ -115,6 +116,7 @@ internal fun PluginRuntimeResult.toStreamItem(
         sourceName = scraper.name,
         addonName = addonName,
         addonId = addonId,
+        providerKey = pluginProviderKey(scraper.id),
         streamType = normalizeStreamType(type),
         behaviorHints = if (requestHeaders.isEmpty()) {
             StreamBehaviorHints(audioDelayMs = audioDelayMs)

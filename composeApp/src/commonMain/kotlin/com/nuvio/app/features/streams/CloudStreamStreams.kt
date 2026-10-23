@@ -40,10 +40,18 @@ private val cloudStreamProviderSemaphore = Semaphore(CLOUDSTREAM_STREAM_PROVIDER
 internal class CloudStreamStreamSource(
     val addonId: String,
     val addonName: String,
+    /** Providers of a repository group, so provider priority knows which ones are still loading. */
+    private val providerKeys: Set<String> = emptySet(),
     private val loader: suspend () -> AddonStreamGroup,
 ) {
     fun loadingGroup(): AddonStreamGroup =
-        AddonStreamGroup(addonName = addonName, addonId = addonId, streams = emptyList(), isLoading = true)
+        AddonStreamGroup(
+            addonName = addonName,
+            addonId = addonId,
+            streams = emptyList(),
+            isLoading = true,
+            pendingProviderKeys = providerKeys,
+        )
 
     suspend fun load(): AddonStreamGroup = try {
         loader()
@@ -132,7 +140,11 @@ internal object CloudStreamStreams {
             cloudStreamFetchLog.d { "CloudStream stream groups=${groups.size} type=$type id=$videoId title=${request?.title}" }
         }
         return groups.map { group ->
-            CloudStreamStreamSource(addonId = group.addonId, addonName = group.addonName) {
+            CloudStreamStreamSource(
+                addonId = group.addonId,
+                addonName = group.addonName,
+                providerKeys = group.providerIds.mapTo(LinkedHashSet(), ::cloudStreamAddonId),
+            ) {
                 withTimeoutOrNull(CLOUDSTREAM_GROUP_TIMEOUT_MS) {
                     resolveCloudStreamProviderStreams(providerGroup = group, request = request)
                 } ?: group.toCloudStreamGroup(streams = emptyList(), error = "${group.addonName} timed out")

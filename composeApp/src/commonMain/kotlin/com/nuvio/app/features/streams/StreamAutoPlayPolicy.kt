@@ -11,8 +11,23 @@ object StreamAutoPlayPolicy {
             StreamAutoPlayMode.MANUAL -> false
             StreamAutoPlayMode.FIRST_STREAM -> true
             StreamAutoPlayMode.REGEX_MATCH -> isRegexSelectionConfigured(settings.streamAutoPlayRegex)
+            StreamAutoPlayMode.PROVIDER_PRIORITY -> settings.streamProviderPriority.applyToFirstPlayback
         }
     }
+
+    /**
+     * Mode used when a title is opened. Provider priority limited to the next episode leaves the
+     * first stream choice to the user.
+     */
+    fun firstPlaybackMode(settings: PlayerSettingsUiState): StreamAutoPlayMode =
+        if (
+            settings.streamAutoPlayMode == StreamAutoPlayMode.PROVIDER_PRIORITY &&
+            !settings.streamProviderPriority.applyToFirstPlayback
+        ) {
+            StreamAutoPlayMode.MANUAL
+        } else {
+            settings.streamAutoPlayMode
+        }
 
     fun isRegexSelectionConfigured(regexPattern: String): Boolean {
         val pattern = regexPattern.trim()

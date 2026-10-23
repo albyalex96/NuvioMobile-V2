@@ -33,6 +33,8 @@ data class StreamItem(
     val externalSubtitles: List<StreamSubtitle> = emptyList(),
     val badges: List<StreamBadge> = emptyList(),
     val serverTarget: ServerPlaybackTarget? = null,
+    /** Plugin scraper or CloudStream provider that produced the stream, when it differs from [addonId]. */
+    val providerKey: String? = null,
 ) {
     val streamLabel: String
         get() = name?.takeIf { it.isNotBlank() } ?: "Stream"
@@ -305,6 +307,8 @@ data class AddonStreamGroup(
     val streams: List<StreamItem>,
     val isLoading: Boolean = false,
     val error: String? = null,
+    /** Providers of a grouped source (plugin or CloudStream repository) that have not answered yet. */
+    val pendingProviderKeys: Set<String> = emptySet(),
 )
 
 enum class StreamsEmptyStateReason {

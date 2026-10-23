@@ -794,6 +794,12 @@ internal fun settingsSearchEntries(
             add(PlaybackSearchRow("source-scope", stringResource(Res.string.settings_playback_source_scope)))
             add(PlaybackSearchRow("allowed-addons", stringResource(Res.string.settings_playback_allowed_addons)))
             if (pluginsEnabled) add(PlaybackSearchRow("allowed-plugins", stringResource(Res.string.settings_playback_allowed_plugins)))
+            // Provider priority mode rows (shown when the mode is selected).
+            add(PlaybackSearchRow("provider-priority-mode", stringResource(Res.string.settings_playback_stream_selection_mode_provider_priority), stringResource(Res.string.settings_playback_stream_selection_mode_provider_priority_description)))
+            add(PlaybackSearchRow("provider-priority-order", stringResource(Res.string.settings_playback_provider_priority_order), stringResource(Res.string.settings_playback_provider_priority_order_hint)))
+            add(PlaybackSearchRow("provider-priority-sources", stringResource(Res.string.settings_playback_provider_priority_sources), stringResource(Res.string.settings_playback_provider_priority_sources_description)))
+            add(PlaybackSearchRow("provider-priority-timeout", stringResource(Res.string.settings_playback_provider_priority_timeout), stringResource(Res.string.settings_playback_provider_priority_timeout_description)))
+            add(PlaybackSearchRow("provider-priority-first-playback", stringResource(Res.string.settings_playback_provider_priority_first_playback), stringResource(Res.string.settings_playback_provider_priority_first_playback_description)))
         },
     )
     if (!isIos) {

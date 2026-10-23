@@ -108,7 +108,7 @@ object StreamsRepository {
         val playerSettings = PlayerSettingsRepository.uiState.value
         val debridSettings = DebridSettingsRepository.snapshot()
         val streamBadgeRules = StreamBadgeSettingsRepository.snapshot()
-        val autoPlayMode = playerSettings.streamAutoPlayMode
+        val autoPlayMode = StreamAutoPlayPolicy.firstPlaybackMode(playerSettings)
         val isAutoPlayEnabled = !manualSelection && autoPlayMode != StreamAutoPlayMode.MANUAL &&
             !(autoPlayMode == StreamAutoPlayMode.REGEX_MATCH &&
                 !StreamAutoPlayPolicy.isRegexSelectionConfigured(playerSettings.streamAutoPlayRegex))
@@ -240,6 +240,7 @@ object StreamsRepository {
                 addonId = providerGroup.addonId,
                 streams = emptyList(),
                 isLoading = true,
+                pendingProviderKeys = providerGroup.scrapers.mapTo(LinkedHashSet()) { pluginProviderKey(it.id) },
             )
         } + serverSources.map { it.loadingGroup() } + cloudStreamSources.map { it.loadingGroup() },
             installedAddonOrder, preferredGroupIds)
@@ -271,21 +272,34 @@ object StreamsRepository {
             val debridAvailabilityJobs = mutableListOf<Job>()
             var autoSelectTriggered = false
             var timeoutElapsed = false
-            fun evaluateAutoPlay(bingeGroupOnly: Boolean = false): StreamAutoPlayEvaluation =
-                StreamAutoPlaySelector.evaluateAutoPlayStream(
-                    streams = _uiState.value.groups.flatMap { it.streams },
-                    mode = autoPlayMode,
-                    regexPattern = playerSettings.streamAutoPlayRegex,
-                    source = playerSettings.streamAutoPlaySource,
-                    installedAddonNames = installedAddonNames,
-                    selectedAddons = playerSettings.streamAutoPlaySelectedAddons,
-                    selectedPlugins = playerSettings.streamAutoPlaySelectedPlugins,
-                    preferredBingeGroup = persistedBingeGroup,
-                    preferBingeGroupInSelection = persistedBingeGroup != null,
-                    bingeGroupOnly = bingeGroupOnly,
+            fun evaluateProviderPriority(): StreamProviderPriorityEvaluation =
+                StreamProviderPrioritySelector.evaluate(
+                    groups = _uiState.value.groups,
+                    config = playerSettings.streamProviderPriority,
+                    timeoutElapsed = timeoutElapsed,
                     debridEnabled = debridSettings.canResolvePlayableLinks,
                     activeResolverProviderId = debridSettings.activeResolverProviderId,
                 )
+
+            fun evaluateAutoPlay(bingeGroupOnly: Boolean = false): StreamAutoPlayEvaluation =
+                if (autoPlayMode == StreamAutoPlayMode.PROVIDER_PRIORITY && !bingeGroupOnly) {
+                    evaluateProviderPriority().toAutoPlayEvaluation()
+                } else {
+                    StreamAutoPlaySelector.evaluateAutoPlayStream(
+                        streams = _uiState.value.groups.flatMap { it.streams },
+                        mode = autoPlayMode,
+                        regexPattern = playerSettings.streamAutoPlayRegex,
+                        source = playerSettings.streamAutoPlaySource,
+                        installedAddonNames = installedAddonNames,
+                        selectedAddons = playerSettings.streamAutoPlaySelectedAddons,
+                        selectedPlugins = playerSettings.streamAutoPlaySelectedPlugins,
+                        preferredBingeGroup = persistedBingeGroup,
+                        preferBingeGroupInSelection = persistedBingeGroup != null,
+                        bingeGroupOnly = bingeGroupOnly,
+                        debridEnabled = debridSettings.canResolvePlayableLinks,
+                        activeResolverProviderId = debridSettings.activeResolverProviderId,
+                    )
+                }
 
             fun settleAutoPlay(evaluation: StreamAutoPlayEvaluation) {
                 if (autoSelectTriggered) return
@@ -354,6 +368,15 @@ object StreamsRepository {
                 }
                 if (earlyEvaluation?.stream != null) {
                     settleAutoPlay(earlyEvaluation)
+                    return
+                }
+
+                if (autoPlayMode == StreamAutoPlayMode.PROVIDER_PRIORITY) {
+                    val priorityEvaluation = evaluateProviderPriority()
+                    if (priorityEvaluation.isDecided) {
+                        StreamProviderPrioritySelector.logDecision("First playback", priorityEvaluation, timeoutElapsed)
+                        settleAutoPlay(priorityEvaluation.toAutoPlayEvaluation())
+                    }
                     return
                 }
 
@@ -437,14 +460,32 @@ object StreamsRepository {
             updateAutoPlayAfterStreamsChanged()
 
             val timeoutJob = if (isDirectAutoPlayFlow) {
-                val timeoutSeconds = playerSettings.streamAutoPlayTimeoutSeconds
+                val timeoutSeconds = if (autoPlayMode == StreamAutoPlayMode.PROVIDER_PRIORITY) {
+                    playerSettings.streamProviderPriority.timeoutSeconds
+                } else {
+                    playerSettings.streamAutoPlayTimeoutSeconds
+                }
                 val isUnlimitedTimeout = timeoutSeconds == Int.MAX_VALUE
                 // Timeout semantics:
                 // - 0 (instant): timeoutElapsed immediately, full select on each response
                 // - 1-30 (bounded): wait the configured delay, then full select
                 // - unlimited (Int.MAX_VALUE): timeoutElapsed immediately, full select on each response,
                 //   with 60s hard fallback to stream picker
-                if (timeoutSeconds <= 0 || isUnlimitedTimeout) {
+                // Provider priority waits for higher ranked providers until its own timeout
+                // ("unlimited" = until they answer, with a hard fallback), then takes the best ready stream.
+                if (autoPlayMode == StreamAutoPlayMode.PROVIDER_PRIORITY) {
+                    launch {
+                        delay(if (isUnlimitedTimeout) PROVIDER_PRIORITY_HARD_TIMEOUT_MS else timeoutSeconds * 1_000L)
+                        timeoutElapsed = true
+                        if (!autoSelectTriggered) {
+                            val evaluation = evaluateProviderPriority()
+                            StreamProviderPrioritySelector.logDecision("First playback timeout", evaluation, true)
+                            if (evaluation.stream != null || isUnlimitedTimeout) {
+                                settleAutoPlay(evaluation.toAutoPlayEvaluation())
+                            }
+                        }
+                    }
+                } else if (timeoutSeconds <= 0 || isUnlimitedTimeout) {
                     timeoutElapsed = true
                     // For unlimited: launch a hard 60s fallback to dismiss overlay
                     if (isUnlimitedTimeout) {
@@ -550,6 +591,7 @@ object StreamsRepository {
                             onSuccess = { results ->
                                 StreamLoadCompletion.PluginScraper(
                                     addonId = providerGroup.addonId,
+                                    providerKey = pluginProviderKey(scraper.id),
                                     streams = results.map { result ->
                                         result.toStreamItem(
                                             scraper = scraper,
@@ -564,6 +606,7 @@ object StreamsRepository {
                             onFailure = { error ->
                                 StreamLoadCompletion.PluginScraper(
                                     addonId = providerGroup.addonId,
+                                    providerKey = pluginProviderKey(scraper.id),
                                     streams = emptyList(),
                                     error = error.message ?: getString(Res.string.streams_failed_to_load_scraper, scraper.name),
                                 )
@@ -609,6 +652,11 @@ object StreamsRepository {
                                             streams = mergedStreams,
                                             isLoading = stillLoading,
                                             error = finalError,
+                                            pendingProviderKeys = if (stillLoading) {
+                                                group.pendingProviderKeys - completion.providerKey
+                                            } else {
+                                                emptySet()
+                                            },
                                         )
                                     }
                                 },

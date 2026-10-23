@@ -105,6 +105,8 @@ fun CloudStreamPlaybackSource.toStreamItem(
         sourceName = name,
         addonName = providerName,
         addonId = "cloudstream:${sha256Hex(providerId.encodeToByteArray()).take(16)}",
+        // Kept when a repository group relabels addonId, so provider priority still sees the provider.
+        providerKey = "cloudstream:${sha256Hex(providerId.encodeToByteArray()).take(16)}",
         streamType = when {
             isHls -> "hls"
             isDash -> "dash"

@@ -6,6 +6,7 @@ import com.nuvio.app.features.player.skip.AutoSkipSegmentType
 import com.nuvio.app.features.player.skip.NextEpisodeThresholdMode
 import com.nuvio.app.features.streams.StreamAutoPlayMode
 import com.nuvio.app.features.streams.StreamAutoPlaySource
+import com.nuvio.app.features.streams.StreamProviderPriorityConfig
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -91,6 +92,7 @@ data class PlayerSettingsUiState(
     val streamAutoPlaySelectedPlugins: Set<String> = emptySet(),
     val streamAutoPlayRegex: String = "",
     val streamAutoPlayTimeoutSeconds: Int = 3,
+    val streamProviderPriority: StreamProviderPriorityConfig = StreamProviderPriorityConfig(),
     val skipIntroEnabled: Boolean = true,
     val autoSkipSegmentTypes: Set<AutoSkipSegmentType> = emptySet(),
     val animeSkipEnabled: Boolean = false,
@@ -183,6 +185,7 @@ object PlayerSettingsRepository {
     private var streamAutoPlaySelectedPlugins: Set<String> = emptySet()
     private var streamAutoPlayRegex = ""
     private var streamAutoPlayTimeoutSeconds = 3
+    private var streamProviderPriority = StreamProviderPriorityConfig()
     private var skipIntroEnabled = true
     private var autoSkipSegmentTypes: Set<AutoSkipSegmentType> = emptySet()
     private var animeSkipEnabled = false
@@ -280,6 +283,7 @@ object PlayerSettingsRepository {
         streamAutoPlaySelectedPlugins = emptySet()
         streamAutoPlayRegex = ""
         streamAutoPlayTimeoutSeconds = 3
+        streamProviderPriority = StreamProviderPriorityConfig()
         skipIntroEnabled = true
         autoSkipSegmentTypes = emptySet()
         animeSkipEnabled = false
@@ -445,6 +449,8 @@ object PlayerSettingsRepository {
             streamAutoPlayTimeoutSeconds = snapToAllowedTimeout(streamAutoPlayTimeoutSeconds)
             PlayerSettingsStorage.saveStreamAutoPlayTimeoutSeconds(streamAutoPlayTimeoutSeconds)
         }
+        streamProviderPriority = StreamProviderPriorityConfig.decode(PlayerSettingsStorage.loadStreamProviderPriority())
+            ?: StreamProviderPriorityConfig()
         skipIntroEnabled = PlayerSettingsStorage.loadSkipIntroEnabled() ?: true
         autoSkipSegmentTypes = PlayerSettingsStorage.loadAutoSkipSegmentTypes()
             ?.mapNotNull(AutoSkipSegmentType::fromStoredValue)?.toSet() ?: buildSet {
@@ -941,6 +947,20 @@ object PlayerSettingsRepository {
         PlayerSettingsStorage.saveStreamAutoPlayTimeoutSeconds(seconds)
     }
 
+    fun setStreamProviderPriority(config: StreamProviderPriorityConfig) {
+        ensureLoaded()
+        val normalized = config.normalized()
+        if (streamProviderPriority == normalized) return
+        streamProviderPriority = normalized
+        publish()
+        PlayerSettingsStorage.saveStreamProviderPriority(normalized.encode())
+        Logger.i("ProviderPriority") {
+            "Provider priority saved: providers=${normalized.order.size} disabled=${normalized.disabled.size} " +
+                "categories=${normalized.categories} timeout=${normalized.timeoutSeconds} " +
+                "firstPlayback=${normalized.applyToFirstPlayback}"
+        }
+    }
+
     fun setSkipIntroEnabled(enabled: Boolean) {
         ensureLoaded()
         if (skipIntroEnabled == enabled) return
@@ -1351,6 +1371,7 @@ object PlayerSettingsRepository {
             streamAutoPlaySelectedPlugins = streamAutoPlaySelectedPlugins,
             streamAutoPlayRegex = streamAutoPlayRegex,
             streamAutoPlayTimeoutSeconds = streamAutoPlayTimeoutSeconds,
+            streamProviderPriority = streamProviderPriority,
             skipIntroEnabled = skipIntroEnabled,
             autoSkipSegmentTypes = autoSkipSegmentTypes,
             animeSkipEnabled = animeSkipEnabled,

@@ -24,6 +24,7 @@ import com.nuvio.app.features.streams.StreamBadgeSettingsRepository
 import com.nuvio.app.features.streams.StreamItem
 import com.nuvio.app.features.streams.StreamLoadCompletion
 import com.nuvio.app.features.streams.StreamParser
+import com.nuvio.app.features.streams.pluginProviderKey
 import com.nuvio.app.features.streams.StreamsUiState
 import com.nuvio.app.features.streams.runCatchingUnlessCancelled
 import com.nuvio.app.features.streams.sortedForGroupedDisplay
@@ -304,6 +305,7 @@ object PlayerStreamsRepository {
                 addonId = providerGroup.addonId,
                 streams = emptyList(),
                 isLoading = true,
+                pendingProviderKeys = providerGroup.scrapers.mapTo(LinkedHashSet()) { pluginProviderKey(it.id) },
             )
         } + serverSources.map { it.loadingGroup() } + cloudStreamSources.map { it.loadingGroup() },
             installedAddonOrder, preferredGroupIds)
@@ -452,6 +454,7 @@ object PlayerStreamsRepository {
                             onSuccess = { results ->
                                 StreamLoadCompletion.PluginScraper(
                                     addonId = providerGroup.addonId,
+                                    providerKey = pluginProviderKey(scraper.id),
                                     streams = results.map { result ->
                                         result.toStreamItem(
                                             scraper = scraper,
@@ -467,6 +470,7 @@ object PlayerStreamsRepository {
                                 log.w(error) { "Plugin scraper failed: ${scraper.name}" }
                                 StreamLoadCompletion.PluginScraper(
                                     addonId = providerGroup.addonId,
+                                    providerKey = pluginProviderKey(scraper.id),
                                     streams = emptyList(),
                                     error = error.message ?: getString(Res.string.streams_failed_to_load_scraper, scraper.name),
                                 )
@@ -511,6 +515,11 @@ object PlayerStreamsRepository {
                                             streams = mergedStreams,
                                             isLoading = stillLoading,
                                             error = finalError,
+                                            pendingProviderKeys = if (stillLoading) {
+                                                group.pendingProviderKeys - completion.providerKey
+                                            } else {
+                                                emptySet()
+                                            },
                                         )
                                     }
                                 },

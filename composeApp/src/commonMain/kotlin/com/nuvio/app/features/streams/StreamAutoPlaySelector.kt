@@ -135,7 +135,8 @@ object StreamAutoPlaySelector {
         }
         val matchingStreams = when (mode) {
             StreamAutoPlayMode.MANUAL -> emptyList()
-            StreamAutoPlayMode.FIRST_STREAM -> candidateStreams
+            // Provider priority has its own selector; here it behaves like the first stream.
+            StreamAutoPlayMode.FIRST_STREAM, StreamAutoPlayMode.PROVIDER_PRIORITY -> candidateStreams
             StreamAutoPlayMode.REGEX_MATCH -> {
                 val pattern = regexPattern.trim()
 
@@ -202,6 +203,18 @@ object StreamAutoPlaySelector {
             },
         )
     }
+
+    fun isReadyForAutoPlay(
+        stream: StreamItem,
+        debridEnabled: Boolean,
+        activeResolverProviderId: String?,
+    ): Boolean = stream.isAutoPlayable(debridEnabled, activeResolverProviderId)
+
+    fun isPendingDebridForAutoPlay(
+        stream: StreamItem,
+        debridEnabled: Boolean,
+        activeResolverProviderId: String?,
+    ): Boolean = stream.isPendingDebridAutoPlay(debridEnabled, activeResolverProviderId)
 
     private fun StreamItem.isAutoPlayable(
         debridEnabled: Boolean,

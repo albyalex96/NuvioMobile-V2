@@ -16,12 +16,17 @@ import com.nuvio.app.features.streams.StreamAutoPlayMode
 import com.nuvio.app.features.streams.StreamAutoPlaySelector
 import com.nuvio.app.features.streams.StreamAutoPlaySource
 import com.nuvio.app.features.streams.StreamItem
+import com.nuvio.app.features.streams.StreamProviderPriorityConfig
+import com.nuvio.app.features.streams.StreamProviderPriorityEvaluation
+import com.nuvio.app.features.streams.StreamProviderPrioritySelector
 import com.nuvio.app.features.watching.domain.isShortPlaceholderDuration
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -227,6 +232,17 @@ internal fun CoroutineScope.launchPlayerNextEpisodeAutoPlay(
             )
         }
 
+        if (effectiveMode == StreamAutoPlayMode.PROVIDER_PRIORITY) {
+            // Provider priority decides here; the generic wait below then finds the selection settled.
+            val priorityStream = awaitProviderPriorityNextEpisodeStream(
+                config = settings.streamProviderPriority,
+                debridEnabled = debridSettings.canResolvePlayableLinks,
+                activeResolverProviderId = debridSettings.activeResolverProviderId,
+                bingeGroupMatch = ::tryBingeGroupOnly,
+            )
+            if (priorityStream != null) selectStream(priorityStream) else finishWithoutSelection()
+        }
+
         val innerJob = launch {
             PlayerStreamsRepository.episodeStreamsState.collectLatest { state ->
                 if (state.groups.isEmpty() && state.isAnyLoading) return@collectLatest
@@ -340,6 +356,57 @@ internal fun CoroutineScope.launchPlayerNextEpisodeAutoPlay(
             onNextEpisodeCardVisibleChanged(false)
         }
     }
+}
+
+/**
+ * Waits for the next-episode streams and picks one by provider priority: a lower ranked provider
+ * that answers first is held back until every higher ranked one has answered or the timeout
+ * elapses. After the timeout the best ranked ready stream wins, or the first one that arrives.
+ */
+private suspend fun awaitProviderPriorityNextEpisodeStream(
+    config: StreamProviderPriorityConfig,
+    debridEnabled: Boolean,
+    activeResolverProviderId: String?,
+    bingeGroupMatch: (List<StreamItem>) -> StreamItem?,
+): StreamItem? {
+    val isUnlimited = config.timeoutSeconds == Int.MAX_VALUE
+
+    suspend fun awaitDecision(timeoutElapsed: Boolean): StreamProviderPriorityEvaluation =
+        PlayerStreamsRepository.episodeStreamsState.mapNotNull { state ->
+            if (state.groups.isEmpty() && state.isAnyLoading) return@mapNotNull null
+            if (!timeoutElapsed) {
+                bingeGroupMatch(state.groups.flatMap { it.streams })?.let { stream ->
+                    return@mapNotNull StreamProviderPriorityEvaluation(stream = stream, readyStreams = listOf(stream))
+                }
+            }
+            StreamProviderPrioritySelector.evaluate(
+                groups = state.groups,
+                config = config,
+                timeoutElapsed = timeoutElapsed,
+                debridEnabled = debridEnabled,
+                activeResolverProviderId = activeResolverProviderId,
+            ).takeIf { it.isDecided }
+        }.first()
+
+    val waitMs = if (isUnlimited) NEXT_EPISODE_HARD_TIMEOUT_MS else config.timeoutSeconds * 1_000L
+    withTimeoutOrNull(waitMs) { awaitDecision(timeoutElapsed = false) }?.let { evaluation ->
+        StreamProviderPrioritySelector.logDecision("Next episode", evaluation, timeoutElapsed = false)
+        return evaluation.stream
+    }
+
+    val afterTimeout = if (isUnlimited) {
+        null
+    } else {
+        withTimeoutOrNull(NEXT_EPISODE_HARD_TIMEOUT_MS) { awaitDecision(timeoutElapsed = true) }
+    } ?: StreamProviderPrioritySelector.evaluate(
+        groups = PlayerStreamsRepository.episodeStreamsState.value.groups,
+        config = config,
+        timeoutElapsed = true,
+        debridEnabled = debridEnabled,
+        activeResolverProviderId = activeResolverProviderId,
+    )
+    StreamProviderPrioritySelector.logDecision("Next episode timeout", afterTimeout, timeoutElapsed = true)
+    return afterTimeout.stream
 }
 
 internal fun PlayerScreenRuntime.preloadNextEpisodeSources() {

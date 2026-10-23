@@ -75,6 +75,7 @@ actual object PlayerSettingsStorage {
     private const val streamAutoPlaySelectedPluginsKey = "stream_auto_play_selected_plugins"
     private const val streamAutoPlayRegexKey = "stream_auto_play_regex"
     private const val streamAutoPlayTimeoutSecondsKey = "stream_auto_play_timeout_seconds"
+    private const val streamProviderPriorityKey = "stream_auto_play_provider_priority"
     private const val skipIntroEnabledKey = "skip_intro_enabled"
     private const val autoSkipMovieCreditsKey = "auto_skip_movie_credits"
     private const val autoSkipSegmentTypesKey = "auto_skip_segment_types"
@@ -163,6 +164,7 @@ actual object PlayerSettingsStorage {
         streamAutoPlaySelectedPluginsKey,
         streamAutoPlayRegexKey,
         streamAutoPlayTimeoutSecondsKey,
+        streamProviderPriorityKey,
         skipIntroEnabledKey,
         autoSkipMovieCreditsKey,
         autoSkipSegmentTypesKey,
@@ -804,6 +806,13 @@ actual object PlayerSettingsStorage {
         NSUserDefaults.standardUserDefaults.setInteger(seconds.toLong(), forKey = ProfileScopedKey.of(streamAutoPlayTimeoutSecondsKey))
     }
 
+    actual fun loadStreamProviderPriority(): String? =
+        NSUserDefaults.standardUserDefaults.stringForKey(ProfileScopedKey.of(streamProviderPriorityKey))
+
+    actual fun saveStreamProviderPriority(value: String) {
+        NSUserDefaults.standardUserDefaults.setObject(value, forKey = ProfileScopedKey.of(streamProviderPriorityKey))
+    }
+
     actual fun loadSkipIntroEnabled(): Boolean? {
         val defaults = NSUserDefaults.standardUserDefaults
         val key = ProfileScopedKey.of(skipIntroEnabledKey)
@@ -1235,6 +1244,7 @@ actual object PlayerSettingsStorage {
         loadStreamAutoPlaySelectedPlugins()?.let { put(streamAutoPlaySelectedPluginsKey, encodeSyncStringSet(it)) }
         loadStreamAutoPlayRegex()?.let { put(streamAutoPlayRegexKey, encodeSyncString(it)) }
         loadStreamAutoPlayTimeoutSeconds()?.let { put(streamAutoPlayTimeoutSecondsKey, encodeSyncInt(it)) }
+        loadStreamProviderPriority()?.let { put(streamProviderPriorityKey, encodeSyncString(it)) }
         loadSkipIntroEnabled()?.let { put(skipIntroEnabledKey, encodeSyncBoolean(it)) }
         loadAutoSkipMovieCredits()?.let { put(autoSkipMovieCreditsKey, encodeSyncBoolean(it)) }
         loadAutoSkipSegmentTypes()?.let { put(autoSkipSegmentTypesKey, encodeSyncStringSet(it)) }
@@ -1326,6 +1336,7 @@ actual object PlayerSettingsStorage {
         payload.decodeSyncStringSet(streamAutoPlaySelectedPluginsKey)?.let(::saveStreamAutoPlaySelectedPlugins)
         payload.decodeSyncString(streamAutoPlayRegexKey)?.let(::saveStreamAutoPlayRegex)
         payload.decodeSyncInt(streamAutoPlayTimeoutSecondsKey)?.let(::saveStreamAutoPlayTimeoutSeconds)
+        payload.decodeSyncString(streamProviderPriorityKey)?.let(::saveStreamProviderPriority)
         payload.decodeSyncBoolean(skipIntroEnabledKey)?.let(::saveSkipIntroEnabled)
         payload.decodeSyncBoolean(autoSkipMovieCreditsKey)?.let(::saveAutoSkipMovieCredits)
         payload.decodeSyncStringSet(autoSkipSegmentTypesKey)?.let(::saveAutoSkipSegmentTypes)

@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.features.addons.AddonRepository
 import com.nuvio.app.features.addons.enabledAddons
+import com.nuvio.app.features.cloudstream.CloudStreamRepository
 import com.nuvio.app.features.player.AndroidLibmpvVideoOutput
 import com.nuvio.app.features.player.PlaybackBufferSettings
 import com.nuvio.app.features.player.playbackHeapBufferMaxMb
@@ -95,6 +96,7 @@ import com.nuvio.app.features.plugins.PluginsUiState
 import com.nuvio.app.features.plugins.PluginRepository
 import com.nuvio.app.features.streams.StreamAutoPlayMode
 import com.nuvio.app.features.streams.StreamAutoPlaySource
+import com.nuvio.app.features.streams.StreamProviderCatalog
 import com.nuvio.app.isIos
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
@@ -359,6 +361,8 @@ private fun PlaybackSettingsSection(
     var showAutoPlayAddonSelectionDialog by remember { mutableStateOf(false) }
     var showAutoPlayPluginSelectionDialog by remember { mutableStateOf(false) }
     var showAutoPlayRegexDialog by remember { mutableStateOf(false) }
+    var showProviderPriorityOrderDialog by remember { mutableStateOf(false) }
+    var showProviderPriorityCategoriesDialog by remember { mutableStateOf(false) }
     var showP2pConsentDialog by remember { mutableStateOf(false) }
     var showP2pProfileDialog by remember { mutableStateOf(false) }
     var showP2pCacheSizeDialog by remember { mutableStateOf(false) }
@@ -383,6 +387,15 @@ private fun PlaybackSettingsSection(
         state
     } else {
         PluginsUiState(pluginsEnabled = false)
+    }
+    val cloudStreamUiState = if (pluginsEnabled) {
+        val state by CloudStreamRepository.uiState.collectAsStateWithLifecycle()
+        state
+    } else {
+        null
+    }
+    val providerCatalog = remember(addonUiState, pluginUiState, cloudStreamUiState) {
+        StreamProviderCatalog.current()
     }
     val hapticFeedback = LocalHapticFeedback.current
     val sectionSpacing = if (isTablet) 18.dp else 12.dp
@@ -887,105 +900,146 @@ private fun PlaybackSettingsSection(
                         onClick = { showAutoPlayRegexDialog = true },
                     )
                 }
-                SettingsGroupDivider(isTablet = isTablet)
-                val timeoutSec = autoPlayPlayerSettings.streamAutoPlayTimeoutSeconds
-                val timeoutLabel = when (timeoutSec) {
-                    0 -> stringResource(Res.string.settings_playback_timeout_instant)
-                    Int.MAX_VALUE -> stringResource(Res.string.settings_playback_timeout_unlimited)
-                    else -> stringResource(Res.string.settings_playback_timeout_seconds, timeoutSec)
-                }
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = if (isTablet) 18.dp else 16.dp, vertical = 10.dp),
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
+                if (autoPlayPlayerSettings.streamAutoPlayMode == StreamAutoPlayMode.PROVIDER_PRIORITY) {
+                    val providerPriority = autoPlayPlayerSettings.streamProviderPriority
+                    val dialogProviders = priorityDialogProviders(providerPriority, providerCatalog, pluginsEnabled)
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsNavigationRow(
+                        title = stringResource(Res.string.settings_playback_provider_priority_order),
+                        description = stringResource(
+                            Res.string.settings_playback_provider_priority_order_description,
+                            dialogProviders.count { it.key !in providerPriority.disabled },
+                            dialogProviders.size,
+                        ),
+                        isTablet = isTablet,
+                        onClick = { showProviderPriorityOrderDialog = true },
+                    )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsNavigationRow(
+                        title = stringResource(Res.string.settings_playback_provider_priority_sources),
+                        description = providerCategoriesSummary(providerPriority, pluginsEnabled),
+                        isTablet = isTablet,
+                        onClick = { showProviderPriorityCategoriesDialog = true },
+                    )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    StreamProviderPriorityTimeoutSlider(
+                        timeoutSeconds = providerPriority.timeoutSeconds,
+                        isTablet = isTablet,
+                        onTimeoutSelected = { seconds ->
+                            PlayerSettingsRepository.setStreamProviderPriority(providerPriority.copy(timeoutSeconds = seconds))
+                        },
+                    )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.settings_playback_provider_priority_first_playback),
+                        description = stringResource(Res.string.settings_playback_provider_priority_first_playback_description),
+                        checked = providerPriority.applyToFirstPlayback,
+                        isTablet = isTablet,
+                        onCheckedChange = { enabled ->
+                            PlayerSettingsRepository.setStreamProviderPriority(providerPriority.copy(applyToFirstPlayback = enabled))
+                        },
+                    )
+                } else {
+                    SettingsGroupDivider(isTablet = isTablet)
+                    val timeoutSec = autoPlayPlayerSettings.streamAutoPlayTimeoutSeconds
+                    val timeoutLabel = when (timeoutSec) {
+                        0 -> stringResource(Res.string.settings_playback_timeout_instant)
+                        Int.MAX_VALUE -> stringResource(Res.string.settings_playback_timeout_unlimited)
+                        else -> stringResource(Res.string.settings_playback_timeout_seconds, timeoutSec)
+                    }
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = if (isTablet) 18.dp else 16.dp, vertical = 10.dp),
                     ) {
-                        Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                            Text(
-                                text = stringResource(Res.string.settings_playback_stream_timeout),
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurface,
-                            )
-                            Text(
-                                text = stringResource(Res.string.settings_playback_stream_timeout_description),
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                                Text(
+                                    text = stringResource(Res.string.settings_playback_stream_timeout),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                Text(
+                                    text = stringResource(Res.string.settings_playback_stream_timeout_description),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            ValueBox(text = timeoutLabel, modifier = Modifier.wrapContentWidth())
+                        }
+                        val timeoutIndex = STREAM_AUTO_PLAY_TIMEOUT_VALUES.indexOf(timeoutSec)
+                            .coerceAtLeast(0)
+                        val maxIndex = (STREAM_AUTO_PLAY_TIMEOUT_VALUES.size - 1).toFloat()
+                        var sliderValue by remember(timeoutIndex) { mutableFloatStateOf(timeoutIndex.toFloat()) }
+                        var lastHapticStep by remember(timeoutIndex) { mutableStateOf(timeoutIndex.toFloat()) }
+                        Slider(
+                            value = sliderValue,
+                            onValueChange = {
+                                val snapped = snapToStep(it, 1f)
+                                sliderValue = snapped
+
+                                if (snapped != lastHapticStep) {
+                                    lastHapticStep = snapped
+                                    hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                }
+                            },
+                            onValueChangeFinished = {
+                                val index = sliderValue.toInt().coerceIn(0, STREAM_AUTO_PLAY_TIMEOUT_VALUES.size - 1)
+                                PlayerSettingsRepository.setStreamAutoPlayTimeoutSeconds(STREAM_AUTO_PLAY_TIMEOUT_VALUES[index])
+                            },
+                            valueRange = 0f..maxIndex,
+                            steps = calculateSteps(0f, maxIndex, 1f),
+                            colors = SliderDefaults.colors(
+                                thumbColor = MaterialTheme.colorScheme.primary,
+                                activeTrackColor = MaterialTheme.colorScheme.primary,
+                            ),
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsNavigationRow(
+                        title = stringResource(Res.string.settings_playback_source_scope),
+                        description = stringResource(autoPlayPlayerSettings.streamAutoPlaySource.labelRes(pluginsEnabled)),
+                        isTablet = isTablet,
+                        onClick = { showAutoPlaySourceDialog = true },
+                    )
+                    if (autoPlayPlayerSettings.streamAutoPlaySource != StreamAutoPlaySource.ENABLED_PLUGINS_ONLY) {
+                        SettingsGroupDivider(isTablet = isTablet)
+                        val addonSubtitle = if (autoPlayPlayerSettings.streamAutoPlaySelectedAddons.isEmpty()) {
+                            stringResource(Res.string.settings_playback_all_addons)
+                        } else {
+                            stringResource(
+                                Res.string.settings_playback_selected_count,
+                                autoPlayPlayerSettings.streamAutoPlaySelectedAddons.size,
                             )
                         }
-                        ValueBox(text = timeoutLabel, modifier = Modifier.wrapContentWidth())
-                    }
-                    val timeoutIndex = STREAM_AUTO_PLAY_TIMEOUT_VALUES.indexOf(timeoutSec)
-                        .coerceAtLeast(0)
-                    val maxIndex = (STREAM_AUTO_PLAY_TIMEOUT_VALUES.size - 1).toFloat()
-                    var sliderValue by remember(timeoutIndex) { mutableFloatStateOf(timeoutIndex.toFloat()) }
-                    var lastHapticStep by remember(timeoutIndex) { mutableStateOf(timeoutIndex.toFloat()) }
-                    Slider(
-                        value = sliderValue,
-                        onValueChange = {
-                            val snapped = snapToStep(it, 1f)
-                            sliderValue = snapped
-
-                            if (snapped != lastHapticStep) {
-                                lastHapticStep = snapped
-                                hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            }
-                        },
-                        onValueChangeFinished = {
-                            val index = sliderValue.toInt().coerceIn(0, STREAM_AUTO_PLAY_TIMEOUT_VALUES.size - 1)
-                            PlayerSettingsRepository.setStreamAutoPlayTimeoutSeconds(STREAM_AUTO_PLAY_TIMEOUT_VALUES[index])
-                        },
-                        valueRange = 0f..maxIndex,
-                        steps = calculateSteps(0f, maxIndex, 1f),
-                        colors = SliderDefaults.colors(
-                            thumbColor = MaterialTheme.colorScheme.primary,
-                            activeTrackColor = MaterialTheme.colorScheme.primary,
-                        ),
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-                SettingsGroupDivider(isTablet = isTablet)
-                SettingsNavigationRow(
-                    title = stringResource(Res.string.settings_playback_source_scope),
-                    description = stringResource(autoPlayPlayerSettings.streamAutoPlaySource.labelRes(pluginsEnabled)),
-                    isTablet = isTablet,
-                    onClick = { showAutoPlaySourceDialog = true },
-                )
-                if (autoPlayPlayerSettings.streamAutoPlaySource != StreamAutoPlaySource.ENABLED_PLUGINS_ONLY) {
-                    SettingsGroupDivider(isTablet = isTablet)
-                    val addonSubtitle = if (autoPlayPlayerSettings.streamAutoPlaySelectedAddons.isEmpty()) {
-                        stringResource(Res.string.settings_playback_all_addons)
-                    } else {
-                        stringResource(
-                            Res.string.settings_playback_selected_count,
-                            autoPlayPlayerSettings.streamAutoPlaySelectedAddons.size,
+                        SettingsNavigationRow(
+                            title = stringResource(Res.string.settings_playback_allowed_addons),
+                            description = addonSubtitle,
+                            isTablet = isTablet,
+                            onClick = { showAutoPlayAddonSelectionDialog = true },
                         )
                     }
-                    SettingsNavigationRow(
-                        title = stringResource(Res.string.settings_playback_allowed_addons),
-                        description = addonSubtitle,
-                        isTablet = isTablet,
-                        onClick = { showAutoPlayAddonSelectionDialog = true },
-                    )
-                }
-                if (pluginsEnabled && autoPlayPlayerSettings.streamAutoPlaySource != StreamAutoPlaySource.INSTALLED_ADDONS_ONLY) {
-                    SettingsGroupDivider(isTablet = isTablet)
-                    val pluginSubtitle = if (autoPlayPlayerSettings.streamAutoPlaySelectedPlugins.isEmpty()) {
-                        stringResource(Res.string.settings_playback_all_plugins)
-                    } else {
-                        stringResource(
-                            Res.string.settings_playback_selected_count,
-                            autoPlayPlayerSettings.streamAutoPlaySelectedPlugins.size,
+                    if (pluginsEnabled && autoPlayPlayerSettings.streamAutoPlaySource != StreamAutoPlaySource.INSTALLED_ADDONS_ONLY) {
+                        SettingsGroupDivider(isTablet = isTablet)
+                        val pluginSubtitle = if (autoPlayPlayerSettings.streamAutoPlaySelectedPlugins.isEmpty()) {
+                            stringResource(Res.string.settings_playback_all_plugins)
+                        } else {
+                            stringResource(
+                                Res.string.settings_playback_selected_count,
+                                autoPlayPlayerSettings.streamAutoPlaySelectedPlugins.size,
+                            )
+                        }
+                        SettingsNavigationRow(
+                            title = stringResource(Res.string.settings_playback_allowed_plugins),
+                            description = pluginSubtitle,
+                            isTablet = isTablet,
+                            onClick = { showAutoPlayPluginSelectionDialog = true },
                         )
                     }
-                    SettingsNavigationRow(
-                        title = stringResource(Res.string.settings_playback_allowed_plugins),
-                        description = pluginSubtitle,
-                        isTablet = isTablet,
-                        onClick = { showAutoPlayPluginSelectionDialog = true },
-                    )
                 }
             }
         }
@@ -2075,6 +2129,33 @@ private fun PlaybackSettingsSection(
         )
     }
 
+    if (showProviderPriorityOrderDialog) {
+        val providerPriority = autoPlayPlayerSettings.streamProviderPriority
+        StreamProviderPriorityOrderDialog(
+            config = providerPriority,
+            providers = priorityDialogProviders(providerPriority, providerCatalog, pluginsEnabled),
+            onSave = PlayerSettingsRepository::setStreamProviderPriority,
+            onDismiss = { showProviderPriorityOrderDialog = false },
+        )
+    }
+
+    if (showProviderPriorityCategoriesDialog) {
+        val providerPriority = autoPlayPlayerSettings.streamProviderPriority
+        StreamProviderCategoriesDialog(
+            config = providerPriority,
+            pluginsEnabled = pluginsEnabled,
+            onCategoryToggled = { category, included ->
+                val categories = if (included) {
+                    providerPriority.categories + category
+                } else {
+                    providerPriority.categories - category
+                }
+                PlayerSettingsRepository.setStreamProviderPriority(providerPriority.copy(categories = categories))
+            },
+            onDismiss = { showProviderPriorityCategoriesDialog = false },
+        )
+    }
+
     if (showAutoPlayRegexDialog) {
         StreamAutoPlayRegexDialog(
             initialRegex = autoPlayPlayerSettings.streamAutoPlayRegex,
@@ -2536,6 +2617,11 @@ private fun StreamAutoPlayModeDialog(
             Res.string.settings_playback_stream_selection_mode_regex,
             Res.string.settings_playback_stream_selection_mode_regex_description,
         ),
+        Triple(
+            StreamAutoPlayMode.PROVIDER_PRIORITY,
+            Res.string.settings_playback_stream_selection_mode_provider_priority,
+            Res.string.settings_playback_stream_selection_mode_provider_priority_description,
+        ),
     )
 
     DialogSurface(
@@ -2901,6 +2987,7 @@ private val StreamAutoPlayMode.labelRes: StringResource
         StreamAutoPlayMode.MANUAL -> Res.string.settings_playback_stream_selection_mode_manual
         StreamAutoPlayMode.FIRST_STREAM -> Res.string.settings_playback_stream_selection_mode_first_stream
         StreamAutoPlayMode.REGEX_MATCH -> Res.string.settings_playback_stream_selection_mode_regex
+        StreamAutoPlayMode.PROVIDER_PRIORITY -> Res.string.settings_playback_stream_selection_mode_provider_priority
     }
 
 private val com.nuvio.app.features.player.skip.NextEpisodeThresholdMode.labelRes: StringResource
