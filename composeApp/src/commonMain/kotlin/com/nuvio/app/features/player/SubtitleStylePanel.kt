@@ -35,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -106,16 +107,33 @@ fun SubtitleStylePanel(
         }
 
         SubtitleStyleSection(title = stringResource(Res.string.compose_player_subtitle_delay)) {
+            // Held − / + repeat and speed up, like the audio delay.
+            val latestDelayMs by rememberUpdatedState(subtitleDelayMs)
+            val latestOnDelayChanged by rememberUpdatedState(onSubtitleDelayChanged)
             SubtitleStyleStepper(
                 value = formatSubtitleDelay(subtitleDelayMs),
-                onDecrease = {
-                    onSubtitleDelayChanged(
-                        (subtitleDelayMs - SUBTITLE_DELAY_STEP_MS).coerceAtLeast(SUBTITLE_DELAY_MIN_MS),
+                decreaseButton = {
+                    HoldRepeatStepButton(
+                        icon = Icons.Rounded.Remove,
+                        contentDescription = null,
+                        enabled = subtitleDelayMs > SUBTITLE_DELAY_MIN_MS,
+                        stepForRepeat = ::subtitleDelayRepeatStepMs,
+                        onStep = { stepMs ->
+                            latestOnDelayChanged((latestDelayMs - stepMs).coerceAtLeast(SUBTITLE_DELAY_MIN_MS))
+                        },
+                        size = SUBTITLE_STEPPER_BUTTON_SIZE,
                     )
                 },
-                onIncrease = {
-                    onSubtitleDelayChanged(
-                        (subtitleDelayMs + SUBTITLE_DELAY_STEP_MS).coerceAtMost(SUBTITLE_DELAY_MAX_MS),
+                increaseButton = {
+                    HoldRepeatStepButton(
+                        icon = Icons.Rounded.Add,
+                        contentDescription = null,
+                        enabled = subtitleDelayMs < SUBTITLE_DELAY_MAX_MS,
+                        stepForRepeat = ::subtitleDelayRepeatStepMs,
+                        onStep = { stepMs ->
+                            latestOnDelayChanged((latestDelayMs + stepMs).coerceAtMost(SUBTITLE_DELAY_MAX_MS))
+                        },
+                        size = SUBTITLE_STEPPER_BUTTON_SIZE,
                     )
                 },
             )
@@ -234,6 +252,15 @@ private fun SubtitleStyleSection(
     }
 }
 
+private val SUBTITLE_STEPPER_BUTTON_SIZE = 40.dp
+
+/** Step for the n-th repeat while the subtitle delay − / + is held: fine at first, then faster. */
+internal fun subtitleDelayRepeatStepMs(repeat: Int): Int = when {
+    repeat < 10 -> SUBTITLE_DELAY_STEP_MS
+    repeat < 25 -> 250
+    else -> 500
+}
+
 @Composable
 private fun SubtitleStyleStepper(
     value: String,
@@ -241,14 +268,26 @@ private fun SubtitleStyleStepper(
     onIncrease: () -> Unit,
     valueWidth: Dp = 84.dp,
 ) {
+    SubtitleStyleStepper(
+        value = value,
+        valueWidth = valueWidth,
+        decreaseButton = { SubtitleStepperButton(icon = Icons.Rounded.Remove, onClick = onDecrease) },
+        increaseButton = { SubtitleStepperButton(icon = Icons.Rounded.Add, onClick = onIncrease) },
+    )
+}
+
+@Composable
+private fun SubtitleStyleStepper(
+    value: String,
+    decreaseButton: @Composable () -> Unit,
+    increaseButton: @Composable () -> Unit,
+    valueWidth: Dp = 84.dp,
+) {
     Row(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SubtitleStepperButton(
-            icon = Icons.Rounded.Remove,
-            onClick = onDecrease,
-        )
+        decreaseButton()
         Box(
             modifier = Modifier
                 .widthIn(min = valueWidth)
@@ -263,10 +302,7 @@ private fun SubtitleStyleStepper(
                 style = MaterialTheme.typography.bodyMedium,
             )
         }
-        SubtitleStepperButton(
-            icon = Icons.Rounded.Add,
-            onClick = onIncrease,
-        )
+        increaseButton()
     }
 }
 
