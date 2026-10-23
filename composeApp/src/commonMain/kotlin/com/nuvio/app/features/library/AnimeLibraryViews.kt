@@ -56,6 +56,11 @@ private val animeLibrarySectionTitleResources: Map<String, StringResource> = map
     "mal:status:dropped" to Res.string.library_status_dropped,
 )
 
+/** Localized title of a library list (a library section or a list picker destination). */
+@Composable
+internal fun localizedLibraryListTitle(key: String, fallback: String): String =
+    animeLibrarySectionTitleResources[key]?.let { stringResource(it) } ?: localizedLibrarySectionTitle(key, fallback)
+
 /** Localized titles of the anime tracker sections. */
 internal data class AnimeLibrarySectionTitles(
     val statusTitles: Map<String, String>,

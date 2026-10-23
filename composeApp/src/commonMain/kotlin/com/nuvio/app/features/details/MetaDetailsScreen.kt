@@ -126,6 +126,12 @@ import com.nuvio.app.features.library.TrackingMembershipRemovalConfirmationHost
 import com.nuvio.app.features.library.executeTrackingMembershipOperation
 import com.nuvio.app.features.library.showTrackingMembershipRewriteFeedback
 import com.nuvio.app.features.library.toLibraryItem
+import com.nuvio.app.features.library.animeLibraryDestinationsToRemember
+import com.nuvio.app.features.library.hasAnimeLibraryDestinations
+import com.nuvio.app.features.library.isSavedToAnimeTracker
+import com.nuvio.app.features.library.libraryPickerInitialMembership
+import com.nuvio.app.features.library.rememberConnectedAnimeLibraries
+import com.nuvio.app.features.anime.AnimeTrackingSettingsRepository
 import com.nuvio.app.features.player.PlayerSettingsRepository
 import com.nuvio.app.features.shuffle.EpisodeShuffleRepository
 import com.nuvio.app.features.shuffle.EpisodeShuffleSheet
@@ -229,6 +235,7 @@ fun MetaDetailsScreen(
         LibraryRepository.ensureLoaded()
         LibraryRepository.uiState
     }.collectAsStateWithLifecycle()
+    val animeLibraries = rememberConnectedAnimeLibraries()
     val watchedUiState by remember {
         WatchedRepository.ensureLoaded()
         WatchedRepository.uiState
@@ -516,10 +523,12 @@ fun MetaDetailsScreen(
                     libraryUiState.items,
                     libraryUiState.sections,
                     libraryUiState.sourceMode,
+                    animeLibraries,
                     meta.id,
                     meta.type,
                 ) {
-                    LibraryRepository.isSaved(meta.id, meta.type)
+                    // Saved in the library source or in a connected anime tracker list.
+                    LibraryRepository.isSaved(meta.id, meta.type) || isSavedToAnimeTracker(meta.id, meta.type)
                 }
                 val isWatched = remember(watchedUiState.watchedKeys, fullyWatchedSeriesKeys, metaPreview) {
                     WatchingState.isPosterWatched(
@@ -541,9 +550,11 @@ fun MetaDetailsScreen(
                                 val snapshot = LibraryRepository.getMembershipSnapshot(libraryItem)
                                 val tabs = LibraryRepository.libraryListTabs(libraryItem)
                                 pickerTabs = tabs
-                                pickerMembership = tabs.associate { tab ->
-                                    tab.key to (snapshot[tab.key] == true)
-                                }
+                                pickerMembership = libraryPickerInitialMembership(
+                                    tabs = tabs,
+                                    currentMembership = snapshot,
+                                    rememberedDestinations = AnimeTrackingSettingsRepository.lastLibraryDestinations(),
+                                )
                             }.onFailure { error ->
                                 pickerError = error.message ?: getString(Res.string.trakt_lists_load_failed)
                             }
@@ -590,6 +601,13 @@ fun MetaDetailsScreen(
                             )
                         }
                         Unit
+                    }
+                }
+                // An anime with a connected anime tracker: the save button opens the choice of services and lists.
+                val onSaveButtonClick = remember(meta, toggleSaved, openLibraryListPicker) {
+                    {
+                        val tabs = LibraryRepository.libraryListTabs(meta.toLibraryItem(savedAtEpochMs = 0L))
+                        if (hasAnimeLibraryDestinations(tabs)) openLibraryListPicker() else toggleSaved()
                     }
                 }
                 val toggleWatched = remember(metaPreview) {
@@ -1040,7 +1058,7 @@ fun MetaDetailsScreen(
                             onEpisodeClick = onEpisodePlayClick,
                             onEpisodeManualClick = onEpisodeManualPlayClick.takeIf { showManualPlayOption },
                             isSaved = isSaved,
-                            onToggleSaved = toggleSaved,
+                            onToggleSaved = onSaveButtonClick,
                             isWatched = isWatched,
                             onToggleWatched = toggleWatched,
                             shuffleActive = shuffleSettings.enabled,
@@ -1254,7 +1272,7 @@ fun MetaDetailsScreen(
                                                         onPlayLongClick = if (showManualPlayOption) onPrimaryPlayLongClick else null,
                                                         onShuffleClick = onShuffleClick,
                                                         onWatchedClick = toggleWatched,
-                                                        onSaveClick = toggleSaved,
+                                                        onSaveClick = onSaveButtonClick,
                                                         onSaveLongClick = openLibraryListPicker,
                                                     )
                                                 }
@@ -1307,7 +1325,7 @@ fun MetaDetailsScreen(
                                     onShuffleClick = onShuffleClick,
                                     shuffleEnabled = shuffleSettings.enabled,
                                     onPrimaryPlayLongClick = onPrimaryPlayLongClick,
-                                    onSaveClick = toggleSaved,
+                                    onSaveClick = onSaveButtonClick,
                                     onSaveLongClick = openLibraryListPicker,
                                     onWatchedClick = toggleWatched,
                                     showManualPlayOption = showManualPlayOption,
@@ -1416,7 +1434,7 @@ fun MetaDetailsScreen(
                             isHeroCollapsed = isHeroCollapsed,
                             backgroundColor = dominantBackdropColor.takeIf { dominantColorEnabled },
                             onBack = onBackFromDetails,
-                            onToggleSaved = toggleSaved,
+                            onToggleSaved = onSaveButtonClick,
                         )
 
                         if (aiAssistantSettings.enabled && !TvAppRuntime.isTvApp && meta.supportsAiAssistant()) {
@@ -1625,6 +1643,8 @@ fun MetaDetailsScreen(
                                         )
                                     }
                                     val completeMembershipUpdate: suspend (TrackingMembershipApplyResult) -> Unit = { result ->
+                                        animeLibraryDestinationsToRemember(pickerTabs, desiredMembership)
+                                            ?.let(AnimeTrackingSettingsRepository::rememberLibraryDestinations)
                                         showTrackingMembershipRewriteFeedback(result)
                                         showLibraryListPicker = false
                                     }

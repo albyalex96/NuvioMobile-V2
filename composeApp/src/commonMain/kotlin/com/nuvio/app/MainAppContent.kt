@@ -126,6 +126,11 @@ import com.nuvio.app.features.library.LibraryRepository
 import com.nuvio.app.features.library.LibrarySection
 import com.nuvio.app.features.library.calendar.LibraryCalendarScreen
 import com.nuvio.app.features.anime.AnimeLibrarySources
+import com.nuvio.app.features.anime.AnimeTrackingSettingsRepository
+import com.nuvio.app.features.library.animeLibraryDestinationsToRemember
+import com.nuvio.app.features.library.hasAnimeLibraryDestinations
+import com.nuvio.app.features.library.isSavedToAnimeTracker
+import com.nuvio.app.features.library.libraryPickerInitialMembership
 import com.nuvio.app.features.library.rememberLibrarySectionTitleResolver
 import com.nuvio.app.features.library.LibrarySortOption
 import com.nuvio.app.features.library.LibrarySourceMode
@@ -2018,7 +2023,9 @@ internal fun MainAppContent(
                         LibraryRepository.remove(libraryItem.id)
                     }
                 } else {
-                    if (!isRemoteLibrarySource) {
+                    // An anime with a connected anime tracker always gets the choice of services and lists.
+                    val offersAnimeDestinations = hasAnimeLibraryDestinations(LibraryRepository.libraryListTabs(libraryItem))
+                    if (!isRemoteLibrarySource && !offersAnimeDestinations) {
                         LibraryRepository.toggleLocalSaved(libraryItem)
                     } else {
                         pickerItem = libraryItem
@@ -2033,9 +2040,11 @@ internal fun MainAppContent(
                                 val snapshot = LibraryRepository.getMembershipSnapshot(libraryItem)
                                 val tabs = LibraryRepository.libraryListTabs(libraryItem)
                                 pickerTabs = tabs
-                                pickerMembership = tabs.associate { tab ->
-                                    tab.key to (snapshot[tab.key] == true)
-                                }
+                                pickerMembership = libraryPickerInitialMembership(
+                                    tabs = tabs,
+                                    currentMembership = snapshot,
+                                    rememberedDestinations = AnimeTrackingSettingsRepository.lastLibraryDestinations(),
+                                )
                             }.onFailure { error ->
                                 pickerError = error.message ?: getString(Res.string.trakt_lists_load_failed)
                             }
@@ -2048,7 +2057,8 @@ internal fun MainAppContent(
             selectedPosterActionTarget?.let { posterActionTarget ->
                 key(posterActionTarget) {
                     val preview = posterActionTarget.preview
-                    val isSaved = LibraryRepository.isSaved(preview.id, preview.type)
+                    val isSaved = LibraryRepository.isSaved(preview.id, preview.type) ||
+                        isSavedToAnimeTracker(preview.id, preview.type)
                     val isWatched = WatchingState.isPosterWatched(
                         watchedKeys = watchedUiState.watchedKeys,
                         item = preview,
@@ -2378,6 +2388,8 @@ internal fun MainAppContent(
                             )
                         }
                         val completeMembershipUpdate: suspend (TrackingMembershipApplyResult) -> Unit = { result ->
+                            animeLibraryDestinationsToRemember(pickerTabs, desiredMembership)
+                                ?.let(AnimeTrackingSettingsRepository::rememberLibraryDestinations)
                             showTrackingMembershipRewriteFeedback(result)
                             showLibraryListPicker = false
                             pickerItem = null

@@ -232,7 +232,7 @@ object ProfileSettingsSync {
             HomeCatalogSettingsRepository.uiState.map(HomeHeroProfileSync::syncSignature).distinctUntilChanged(),
             DiscordRpcRepository.uiState.map(DiscordRpcProfileSync::syncSignature).distinctUntilChanged(),
             MalAuthRepository.uiState.map(MalProfileSync::syncSignature).distinctUntilChanged(),
-            AnimeTrackingSettingsRepository.uiState.map { "anime_tracking_${it.excludedProviders}" }.distinctUntilChanged(),
+            AnimeTrackingSettingsRepository.uiState.map { "anime_tracking_$it" }.distinctUntilChanged(),
             OpenSubtitlesRepository.uiState.map(OpenSubtitlesProfileSync::syncSignature).distinctUntilChanged(),
             SubDlRepository.uiState.map(SubDlProfileSync::syncSignature).distinctUntilChanged(),
             AiAssistantRepository.uiState.map(AiAssistantProfileSync::syncSignature).distinctUntilChanged(),

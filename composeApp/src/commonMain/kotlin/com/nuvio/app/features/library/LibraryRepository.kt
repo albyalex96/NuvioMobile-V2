@@ -508,7 +508,13 @@ object LibraryRepository {
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Throwable) {
-                if (firstFailure == null) firstFailure = error
+                // The other services are still updated; the message names the one that failed.
+                if (firstFailure == null) {
+                    firstFailure = IllegalStateException(
+                        "${provider.providerId.displayName}: ${error.message ?: error::class.simpleName}",
+                        error,
+                    )
+                }
                 log.e(error) { "Failed to update ${provider.providerId.storageId} library membership" }
             }
         }

@@ -1400,6 +1400,7 @@
     <string name="settings_tracking_mal_section">MyAnimeList</string>
     <string name="settings_tracking_mal_library_description">Use your MyAnimeList anime list, one tab per status.</string>
     <string name="library_mal_title">MyAnimeList</string>
+    <string name="library_picker_nuvio_group">Nuvio</string>
     <string name="library_source_all">All</string>
     <string name="library_source_mal">MAL</string>
     <string name="library_anime_section_title">%1$s · %2$s</string>

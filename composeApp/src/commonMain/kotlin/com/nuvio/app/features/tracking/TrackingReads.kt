@@ -38,6 +38,18 @@ internal fun trackingMembershipDestinations(
     tabs: List<TrackingLibraryTab>,
 ): List<TrackingLibraryTab> = tabs.filter(TrackingLibraryTab::isMembershipDestination)
 
+/** The destinations of one service in the library list picker; a null provider is the Nuvio library. */
+data class TrackingMembershipGroup(
+    val providerId: TrackingProviderId?,
+    val tabs: List<TrackingLibraryTab>,
+)
+
+/** Destinations grouped by service, in the order the services first appear. */
+fun trackingMembershipGroups(tabs: List<TrackingLibraryTab>): List<TrackingMembershipGroup> =
+    trackingMembershipDestinations(tabs)
+        .groupBy(TrackingLibraryTab::providerId)
+        .map { (providerId, groupTabs) -> TrackingMembershipGroup(providerId, groupTabs) }
+
 fun toggleTrackingLibraryMembership(
     tabs: List<TrackingLibraryTab>,
     membership: Map<String, Boolean>,
