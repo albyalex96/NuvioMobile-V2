@@ -41,6 +41,7 @@ import com.nuvio.app.features.details.MetaDetails
 import com.nuvio.app.features.details.MetaExternalRating
 import com.nuvio.app.features.details.formatRuntimeForDisplay
 import com.nuvio.app.features.details.formatMetaReleaseLineForDetails
+import com.nuvio.app.features.mal.shouldShowExternalRatings
 import com.nuvio.app.features.mdblist.MdbListMetadataService.PROVIDER_AUDIENCE
 import com.nuvio.app.features.mdblist.MdbListMetadataService.PROVIDER_IMDB
 import com.nuvio.app.features.mdblist.MdbListMetadataService.PROVIDER_LETTERBOXD
@@ -139,7 +140,7 @@ fun DetailMetaInfo(
         }
 
         AnimatedVisibility(
-            visible = isMdbListActive && meta.externalRatings.isNotEmpty(),
+            visible = shouldShowExternalRatings(isMdbListActive, meta.externalRatings),
             enter = fadeIn() + expandVertically(),
             exit = fadeOut() + shrinkVertically(),
         ) {

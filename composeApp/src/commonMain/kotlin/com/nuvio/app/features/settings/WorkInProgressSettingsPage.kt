@@ -63,7 +63,6 @@ internal fun LazyListScope.workInProgressIntegrationContent(
         }
         val logo = when (page) {
             SettingsPage.SkipDb -> IntegrationLogo.SkipDb
-            SettingsPage.MyAnimeList -> IntegrationLogo.MyAnimeList
             SettingsPage.Kitsu -> IntegrationLogo.Kitsu
             SettingsPage.AniList -> IntegrationLogo.AniList
             SettingsPage.Telegram -> IntegrationLogo.Telegram

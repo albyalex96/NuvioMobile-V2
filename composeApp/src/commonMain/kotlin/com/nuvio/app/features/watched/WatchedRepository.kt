@@ -4,6 +4,7 @@ import co.touchlab.kermit.Logger
 import com.nuvio.app.core.auth.AuthRepository
 import com.nuvio.app.core.auth.AuthState
 import com.nuvio.app.core.tracking.ensureTrackingProvidersRegistered
+import com.nuvio.app.features.anime.watchedItemsForAnimeSelection
 import com.nuvio.app.features.details.MetaDetails
 import com.nuvio.app.features.details.MetaVideo
 import com.nuvio.app.features.profiles.ProfileRepository
@@ -1299,7 +1300,8 @@ object WatchedRepository {
         if (trackerHistorySync == WatchedTrackerHistorySync.Mirror) {
             TrackingProviderRegistry.connectedWatchedProviders().forEach { provider ->
                 try {
-                    provider.push(profileId = profileId, items = items)
+                    val providerItems = watchedItemsForAnimeSelection(provider.providerId, items)
+                    if (providerItems.isNotEmpty()) provider.push(profileId = profileId, items = providerItems)
                     succeededTrackerProviderIds += provider.providerId
                 } catch (error: CancellationException) {
                     throw error
@@ -1334,7 +1336,8 @@ object WatchedRepository {
 
         TrackingProviderRegistry.connectedWatchedProviders().forEach { provider ->
             try {
-                provider.delete(profileId = profileId, items = items)
+                val providerItems = watchedItemsForAnimeSelection(provider.providerId, items)
+                if (providerItems.isNotEmpty()) provider.delete(profileId = profileId, items = providerItems)
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Throwable) {

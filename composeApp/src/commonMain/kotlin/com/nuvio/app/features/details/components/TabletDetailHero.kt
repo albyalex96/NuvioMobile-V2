@@ -55,6 +55,7 @@ import coil3.compose.AsyncImage
 import com.nuvio.app.core.format.extractReleaseYearForDisplay
 import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.features.details.MetaDetails
+import com.nuvio.app.features.mal.shouldShowExternalRatings
 import com.nuvio.app.features.details.formatRuntimeForDisplay
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.detail_logo_content_description
@@ -302,7 +303,7 @@ fun TabletDetailHero(
             if (showOverview) {
                 Spacer(modifier = Modifier.height(space.s20))
                 TabletHeroMetaRow(meta = meta, showImdbRating = showOverallRatings && !isMdbListActive)
-                if (isMdbListActive && meta.externalRatings.isNotEmpty()) {
+                if (shouldShowExternalRatings(isMdbListActive, meta.externalRatings)) {
                     Spacer(modifier = Modifier.height(space.s12))
                     DetailRatingsRow(
                         ratings = meta.externalRatings,

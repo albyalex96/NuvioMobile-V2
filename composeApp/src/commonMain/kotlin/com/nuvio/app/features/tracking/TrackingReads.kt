@@ -96,6 +96,8 @@ interface TrackingLibraryProvider {
     fun clearLocalState() = Unit
     suspend fun refresh(intent: TrackingRefreshIntent)
     fun snapshot(): TrackingLibrarySnapshot
+    /** False when this provider cannot list [item] at all (e.g. an anime-only tracker and a movie). */
+    fun supportsItem(item: LibraryItem): Boolean = true
     fun contains(contentId: String, contentType: String? = null): Boolean
     fun find(contentId: String): LibraryItem?
     suspend fun membership(item: LibraryItem): Map<String, Boolean>

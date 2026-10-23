@@ -3,6 +3,7 @@ package com.nuvio.app.features.library
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -53,6 +54,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -89,6 +91,9 @@ import com.nuvio.app.features.home.components.HomeSkeletonRow
 import com.nuvio.app.features.home.components.posterGridColumnCountForWidth
 import com.nuvio.app.core.ui.rememberPosterCardStyleUiState
 import com.nuvio.app.features.profiles.ProfileRepository
+import com.nuvio.app.features.anime.AnimeLibrarySources
+import com.nuvio.app.features.settings.integrationLogoPainter
+import com.nuvio.app.features.tracking.TrackingProviderId
 import com.nuvio.app.features.tracking.TrackingRefreshIntent
 import com.nuvio.app.features.watched.WatchedRepository
 import com.nuvio.app.features.watching.application.WatchingState
@@ -150,11 +155,33 @@ fun LibraryScreen(
         ServerRepository.uiState
     }.collectAsStateWithLifecycle()
     val hasServers = serversUiState.connections.any { it.enabled }
-    var sourceModeName by rememberSaveable { mutableStateOf(LibraryViewMode.Saved.name) }
-    val sourceMode = remember(sourceModeName, hasServers) {
-        runCatching { LibraryViewMode.valueOf(sourceModeName) }.getOrDefault(LibraryViewMode.Saved)
-            .takeUnless { it == LibraryViewMode.Servers && !hasServers }
-            ?: LibraryViewMode.Saved
+    val animeLibraries = rememberConnectedAnimeLibraries()
+    var sourceModeName by rememberSaveable { mutableStateOf(LibraryViewMode.All.name) }
+    var animeProviderName by rememberSaveable { mutableStateOf<String?>(null) }
+    // An anime chip exists only while its tracker is connected; without it the view falls back to "All".
+    val selectedAnimeLibrary = animeLibraries.firstOrNull { it.providerId.name == animeProviderName }
+    val sourceMode = remember(sourceModeName, hasServers, selectedAnimeLibrary != null) {
+        runCatching { LibraryViewMode.valueOf(sourceModeName) }.getOrDefault(LibraryViewMode.All)
+            .takeUnless {
+                (it == LibraryViewMode.Servers && !hasServers) ||
+                    (it == LibraryViewMode.Anime && selectedAnimeLibrary == null)
+            }
+            ?: LibraryViewMode.All
+    }
+    val showsLibrarySections = sourceMode.showsLibrarySections
+    val animeSectionTitles = rememberAnimeLibrarySectionTitles()
+    val viewState = when (sourceMode) {
+        LibraryViewMode.Anime -> selectedAnimeLibrary?.state ?: uiState
+        LibraryViewMode.All -> remember(uiState, animeLibraries) { mergeAllLibrarySections(uiState, animeLibraries) }
+        else -> uiState
+    }
+    val libraryState = remember(viewState, animeSectionTitles, sourceMode) {
+        viewState.copy(
+            sections = animeSectionTitles.localize(
+                sections = viewState.sections,
+                withProviderName = sourceMode == LibraryViewMode.All,
+            ),
+        )
     }
     var serverShelves by remember { mutableStateOf<List<LibraryServerShelf>?>(null) }
     var serverShelvesRequest by remember { mutableStateOf(0) }
@@ -175,21 +202,24 @@ fun LibraryScreen(
     val isRemoteSource = uiState.sourceMode != LibrarySourceMode.LOCAL
     val effectiveSortOption = effectiveLibrarySortOption(
         selected = displaySettings.sortOption,
-        sourceMode = uiState.sourceMode,
+        sourceMode = libraryState.sourceMode,
     )
-    val orderListKeys = if (sourceMode != LibraryViewMode.Saved) emptyList() else {
-        if (displaySettings.layoutMode == LibraryLayoutMode.HORIZONTAL) uiState.sections.map { it.type }
-        else listOfNotNull(uiState.sections.firstOrNull { it.type == selectedLibrarySectionKey }?.type
-            ?: uiState.sections.firstOrNull()?.type)
+    val orderListKeys = if (!showsLibrarySections) emptyList() else {
+        if (displaySettings.layoutMode == LibraryLayoutMode.HORIZONTAL) libraryState.sections.map { it.type }
+        else listOfNotNull(libraryState.sections.firstOrNull { it.type == selectedLibrarySectionKey }?.type
+            ?: libraryState.sections.firstOrNull()?.type)
+    }.filter { key ->
+        // In "All" the anime tracker lists are not known to the library source sorter.
+        libraryState.sourceMode.animeProviderId() != null || AnimeLibrarySources.forSection(key) == null
     }
-    val providerOrders = rememberLibraryProviderOrders(uiState.sourceMode, orderListKeys, effectiveSortOption)
+    val providerOrders = rememberLibraryProviderOrders(libraryState.sourceMode, orderListKeys, effectiveSortOption)
     val visibleSortOption = if (providerOrders.failed) LibrarySortOption.DEFAULT else effectiveSortOption
-    val sortedSections = remember(uiState.sections, displaySettings, uiState.sourceMode, sourceMode, providerOrders) {
-        if (sourceMode == LibraryViewMode.Saved && displaySettings.layoutMode == LibraryLayoutMode.HORIZONTAL) {
+    val sortedSections = remember(libraryState.sections, displaySettings, libraryState.sourceMode, sourceMode, providerOrders) {
+        if (showsLibrarySections && displaySettings.layoutMode == LibraryLayoutMode.HORIZONTAL) {
             sortLibrarySections(
-                sections = uiState.sections,
+                sections = libraryState.sections,
                 selected = visibleSortOption,
-                sourceMode = uiState.sourceMode,
+                sourceMode = libraryState.sourceMode,
                 providerOrders = providerOrders.ranks,
             )
         } else {
@@ -197,18 +227,18 @@ fun LibraryScreen(
         }
     }
     val verticalProjection = remember(
-        uiState.sections,
-        uiState.sourceMode,
+        libraryState.sections,
+        libraryState.sourceMode,
         selectedLibrarySectionKey,
         selectedLibraryType,
         displaySettings,
         sourceMode,
         providerOrders,
     ) {
-        if (sourceMode == LibraryViewMode.Saved && displaySettings.layoutMode == LibraryLayoutMode.VERTICAL) {
+        if (showsLibrarySections && displaySettings.layoutMode == LibraryLayoutMode.VERTICAL) {
             buildLibraryVerticalProjection(
-                sections = uiState.sections,
-                sourceMode = uiState.sourceMode,
+                sections = libraryState.sections,
+                sourceMode = libraryState.sourceMode,
                 selectedSectionKey = selectedLibrarySectionKey,
                 selectedType = selectedLibraryType,
                 sortOption = visibleSortOption,
@@ -227,11 +257,29 @@ fun LibraryScreen(
     val retryLibraryLoad: () -> Unit = {
         NetworkStatusRepository.requestRefresh(force = true)
         coroutineScope.launch {
-            LibraryRepository.pullFromServer(
-                profileId = ProfileRepository.activeProfileId,
-                refreshIntent = TrackingRefreshIntent.USER_INITIATED,
-            )
+            val animeSource = selectedAnimeLibrary
+                ?.takeIf { sourceMode == LibraryViewMode.Anime }
+                ?.let { AnimeLibrarySources.byProvider(it.providerId) }
+            if (animeSource != null) {
+                animeSource.refresh(TrackingRefreshIntent.USER_INITIATED)
+            } else {
+                LibraryRepository.pullFromServer(
+                    profileId = ProfileRepository.activeProfileId,
+                    refreshIntent = TrackingRefreshIntent.USER_INITIATED,
+                )
+            }
         }
+    }
+
+    // The anime tracker lists of the anime chips and of "All" are refreshed while they are shown.
+    ScreenActivityEffect(sourceMode, animeLibraries.map { it.providerId }) { screenActive ->
+        if (!screenActive || (sourceMode != LibraryViewMode.All && sourceMode != LibraryViewMode.Anime)) {
+            return@ScreenActivityEffect
+        }
+        animeLibraries
+            .filter { sourceMode == LibraryViewMode.All || it.providerId == selectedAnimeLibrary?.providerId }
+            .mapNotNull { AnimeLibrarySources.byProvider(it.providerId) }
+            .forEach { it.prepare() }
     }
 
     ScreenActivityEffect(networkStatusUiState.condition, isRemoteSource) { screenActive ->
@@ -279,13 +327,13 @@ fun LibraryScreen(
 
     val disintegration = remember { LibraryDisintegrationHolder() }
     val librarySectionsDisplay = if (
-        sourceMode == LibraryViewMode.Saved &&
+        showsLibrarySections &&
         displaySettings.layoutMode == LibraryLayoutMode.HORIZONTAL &&
-        uiState.isLoaded &&
+        libraryState.isLoaded &&
         sortedSections.isNotEmpty()
     ) {
         disintegration.sync(
-            sourceMode = uiState.sourceMode,
+            sourceMode = libraryState.sourceMode,
             sections = sortedSections,
             previewLimit = LIBRARY_SECTION_PREVIEW_LIMIT,
             request = disintegrationRequest,
@@ -318,20 +366,22 @@ fun LibraryScreen(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         NuvioScreenHeader(
-                            title = if (sourceMode != LibraryViewMode.Saved) {
+                            title = if (!showsLibrarySections || sourceMode == LibraryViewMode.All) {
                                 stringResource(Res.string.library_title)
                             } else {
-                                when (uiState.sourceMode) {
+                                when (libraryState.sourceMode) {
                                     LibrarySourceMode.LOCAL -> stringResource(Res.string.library_title)
                                     LibrarySourceMode.TRAKT -> stringResource(Res.string.library_trakt_title)
                                     LibrarySourceMode.SIMKL -> stringResource(Res.string.library_simkl_title)
                                     LibrarySourceMode.MDBLIST -> stringResource(Res.string.library_mdblist_title)
+                                    LibrarySourceMode.MAL -> stringResource(Res.string.library_mal_title)
                                 }
                             },
                             modifier = Modifier.padding(horizontal = 16.dp),
                             actions = {
-                                if (sourceMode == LibraryViewMode.Saved) {
-                                    LibraryListManagementButton()
+                                if (showsLibrarySections) {
+                                    // The lists it manages are the ones of the library source.
+                                    if (sourceMode != LibraryViewMode.Anime) LibraryListManagementButton()
                                     val targetLayout = if (displaySettings.layoutMode == LibraryLayoutMode.HORIZONTAL) {
                                         LibraryLayoutMode.VERTICAL
                                     } else {
@@ -379,9 +429,15 @@ fun LibraryScreen(
                         )
                         LibrarySourceSwitch(
                             selectedMode = sourceMode,
+                            selectedAnimeProvider = selectedAnimeLibrary?.providerId,
+                            animeProviders = animeLibraries.map { it.providerId },
                             showServers = hasServers,
                             onModeSelected = { mode ->
                                 sourceModeName = mode.name
+                            },
+                            onAnimeProviderSelected = { providerId ->
+                                sourceModeName = LibraryViewMode.Anime.name
+                                animeProviderName = providerId.name
                             },
                             modifier = Modifier.padding(horizontal = 16.dp),
                         )
@@ -434,7 +490,7 @@ fun LibraryScreen(
                 )
             } else {
                 when {
-                    !uiState.isLoaded || (uiState.isLoading && uiState.sections.isEmpty()) -> {
+                    !libraryState.isLoaded || (libraryState.isLoading && libraryState.sections.isEmpty()) -> {
                         if (displaySettings.layoutMode == LibraryLayoutMode.VERTICAL) {
                             libraryVerticalSkeletonItems(gridColumns)
                         } else {
@@ -446,7 +502,7 @@ fun LibraryScreen(
                         }
                     }
 
-                    !uiState.errorMessage.isNullOrBlank() && uiState.sections.isEmpty() -> {
+                    !libraryState.errorMessage.isNullOrBlank() && libraryState.sections.isEmpty() -> {
                         item {
                             if (networkStatusUiState.isOfflineLike) {
                                 NuvioNetworkOfflineCard(
@@ -457,13 +513,14 @@ fun LibraryScreen(
                             } else {
                                 HomeEmptyStateCard(
                                     modifier = Modifier.padding(horizontal = 16.dp),
-                                    title = when (uiState.sourceMode) {
+                                    title = when (libraryState.sourceMode) {
                                         LibrarySourceMode.LOCAL -> stringResource(Res.string.library_load_failed)
                                         LibrarySourceMode.TRAKT -> stringResource(Res.string.library_trakt_load_failed)
                                         LibrarySourceMode.SIMKL -> stringResource(Res.string.library_simkl_load_failed)
                                         LibrarySourceMode.MDBLIST -> stringResource(Res.string.library_mdblist_load_failed)
+                                        LibrarySourceMode.MAL -> stringResource(Res.string.library_mal_load_failed)
                                     },
-                                    message = uiState.errorMessage.orEmpty(),
+                                    message = libraryState.errorMessage.orEmpty(),
                                     actionLabel = stringResource(Res.string.action_retry),
                                     onActionClick = retryLibraryLoad,
                                 )
@@ -471,21 +528,23 @@ fun LibraryScreen(
                         }
                     }
 
-                    uiState.sections.isEmpty() -> {
+                    libraryState.sections.isEmpty() -> {
                         item {
                             HomeEmptyStateCard(
                                 modifier = Modifier.padding(horizontal = 16.dp),
-                                title = when (uiState.sourceMode) {
+                                title = when (libraryState.sourceMode) {
                                     LibrarySourceMode.LOCAL -> stringResource(Res.string.library_empty_title)
                                     LibrarySourceMode.TRAKT -> stringResource(Res.string.library_trakt_empty_title)
                                     LibrarySourceMode.SIMKL -> stringResource(Res.string.library_simkl_empty_title)
                                     LibrarySourceMode.MDBLIST -> stringResource(Res.string.library_mdblist_empty_title)
+                                    LibrarySourceMode.MAL -> stringResource(Res.string.library_mal_empty_title)
                                 },
-                                message = when (uiState.sourceMode) {
+                                message = when (libraryState.sourceMode) {
                                     LibrarySourceMode.LOCAL -> stringResource(Res.string.library_empty_message)
                                     LibrarySourceMode.TRAKT -> stringResource(Res.string.library_trakt_empty_message)
                                     LibrarySourceMode.SIMKL -> stringResource(Res.string.library_simkl_empty_message)
                                     LibrarySourceMode.MDBLIST -> stringResource(Res.string.library_mdblist_empty_message)
+                                    LibrarySourceMode.MAL -> stringResource(Res.string.library_mal_empty_message)
                                 },
                             )
                         }
@@ -493,12 +552,12 @@ fun LibraryScreen(
 
                     else -> {
                         item(
-                            key = "library-saved-controls:${uiState.sourceMode}:" +
+                            key = "library-saved-controls:${libraryState.sourceMode}:" +
                                 "${displaySettings.layoutMode}:$effectiveSortOption",
                         ) {
                             LibrarySavedControls(
                                 layoutMode = displaySettings.layoutMode,
-                                sourceMode = uiState.sourceMode,
+                                sourceMode = libraryState.sourceMode,
                                 sortOption = effectiveSortOption,
                                 verticalProjection = verticalProjection,
                                 onSectionSelected = { sectionKey ->
@@ -742,14 +801,24 @@ private fun LazyListScope.cloudLibrarySkeletonItems() {
 @Composable
 private fun LibrarySourceSwitch(
     selectedMode: LibraryViewMode,
+    selectedAnimeProvider: TrackingProviderId?,
+    animeProviders: List<TrackingProviderId>,
     showServers: Boolean,
     onModeSelected: (LibraryViewMode) -> Unit,
+    onAnimeProviderSelected: (TrackingProviderId) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        LibraryChip(
+            label = stringResource(Res.string.library_source_all),
+            selected = selectedMode == LibraryViewMode.All,
+            onClick = { onModeSelected(LibraryViewMode.All) },
+        )
         LibraryChip(
             label = stringResource(Res.string.library_source_saved),
             selected = selectedMode == LibraryViewMode.Saved,
@@ -765,6 +834,16 @@ private fun LibrarySourceSwitch(
                 label = stringResource(Res.string.library_source_servers),
                 selected = selectedMode == LibraryViewMode.Servers,
                 onClick = { onModeSelected(LibraryViewMode.Servers) },
+            )
+        }
+        // One chip per connected anime tracker; the list holds only trackers with a login.
+        animeProviders.forEach { providerId ->
+            val style = animeLibraryChipStyle(providerId) ?: return@forEach
+            LibraryChip(
+                label = stringResource(style.label),
+                selected = selectedMode == LibraryViewMode.Anime && selectedAnimeProvider == providerId,
+                leadingPainter = integrationLogoPainter(style.logo),
+                onClick = { onAnimeProviderSelected(providerId) },
             )
         }
     }
@@ -867,6 +946,7 @@ private fun LibraryChip(
     selected: Boolean,
     loading: Boolean = false,
     error: Boolean = false,
+    leadingPainter: Painter? = null,
     onClick: () -> Unit,
 ) {
     val colorScheme = MaterialTheme.colorScheme
@@ -878,21 +958,39 @@ private fun LibraryChip(
         color = if (selected) colorScheme.primaryContainer else colorScheme.surfaceContainerLow,
         border = if (selected) BorderStroke(1.dp, colorScheme.primary.copy(alpha = 0.45f)) else null,
     ) {
-        Text(
-            text = label,
-            modifier = Modifier
-                .padding(horizontal = 14.dp, vertical = 8.dp)
-                .shimmer(loading),
-            style = MaterialTheme.typography.labelMedium,
-            color = when {
-                error -> colorScheme.error
-                selected -> colorScheme.onPrimaryContainer
-                else -> colorScheme.onSurfaceVariant
-            },
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        Row(
+            modifier = Modifier.padding(
+                start = if (leadingPainter != null) 10.dp else 14.dp,
+                end = 14.dp,
+                top = 8.dp,
+                bottom = 8.dp,
+            ),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            if (leadingPainter != null) {
+                Image(
+                    painter = leadingPainter,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(16.dp)
+                        .clip(RoundedCornerShape(4.dp)),
+                )
+            }
+            Text(
+                text = label,
+                modifier = Modifier.shimmer(loading),
+                style = MaterialTheme.typography.labelMedium,
+                color = when {
+                    error -> colorScheme.error
+                    selected -> colorScheme.onPrimaryContainer
+                    else -> colorScheme.onSurfaceVariant
+                },
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
     }
 }
 
@@ -1228,10 +1326,18 @@ private fun CloudLibrarySkeletonRow(
 }
 
 private enum class LibraryViewMode {
+    /** The library source plus every connected anime tracker. */
+    All,
     Saved,
     Cloud,
     Servers,
+
+    /** The lists of one connected anime tracker, whatever the library source. */
+    Anime,
 }
+
+private val LibraryViewMode.showsLibrarySections: Boolean
+    get() = this == LibraryViewMode.All || this == LibraryViewMode.Saved || this == LibraryViewMode.Anime
 
 private fun LazyListScope.librarySections(
     displaySections: List<LibraryDisplaySection>,

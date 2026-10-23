@@ -25,6 +25,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.ui.NuvioLoadingIndicator
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.library.LibrarySourceMode
+import com.nuvio.app.features.anime.AnimeTrackingSettingsRepository
+import com.nuvio.app.features.mal.MalAuthRepository
+import com.nuvio.app.features.tracking.TrackingProviderRegistry
 import com.nuvio.app.features.mdblist.MdbListTracker
 import com.nuvio.app.features.profiles.ProfileRepository
 import com.nuvio.app.features.simkl.SimklAnimeIdPreference
@@ -79,6 +82,10 @@ import nuvio.composeapp.generated.resources.settings_tracking_anime_id_subtitle
 import nuvio.composeapp.generated.resources.settings_tracking_anime_id_title
 import nuvio.composeapp.generated.resources.settings_tracking_anime_section
 import nuvio.composeapp.generated.resources.settings_tracking_mdblist_section
+import nuvio.composeapp.generated.resources.settings_tracking_mal_library_description
+import nuvio.composeapp.generated.resources.settings_tracking_anime_updates_description
+import nuvio.composeapp.generated.resources.settings_tracking_anime_updates_title
+import nuvio.composeapp.generated.resources.tracking_source_mal
 import nuvio.composeapp.generated.resources.settings_mdblist_library_lists
 import nuvio.composeapp.generated.resources.settings_mdblist_library_lists_description
 import nuvio.composeapp.generated.resources.settings_mdblist_library_lists_summary
@@ -189,6 +196,45 @@ internal fun LazyListScope.trackingSettingsContent(
             }
         }
     }
+
+    item {
+        AnimeUpdatesSection(isTablet = isTablet)
+    }
+}
+
+/** The "services to update for anime" selector: one switch per connected tracking service. */
+@Composable
+internal fun AnimeUpdatesSection(isTablet: Boolean) {
+    val connectedProviders by TrackingProviderRegistry.connectedProviderIds.collectAsStateWithLifecycle()
+    val animeSettings by remember {
+        AnimeTrackingSettingsRepository.ensureLoaded()
+        AnimeTrackingSettingsRepository.uiState
+    }.collectAsStateWithLifecycle()
+    if (connectedProviders.isEmpty()) return
+
+    SettingsSection(
+        title = stringResource(Res.string.settings_tracking_anime_updates_title),
+        isTablet = isTablet,
+    ) {
+        Text(
+            text = stringResource(Res.string.settings_tracking_anime_updates_description),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.nuvio.colors.textMuted,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+        SettingsGroup(isTablet = isTablet) {
+            connectedProviders.sortedBy(TrackingProviderId::ordinal).forEach { provider ->
+                SettingsSwitchRow(
+                    title = provider.displayName,
+                    checked = provider !in animeSettings.excludedProviders,
+                    isTablet = isTablet,
+                    onCheckedChange = { enabled ->
+                        AnimeTrackingSettingsRepository.setEnabledForAnime(provider, enabled)
+                    },
+                )
+            }
+        }
+    }
 }
 
 private enum class TrackingDataPicker {
@@ -212,10 +258,12 @@ private fun TrackingDataSources(
         WatchProgressSourceCoordinator.uiState
     }.collectAsStateWithLifecycle()
     val mdblistConnected by remember { MdbListTracker.ensureLoaded(); MdbListTracker.isAuthenticated }.collectAsStateWithLifecycle()
+    val malConnected by remember { MalAuthRepository.ensureLoaded(); MalAuthRepository.isAuthenticated }.collectAsStateWithLifecycle()
     val connectedProviders = buildSet {
         if (traktConnected) add(TrackingProviderId.TRAKT)
         if (simklConnected) add(TrackingProviderId.SIMKL)
         if (mdblistConnected) add(TrackingProviderId.MDBLIST)
+        if (malConnected) add(TrackingProviderId.MAL)
     }
     val effectiveLibrarySource = effectiveLibrarySourceMode(settingsUiState.librarySourceMode) { provider ->
         provider in connectedProviders
@@ -305,7 +353,7 @@ private fun TrackingDataSources(
             title = stringResource(Res.string.trakt_library_source_dialog_title),
             subtitle = stringResource(Res.string.trakt_library_source_dialog_subtitle),
             selectedValue = effectiveLibrarySource,
-            options = librarySourceOptions(traktConnected, simklConnected, mdblistConnected),
+            options = librarySourceOptions(traktConnected, simklConnected, mdblistConnected, malConnected),
             onSelected = TrackingSettingsRepository::setLibrarySourceMode,
             onDismiss = { activePickerName = null },
         )
@@ -479,7 +527,8 @@ private fun librarySourceOptions(
     traktConnected: Boolean,
     simklConnected: Boolean,
     mdblistConnected: Boolean,
-): List<TrackingPickerOption<LibrarySourceMode>> {
+    malConnected: Boolean,
+):List<TrackingPickerOption<LibrarySourceMode>> {
     val traktAvailable = isTrackingBrandAvailable(TrackingBrand.TRAKT, traktConnected, simklConnected)
     val simklAvailable = isTrackingBrandAvailable(TrackingBrand.SIMKL, traktConnected, simklConnected)
     return listOf(
@@ -508,6 +557,13 @@ private fun librarySourceOptions(
             description = stringResource(Res.string.settings_mdblist_library_description),
             enabled = mdblistConnected,
             unavailableReason = trackingUnavailableReason(TrackingBrand.MDBLIST, mdblistConnected),
+        ),
+        TrackingPickerOption(
+            value = LibrarySourceMode.MAL,
+            title = stringResource(Res.string.tracking_source_mal),
+            description = stringResource(Res.string.settings_tracking_mal_library_description),
+            enabled = malConnected,
+            unavailableReason = trackingUnavailableReason(TrackingBrand.MAL, malConnected),
         ),
     )
 }
@@ -608,6 +664,7 @@ private fun librarySourceModeLabel(source: LibrarySourceMode): String = when (so
     LibrarySourceMode.LOCAL -> stringResource(Res.string.trakt_library_source_nuvio)
     LibrarySourceMode.SIMKL -> stringResource(Res.string.tracking_source_simkl)
     LibrarySourceMode.MDBLIST -> stringResource(Res.string.tracking_source_mdblist)
+    LibrarySourceMode.MAL -> stringResource(Res.string.tracking_source_mal)
 }
 
 @Composable

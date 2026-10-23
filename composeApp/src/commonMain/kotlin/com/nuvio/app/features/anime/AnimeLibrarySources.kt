@@ -1,0 +1,56 @@
+package com.nuvio.app.features.anime
+
+import com.nuvio.app.features.library.LibraryUiState
+import com.nuvio.app.features.mal.MalAuthRepository
+import com.nuvio.app.features.mal.MalTrackingLibraryProvider
+import com.nuvio.app.features.mal.isMalLibrarySection
+import com.nuvio.app.features.tracking.TrackingProviderId
+import com.nuvio.app.features.tracking.TrackingRefreshIntent
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
+
+/**
+ * An anime tracker whose lists the library shows in its own chip and in the "All" view, whatever the
+ * selected library source. The chip is offered only while [isConnected].
+ */
+interface AnimeLibrarySource {
+    val providerId: TrackingProviderId
+    val isConnected: StateFlow<Boolean>
+
+    /** The tracker lists as library sections; empty while the tracker is not connected. */
+    val libraryState: Flow<LibraryUiState>
+
+    fun ownsSection(sectionType: String?): Boolean
+
+    /** Loads the lists and refreshes them when stale. */
+    fun prepare()
+
+    suspend fun refresh(intent: TrackingRefreshIntent)
+}
+
+/** Every anime tracker with library lists. AniList and Kitsu go here when they are added. */
+object AnimeLibrarySources {
+    val all: List<AnimeLibrarySource> = listOf(MalAnimeLibrarySource)
+
+    fun byProvider(providerId: TrackingProviderId): AnimeLibrarySource? =
+        all.firstOrNull { it.providerId == providerId }
+
+    fun forSection(sectionType: String?): AnimeLibrarySource? =
+        all.firstOrNull { it.ownsSection(sectionType) }
+}
+
+private object MalAnimeLibrarySource : AnimeLibrarySource {
+    override val providerId: TrackingProviderId = TrackingProviderId.MAL
+    override val isConnected: StateFlow<Boolean>
+        get() {
+            MalAuthRepository.ensureLoaded()
+            return MalAuthRepository.isAuthenticated
+        }
+    override val libraryState: Flow<LibraryUiState> get() = MalTrackingLibraryProvider.libraryState
+
+    override fun ownsSection(sectionType: String?): Boolean = isMalLibrarySection(sectionType)
+
+    override fun prepare() = MalTrackingLibraryProvider.prepare()
+
+    override suspend fun refresh(intent: TrackingRefreshIntent) = MalTrackingLibraryProvider.refresh(intent)
+}

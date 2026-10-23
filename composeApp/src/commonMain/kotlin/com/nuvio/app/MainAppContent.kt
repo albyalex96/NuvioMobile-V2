@@ -125,6 +125,7 @@ import com.nuvio.app.features.library.LibraryItem
 import com.nuvio.app.features.library.LibraryRepository
 import com.nuvio.app.features.library.LibrarySection
 import com.nuvio.app.features.library.calendar.LibraryCalendarScreen
+import com.nuvio.app.features.anime.AnimeLibrarySources
 import com.nuvio.app.features.library.rememberLibrarySectionTitleResolver
 import com.nuvio.app.features.library.LibrarySortOption
 import com.nuvio.app.features.library.LibrarySourceMode
@@ -1268,6 +1269,7 @@ internal fun MainAppContent(
             LibrarySourceMode.TRAKT -> stringResource(Res.string.compose_catalog_subtitle_trakt_library)
             LibrarySourceMode.SIMKL -> stringResource(Res.string.compose_catalog_subtitle_simkl_library)
                                     LibrarySourceMode.MDBLIST -> stringResource(Res.string.library_mdblist_title)
+                                    LibrarySourceMode.MAL -> stringResource(Res.string.library_mal_title)
         }
 
         val resolveLibrarySectionTitle = rememberLibrarySectionTitleResolver()
@@ -1944,7 +1946,8 @@ internal fun MainAppContent(
                 if (posterActionTarget.libraryItem != null) {
                     val animationKey = posterActionTarget.libraryListKey
                         ?.let { listKey -> librarySectionItemKey(listKey, libraryItem) }
-                    if (isRemoteLibrarySource) {
+                    // Anime tracker lists (library anime chips and "All") belong to their tracker whatever the source.
+                    if (isRemoteLibrarySource || AnimeLibrarySources.forSection(posterActionTarget.libraryListKey) != null) {
                         coroutineScope.launch {
                             val listKey = posterActionTarget.libraryListKey
                             val removeMembership: suspend (Set<TrackingProviderId>) ->

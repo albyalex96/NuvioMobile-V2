@@ -406,6 +406,7 @@ object LibraryRepository {
     fun libraryListTabs(item: LibraryItem? = null): List<TrackingLibraryTab> =
         libraryTabsWithLocal(
             TrackingProviderRegistry.connectedLibraryProviders()
+                .filter { provider -> item == null || provider.supportsItem(item) }
                 .flatMap { provider -> provider.snapshot().tabs },
         ).filter { tab ->
             item == null || (tab.supportsContentType(item.type) && (!item.isServerItem || tab.key == LOCAL_LIBRARY_LIST_KEY))
@@ -429,9 +430,9 @@ object LibraryRepository {
         val inLocal = localState.contains(item.id, item.type)
         val memberships = linkedMapOf<String, Boolean>()
         if (!item.isServerItem) {
-            TrackingProviderRegistry.connectedLibraryProviders().forEach { provider ->
-                memberships += provider.membership(item)
-            }
+            TrackingProviderRegistry.connectedLibraryProviders()
+                .filter { provider -> provider.supportsItem(item) }
+                .forEach { provider -> memberships += provider.membership(item) }
         }
         return libraryMembershipWithLocal(inLocal = inLocal, providerMembership = memberships)
     }

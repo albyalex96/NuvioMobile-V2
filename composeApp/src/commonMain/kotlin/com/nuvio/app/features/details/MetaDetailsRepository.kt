@@ -11,6 +11,7 @@ import com.nuvio.app.features.addons.supportsResource
 import com.nuvio.app.features.home.HomeCatalogSettingsRepository
 import com.nuvio.app.features.home.filterReleasedItems
 import com.nuvio.app.features.mdblist.MdbListMetadataService
+import com.nuvio.app.features.mal.MalMetadataService
 import com.nuvio.app.features.mdblist.MdbListSettingsRepository
 import com.nuvio.app.features.cloudstream.CloudStreamRepository
 import com.nuvio.app.features.cloudstream.CloudStreamRouteData
@@ -319,6 +320,7 @@ object MetaDetailsRepository {
     private const val METADATA_PROVIDER_READY_TIMEOUT_MS = 10_000L
     private const val TMDB_ENRICH_TIMEOUT_MS = 5_000L
     private const val MDBLIST_ENRICH_TIMEOUT_MS = 5_000L
+    private const val MAL_ENRICH_TIMEOUT_MS = 4_000L
 
     private suspend fun tryFetchMeta(
         manifest: AddonManifest,
@@ -357,6 +359,11 @@ object MetaDetailsRepository {
                 } ?: tmdbEnriched
             } else {
                 tmdbEnriched
+            }.let { mdbListEnriched ->
+                if (!includeMdbList) return@let mdbListEnriched
+                withTimeoutOrNull(MAL_ENRICH_TIMEOUT_MS) {
+                    MalMetadataService.enrichMeta(meta = mdbListEnriched, fallbackItemId = id)
+                } ?: mdbListEnriched
             }
             log.d { "Parsed meta: type=${enriched.type}, name=${enriched.name}, videos=${enriched.videos.size}" }
             if (enriched.videos.isNotEmpty()) {

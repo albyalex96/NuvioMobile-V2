@@ -7,6 +7,7 @@ import com.nuvio.app.features.collection.CollectionRepository
 import com.nuvio.app.features.collection.TmdbCollectionSourceResolver
 import com.nuvio.app.features.collection.catalogRouteKey
 import com.nuvio.app.features.library.LibraryRepository
+import com.nuvio.app.features.anime.AnimeLibrarySources
 import com.nuvio.app.features.servers.ServerCatalog
 import com.nuvio.app.features.servers.serverMessage
 import com.nuvio.app.features.home.HomeCatalogSettingsRepository
@@ -101,8 +102,11 @@ object CatalogRepository {
             try {
                 val target = request.target as CatalogTarget.Library
                 LibraryRepository.ensureLoaded()
-                LibraryRepository.uiState.libraryCatalogStates(
-                    target, LibraryRepository.uiState.libraryCatalogOrders(target),
+                // Anime tracker sections are shown by the library anime chips and "All" whatever the library source.
+                val libraryStates = AnimeLibrarySources.forSection(target.sectionType)?.libraryState
+                    ?: LibraryRepository.uiState
+                libraryStates.libraryCatalogStates(
+                    target, libraryStates.libraryCatalogOrders(target),
                 ).collect { state ->
                     if (activeRequest != request) return@collect
                     _uiState.value = state

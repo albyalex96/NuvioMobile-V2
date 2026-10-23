@@ -1,0 +1,116 @@
+package com.nuvio.app.features.anime
+
+import co.touchlab.kermit.Logger
+import com.nuvio.app.core.sync.decodeSyncStringSet
+import com.nuvio.app.core.sync.encodeSyncStringSet
+import com.nuvio.app.features.profiles.ProfileRepository
+import com.nuvio.app.features.tracking.TrackingExternalIds
+import com.nuvio.app.features.tracking.TrackingMediaKind
+import com.nuvio.app.features.tracking.TrackingProviderId
+import com.nuvio.app.features.tracking.parseTrackingExternalIds
+import com.nuvio.app.features.tracking.trackingMediaKind
+import com.nuvio.app.features.watched.WatchedItem
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+
+internal expect object AnimeTrackingStorage {
+    fun loadExcludedProviders(): String?
+    fun saveExcludedProviders(payload: String)
+}
+
+data class AnimeTrackingSettingsUiState(
+    /** Providers that must NOT receive automatic anime updates; new providers are included by default. */
+    val excludedProviders: Set<TrackingProviderId> = emptySet(),
+)
+
+/**
+ * The "services to update for anime" selector: which connected trackers receive anime episode
+ * completions and watched marks. Non-anime content always reaches every connected tracker.
+ */
+object AnimeTrackingSettingsRepository {
+    private val log = Logger.withTag("AnimeTracking")
+    private val _uiState = MutableStateFlow(AnimeTrackingSettingsUiState())
+    val uiState: StateFlow<AnimeTrackingSettingsUiState> = _uiState.asStateFlow()
+    private var loadedProfileId: Int? = null
+
+    /** Loads the active profile's choice; switching profile reloads it on the next access. */
+    fun ensureLoaded() {
+        val profileId = ProfileRepository.activeProfileId
+        if (loadedProfileId == profileId) return
+        loadedProfileId = profileId
+        _uiState.value = AnimeTrackingSettingsUiState(
+            excludedProviders = decodeExcludedProviders(AnimeTrackingStorage.loadExcludedProviders()),
+        )
+    }
+
+    fun isEnabledForAnime(providerId: TrackingProviderId): Boolean {
+        ensureLoaded()
+        return providerId !in _uiState.value.excludedProviders
+    }
+
+    fun setEnabledForAnime(providerId: TrackingProviderId, enabled: Boolean) {
+        ensureLoaded()
+        val current = _uiState.value.excludedProviders
+        val updated = if (enabled) current - providerId else current + providerId
+        if (updated == current) return
+        log.i { "Anime updates for ${providerId.storageId} set to $enabled" }
+        save(updated)
+    }
+
+    internal fun exportToSyncPayload(): JsonObject = buildJsonObject {
+        ensureLoaded()
+        put(SYNC_KEY, encodeSyncStringSet(_uiState.value.excludedProviders.mapTo(linkedSetOf()) { it.storageId }))
+    }
+
+    internal fun applyFromSyncPayload(payload: JsonObject) {
+        val remote = payload.decodeSyncStringSet(SYNC_KEY) ?: return
+        ensureLoaded()
+        val excluded = remote.mapNotNullTo(linkedSetOf(), TrackingProviderId::fromStorage)
+        if (excluded != _uiState.value.excludedProviders) save(excluded)
+    }
+
+    private fun save(excluded: Set<TrackingProviderId>) {
+        _uiState.value = AnimeTrackingSettingsUiState(excludedProviders = excluded)
+        AnimeTrackingStorage.saveExcludedProviders(excluded.joinToString(",") { it.storageId })
+    }
+
+    private const val SYNC_KEY = "anime_tracking_excluded_providers"
+}
+
+internal fun decodeExcludedProviders(payload: String?): Set<TrackingProviderId> =
+    payload.orEmpty()
+        .split(',')
+        .mapNotNullTo(linkedSetOf()) { value -> TrackingProviderId.fromStorage(value.trim().takeIf(String::isNotEmpty)) }
+
+/**
+ * Routing rule of the selector: anime content goes only to the providers left enabled; anything
+ * else goes everywhere. [isAnime] is evaluated lazily because it may need the ID index.
+ */
+internal suspend fun <T> filterProvidersForMedia(
+    providers: List<T>,
+    providerId: (T) -> TrackingProviderId,
+    isAnime: suspend () -> Boolean,
+    isEnabledForAnime: (TrackingProviderId) -> Boolean = AnimeTrackingSettingsRepository::isEnabledForAnime,
+): List<T> {
+    if (providers.all { isEnabledForAnime(providerId(it)) }) return providers
+    if (!isAnime()) return providers
+    return providers.filter { isEnabledForAnime(providerId(it)) }
+}
+
+internal suspend fun isAnimeMedia(kind: TrackingMediaKind, ids: TrackingExternalIds): Boolean =
+    kind == TrackingMediaKind.ANIME || AnimeIdMapper.isKnownAnime(ids)
+
+/** Watched items a provider should receive: anime items are dropped when it is excluded from anime updates. */
+internal suspend fun watchedItemsForAnimeSelection(
+    providerId: TrackingProviderId,
+    items: Collection<WatchedItem>,
+): Collection<WatchedItem> {
+    if (AnimeTrackingSettingsRepository.isEnabledForAnime(providerId)) return items
+    return items.filterNot { item ->
+        val ids = parseTrackingExternalIds(item.id).mergeMissing(parseTrackingExternalIds(item.videoId))
+        isAnimeMedia(trackingMediaKind(item.type, ids), ids)
+    }
+}

@@ -1116,6 +1116,16 @@ internal fun settingsSearchEntries(
         category = accountCategory,
         icon = Icons.Rounded.Link,
     )
+    addRow(
+        page = SettingsPage.TraktAuthentication,
+        key = "mal-authentication",
+        title = stringResource(Res.string.tracking_source_mal),
+        description = stringResource(Res.string.settings_mal_sign_in_description),
+        pageLabel = trackingPage,
+        section = stringResource(Res.string.settings_tracking_services),
+        category = accountCategory,
+        icon = Icons.Rounded.Link,
+    )
     listOf(
         PlaybackSearchRow("trakt-library-source", stringResource(Res.string.trakt_library_source_title), stringResource(Res.string.trakt_library_source_subtitle)),
         PlaybackSearchRow("trakt-watch-progress", stringResource(Res.string.trakt_watch_progress_title), stringResource(Res.string.trakt_watch_progress_subtitle)),
@@ -1151,6 +1161,57 @@ internal fun settingsSearchEntries(
         description = stringResource(Res.string.settings_mdblist_library_lists_description),
         pageLabel = trackingPage,
         section = stringResource(Res.string.settings_tracking_mdblist_section),
+        category = accountCategory,
+        icon = Icons.Rounded.Link,
+    )
+    addRow(
+        page = SettingsPage.TraktAuthentication,
+        key = "anime-tracking-updates",
+        title = stringResource(Res.string.settings_tracking_anime_updates_title),
+        description = stringResource(Res.string.settings_tracking_anime_updates_description),
+        pageLabel = trackingPage,
+        section = stringResource(Res.string.settings_tracking_anime_updates_title),
+        category = accountCategory,
+        icon = Icons.Rounded.Link,
+    )
+    addRow(
+        page = SettingsPage.TraktAuthentication,
+        key = "mal-library-source",
+        title = stringResource(Res.string.tracking_source_mal),
+        description = stringResource(Res.string.settings_tracking_mal_library_description),
+        pageLabel = trackingPage,
+        section = stringResource(Res.string.settings_tracking_data_sources),
+        category = accountCategory,
+        icon = Icons.Rounded.Link,
+    )
+    val malPage = stringResource(Res.string.compose_settings_page_myanimelist)
+    addRow(
+        page = SettingsPage.MyAnimeList,
+        key = "mal-account",
+        title = stringResource(Res.string.tracking_source_mal),
+        description = stringResource(Res.string.settings_mal_sign_in_description),
+        pageLabel = malPage,
+        section = stringResource(Res.string.settings_tracking_services),
+        category = accountCategory,
+        icon = Icons.Rounded.Link,
+    )
+    addRow(
+        page = SettingsPage.MyAnimeList,
+        key = "mal-anime-tracking-updates",
+        title = stringResource(Res.string.settings_tracking_anime_updates_title),
+        description = stringResource(Res.string.settings_tracking_anime_updates_description),
+        pageLabel = malPage,
+        section = stringResource(Res.string.settings_tracking_anime_updates_title),
+        category = accountCategory,
+        icon = Icons.Rounded.Link,
+    )
+    addRow(
+        page = SettingsPage.MyAnimeList,
+        key = "mal-sync-login",
+        title = stringResource(Res.string.settings_mal_sync_login_title),
+        description = stringResource(Res.string.settings_mal_sync_login_description),
+        pageLabel = malPage,
+        section = stringResource(Res.string.settings_tracking_mal_section),
         category = accountCategory,
         icon = Icons.Rounded.Link,
     )
@@ -1666,9 +1727,9 @@ private fun addAdditionalSearchEntries(
         row(SettingsPage.AiAssistant, "ai-tavily-key", stringResource(Res.string.ai_settings_tavily_key), stringResource(Res.string.ai_settings_tavily_description), aiPage, aiWebSection, icon = Icons.Rounded.AutoAwesome)
     }
 
+    addPage(SettingsPage.MyAnimeList, "myanimelist", stringResource(Res.string.compose_settings_page_myanimelist), stringResource(Res.string.settings_integrations_myanimelist_description), generalCategory, Icons.Rounded.ViewList)
     // Integrations: placeholder pages (work in progress)
     addPage(SettingsPage.SkipDb, "skipdb", stringResource(Res.string.compose_settings_page_skipdb), stringResource(Res.string.settings_integrations_skipdb_description), generalCategory, Icons.Rounded.SkipNext)
-    addPage(SettingsPage.MyAnimeList, "myanimelist", stringResource(Res.string.compose_settings_page_myanimelist), stringResource(Res.string.settings_integrations_myanimelist_description), generalCategory, Icons.Rounded.ViewList)
     addPage(SettingsPage.Kitsu, "kitsu", stringResource(Res.string.compose_settings_page_kitsu), stringResource(Res.string.settings_integrations_kitsu_description), generalCategory, Icons.Rounded.ViewList)
     addPage(SettingsPage.AniList, "anilist", stringResource(Res.string.compose_settings_page_anilist), stringResource(Res.string.settings_integrations_anilist_description), generalCategory, Icons.Rounded.ViewList)
     addPage(SettingsPage.Telegram, "telegram", stringResource(Res.string.compose_settings_page_telegram), stringResource(Res.string.settings_integrations_telegram_description), generalCategory, Icons.Rounded.Send)

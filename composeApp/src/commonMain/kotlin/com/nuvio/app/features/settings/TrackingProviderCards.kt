@@ -83,6 +83,7 @@ import com.nuvio.app.features.trakt.TraktConnectionMode
 import com.nuvio.app.features.trakt.traktBrandPainter
 import com.nuvio.app.features.watchprogress.WatchProgressSourceCoordinator
 import kotlinx.coroutines.launch
+import nuvio.composeapp.generated.resources.settings_mal_disconnect_description
 import nuvio.composeapp.generated.resources.settings_mdblist_disconnect_description
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_cancel
@@ -128,6 +129,7 @@ internal enum class TrackingBrand(val displayName: String) {
     TRAKT("Trakt"),
     SIMKL("Simkl"),
     MDBLIST("MDBList"),
+    MAL("MyAnimeList"),
     TMDB("TMDB"),
 }
 
@@ -142,6 +144,7 @@ internal fun isTrackingBrandAvailable(
     traktConnected: Boolean,
     simklConnected: Boolean,
     mdblistConnected: Boolean = false,
+    malConnected: Boolean = false,
 ): Boolean = when (brand) {
     TrackingBrand.NUVIO,
     TrackingBrand.TMDB,
@@ -149,6 +152,7 @@ internal fun isTrackingBrandAvailable(
     TrackingBrand.TRAKT -> traktConnected
     TrackingBrand.SIMKL -> simklConnected
     TrackingBrand.MDBLIST -> mdblistConnected
+    TrackingBrand.MAL -> malConnected
 }
 
 internal fun TraktConnectionMode.toTrackingConnectionCardMode(): TrackingConnectionCardMode = when (this) {
@@ -204,6 +208,7 @@ internal fun TrackingProviderCards(
             modifier = Modifier.fillMaxWidth(),
         )
         MdbListProviderCard(Modifier.fillMaxWidth())
+        MalProviderCard(Modifier.fillMaxWidth())
     }
 
     if (showSyncInfo) {
@@ -677,6 +682,7 @@ private fun TrackingDisconnectDialog(
                 TrackingBrand.SIMKL ->
                     stringResource(Res.string.settings_simkl_disconnect_description)
                 TrackingBrand.MDBLIST -> stringResource(Res.string.settings_mdblist_disconnect_description)
+                TrackingBrand.MAL -> stringResource(Res.string.settings_mal_disconnect_description)
                 TrackingBrand.NUVIO,
                 TrackingBrand.TMDB,
                 -> stringResource(
@@ -726,6 +732,12 @@ internal fun TrackingBrandGlyph(
             modifier = modifier,
             contentScale = ContentScale.Fit,
         )
+        TrackingBrand.MAL -> Image(
+            painter = integrationLogoPainter(IntegrationLogo.MyAnimeList),
+            contentDescription = contentDescription,
+            modifier = modifier,
+            contentScale = ContentScale.Fit,
+        )
         TrackingBrand.TMDB -> Image(
             painter = integrationLogoPainter(IntegrationLogo.Tmdb),
             contentDescription = contentDescription,
@@ -750,11 +762,12 @@ private fun TrackingBrandWordmark(
         TrackingBrand.TRAKT -> traktBrandPainter(TraktBrandAsset.Wordmark)
         TrackingBrand.SIMKL -> simklBrandPainter(SimklBrandAsset.Wordmark)
         TrackingBrand.MDBLIST -> integrationLogoPainter(IntegrationLogo.MdbList)
+        TrackingBrand.MAL -> integrationLogoPainter(IntegrationLogo.MyAnimeList)
         TrackingBrand.NUVIO,
         TrackingBrand.TMDB,
         -> return
     }
-    if (brand == TrackingBrand.MDBLIST) {
+    if (brand == TrackingBrand.MDBLIST || brand == TrackingBrand.MAL) {
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             Image(painter, contentDescription = null, modifier = Modifier.size(32.dp))
             Text(contentDescription, style = MaterialTheme.typography.titleLarge, color = Color.White, fontWeight = FontWeight.Bold)
@@ -771,7 +784,9 @@ private fun TrackingBrandWordmark(
             TrackingBrand.SIMKL -> Modifier
                 .width(124.dp)
                 .height(30.dp)
-            TrackingBrand.MDBLIST -> Modifier.width(130.dp).height(32.dp)
+            TrackingBrand.MDBLIST,
+            TrackingBrand.MAL,
+            -> Modifier.width(130.dp).height(32.dp)
             TrackingBrand.NUVIO,
             TrackingBrand.TMDB,
             -> Modifier
@@ -790,6 +805,9 @@ private fun TrackingBrand.cardBrush(): Brush = when (this) {
     )
     TrackingBrand.SIMKL -> Brush.linearGradient(
         colors = listOf(Color(0xFF050505), Color(0xFF292929), Color(0xFF111111)),
+    )
+    TrackingBrand.MAL -> Brush.linearGradient(
+        colors = listOf(Color(0xFF1B3266), Color(0xFF2E51A2), Color(0xFF162A57)),
     )
     TrackingBrand.NUVIO,
     TrackingBrand.TMDB,

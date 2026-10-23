@@ -1,5 +1,8 @@
 package com.nuvio.app.core.tracking
 
+import com.nuvio.app.features.mal.MalAuthRepository
+import com.nuvio.app.features.mal.MalTrackingLibraryProvider
+import com.nuvio.app.features.mal.MalTrackingWrites
 import com.nuvio.app.features.simkl.SimklAuthRepository
 import com.nuvio.app.features.simkl.SimklMutationRepository
 import com.nuvio.app.features.simkl.SimklLibraryRepository
@@ -25,6 +28,9 @@ fun ensureTrackingProvidersRegistered() {
     SimklLibraryRepository.uiState
     SimklProgressRepository.uiState
     SimklMutationRepository.ensureRegistered()
+    MalAuthRepository.descriptor
+    MalTrackingWrites.ensureRegistered()
+    TrackingProviderRegistry.registerLibraryProvider(MalTrackingLibraryProvider)
     TrackingProviderRegistry.registerLibraryProvider(TraktTrackingLibraryProvider)
     TrackingProviderRegistry.registerLibraryProvider(SimklTrackingLibraryProvider)
     TrackingProviderRegistry.registerWatchedProvider(TraktWatchedSyncAdapter)

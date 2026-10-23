@@ -124,6 +124,21 @@ abstract class GenerateRuntimeConfigsTask : DefaultTask() {
             )
         }
 
+        outDir.resolve("com/nuvio/app/features/mal").apply {
+            mkdirs()
+            resolve("MalConfig.kt").writeText(
+                """
+                |package com.nuvio.app.features.mal
+                |
+                |object MalConfig {
+                |    const val CLIENT_ID = "${props.getProperty("MAL_CLIENT_ID", "")}"
+                |    const val CLIENT_SECRET = "${props.getProperty("MAL_CLIENT_SECRET", "")}"
+                |    const val REDIRECT_URI = "${props.getProperty("MAL_REDIRECT_URI", "nuvio://auth/mal")}"
+                |}
+                """.trimMargin()
+            )
+        }
+
         outDir.resolve("com/nuvio/app/features/mdblist").apply {
             mkdirs()
             resolve("MdbListConfig.kt").writeText(

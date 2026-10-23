@@ -36,6 +36,9 @@ import com.nuvio.app.features.plugins.PluginGroupingSync
 import com.nuvio.app.features.home.HomeCatalogSettingsRepository
 import com.nuvio.app.features.home.HomeHeroProfileSync
 import com.nuvio.app.features.discord.DiscordRpcProfileSync
+import com.nuvio.app.features.anime.AnimeTrackingSettingsRepository
+import com.nuvio.app.features.mal.MalAuthRepository
+import com.nuvio.app.features.mal.MalProfileSync
 import com.nuvio.app.features.opensubtitles.OpenSubtitlesProfileSync
 import com.nuvio.app.features.player.skip.TimestampIntegrationsProfileSync
 import com.nuvio.app.features.opensubtitles.OpenSubtitlesRepository
@@ -228,6 +231,8 @@ object ProfileSettingsSync {
             LiveTvRepository.uiState.map { "live_tv_${LiveTvProfileSync.syncSignature(it)}" }.distinctUntilChanged(),
             HomeCatalogSettingsRepository.uiState.map(HomeHeroProfileSync::syncSignature).distinctUntilChanged(),
             DiscordRpcRepository.uiState.map(DiscordRpcProfileSync::syncSignature).distinctUntilChanged(),
+            MalAuthRepository.uiState.map(MalProfileSync::syncSignature).distinctUntilChanged(),
+            AnimeTrackingSettingsRepository.uiState.map { "anime_tracking_${it.excludedProviders}" }.distinctUntilChanged(),
             OpenSubtitlesRepository.uiState.map(OpenSubtitlesProfileSync::syncSignature).distinctUntilChanged(),
             SubDlRepository.uiState.map(SubDlProfileSync::syncSignature).distinctUntilChanged(),
             AiAssistantRepository.uiState.map(AiAssistantProfileSync::syncSignature).distinctUntilChanged(),
@@ -297,6 +302,8 @@ object ProfileSettingsSync {
                         LiveTvProfileSync.exportToSyncPayload() +
                         HomeHeroProfileSync.exportToSyncPayload() +
                         DiscordRpcProfileSync.exportToSyncPayload() +
+                        MalProfileSync.exportToSyncPayload() +
+                        AnimeTrackingSettingsRepository.exportToSyncPayload() +
                         OpenSubtitlesProfileSync.exportToSyncPayload() +
                         SubDlProfileSync.exportToSyncPayload() +
                         AiAssistantProfileSync.exportToSyncPayload() +
@@ -368,6 +375,8 @@ object ProfileSettingsSync {
         LiveTvProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
         HomeHeroProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
         DiscordRpcProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
+        MalProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
+        AnimeTrackingSettingsRepository.applyFromSyncPayload(blob.features.streamBadgeSettings)
         OpenSubtitlesProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
         SubDlProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
         AiAssistantProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
@@ -441,6 +450,7 @@ object ProfileSettingsSync {
         TraktCommentsSettings.ensureLoaded()
         EpisodeReleaseNotificationsRepository.ensureLoaded()
         DiscordRpcRepository.ensureLoaded()
+        MalAuthRepository.ensureLoaded()
         Top10Repository.ensureLoaded()
     }
 

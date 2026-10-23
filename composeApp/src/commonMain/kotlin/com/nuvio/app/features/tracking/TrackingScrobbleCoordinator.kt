@@ -1,6 +1,8 @@
 package com.nuvio.app.features.tracking
 
 import co.touchlab.kermit.Logger
+import com.nuvio.app.features.anime.filterProvidersForMedia
+import com.nuvio.app.features.anime.isAnimeMedia
 import com.nuvio.app.features.profiles.ProfileRepository
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.async
@@ -23,7 +25,7 @@ object TrackingScrobbleCoordinator {
         if (profileId != ProfileRepository.activeProfileId) return emptyList()
         TrackingProviderRegistry.ensureLoaded()
         val failures = dispatchTrackingScrobble(
-            scrobblers = TrackingProviderRegistry.connectedScrobblers(),
+            scrobblers = scrobblersFor(event),
             profileId = profileId,
             action = action,
             event = event,
@@ -44,7 +46,7 @@ object TrackingScrobbleCoordinator {
         if (profileId != ProfileRepository.activeProfileId) return emptyList()
         TrackingProviderRegistry.ensureLoaded()
         val failures = dispatchTrackingSeekScrobble(
-            scrobblers = TrackingProviderRegistry.connectedScrobblers(),
+            scrobblers = scrobblersFor(event),
             profileId = profileId,
             action = action,
             event = event,
@@ -56,6 +58,14 @@ object TrackingScrobbleCoordinator {
         }
         return failures
     }
+
+    /** Connected scrobblers, minus the ones excluded from anime updates when [event] is anime. */
+    private suspend fun scrobblersFor(event: TrackingScrobbleEvent): List<TrackingScrobbler> =
+        filterProvidersForMedia(
+            providers = TrackingProviderRegistry.connectedScrobblers(),
+            providerId = TrackingScrobbler::providerId,
+            isAnime = { isAnimeMedia(event.media.kind, event.media.ids) },
+        )
 }
 
 internal suspend fun dispatchTrackingSeekScrobble(
