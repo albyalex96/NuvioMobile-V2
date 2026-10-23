@@ -932,7 +932,8 @@ final class MPVPlayerViewController: UIViewController {
     ) {
         guard mpv != nil else { return }
 
-        checkError(mpv_set_property_string(mpv, "sub-ass-override", "no"))
+        // "no" keeps the ASS/SSA styles of embedded tracks and ignores every sub-* option below.
+        checkError(mpv_set_property_string(mpv, "sub-ass-override", "force"))
         checkError(mpv_set_property_string(mpv, "sub-color", textColor))
         checkError(mpv_set_property_string(mpv, "sub-back-color", backgroundColor))
         checkError(mpv_set_property_string(mpv, "sub-outline-color", outlineColor))

@@ -1758,7 +1758,13 @@ private class NuvioLibmpvView(
 
             override fun applySubtitleStyle(style: SubtitleStyleState) {
                 executeMpv {
-                    mpv.setPropertyString("sub-ass-override", "no")
+                    // "no" keeps the ASS/SSA styles of embedded tracks and ignores every sub-* option below;
+                    // "force" applies the user style while keeping inline positioning tags.
+                    mpv.setPropertyString("sub-ass-override", "force")
+                    Logger.d(TAG) {
+                        "libmpv subtitle style applied: size=${style.fontSizeSp} bold=${style.bold} " +
+                            "outline=${style.outlineEnabled}/${style.outlineWidth} offset=${style.bottomOffset} marginY=${style.toMpvSubtitleMarginY()}"
+                    }
                     mpv.setPropertyString("sub-color", style.textColor.toMpvColor())
                     mpv.setPropertyString("sub-back-color", style.backgroundColor.toMpvColor())
                     mpv.setPropertyString("sub-outline-color", style.outlineColor.toMpvColor())
@@ -1768,7 +1774,10 @@ private class NuvioLibmpvView(
                     mpv.setPropertyInt("sub-font-size", style.toMpvSubtitleFontSize())
                     mpv.setPropertyInt("sub-outline-size", style.toMpvSubtitleOutlineSize())
                     mpv.setPropertyInt("sub-border-size", style.toMpvSubtitleOutlineSize())
-                    mpv.setPropertyInt("sub-pos", (100 - style.bottomOffset / 10).coerceIn(0, 100))
+                    // sub-pos is only a minimum height (libass line position): subtitles already above it,
+                    // like most ASS tracks, never move. The bottom margin shifts every bottom-aligned line.
+                    mpv.setPropertyInt("sub-pos", 100)
+                    mpv.setPropertyInt("sub-margin-y", style.toMpvSubtitleMarginY())
                     mpv.setPropertyBoolean("sub-filter-sdh", style.stripSdh)
                     mpv.setPropertyBoolean("sub-filter-sdh-harder", style.stripSdh)
                 }
@@ -1924,6 +1933,12 @@ private fun SubtitleStyleState.toMpvSubtitleBorderStyle(): String =
         "outline-and-shadow"
     }
 
+// Same scale as ExoPlayer (bottomOffset / 1000 of the height, at most 20%), on mpv's 720px reference height.
+private fun SubtitleStyleState.toMpvSubtitleMarginY(): Int =
+    MPV_SUBTITLE_BASE_MARGIN_Y + (bottomOffset.coerceIn(0, 200) * MPV_SUBTITLE_REFERENCE_HEIGHT / 1000)
+
+private const val MPV_SUBTITLE_BASE_MARGIN_Y = 22
+private const val MPV_SUBTITLE_REFERENCE_HEIGHT = 720
 private const val MPV_SUBTITLE_FONT_SIZE_SCALE = 55.0 / 18.0
 private const val MPV_SUBTITLE_FONT_SIZE_MIN = 36
 private const val MPV_SUBTITLE_FONT_SIZE_MAX = 122
