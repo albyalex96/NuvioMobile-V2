@@ -5,6 +5,8 @@
     <string name="stream_parser_enabled_description">Mostra i dettagli dei flussi con badge in una card dedicata</string>
     <string name="stream_parser_animations_title">Animazioni dei badge</string>
     <string name="stream_parser_animations_description">Anima i badge di qualità, cached, torrent e proxy</string>
+    <string name="stream_parser_player_badges_title">Badge nel player</string>
+    <string name="stream_parser_player_badges_description">Mostra i badge di qualità e tecnici del flusso sotto il titolo nei comandi del player</string>
     <string name="stream_parser_sort_by_quality_title">Ordina per qualità video</string>
     <string name="stream_parser_sort_by_quality_description">Mostra tutti i flussi in un'unica lista, dalla risoluzione più alta, indipendentemente da addon o plugin</string>
     <string name="stream_parser_quality_filter_title">Qualità mostrate</string>

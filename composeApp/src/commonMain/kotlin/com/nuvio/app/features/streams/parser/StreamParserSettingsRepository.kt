@@ -13,6 +13,8 @@ data class StreamParserSettingsUiState(
     val sortByQuality: Boolean = false,
     /** Resolutions hidden from the stream results; empty shows everything. */
     val hiddenQualities: Set<StreamParserResolution> = emptySet(),
+    /** Quality and technical badges under the title in the player controls; needs [enabled]. */
+    val playerBadgesEnabled: Boolean = true,
 )
 
 object StreamParserSettingsRepository {
@@ -57,6 +59,14 @@ object StreamParserSettingsRepository {
         StreamParserSettingsStorage.saveSortByQuality(enabled)
     }
 
+    fun setPlayerBadgesEnabled(enabled: Boolean) {
+        ensureLoaded()
+        if (_uiState.value.playerBadgesEnabled == enabled) return
+        _uiState.value = _uiState.value.copy(playerBadgesEnabled = enabled)
+        StreamParserSettingsStorage.savePlayerBadgesEnabled(enabled)
+        Logger.withTag("PlayerStreamBadges").i { "Player badges ${if (enabled) "enabled" else "disabled"}" }
+    }
+
     fun setQualityVisible(quality: StreamParserResolution, visible: Boolean) {
         ensureLoaded()
         val current = _uiState.value.hiddenQualities
@@ -90,6 +100,7 @@ object StreamParserSettingsRepository {
             animationsEnabled = StreamParserSettingsStorage.loadAnimationsEnabled() ?: true,
             sortByQuality = StreamParserSettingsStorage.loadSortByQuality() ?: false,
             hiddenQualities = decodeHiddenQualities(StreamParserSettingsStorage.loadHiddenQualities()),
+            playerBadgesEnabled = StreamParserSettingsStorage.loadPlayerBadgesEnabled() ?: true,
         )
     }
 

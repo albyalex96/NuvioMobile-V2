@@ -19,6 +19,7 @@ internal actual object StreamParserSettingsStorage {
         STREAM_PARSER_ANIMATIONS_ENABLED_KEY,
         STREAM_PARSER_SORT_BY_QUALITY_KEY,
         STREAM_PARSER_HIDDEN_QUALITIES_KEY,
+        STREAM_PARSER_PLAYER_BADGES_KEY,
     )
 
     private var preferences: SharedPreferences? = null
@@ -43,6 +44,12 @@ internal actual object StreamParserSettingsStorage {
 
     actual fun saveSortByQuality(enabled: Boolean) {
         saveBoolean(STREAM_PARSER_SORT_BY_QUALITY_KEY, enabled)
+    }
+
+    actual fun loadPlayerBadgesEnabled(): Boolean? = loadBoolean(STREAM_PARSER_PLAYER_BADGES_KEY)
+
+    actual fun savePlayerBadgesEnabled(enabled: Boolean) {
+        saveBoolean(STREAM_PARSER_PLAYER_BADGES_KEY, enabled)
     }
 
     actual fun loadHiddenQualities(): Set<String>? =
@@ -76,6 +83,7 @@ internal actual object StreamParserSettingsStorage {
         loadEnabled()?.let { put(STREAM_PARSER_ENABLED_KEY, encodeSyncBoolean(it)) }
         loadAnimationsEnabled()?.let { put(STREAM_PARSER_ANIMATIONS_ENABLED_KEY, encodeSyncBoolean(it)) }
         loadSortByQuality()?.let { put(STREAM_PARSER_SORT_BY_QUALITY_KEY, encodeSyncBoolean(it)) }
+        loadPlayerBadgesEnabled()?.let { put(STREAM_PARSER_PLAYER_BADGES_KEY, encodeSyncBoolean(it)) }
         loadHiddenQualities()?.let { put(STREAM_PARSER_HIDDEN_QUALITIES_KEY, encodeSyncStringSet(it)) }
     }
 
@@ -87,6 +95,7 @@ internal actual object StreamParserSettingsStorage {
         payload.decodeSyncBoolean(STREAM_PARSER_ENABLED_KEY)?.let(::saveEnabled)
         payload.decodeSyncBoolean(STREAM_PARSER_ANIMATIONS_ENABLED_KEY)?.let(::saveAnimationsEnabled)
         payload.decodeSyncBoolean(STREAM_PARSER_SORT_BY_QUALITY_KEY)?.let(::saveSortByQuality)
+        payload.decodeSyncBoolean(STREAM_PARSER_PLAYER_BADGES_KEY)?.let(::savePlayerBadgesEnabled)
         payload.decodeSyncStringSet(STREAM_PARSER_HIDDEN_QUALITIES_KEY)?.let(::saveHiddenQualities)
     }
 }

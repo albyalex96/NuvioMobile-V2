@@ -40,6 +40,7 @@ import androidx.compose.runtime.getValue
 import com.nuvio.app.features.livetv.LiveTvRepository
 import com.nuvio.app.features.livetv.currentProgram
 import com.nuvio.app.features.livetv.rememberLiveTvEpgNowMillis
+import com.nuvio.app.features.streams.parser.StreamParserSettingsRepository
 import nuvio.composeapp.generated.resources.*
 
 @Composable
@@ -365,6 +366,27 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
     val partyActive = partyState.party != null
     val partyAvailable by PartyRepository.available.collectAsStateWithLifecycle()
     val castState by CastPlatform.state.collectAsStateWithLifecycle()
+    val streamParserSettings by remember {
+        StreamParserSettingsRepository.ensureLoaded()
+        StreamParserSettingsRepository.uiState
+    }.collectAsStateWithLifecycle()
+    // Stream Parser badges of the playing stream under the title (not for live TV channels).
+    val showStreamBadges = streamParserSettings.enabled && streamParserSettings.playerBadgesEnabled && !isLiveTvPlayback
+    val streamBadgeInfo = if (showStreamBadges) {
+        remember(activeStream, activeStreamTitle, activeStreamSubtitle, activeSourceFilename, title) {
+            parsePlayerStream(
+                stream = activeStream,
+                streamTitle = activeStreamTitle,
+                streamSubtitle = activeStreamSubtitle,
+                filename = activeSourceFilename,
+                providerName = activeProviderName,
+                providerAddonId = activeProviderAddonId,
+                knownTitle = title,
+            )
+        }
+    } else {
+        null
+    }
     AnimatedVisibility(
         visible = (controlsVisible || showParentalGuide) && !playerControlsLocked && !isInPip,
         enter = fadeIn(),
@@ -372,6 +394,11 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
     ) {
         PlayerControlsShell(
             title = title,
+            // Live TV keeps the channel name: its logo is the channel's, not a title logo.
+            logo = if (isLiveTvPlayback) null else logo,
+            streamBadges = streamBadgeInfo?.let { info ->
+                PlayerStreamBadges(info = info, animationsEnabled = streamParserSettings.animationsEnabled)
+            },
             streamTitle = activeStreamTitle,
             providerName = liveTvNowProgramTitle?.let { programTitle -> "$activeProviderName · $programTitle" }
                 ?: activeProviderName,

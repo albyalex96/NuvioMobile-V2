@@ -89,6 +89,8 @@ import com.nuvio.app.core.i18n.localizedEpisodeTitle
 @Composable
 internal fun PlayerControlsShell(
     title: String,
+    logo: String? = null,
+    streamBadges: PlayerStreamBadges? = null,
     streamTitle: String,
     providerName: String,
     seasonNumber: Int?,
@@ -185,6 +187,8 @@ internal fun PlayerControlsShell(
             if (useLegacyLayout) {
                 PlayerHeader(
                     title = title,
+                    logo = logo,
+                    streamBadges = streamBadges,
                     streamTitle = streamTitle,
                     providerName = providerName,
                     seasonNumber = seasonNumber,
@@ -304,6 +308,8 @@ internal fun PlayerControlsShell(
                     if (!hideDetails) {
                         PlayerTimelineDetails(
                             title = title,
+                            logo = logo,
+                            streamBadges = streamBadges,
                             seasonNumber = seasonNumber,
                             episodeNumber = episodeNumber,
                             episodeTitle = episodeTitle,
@@ -380,6 +386,8 @@ internal fun PlayerControlsShell(
 @Composable
 private fun PlayerHeader(
     title: String,
+    logo: String?,
+    streamBadges: PlayerStreamBadges?,
     streamTitle: String,
     providerName: String,
     seasonNumber: Int?,
@@ -421,19 +429,26 @@ private fun PlayerHeader(
                     modifier = Modifier.graphicsLayer { alpha = metadataAlpha },
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
-                    Text(
-                        text = title,
-                        style = typeScale.titleLg.copy(
-                            fontSize = metrics.titleSize,
-                            lineHeight = metrics.titleSize * 1.16f,
-                            fontWeight = FontWeight.Bold,
-                        ),
-                        color = Color.White,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    PlayerTitleLogo(title = title, logo = logo, height = metrics.titleLogoHeight()) {
+                        Text(
+                            text = title,
+                            style = typeScale.titleLg.copy(
+                                fontSize = metrics.titleSize,
+                                lineHeight = metrics.titleSize * 1.16f,
+                                fontWeight = FontWeight.Bold,
+                            ),
+                            color = Color.White,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    val hasEpisodeLine = seasonNumber != null && episodeNumber != null && !episodeTitle.isNullOrBlank()
+                    if (!hasEpisodeLine) {
+                        streamBadges?.let { badges -> PlayerStreamBadgesRow(badges) }
+                    }
                     if (seasonNumber != null && episodeNumber != null && !episodeTitle.isNullOrBlank()) {
                         val displayEpisodeTitle = localizedEpisodeTitle(episodeTitle, episodeNumber) ?: episodeTitle
+                        PlayerEpisodeLineWithBadges(streamBadges) {
                         Text(
                             text = formatEpisodeCodeWithSelectedFormat(seasonNumber, episodeNumber)
                                 ?.let { "$it • $displayEpisodeTitle" }
@@ -450,7 +465,9 @@ private fun PlayerHeader(
                             color = Color.White.copy(alpha = 0.9f),
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
+                            modifier = it,
                         )
+                        }
                     }
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),

@@ -38,6 +38,8 @@ import nuvio.composeapp.generated.resources.stream_parser_animations_description
 import nuvio.composeapp.generated.resources.stream_parser_animations_title
 import nuvio.composeapp.generated.resources.stream_parser_enabled_description
 import nuvio.composeapp.generated.resources.stream_parser_enabled_title
+import nuvio.composeapp.generated.resources.stream_parser_player_badges_description
+import nuvio.composeapp.generated.resources.stream_parser_player_badges_title
 import nuvio.composeapp.generated.resources.stream_parser_quality_filter_all
 import nuvio.composeapp.generated.resources.stream_parser_quality_filter_description
 import nuvio.composeapp.generated.resources.stream_parser_quality_filter_none
@@ -81,6 +83,14 @@ internal fun LazyListScope.streamParserSettingsSection(isTablet: Boolean) {
                     enabled = settings.enabled,
                     isTablet = isTablet,
                     onCheckedChange = StreamParserSettingsRepository::setAnimationsEnabled,
+                )
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.stream_parser_player_badges_title),
+                    description = stringResource(Res.string.stream_parser_player_badges_description),
+                    checked = settings.playerBadgesEnabled,
+                    enabled = settings.enabled,
+                    isTablet = isTablet,
+                    onCheckedChange = StreamParserSettingsRepository::setPlayerBadgesEnabled,
                 )
                 // Independent from the Stream Parser card: sorting also works with the classic card.
                 SettingsSwitchRow(

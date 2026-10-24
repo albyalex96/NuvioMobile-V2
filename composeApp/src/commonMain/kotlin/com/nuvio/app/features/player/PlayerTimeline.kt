@@ -50,6 +50,8 @@ internal val PlayerTimelineContentInset = 2.dp
 @Composable
 internal fun PlayerTimelineDetails(
     title: String,
+    logo: String?,
+    streamBadges: PlayerStreamBadges?,
     seasonNumber: Int?,
     episodeNumber: Int?,
     episodeTitle: String?,
@@ -61,28 +63,38 @@ internal fun PlayerTimelineDetails(
 ) {
     val typeScale = MaterialTheme.nuvioTypeScale
     Column(Modifier.padding(horizontal = PlayerTimelineContentInset)) {
-        Text(
-            text = title,
-            style = typeScale.titleLg.copy(
-                fontSize = metrics.titleSize,
-                lineHeight = metrics.titleSize * 1.16f,
-                fontWeight = FontWeight.SemiBold,
-            ),
-            color = Color.White,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        PlayerTitleLogo(title = title, logo = logo, height = metrics.titleLogoHeight()) {
+            Text(
+                text = title,
+                style = typeScale.titleLg.copy(
+                    fontSize = metrics.titleSize,
+                    lineHeight = metrics.titleSize * 1.16f,
+                    fontWeight = FontWeight.SemiBold,
+                ),
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
         if (seasonNumber != null && episodeNumber != null) {
             val episodeCode = formatEpisodeCodeWithSelectedFormat(seasonNumber, episodeNumber)
                 ?: stringResource(Res.string.compose_player_episode_code_full, seasonNumber, episodeNumber)
             val displayEpisodeTitle = localizedEpisodeTitle(episodeTitle, episodeNumber)
-            Text(
-                text = if (displayEpisodeTitle.isNullOrBlank()) episodeCode else "$episodeCode • $displayEpisodeTitle",
-                style = typeScale.bodyMd.copy(fontSize = metrics.episodeInfoSize),
-                color = Color.White.copy(alpha = 0.9f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            PlayerEpisodeLineWithBadges(streamBadges, Modifier.padding(top = if (streamBadges != null) 4.dp else 0.dp)) {
+                Text(
+                    text = if (displayEpisodeTitle.isNullOrBlank()) episodeCode else "$episodeCode • $displayEpisodeTitle",
+                    style = typeScale.bodyMd.copy(fontSize = metrics.episodeInfoSize),
+                    color = Color.White.copy(alpha = 0.9f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = it,
+                )
+            }
+        } else {
+            // Movies have no episode line: the badges go right below the logo.
+            streamBadges?.let { badges ->
+                PlayerStreamBadgesRow(badges, Modifier.padding(top = 6.dp, bottom = 2.dp))
+            }
         }
         if (!releaseInfo.isNullOrBlank()) {
             Text(
