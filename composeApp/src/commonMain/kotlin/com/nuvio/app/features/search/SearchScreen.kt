@@ -2,6 +2,8 @@ package com.nuvio.app.features.search
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -12,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.LazyListState
@@ -34,6 +37,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -44,7 +48,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.network.NetworkCondition
 import com.nuvio.app.core.network.NetworkStatusRepository
 import com.nuvio.app.core.ui.NuvioInputField
+import com.nuvio.app.tv.LocalTvShell
 import com.nuvio.app.tv.TvSearchFieldRow
+import com.nuvio.app.core.ui.NuvioTokens
+import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.core.ui.NuvioScreen
 import com.nuvio.app.core.ui.NuvioNetworkOfflineCard
 import com.nuvio.app.core.ui.NuvioScreenHeader
@@ -99,6 +106,8 @@ fun SearchScreen(
     scrollToTopRequests: Flow<Unit> = emptyFlow(),
 ) {
     val focusRequester = remember { FocusRequester() }
+    // On TV the D-pad takes the focus off the field to reach the list, so the recent searches stay visible.
+    val isTv = LocalTvShell.current != null
     var isSearchFocused by remember { mutableStateOf(false) }
 
     ScreenActivityEffect(listState) { screenActive ->
@@ -307,7 +316,15 @@ fun SearchScreen(
         }
 
         if (query.isBlank()) {
-            if (isSearchFocused && recentSearches.isNotEmpty()) {
+            if (isTv && recentSearches.isNotEmpty()) {
+                item(key = "recent_searches") {
+                    SearchRecentChipsRow(
+                        recentSearches = recentSearches,
+                        onSearchPress = { recentQuery -> query = recentQuery },
+                        onRemoveSearch = SearchHistoryRepository::removeSearch,
+                    )
+                }
+            } else if (isSearchFocused && recentSearches.isNotEmpty()) {
                 item(key = "recent_searches") {
                     SearchRecentSection(
                         recentSearches = recentSearches,
@@ -499,6 +516,93 @@ private fun SearchRecentSection(
             )
         }
         Spacer(modifier = Modifier.height(6.dp))
+    }
+}
+
+/** TV: the recent searches in one horizontally scrollable row of chips, so they never fill the page. */
+@Composable
+private fun SearchRecentChipsRow(
+    recentSearches: List<String>,
+    onSearchPress: (String) -> Unit,
+    onRemoveSearch: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = stringResource(Res.string.compose_search_recent_searches),
+            modifier = Modifier.padding(horizontal = 16.dp),
+            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            recentSearches.forEach { recentQuery ->
+                SearchRecentChip(
+                    query = recentQuery,
+                    onSearchPress = { onSearchPress(recentQuery) },
+                    onRemovePress = { onRemoveSearch(recentQuery) },
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+    }
+}
+
+@Composable
+private fun SearchRecentChip(
+    query: String,
+    onSearchPress: () -> Unit,
+    onRemovePress: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val tokens = MaterialTheme.nuvio
+    Row(
+        modifier = modifier
+            .clip(tokens.shapes.compactCard)
+            .background(tokens.colors.surface),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = query,
+            modifier = Modifier
+                .clip(tokens.shapes.compactCard)
+                .clickable(onClick = onSearchPress)
+                .padding(
+                    start = NuvioTokens.Space.s12,
+                    end = NuvioTokens.Space.s6,
+                    top = tokens.components.chipVerticalPadding,
+                    bottom = tokens.components.chipVerticalPadding,
+                ),
+            style = MaterialTheme.typography.labelLarge,
+            color = tokens.colors.textPrimary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Box(
+            modifier = Modifier
+                .clip(tokens.shapes.compactCard)
+                .clickable(onClick = onRemovePress)
+                .padding(horizontal = NuvioTokens.Space.s6, vertical = tokens.components.chipVerticalPadding),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.Close,
+                contentDescription = stringResource(Res.string.compose_search_remove_recent_search),
+                modifier = Modifier.size(NuvioTokens.Icon.sm + NuvioTokens.Space.s2),
+                tint = tokens.colors.textMuted,
+            )
+        }
     }
 }
 
