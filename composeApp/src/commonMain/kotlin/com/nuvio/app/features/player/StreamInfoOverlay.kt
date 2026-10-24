@@ -1,5 +1,6 @@
 package com.nuvio.app.features.player
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
@@ -44,6 +45,7 @@ internal fun StreamInfoOverlay(
     addonSubtitle: AddonSubtitle?,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    scrollState: ScrollState = rememberScrollState(),
 ) {
     PlayerOverlayScaffold(
         visible = visible,
@@ -54,7 +56,7 @@ internal fun StreamInfoOverlay(
         Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(scrollState),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             StreamInfoSection(stringResource(Res.string.stream_info_section_source)) {

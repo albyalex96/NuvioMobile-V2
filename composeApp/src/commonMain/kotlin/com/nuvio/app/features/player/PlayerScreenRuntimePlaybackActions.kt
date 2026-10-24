@@ -484,6 +484,7 @@ internal fun PlayerScreenRuntime.openStreamInfo() {
     val controller = playerController
     scope.launch {
         streamMediaInfo = controller?.getMediaInfo() ?: PlayerMediaInfo()
+        streamInfoScrollState.scrollTo(0)
         showStreamInfo = true
     }
 }

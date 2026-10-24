@@ -1,5 +1,7 @@
 package com.nuvio.app.tv
 
+import kotlinx.coroutines.launch
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.filled.Info
@@ -69,6 +71,9 @@ private val log = Logger.withTag("TvShell")
 
 /** Number of catalog items shown in a TV home row before "see all". */
 private const val TV_HOME_ROW_LIMIT = 24
+
+/** Share of the visible height scrolled by one D-pad press in the stream "Info" panel. */
+private const val STREAM_INFO_SCROLL_FRACTION = 0.6f
 
 @Composable
 internal fun TvShellThemeOverlay(content: @Composable () -> Unit) {
@@ -390,6 +395,23 @@ internal fun PlayerScreenRuntime.BindTvPlayerRemote() {
 
             override val overlayOpen: Boolean
                 get() = runtime.tvOverlayOpen()
+
+            override val streamInfoOpen: Boolean
+                get() = runtime.showStreamInfo
+
+            override fun scrollStreamInfo(down: Boolean): Boolean {
+                val scrollState = runtime.streamInfoScrollState
+                val canScroll = if (down) scrollState.canScrollForward else scrollState.canScrollBackward
+                if (!canScroll) return false
+                val step = scrollState.viewportSize * STREAM_INFO_SCROLL_FRACTION
+                runtime.scope.launch { scrollState.animateScrollBy(if (down) step else -step) }
+                return true
+            }
+
+            override fun closeStreamInfo() {
+                log.d { "Stream info closed from remote" }
+                runtime.showStreamInfo = false
+            }
 
             override fun togglePlayback() {
                 runtime.togglePlayback()

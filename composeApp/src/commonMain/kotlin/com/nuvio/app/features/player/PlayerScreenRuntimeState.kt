@@ -1,5 +1,6 @@
 package com.nuvio.app.features.player
 
+import androidx.compose.foundation.ScrollState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -213,6 +214,7 @@ internal class PlayerScreenRuntime(
     var showSubtitleModal by mutableStateOf(false)
     var showVideoSettingsModal by mutableStateOf(false)
     var showStreamInfo by mutableStateOf(false)
+    val streamInfoScrollState = ScrollState(0)
     var showPartyPanel by mutableStateOf(false)
     var showPartyChat by mutableStateOf(false)
     var partyBehind by mutableStateOf(false)

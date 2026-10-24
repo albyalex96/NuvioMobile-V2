@@ -196,6 +196,14 @@ interface TvPlayerRemote {
     /** A panel, modal or prompt is open: keys must reach it untouched. */
     val overlayOpen: Boolean
 
+    /** The stream "Info" panel is open: it has no buttons, so the D-pad scrolls or closes it. */
+    val streamInfoOpen: Boolean
+
+    /** Scrolls the "Info" panel one step; false when there is nothing more to scroll that way. */
+    fun scrollStreamInfo(down: Boolean): Boolean
+
+    fun closeStreamInfo()
+
     fun togglePlayback()
 
     /** Triggers the visible "skip intro/recap/outro" or "next episode" prompt; false if none is shown. */

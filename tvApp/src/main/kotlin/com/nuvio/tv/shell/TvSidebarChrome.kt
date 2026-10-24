@@ -41,6 +41,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -115,6 +116,15 @@ private const val PANEL_IN_MS = 345
 private const val PANEL_OUT_MS = 385
 private const val ITEM_ANIMATION_MS = 150
 
+/** Frames (one attempt each) to focus the selected tab when the panel opens. */
+private const val SELECTED_FOCUS_ATTEMPTS = 12
+
+/** Attempts (and interval) to move the focus into a page opened from the sidebar. */
+private const val CONTENT_FOCUS_ATTEMPTS = 10
+private const val CONTENT_FOCUS_RETRY_MS = 100L
+
+private val ConfirmKeys = setOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter)
+
 /**
  * Root tabs chrome for TV, ported from NuvioTV's modern sidebar: the page uses the whole screen,
  * a floating pill shows the open section at the top left, and a rounded panel with the profile
@@ -131,6 +141,8 @@ fun TvSidebarChrome(chrome: TvTabsChrome, content: @Composable () -> Unit) {
     var topBarFocused by remember { mutableStateOf(false) }
     var pillIconOnly by remember { mutableStateOf(false) }
     var pillExpandRequests by remember { mutableIntStateOf(0) }
+    var contentHasFocus by remember { mutableStateOf(false) }
+    var contentFocusRequests by remember { mutableIntStateOf(0) }
     val selectedRequester = remember { FocusRequester() }
     val topBarRequester = remember { FocusRequester() }
     val showPill = !topBar && chrome.selectedTab != AppScreenTab.Search
@@ -172,10 +184,33 @@ fun TvSidebarChrome(chrome: TvTabsChrome, content: @Composable () -> Unit) {
     // Back on a root page opens the sidebar; with the sidebar open it is the app's own Back.
     PlatformBackHandler(enabled = !expanded && !(topBar && topBarFocused), onBack = { openSidebar("back") })
 
-    LaunchedEffect(expanded) {
-        if (!expanded) return@LaunchedEffect
-        repeat(3) { withFrameNanos { } }
-        runCatching { selectedRequester.requestFocus() }
+    // The open panel always starts on the section on screen (it is also the highlighted one).
+    LaunchedEffect(expanded, chrome.selectedTab) {
+        if (!expanded || topBar) return@LaunchedEffect
+        repeat(SELECTED_FOCUS_ATTEMPTS) {
+            withFrameNanos { }
+            if (runCatching { selectedRequester.requestFocus() }.getOrDefault(false)) {
+                log.d { "Sidebar focus on the selected section ${chrome.selectedTab}" }
+                return@LaunchedEffect
+            }
+        }
+        log.w { "Could not focus the selected section ${chrome.selectedTab} in the sidebar" }
+    }
+    // A section chosen in the sidebar: the focus goes into the opened page, retried while the page
+    // is still composing (lazy lists attach their first item a few frames later).
+    LaunchedEffect(contentFocusRequests) {
+        if (contentFocusRequests == 0) return@LaunchedEffect
+        repeat(CONTENT_FOCUS_ATTEMPTS) { attempt ->
+            withFrameNanos { }
+            if (expanded) return@LaunchedEffect
+            if (contentHasFocus) {
+                log.d { "Focus moved into ${chrome.selectedTab} (attempt $attempt)" }
+                return@LaunchedEffect
+            }
+            TvFocusRegions.request(force = true)
+            delay(CONTENT_FOCUS_RETRY_MS)
+        }
+        if (!contentHasFocus) log.w { "Focus did not reach ${chrome.selectedTab} after a sidebar selection" }
     }
     // The pill shows the label after a section change, then shrinks to the icon.
     LaunchedEffect(chrome.selectedTab) {
@@ -209,6 +244,7 @@ fun TvSidebarChrome(chrome: TvTabsChrome, content: @Composable () -> Unit) {
                     top = if ((showPill || topBar) && chrome.selectedTab != AppScreenTab.Home) TvDimens.chromeTopInset else 0.dp,
                 )
                 .then(if (topBar) Modifier.tvGlassBackdropSource(glassBackdrop) else Modifier)
+                .onFocusChanged { contentHasFocus = it.hasFocus }
                 .onPreviewKeyEvent { event ->
                     if (event.type == KeyEventType.KeyDown && !expanded && !topBar) {
                         when (event.key) {
@@ -355,11 +391,12 @@ fun TvSidebarChrome(chrome: TvTabsChrome, content: @Composable () -> Unit) {
                     focusEnabled = expanded,
                     selectedRequester = selectedRequester,
                     onTabClick = { tab ->
-                        log.d { "Tab selected: $tab" }
-                        chrome.onTabSelected(tab)
+                        log.i { "Tab selected from sidebar: $tab (was ${chrome.selectedTab})" }
+                        // Collapse first: the panel gives up the focus, then the page takes it.
                         closeSidebar(focusContent = false)
+                        chrome.onTabSelected(tab)
                         // Land on the first element of the opened page (also when re-selecting it).
-                        TvFocusRegions.request(force = true)
+                        contentFocusRequests++
                     },
                     onProfileClick = {
                         closeSidebar(focusContent = false)
@@ -479,6 +516,7 @@ private fun SidebarNavigationItem(
                 scaleY = scale
             }
             .onFocusChanged { focused = it.hasFocus }
+            .sidebarConfirmKeys(focusEnabled, onClick)
             .focusProperties { canFocus = focusEnabled }
             .clip(shape)
             .background(background, shape)
@@ -523,6 +561,7 @@ private fun SidebarProfileItem(
     Row(
         modifier = modifier
             .onFocusChanged { focused = it.hasFocus }
+            .sidebarConfirmKeys(focusEnabled, onClick)
             .focusProperties { canFocus = focusEnabled }
             .clip(shape)
             .background(if (focused) Color.White.copy(alpha = 0.12f) else Color.Transparent, shape)
@@ -632,6 +671,35 @@ private fun ProfileAvatar(profile: NuvioProfile?, size: androidx.compose.ui.unit
             )
         }
     }
+}
+
+/**
+ * OK on a sidebar entry, handled here like the TV cards: the press must start on the entry
+ * (key down) and the action runs on release, so nothing else on the way can swallow it.
+ * The clickable stays for touch and mouse.
+ */
+@Composable
+private fun Modifier.sidebarConfirmKeys(enabled: Boolean, onClick: () -> Unit): Modifier {
+    val currentOnClick by rememberUpdatedState(onClick)
+    var pressed by remember { mutableStateOf(false) }
+    return this
+        .onFocusChanged { if (!it.hasFocus) pressed = false }
+        .onPreviewKeyEvent { event ->
+            if (event.key !in ConfirmKeys) return@onPreviewKeyEvent false
+            when (event.type) {
+                KeyEventType.KeyDown -> {
+                    if (enabled) pressed = true
+                    enabled
+                }
+                KeyEventType.KeyUp -> {
+                    val click = pressed && enabled
+                    pressed = false
+                    if (click) currentOnClick()
+                    click
+                }
+                else -> false
+            }
+        }
 }
 
 /** Paints the (white) icon with [brush], like NuvioTV's accent-gradient selected icon. */

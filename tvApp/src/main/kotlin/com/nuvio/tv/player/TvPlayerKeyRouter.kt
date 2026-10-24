@@ -12,6 +12,7 @@ import com.nuvio.app.tv.TvPlayerRemoteRegistry
  *   left/right = cumulative seek by the configured interval, up/down/menu = show controls.
  * - Controls visible: D-pad moves between the player buttons, Back hides the controls.
  * - A panel, modal or prompt is open: keys go untouched to it.
+ * - "Info" panel open: up/down scroll it, other navigation keys close it.
  * - Media keys work in every state.
  * - Dedicated buttons work in every state unless a blocking prompt is open: subtitles and audio
  *   open/close their menu, guide opens the episodes (series) or channels (Live TV) panel,
@@ -86,6 +87,8 @@ object TvPlayerKeyRouter {
 
         if (remote.overlayOpen) return false
 
+        if (remote.streamInfoOpen && handleStreamInfoKey(remote, event.keyCode, firstPress)) return true
+
         if (remote.controlsVisible) {
             remote.registerActivity()
             if ((event.keyCode == KeyEvent.KEYCODE_BACK || event.keyCode == KeyEvent.KEYCODE_INFO) && firstPress) {
@@ -126,6 +129,33 @@ object TvPlayerKeyRouter {
             }
             else -> false
         }
+    }
+
+    /**
+     * "Info" panel (no buttons): up/down scroll its details while there is more to read that way,
+     * any other navigation key (and up/down at the end of the details) closes it.
+     * Held keys only scroll, so holding down to read does not close the panel at the end.
+     */
+    private fun handleStreamInfoKey(remote: TvPlayerRemote, keyCode: Int, firstPress: Boolean): Boolean {
+        when (keyCode) {
+            KeyEvent.KEYCODE_DPAD_UP,
+            KeyEvent.KEYCODE_DPAD_DOWN,
+            -> {
+                if (!remote.scrollStreamInfo(down = keyCode == KeyEvent.KEYCODE_DPAD_DOWN) && firstPress) {
+                    remote.closeStreamInfo()
+                }
+            }
+            KeyEvent.KEYCODE_DPAD_LEFT,
+            KeyEvent.KEYCODE_DPAD_RIGHT,
+            KeyEvent.KEYCODE_DPAD_CENTER,
+            KeyEvent.KEYCODE_ENTER,
+            KeyEvent.KEYCODE_NUMPAD_ENTER,
+            KeyEvent.KEYCODE_BACK,
+            -> if (firstPress) remote.closeStreamInfo()
+            else -> return false
+        }
+        if (remote.controlsVisible) remote.registerActivity()
+        return true
     }
 
     /** Dedicated remote buttons; null for keys handled by the state-dependent mapping. */
