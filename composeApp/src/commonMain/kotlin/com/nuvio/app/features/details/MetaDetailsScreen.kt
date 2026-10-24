@@ -741,7 +741,7 @@ fun MetaDetailsScreen(
                     meta.moreLikeThis.isNotEmpty()
                 }
                 val hasTrailersSection = remember(meta) {
-                    meta.trailers.isNotEmpty()
+                    meta.trailers.isNotEmpty() || meta.backdropImages.isNotEmpty() || meta.posterImages.isNotEmpty()
                 }
                 val uriHandler = LocalUriHandler.current
                 val inAppTrailerPlaybackEnabled = AppFeaturePolicy.trailerPlaybackMode == TrailerPlaybackMode.IN_APP
@@ -2475,6 +2475,8 @@ private fun ConfiguredMetaSections(
                     DetailTrailersSection(
                         trailers = meta.trailers,
                         onTrailerClick = onTrailerClick,
+                        backdropImages = meta.backdropImages,
+                        posterImages = meta.posterImages,
                         showHeader = showHeader,
                         horizontalScrollPadding = horizontalScrollPadding,
                     )

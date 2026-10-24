@@ -4,6 +4,7 @@ import co.touchlab.kermit.Logger
 import com.nuvio.app.features.addons.httpGetText
 import com.nuvio.app.features.details.MetaCompany
 import com.nuvio.app.features.details.MetaDetails
+import com.nuvio.app.features.details.MetaGalleryImage
 import com.nuvio.app.features.details.MetaPerson
 import com.nuvio.app.features.details.MetaTrailer
 import com.nuvio.app.features.details.MetaVideo
@@ -747,7 +748,11 @@ object TmdbMetadataService {
             type = type,
             id = id,
             tmdbId = tmdbId,
-            enrichment = enrichment,
+            enrichment = if (settings.useExtraImages) {
+                enrichment
+            } else {
+                enrichment.copy(backdropImages = emptyList(), posterImages = emptyList())
+            },
         )
     }
 
@@ -784,6 +789,8 @@ object TmdbMetadataService {
             collectionName = enrichment.collectionName,
             collectionItems = enrichment.collectionItems,
             trailers = enrichment.trailers,
+            backdropImages = enrichment.backdropImages,
+            posterImages = enrichment.posterImages,
         )
 
     internal fun applyEnrichment(
@@ -906,6 +913,13 @@ object TmdbMetadataService {
 
         if (enrichment != null && settings.useTrailers && enrichment.trailers.isNotEmpty()) {
             updated = updated.copy(trailers = enrichment.trailers)
+        }
+
+        if (enrichment != null && settings.useExtraImages) {
+            updated = updated.copy(
+                backdropImages = enrichment.backdropImages.ifEmpty { updated.backdropImages },
+                posterImages = enrichment.posterImages.ifEmpty { updated.posterImages },
+            )
         }
 
         return updated
@@ -1065,7 +1079,12 @@ object TmdbMetadataService {
             },
             moreLikeThis = response.fourth.moreLikeThis,
             trailers = response.fourth.trailers,
+            backdropImages = images?.backdrops.orEmpty().toGalleryImages(normalizedLanguage, thumbnailSize = "w780"),
+            posterImages = images?.posters.orEmpty().toGalleryImages(normalizedLanguage, thumbnailSize = "w342"),
         )
+        log.d {
+            "Extra images for $mediaType/$tmdbId: backdrops=${enrichment.backdropImages.size} posters=${enrichment.posterImages.size}"
+        }
 
         if (!enrichment.hasContent()) return@withContext null
         enrichmentCache[cacheKey] = enrichment
@@ -1422,6 +1441,8 @@ internal data class TmdbEnrichment(
     val collectionItems: List<MetaPreview> = emptyList(),
     val moreLikeThis: List<MetaPreview> = emptyList(),
     val trailers: List<MetaTrailer> = emptyList(),
+    val backdropImages: List<MetaGalleryImage> = emptyList(),
+    val posterImages: List<MetaGalleryImage> = emptyList(),
 ) {
     fun hasContent(): Boolean =
         localizedTitle != null ||
@@ -1445,7 +1466,9 @@ internal data class TmdbEnrichment(
             networks.isNotEmpty() ||
             collectionItems.isNotEmpty() ||
             moreLikeThis.isNotEmpty() ||
-            trailers.isNotEmpty()
+            trailers.isNotEmpty() ||
+            backdropImages.isNotEmpty() ||
+            posterImages.isNotEmpty()
 }
 
 private data class EnrichmentPayload(
@@ -1761,6 +1784,12 @@ private fun List<MetaPerson>.dedupePeople(): List<MetaPerson> {
     }
     return merged.values.toList()
 }
+
+private fun List<TmdbImage>.toGalleryImages(normalizedLanguage: String, thumbnailSize: String): List<MetaGalleryImage> =
+    toGalleryImagePaths(normalizedLanguage).mapNotNull { path ->
+        val thumbnail = buildImageUrl(path, thumbnailSize) ?: return@mapNotNull null
+        MetaGalleryImage(thumbnailUrl = thumbnail, fullUrl = buildImageUrl(path, "original") ?: thumbnail)
+    }
 
 private fun buildImageUrl(path: String?, size: String): String? {
     val clean = path?.trim()?.takeIf(String::isNotBlank) ?: return null

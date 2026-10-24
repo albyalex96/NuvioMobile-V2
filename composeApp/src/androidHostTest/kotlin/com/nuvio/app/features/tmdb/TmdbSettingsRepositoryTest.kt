@@ -125,4 +125,21 @@ class TmdbSettingsRepositoryTest {
 
         assertEquals("local-key", TmdbSettingsRepository.effectiveApiKey())
     }
+
+    @Test
+    fun extraImagesSurviveAPayloadFromAnOlderBuild() {
+        TmdbSettingsRepository.setUseExtraImages(false)
+
+        TmdbSettingsStorage.replaceFromSyncPayload(buildJsonObject {
+            put("tmdb_enabled", encodeSyncBoolean(true))
+        })
+        TmdbSettingsRepository.onProfileChanged()
+        assertFalse(TmdbSettingsRepository.snapshot().useExtraImages)
+
+        TmdbSettingsStorage.replaceFromSyncPayload(buildJsonObject {
+            put("tmdb_use_extra_images", encodeSyncBoolean(true))
+        })
+        TmdbSettingsRepository.onProfileChanged()
+        assertTrue(TmdbSettingsRepository.snapshot().useExtraImages)
+    }
 }

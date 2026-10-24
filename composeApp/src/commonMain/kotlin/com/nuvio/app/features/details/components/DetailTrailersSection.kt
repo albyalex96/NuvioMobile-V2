@@ -5,6 +5,12 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -17,69 +23,117 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
+import com.nuvio.app.core.media.GalleryImageSaveResult
+import com.nuvio.app.core.media.downloadAndSaveGalleryImage
+import com.nuvio.app.core.media.downloadAndShareGalleryImage
+import com.nuvio.app.core.media.rememberGalleryImageSaver
 import com.nuvio.app.core.ui.Menu
 import com.nuvio.app.core.ui.MenuItem
 import com.nuvio.app.core.ui.NuvioCardDepthSurface
 import com.nuvio.app.core.ui.nuvioCardDepth
 import com.nuvio.app.core.ui.nuvioHorizontalScrollBleed
 import com.nuvio.app.core.ui.rememberPosterCardStyleUiState
+import com.nuvio.app.features.details.MetaGalleryImage
 import com.nuvio.app.features.details.MetaTrailer
 import nuvio.composeapp.generated.resources.*
 import nuvio.composeapp.generated.resources.detail_tab_trailer
 import nuvio.composeapp.generated.resources.detail_trailer_category_count
 import nuvio.composeapp.generated.resources.detail_trailers_title
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
+
+private sealed interface TrailerSectionCategory {
+    val label: String
+    val count: Int
+
+    data class Videos(override val label: String, val trailers: List<MetaTrailer>) : TrailerSectionCategory {
+        override val count: Int get() = trailers.size
+    }
+
+    data class Images(
+        override val label: String,
+        val images: List<MetaGalleryImage>,
+        val isPoster: Boolean,
+    ) : TrailerSectionCategory {
+        override val count: Int get() = images.size
+    }
+}
 
 @Composable
 fun DetailTrailersSection(
     trailers: List<MetaTrailer>,
     onTrailerClick: (MetaTrailer) -> Unit,
     modifier: Modifier = Modifier,
+    backdropImages: List<MetaGalleryImage> = emptyList(),
+    posterImages: List<MetaGalleryImage> = emptyList(),
     showHeader: Boolean = true,
     horizontalScrollPadding: Dp = 0.dp,
 ) {
-    if (trailers.isEmpty()) return
+    if (trailers.isEmpty() && backdropImages.isEmpty() && posterImages.isEmpty()) return
 
     val trailerLabel = stringResource(Res.string.detail_tab_trailer)
-    val grouped = remember(trailers) {
-        linkedMapOf<String, MutableList<MetaTrailer>>().apply {
-            trailers.forEach { trailer ->
-                val category = trailer.type.ifBlank { trailerLabel }
-                getOrPut(category) { mutableListOf() }.add(trailer)
+    val backdropsLabel = stringResource(Res.string.detail_gallery_backdrops)
+    val postersLabel = stringResource(Res.string.detail_gallery_posters)
+    val categories = remember(trailers, backdropImages, posterImages, trailerLabel, backdropsLabel, postersLabel) {
+        buildList<TrailerSectionCategory> {
+            linkedMapOf<String, MutableList<MetaTrailer>>().apply {
+                trailers.forEach { trailer ->
+                    val category = trailer.type.ifBlank { trailerLabel }
+                    getOrPut(category) { mutableListOf() }.add(trailer)
+                }
+            }.forEach { (label, items) -> add(TrailerSectionCategory.Videos(label, items)) }
+            if (backdropImages.isNotEmpty()) {
+                add(TrailerSectionCategory.Images(backdropsLabel, backdropImages, isPoster = false))
+            }
+            if (posterImages.isNotEmpty()) {
+                add(TrailerSectionCategory.Images(postersLabel, posterImages, isPoster = true))
             }
         }
     }
 
-    if (grouped.isEmpty()) return
+    if (categories.isEmpty()) return
 
-    val initialCategory = remember(grouped) {
-        grouped.keys.firstOrNull { it.equals(trailerLabel, ignoreCase = true) }
-            ?: grouped.keys.first()
+    val initialCategoryIndex = remember(categories) {
+        categories.indexOfFirst { it is TrailerSectionCategory.Videos && it.label.equals(trailerLabel, ignoreCase = true) }
+            .takeIf { it >= 0 } ?: 0
     }
-    var selectedCategory by remember(grouped) { mutableStateOf(initialCategory) }
+    var selectedCategoryIndex by remember(categories) { mutableStateOf(initialCategoryIndex) }
     var menuExpanded by remember { mutableStateOf(false) }
+    var viewerState by remember(categories) { mutableStateOf<Pair<List<MetaGalleryImage>, Int>?>(null) }
 
-    val selectedTrailers = grouped[selectedCategory].orEmpty()
+    val selectedCategory = categories[selectedCategoryIndex.coerceIn(0, categories.lastIndex)]
     val posterCardStyle = rememberPosterCardStyleUiState()
     val userCornerRadius = posterCardStyle.cornerRadiusDp.dp
 
@@ -120,7 +174,7 @@ fun DetailTrailersSection(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
                             Text(
-                                text = selectedCategory,
+                                text = selectedCategory.label,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 style = MaterialTheme.typography.labelLarge.copy(
@@ -141,13 +195,12 @@ fun DetailTrailersSection(
                         expanded = menuExpanded,
                         onDismissRequest = { menuExpanded = false },
                     ) {
-                        grouped.keys.forEach { category ->
-                            val count = grouped[category]?.size ?: 0
+                        categories.forEachIndexed { index, category ->
                             MenuItem(
-                                text = stringResource(Res.string.detail_trailer_category_count, category, count),
-                                selected = category == selectedCategory,
+                                text = stringResource(Res.string.detail_trailer_category_count, category.label, category.count),
+                                selected = index == selectedCategoryIndex,
                                 onClick = {
-                                    selectedCategory = category
+                                    selectedCategoryIndex = index
                                     menuExpanded = false
                                 },
                             )
@@ -166,17 +219,212 @@ fun DetailTrailersSection(
                 contentPadding = PaddingValues(horizontal = horizontalScrollPadding),
                 horizontalArrangement = Arrangement.spacedBy(sizing.cardSpacing),
             ) {
-                itemsIndexed(
-                    items = selectedTrailers,
-                    key = { index, trailer -> "${trailer.type}-${trailer.id}-${trailer.seasonNumber ?: 0}#$index" },
-                ) { _, trailer ->
-                    TrailerCard(
-                        trailer = trailer,
-                        cardWidth = sizing.cardWidth,
-                        cornerRadius = sizing.cardRadius,
-                        titleFontSize = sizing.titleFontSize,
-                        metaFontSize = sizing.metaFontSize,
-                        onClick = { onTrailerClick(trailer) },
+                when (selectedCategory) {
+                    is TrailerSectionCategory.Videos -> itemsIndexed(
+                        items = selectedCategory.trailers,
+                        key = { index, trailer -> "${trailer.type}-${trailer.id}-${trailer.seasonNumber ?: 0}#$index" },
+                    ) { _, trailer ->
+                        TrailerCard(
+                            trailer = trailer,
+                            cardWidth = sizing.cardWidth,
+                            cornerRadius = sizing.cardRadius,
+                            titleFontSize = sizing.titleFontSize,
+                            metaFontSize = sizing.metaFontSize,
+                            onClick = { onTrailerClick(trailer) },
+                        )
+                    }
+
+                    is TrailerSectionCategory.Images -> itemsIndexed(
+                        items = selectedCategory.images,
+                        key = { index, image -> "${selectedCategory.isPoster}-${image.fullUrl}#$index" },
+                    ) { index, image ->
+                        GalleryImageCard(
+                            image = image,
+                            cardWidth = if (selectedCategory.isPoster) sizing.cardWidth * 0.6f else sizing.cardWidth,
+                            aspectRatio = if (selectedCategory.isPoster) 2f / 3f else 16f / 9f,
+                            cornerRadius = sizing.cardRadius,
+                            onClick = { viewerState = selectedCategory.images to index },
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    viewerState?.let { (images, index) ->
+        GalleryImageViewer(
+            images = images,
+            initialIndex = index,
+            onDismiss = { viewerState = null },
+        )
+    }
+}
+
+@Composable
+private fun GalleryImageCard(
+    image: MetaGalleryImage,
+    cardWidth: Dp,
+    aspectRatio: Float,
+    cornerRadius: Dp,
+    onClick: () -> Unit,
+) {
+    AsyncImage(
+        model = image.thumbnailUrl,
+        contentDescription = null,
+        modifier = Modifier
+            .width(cardWidth)
+            .aspectRatio(aspectRatio)
+            .clip(RoundedCornerShape(cornerRadius))
+            .nuvioCardDepth(
+                shape = RoundedCornerShape(cornerRadius),
+                surface = NuvioCardDepthSurface.Trailers,
+            )
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(onClick = onClick),
+        contentScale = ContentScale.Crop,
+    )
+}
+
+@Composable
+private fun GalleryImageViewer(
+    images: List<MetaGalleryImage>,
+    initialIndex: Int,
+    onDismiss: () -> Unit,
+) {
+    val pagerState = rememberPagerState(initialPage = initialIndex.coerceIn(0, images.lastIndex)) { images.size }
+    val imageSaver = rememberGalleryImageSaver()
+    val saveScope = rememberCoroutineScope()
+    var isSaving by remember { mutableStateOf(false) }
+    var saveMessage by remember { mutableStateOf<StringResource?>(null) }
+    LaunchedEffect(saveMessage) {
+        if (saveMessage != null) {
+            delay(2_500)
+            saveMessage = null
+        }
+    }
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black),
+        ) {
+            HorizontalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize(),
+                key = { page -> images[page].fullUrl },
+            ) { page ->
+                val image = images[page]
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    // The rail thumbnail is usually cached already: it stays visible while the full image loads.
+                    AsyncImage(
+                        model = image.thumbnailUrl,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit,
+                    )
+                    AsyncImage(
+                        model = image.fullUrl,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit,
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .windowInsetsPadding(WindowInsets.safeDrawing)
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(
+                    text = "${pagerState.currentPage + 1} / ${images.size}",
+                    style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold),
+                    color = Color.White,
+                    modifier = Modifier.padding(horizontal = 8.dp),
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        enabled = !isSaving,
+                        onClick = {
+                            val image = images.getOrNull(pagerState.currentPage) ?: return@IconButton
+                            isSaving = true
+                            saveScope.launch {
+                                val result = downloadAndShareGalleryImage(imageSaver, image.fullUrl)
+                                isSaving = false
+                                if (result == GalleryImageSaveResult.FAILED) {
+                                    saveMessage = Res.string.detail_gallery_share_failed
+                                }
+                            }
+                        },
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Share,
+                            contentDescription = stringResource(Res.string.detail_gallery_share),
+                            tint = Color.White,
+                        )
+                    }
+                    IconButton(
+                        enabled = !isSaving,
+                        onClick = {
+                            val image = images.getOrNull(pagerState.currentPage) ?: return@IconButton
+                            isSaving = true
+                            saveScope.launch {
+                                val result = downloadAndSaveGalleryImage(imageSaver, image.fullUrl)
+                                isSaving = false
+                                saveMessage = when (result) {
+                                    GalleryImageSaveResult.SAVED -> Res.string.detail_gallery_saved
+                                    GalleryImageSaveResult.SHARED -> null
+                                    GalleryImageSaveResult.FAILED -> Res.string.detail_gallery_save_failed
+                                }
+                            }
+                        },
+                    ) {
+                        if (isSaving) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp,
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Rounded.Download,
+                                contentDescription = stringResource(Res.string.detail_gallery_download),
+                                tint = Color.White,
+                            )
+                        }
+                    }
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            imageVector = Icons.Filled.Close,
+                            contentDescription = stringResource(Res.string.detail_gallery_close),
+                            tint = Color.White,
+                        )
+                    }
+                }
+            }
+
+            // The app toast is drawn under this dialog, so the save result is shown here.
+            saveMessage?.let { message ->
+                Surface(
+                    shape = RoundedCornerShape(20.dp),
+                    color = Color.Black.copy(alpha = 0.75f),
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .windowInsetsPadding(WindowInsets.safeDrawing)
+                        .padding(bottom = 24.dp),
+                ) {
+                    Text(
+                        text = stringResource(message),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
                     )
                 }
             }

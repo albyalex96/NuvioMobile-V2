@@ -23,6 +23,28 @@ internal fun List<TmdbImage>.selectBestLocalizedImagePath(normalizedLanguage: St
     ).firstOrNull()?.filePath?.trim()
 }
 
+/**
+ * Gallery images for the detail "extra images" tab: images in the TMDB language first, then English,
+ * then textless ones, keeping the TMDB order (by vote) inside each group.
+ */
+internal fun List<TmdbImage>.toGalleryImagePaths(normalizedLanguage: String, limit: Int = GALLERY_IMAGE_LIMIT): List<String> {
+    val languageCode = normalizedLanguage.substringBefore("-")
+    return mapNotNull { image -> image.filePath?.trim()?.takeIf(String::isNotBlank)?.let { image to it } }
+        .distinctBy { it.second }
+        .sortedBy { (image, _) ->
+            when (image.iso6391) {
+                languageCode -> 0
+                "en" -> 1
+                null -> 2
+                else -> 3
+            }
+        }
+        .take(limit)
+        .map { it.second }
+}
+
+private const val GALLERY_IMAGE_LIMIT = 40
+
 private val defaultLanguageRegions = mapOf(
     "pt" to "PT",
     "es" to "ES",
@@ -32,6 +54,7 @@ private val defaultLanguageRegions = mapOf(
 internal data class TmdbImagesResponse(
     val logos: List<TmdbImage> = emptyList(),
     val backdrops: List<TmdbImage> = emptyList(),
+    val posters: List<TmdbImage> = emptyList(),
 )
 
 @Serializable

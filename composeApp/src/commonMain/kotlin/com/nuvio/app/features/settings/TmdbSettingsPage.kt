@@ -49,6 +49,8 @@ import nuvio.composeapp.generated.resources.settings_tmdb_module_production_comp
 import nuvio.composeapp.generated.resources.settings_tmdb_module_production_companies_description
 import nuvio.composeapp.generated.resources.settings_tmdb_module_season_posters
 import nuvio.composeapp.generated.resources.settings_tmdb_module_season_posters_description
+import nuvio.composeapp.generated.resources.settings_tmdb_module_extra_images
+import nuvio.composeapp.generated.resources.settings_tmdb_module_extra_images_description
 import nuvio.composeapp.generated.resources.settings_tmdb_module_trailers
 import nuvio.composeapp.generated.resources.settings_tmdb_module_trailers_description
 import nuvio.composeapp.generated.resources.settings_tmdb_personal_api_key
@@ -117,6 +119,15 @@ internal fun LazyListScope.tmdbSettingsContent(
                     checked = settings.useTrailers,
                     enabled = enrichmentControlsEnabled,
                     onCheckedChange = TmdbSettingsRepository::setUseTrailers,
+                )
+                SettingsGroupDivider(isTablet = isTablet)
+                TmdbToggleRow(
+                    isTablet = isTablet,
+                    title = stringResource(Res.string.settings_tmdb_module_extra_images),
+                    description = stringResource(Res.string.settings_tmdb_module_extra_images_description),
+                    checked = settings.useExtraImages,
+                    enabled = enrichmentControlsEnabled,
+                    onCheckedChange = TmdbSettingsRepository::setUseExtraImages,
                 )
                 SettingsGroupDivider(isTablet = isTablet)
                 TmdbToggleRow(

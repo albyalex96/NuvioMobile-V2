@@ -12,6 +12,9 @@
     <cache-path
         name="nuvio_app_logs"
         path="app_logs/" />
+    <cache-path
+        name="nuvio_gallery_images"
+        path="gallery_images/" />
     <files-path
         name="nuvio_downloads"
         path="downloads/" />

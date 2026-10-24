@@ -283,7 +283,15 @@
   <string name="detail_comments_title">Commenti</string>
   <string name="detail_tab_trailer">Trailer</string>
   <string name="detail_trailer_category_count">%1$s (%2$d)</string>
-  <string name="detail_trailers_title">Trailer</string>
+  <string name="detail_trailers_title">Trailer e Immagini</string>
+  <string name="detail_gallery_backdrops">Sfondi</string>
+  <string name="detail_gallery_posters">Poster</string>
+  <string name="detail_gallery_close">Chiudi</string>
+  <string name="detail_gallery_download">Scarica immagine</string>
+  <string name="detail_gallery_saved">Immagine salvata in Immagini/Nuvio</string>
+  <string name="detail_gallery_save_failed">Impossibile salvare l'immagine</string>
+  <string name="detail_gallery_share">Condividi immagine</string>
+  <string name="detail_gallery_share_failed">Impossibile condividere l'immagine</string>
   <string name="downloads_empty_episodes">Nessun episodio completato</string>
   <string name="downloads_empty_title">Ancora nessun download</string>
   <string name="downloads_episode_count">%1$d episodi scaricati</string>
@@ -452,8 +460,8 @@
   <string name="settings_meta_tab_group_format">Gruppo schede %1$d</string>
   <string name="settings_meta_tab_layout">Layout a schede</string>
   <string name="settings_meta_tab_layout_description">Raggruppa le sezioni in schede (tab) come nell'app TV. Assegna fino a 3 sezioni per ogni gruppo.</string>
-  <string name="settings_meta_trailers">Trailer</string>
-  <string name="settings_meta_trailers_description">Riga dei trailer e scorciatoie di riproduzione.</string>
+  <string name="settings_meta_trailers">Trailer e Immagini</string>
+  <string name="settings_meta_trailers_description">Riga dei trailer, scorciatoie di riproduzione, sfondi e poster.</string>
   <string name="settings_notifications_disabled_in_app">Le notifiche sono attualmente disabilitate in Nuvio.</string>
   <string name="settings_notifications_episode_release_alerts">Avvisi uscita episodi</string>
   <string name="settings_notifications_episode_release_alerts_description">Programma notifiche locali quando è disponibile un nuovo episodio di una serie salvata.</string>
@@ -687,6 +695,8 @@
   <string name="settings_tmdb_module_season_posters_description">Usa le locandine delle stagioni di TMDB nel selettore delle stagioni per le serie.</string>
   <string name="settings_tmdb_module_trailers">Trailer</string>
   <string name="settings_tmdb_module_trailers_description">Recupera e mostra la sezione dei trailer di TMDB nelle pagine dei dettagli.</string>
+  <string name="settings_tmdb_module_extra_images">Immagini e contenuti extra</string>
+  <string name="settings_tmdb_module_extra_images_description">Aggiunge gli sfondi e i poster di TMDB al menu della sezione trailer nelle pagine dei dettagli.</string>
   <string name="settings_tmdb_preferred_language">Lingua preferita</string>
   <string name="settings_tmdb_preferred_language_description">Imposta il codice lingua TMDB usato per i metadati localizzati, ad esempio `it`, `it-IT` o `en-US`.</string>
   <string name="settings_tmdb_section_localization">LOCALIZZAZIONE</string>
@@ -891,7 +901,7 @@
   <string name="meta_section_overview_title">Panoramica</string>
   <string name="meta_section_production_description">Studi e network.</string>
   <string name="meta_section_production_title">Produzione</string>
-  <string name="meta_section_trailers_description">Riga dei trailer e scorciatoie di riproduzione.</string>
+  <string name="meta_section_trailers_description">Riga dei trailer, scorciatoie di riproduzione, sfondi e poster.</string>
   <string name="network_back_online">Di nuovo online</string>
   <string name="network_cannot_reach_servers">Impossibile raggiungere i server</string>
   <string name="network_no_internet_connection">Nessuna connessione internet</string>

@@ -25,6 +25,9 @@ actual object TmdbSettingsStorage {
     private const val useSeasonPostersKey = "tmdb_use_season_posters"
     private const val useMoreLikeThisKey = "tmdb_use_more_like_this"
     private const val useCollectionsKey = "tmdb_use_collections"
+
+    // Not in [syncKeys]: a payload from an older build that does not know this key keeps the local value.
+    private const val useExtraImagesKey = "tmdb_use_extra_images"
     private val syncKeys = listOf(
         enabledKey,
         languageKey,
@@ -127,6 +130,12 @@ actual object TmdbSettingsStorage {
         saveBoolean(useCollectionsKey, enabled)
     }
 
+    actual fun loadUseExtraImages(): Boolean? = loadBoolean(useExtraImagesKey)
+
+    actual fun saveUseExtraImages(enabled: Boolean) {
+        saveBoolean(useExtraImagesKey, enabled)
+    }
+
     private fun loadBoolean(key: String): Boolean? {
         val defaults = NSUserDefaults.standardUserDefaults
         val scopedKey = ProfileScopedKey.of(key)
@@ -155,6 +164,7 @@ actual object TmdbSettingsStorage {
         loadUseSeasonPosters()?.let { put(useSeasonPostersKey, encodeSyncBoolean(it)) }
         loadUseMoreLikeThis()?.let { put(useMoreLikeThisKey, encodeSyncBoolean(it)) }
         loadUseCollections()?.let { put(useCollectionsKey, encodeSyncBoolean(it)) }
+        loadUseExtraImages()?.let { put(useExtraImagesKey, encodeSyncBoolean(it)) }
     }
 
     actual fun replaceFromSyncPayload(payload: JsonObject) {
@@ -175,5 +185,6 @@ actual object TmdbSettingsStorage {
         payload.decodeSyncBoolean(useSeasonPostersKey)?.let(::saveUseSeasonPosters)
         payload.decodeSyncBoolean(useMoreLikeThisKey)?.let(::saveUseMoreLikeThis)
         payload.decodeSyncBoolean(useCollectionsKey)?.let(::saveUseCollections)
+        payload.decodeSyncBoolean(useExtraImagesKey)?.let(::saveUseExtraImages)
     }
 }

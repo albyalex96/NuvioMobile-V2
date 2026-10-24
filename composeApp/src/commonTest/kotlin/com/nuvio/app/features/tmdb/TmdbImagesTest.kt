@@ -63,4 +63,22 @@ class TmdbImagesTest {
         assertEquals("es,es-MX,en,null", tmdbImageLanguages("es-419"))
         assertEquals("en,null", tmdbImageLanguages("en"))
     }
+
+    @Test
+    fun galleryImagesFollowLanguageThenEnglishThenTextless() {
+        val images = listOf(
+            TmdbImage("/textless.jpg", null),
+            TmdbImage("/french.jpg", "fr"),
+            TmdbImage("/english.jpg", "en"),
+            TmdbImage("/italian.jpg", "it"),
+            TmdbImage("/italian.jpg", "it"),
+            TmdbImage(null, "it"),
+        )
+
+        assertEquals(
+            listOf("/italian.jpg", "/english.jpg", "/textless.jpg", "/french.jpg"),
+            images.toGalleryImagePaths("it-IT"),
+        )
+        assertEquals(listOf("/italian.jpg"), images.toGalleryImagePaths("it-IT", limit = 1))
+    }
 }
