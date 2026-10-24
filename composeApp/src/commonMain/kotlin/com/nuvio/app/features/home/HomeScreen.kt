@@ -1,5 +1,6 @@
 package com.nuvio.app.features.home
 
+import co.touchlab.kermit.Logger
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.MutatePriority
@@ -656,7 +657,22 @@ fun HomeScreen(
                 hasLoadedRemoteWatchedItems = watchedUiState.hasLoadedRemoteItems,
             )
         ) {
+            nextUpLog.d {
+                "Waiting for seed sources: remoteProgress=${watchProgressUiState.hasLoadedRemoteProgress}, " +
+                    "watched=${watchedUiState.isLoaded}, remoteWatched=${watchedUiState.hasLoadedRemoteItems}"
+            }
             return@ScreenActivityEffect
+        }
+        nextUpLog.d {
+            val seriesEntries = watchProgressUiState.entries.filter { entry ->
+                entry.parentMetaType.isSeriesTypeForContinueWatching()
+            }
+            "Next up pass: ${seriesEntries.size} series progress entries " +
+                "(${seriesEntries.count { it.isEffectivelyCompleted }} completed, " +
+                "${seriesEntries.count { it.seasonNumber == null || it.episodeNumber == null }} without episode numbers), " +
+                "${nextUpWatchedItems.size} watched items, seeds=${allNextUpSeedCandidates.map { it.logLabel() }}, " +
+                "inWindow=${recentNextUpSeedCandidates.size}, suppressedByInProgress=$nextUpSuppressedSeriesIds, " +
+                "toResolve=${completedSeriesCandidates.map { it.logLabel() }}, visibleInProgress=${visibleContinueWatchingEntries.size}"
         }
 
         if (completedSeriesCandidates.isEmpty()) {
@@ -747,6 +763,7 @@ fun HomeScreen(
                             }
                         } catch (error: Throwable) {
                             if (error is CancellationException) throw error
+                            nextUpLog.e(error) { "${completedEntry.logLabel()}: next up resolution failed" }
                             HomeNextUpResolutionAttempt.transientFailure()
                         }
                         results.send(
@@ -1324,6 +1341,7 @@ internal const val HomeNextUpInitialResolutionLimit = 32
 private const val NEXT_UP_RESOLUTION_CONCURRENCY = 4
 private const val MAX_NEXT_UP_RESOLUTION_RETRIES = 3
 private const val NEXT_UP_RESOLUTION_RETRY_BASE_DELAY_MS = 1_500L
+private val nextUpLog = Logger.withTag("ContinueWatchingNextUp")
 
 private fun String.isHomeSeriesLikeType(): Boolean =
     trim().lowercase() in setOf("series", "show", "tv", "tvshow")
@@ -1532,6 +1550,7 @@ private suspend fun resolveHomeNextUpCandidate(
         null
     }
     if (meta == null) {
+        nextUpLog.w { "${completedEntry.logLabel()}: metadata not available, will retry" }
         return HomeNextUpResolutionAttempt.transientFailure()
     }
 
@@ -1575,14 +1594,20 @@ private suspend fun resolveHomeNextUpCandidate(
         )
     }
     if (action == null) {
+        nextUpLog.d { "${completedEntry.logLabel()}: no next episode (series finished or not aired)" }
         return HomeNextUpResolutionAttempt.conclusiveNone()
     }
     if (action.resumePositionMs != null) {
+        nextUpLog.d {
+            "${completedEntry.logLabel()}: dropped, S${action.seasonNumber}E${action.episodeNumber} " +
+                "has a resume position (${action.resumePositionMs} ms) and should show as in progress"
+        }
         return HomeNextUpResolutionAttempt.conclusiveNone()
     }
 
     val nextEpisode = meta.videoForSeriesAction(action)
     if (nextEpisode == null) {
+        nextUpLog.d { "${completedEntry.logLabel()}: next episode ${action.videoId} not found in the metadata" }
         return HomeNextUpResolutionAttempt.conclusiveNone()
     }
     val metadataDecision = classifyHomeNextUpCandidateMetadata(
@@ -1593,11 +1618,14 @@ private suspend fun resolveHomeNextUpCandidate(
     )
     val item = metadataDecision.item
     if (metadataDecision.outcome == HomeNextUpCandidateMetadataOutcome.Dismissed) {
+        nextUpLog.d { "${completedEntry.logLabel()}: next up was dismissed by the user" }
         return HomeNextUpResolutionAttempt.conclusiveNone()
     }
     if (metadataDecision.outcome == HomeNextUpCandidateMetadataOutcome.Transient) {
+        nextUpLog.w { "${completedEntry.logLabel()}: next up metadata incomplete (title/artwork), will retry" }
         return HomeNextUpResolutionAttempt.transientFailure()
     }
+    nextUpLog.d { "${completedEntry.logLabel()}: next up is S${nextEpisode.season}E${nextEpisode.episode}" }
 
     val sortTimestamp = if (item.isReleaseAlert) {
         com.nuvio.app.features.watchprogress.parseReleaseDateToEpochMs(item.released) ?: completedEntry.markedAtEpochMs
@@ -1608,6 +1636,9 @@ private suspend fun resolveHomeNextUpCandidate(
         contentId to (sortTimestamp to item),
     )
 }
+
+private fun CompletedSeriesCandidate.logLabel(): String =
+    "${content.id} S${seasonNumber}E$episodeNumber"
 
 private fun MetaDetails.videoForSeriesAction(action: SeriesPrimaryAction): MetaVideo? {
     if (action.seasonNumber != null && action.episodeNumber != null) {
