@@ -51,6 +51,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.features.addons.AddonRepository
+import com.nuvio.app.features.player.StillWatchingSettings
 import com.nuvio.app.features.addons.enabledAddons
 import com.nuvio.app.features.cloudstream.CloudStreamRepository
 import com.nuvio.app.features.player.AndroidLibmpvVideoOutput
@@ -1470,18 +1471,25 @@ private fun PlaybackSettingsSection(
                     onCheckedChange = PlayerSettingsRepository::setPreloadNextEpisodeSources,
                 )
                 SettingsGroupDivider(isTablet = isTablet)
+                // Phones, tablets and TVs keep separate still-watching options (all synced with the
+                // profile); each device shows and edits only its own class.
+                val stillWatchingFormFactor = autoPlayPlayerSettings.subtitleSizeFormFactor
+                val stillWatching = autoPlayPlayerSettings.stillWatchingSettings[stillWatchingFormFactor]
+                    ?: StillWatchingSettings()
                 SettingsSwitchRow(
                     title = stringResource(Res.string.settings_playback_still_watching),
                     description = stringResource(Res.string.settings_playback_still_watching_description),
-                    checked = autoPlayPlayerSettings.stillWatchingPromptEnabled,
+                    checked = stillWatching.promptEnabled,
                     enabled = autoPlayPlayerSettings.streamAutoPlayNextEpisodeEnabled,
                     isTablet = isTablet,
-                    onCheckedChange = PlayerSettingsRepository::setStillWatchingPromptEnabled,
+                    onCheckedChange = { enabled ->
+                        PlayerSettingsRepository.setStillWatchingPromptEnabled(enabled, stillWatchingFormFactor)
+                    },
                 )
                 if (autoPlayPlayerSettings.streamAutoPlayNextEpisodeEnabled &&
-                    autoPlayPlayerSettings.stillWatchingPromptEnabled) {
+                    stillWatching.promptEnabled) {
                     SettingsGroupDivider(isTablet = isTablet)
-                    val episodeCount = autoPlayPlayerSettings.stillWatchingEpisodeCount
+                    val episodeCount = stillWatching.episodeCount
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1521,7 +1529,7 @@ private fun PlaybackSettingsSection(
                                 }
                             },
                             onValueChangeFinished = {
-                                PlayerSettingsRepository.setStillWatchingEpisodeCount(sliderValue.toInt())
+                                PlayerSettingsRepository.setStillWatchingEpisodeCount(sliderValue.toInt(), stillWatchingFormFactor)
                             },
                             valueRange = minCount..maxCount,
                             steps = calculateSteps(minCount, maxCount, 1f),
@@ -1536,22 +1544,26 @@ private fun PlaybackSettingsSection(
                     SettingsSwitchRow(
                         title = stringResource(Res.string.settings_playback_still_watching_night_only),
                         description = stringResource(Res.string.settings_playback_still_watching_night_only_description),
-                        checked = autoPlayPlayerSettings.stillWatchingNightOnly,
+                        checked = stillWatching.nightOnly,
                         isTablet = isTablet,
-                        onCheckedChange = PlayerSettingsRepository::setStillWatchingNightOnly,
+                        onCheckedChange = { enabled ->
+                            PlayerSettingsRepository.setStillWatchingNightOnly(enabled, stillWatchingFormFactor)
+                        },
                     )
                 }
                 SettingsGroupDivider(isTablet = isTablet)
                 SettingsSwitchRow(
                     title = stringResource(Res.string.settings_playback_still_watching_live_tv),
                     description = stringResource(Res.string.settings_playback_still_watching_live_tv_description),
-                    checked = autoPlayPlayerSettings.stillWatchingLiveTvEnabled,
+                    checked = stillWatching.liveTvEnabled,
                     isTablet = isTablet,
-                    onCheckedChange = PlayerSettingsRepository::setStillWatchingLiveTvEnabled,
+                    onCheckedChange = { enabled ->
+                        PlayerSettingsRepository.setStillWatchingLiveTvEnabled(enabled, stillWatchingFormFactor)
+                    },
                 )
-                if (autoPlayPlayerSettings.stillWatchingLiveTvEnabled) {
+                if (stillWatching.liveTvEnabled) {
                     SettingsGroupDivider(isTablet = isTablet)
-                    val liveTvMinutes = autoPlayPlayerSettings.stillWatchingLiveTvMinutes
+                    val liveTvMinutes = stillWatching.liveTvMinutes
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1595,7 +1607,7 @@ private fun PlaybackSettingsSection(
                                 }
                             },
                             onValueChangeFinished = {
-                                PlayerSettingsRepository.setStillWatchingLiveTvMinutes(sliderValue.toInt())
+                                PlayerSettingsRepository.setStillWatchingLiveTvMinutes(sliderValue.toInt(), stillWatchingFormFactor)
                             },
                             valueRange = minMinutes..maxMinutes,
                             steps = calculateSteps(minMinutes, maxMinutes, stepMinutes),

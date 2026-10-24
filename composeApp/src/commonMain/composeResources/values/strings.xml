@@ -1526,10 +1526,13 @@
     <string name="player_next_episode_thumbnail">Next episode thumbnail</string>
     <string name="player_next_episode_unaired">Unaired</string>
     <string name="player_still_watching_title">Are you still watching?</string>
-    <string name="player_still_watching_message">You have watched %1$d episodes in a row. Do you want to keep watching?</string>
+    <plurals name="player_still_watching_message">
+        <item quantity="one">You have watched %1$d episode without a break. Do you want to keep watching?</item>
+        <item quantity="other">You have watched %1$d episodes in a row. Do you want to keep watching?</item>
+    </plurals>
     <string name="player_still_watching_continue">Keep watching</string>
     <string name="player_still_watching_stop">Exit Player</string>
-    <string name="player_still_watching_auto_exit">The player will close in %1$d s</string>
+    <string name="player_still_watching_next_label">Up next</string>
     <string name="player_skip">Skip</string>
     <string name="player_skip_intro">Skip Intro</string>
     <string name="player_skip_outro">Skip Outro</string>

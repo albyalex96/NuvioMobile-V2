@@ -14,6 +14,7 @@ import com.nuvio.app.features.player.PlayerLaunch
 import com.nuvio.app.features.player.PlayerLaunchStore
 import com.nuvio.app.features.player.PlayerScreen
 import com.nuvio.app.features.watchprogress.ResumePromptRepository
+import com.nuvio.app.navigation.DetailRoute
 import com.nuvio.app.navigation.NuvioNavigator
 import com.nuvio.app.navigation.PlayerRoute
 
@@ -40,6 +41,14 @@ internal fun PlayerDestination(
     }
     LaunchedEffect(launch.videoId) {
         launch.videoId?.let { ResumePromptRepository.markPlayerEntered(it) }
+    }
+    val onExitToDetails = remember(navController, route, launch, onBack) {
+        {
+            val details = DetailRoute(type = launch.parentMetaType, id = launch.parentMetaId, title = launch.title)
+            val handled = launch.parentMetaId.isNotBlank() &&
+                navController.popBackToOrReplace(route, details) { it is DetailRoute && it.id == details.id }
+            if (!handled) onBack()
+        }
     }
     PlayerScreen(
         profileId = launch.profileId,
@@ -78,6 +87,7 @@ internal fun PlayerDestination(
         sourceFilename = launch.sourceFilename,
         stream = launch.stream,
         onBack = onBack,
+        onExitToDetails = onExitToDetails,
         onOpenInExternalPlayer = { request ->
             val playerLaunch = PlayerLaunch(
                 profileId = launch.profileId,

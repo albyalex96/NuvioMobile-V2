@@ -52,11 +52,18 @@ internal fun PlayerScreenRuntime.shouldPromptStillWatching(): Boolean {
         stillWatchingLog.d { "Skipping the prompt during a watch party" }
         return false
     }
-    return shouldPromptStillWatching(
-        settings = playerSettingsUiState,
+    val settings = playerSettingsUiState
+    val prompt = shouldPromptStillWatching(
+        settings = settings,
         consecutiveEpisodesPlayed = consecutiveEpisodesPlayed,
         localHour = ::currentLocalHour,
     )
+    stillWatchingLog.d {
+        "Auto-advance check: prompt=$prompt (enabled=${settings.stillWatchingPromptEnabled}, " +
+            "episodes=$consecutiveEpisodesPlayed/${settings.stillWatchingEpisodeCount}, " +
+            "nightOnly=${settings.stillWatchingNightOnly}, device=${settings.subtitleSizeFormFactor.storageSuffix})"
+    }
+    return prompt
 }
 
 /** Automatic advances extend the streak; any manual choice starts a new one. */
@@ -113,8 +120,16 @@ internal fun PlayerScreenRuntime.BindLiveTvStillWatchingTimer() {
     }
 }
 
+/** Stop, dismiss and timeout all land on the title's details page; live TV has none, so it goes back. */
 internal fun PlayerScreenRuntime.exitAfterStillWatchingPrompt() {
     showStillWatchingPrompt = false
     flushWatchProgress()
-    args.onBack()
+    val exitToDetails = args.onExitToDetails
+    if (isLiveTvPlayback || exitToDetails == null) {
+        stillWatchingLog.i { "Closing the player after the prompt" }
+        args.onBack()
+        return
+    }
+    stillWatchingLog.i { "Closing the player after the prompt, back to details of ${args.parentMetaId}" }
+    exitToDetails()
 }

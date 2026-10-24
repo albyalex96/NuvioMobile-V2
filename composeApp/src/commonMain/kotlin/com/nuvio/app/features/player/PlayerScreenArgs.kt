@@ -17,6 +17,8 @@ internal data class PlayerScreenArgs(
     val initialBingeGroup: String?,
     val pauseDescription: String?,
     val onBack: () -> Unit,
+    // Closes the player onto the details page of the title; null when the host cannot do it.
+    val onExitToDetails: (() -> Unit)? = null,
     val onOpenInExternalPlayer: ((ExternalPlayerPlaybackRequest) -> Unit)?,
     val onOpenExternalUrl: ((String) -> Unit)?,
     val modifier: Modifier,

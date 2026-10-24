@@ -62,6 +62,27 @@ internal class NuvioNavigator(
         onExternalBack?.invoke()
         return onExternalBack != null
     }
+
+    /**
+     * Leaves [expectedRoute] for [target]: pops back to the closest entry matching [isTarget], or
+     * replaces [expectedRoute] with [target] when none is in the stack. Returns false (nothing done)
+     * with native navigation, whose stack is not visible here, or when [expectedRoute] is not on top.
+     */
+    fun popBackToOrReplace(
+        expectedRoute: AppRoute,
+        target: AppRoute,
+        isTarget: (AppRoute) -> Boolean,
+    ): Boolean {
+        if (onExternalNavigate != null || currentRoute != expectedRoute) return false
+        onLocalPop?.invoke()
+        val targetIndex = backStack.indexOfLast { it is AppRoute && isTarget(it) }
+        if (targetIndex >= 0) {
+            backStack.subList(targetIndex + 1, backStack.size).clear()
+        } else {
+            backStack[backStack.lastIndex] = target
+        }
+        return true
+    }
 }
 
 internal class NuvioNavigateOptions {

@@ -9,10 +9,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -36,7 +32,6 @@ import com.nuvio.app.features.p2p.formatP2pSpeed
 import com.nuvio.app.features.player.skip.internalSkipAction
 import com.nuvio.app.features.servers.ServerStreams
 import com.nuvio.app.features.streams.streamAddonInstanceId
-import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.isIos
 import kotlin.math.ceil
 import kotlinx.coroutines.launch
@@ -316,45 +311,17 @@ private fun PlayerScreenRuntime.RenderStillWatchingPrompt() {
     }
     val remainingSeconds = ceil(countdown.value * STILL_WATCHING_AUTO_EXIT_SECONDS).toInt()
 
-    com.nuvio.app.core.ui.DialogSurface(
-        onDismissRequest = { exitAfterStillWatchingPrompt() },
-        title = org.jetbrains.compose.resources.stringResource(Res.string.player_still_watching_title),
-        message = if (isLiveTvPlayback) {
-            org.jetbrains.compose.resources.stringResource(
-                Res.string.player_still_watching_live_tv_message,
-                playerSettingsUiState.stillWatchingLiveTvMinutes,
-            )
-        } else {
-            org.jetbrains.compose.resources.stringResource(
-                Res.string.player_still_watching_message,
-                consecutiveEpisodesPlayed,
-            )
-        },
-    ) {
-        Text(
-            text = org.jetbrains.compose.resources.stringResource(
-                Res.string.player_still_watching_auto_exit,
-                remainingSeconds,
-            ),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.nuvio.colors.textMuted,
-        )
-        LinearProgressIndicator(
-            progress = { countdown.value },
-            modifier = Modifier.fillMaxWidth(),
-        )
-        com.nuvio.app.core.ui.DialogButtons {
-            com.nuvio.app.core.ui.DialogButton(
-                text = org.jetbrains.compose.resources.stringResource(Res.string.player_still_watching_stop),
-                onClick = { exitAfterStillWatchingPrompt() },
-            )
-            com.nuvio.app.core.ui.DialogButton(
-                text = org.jetbrains.compose.resources.stringResource(Res.string.player_still_watching_continue),
-                onClick = { continueAfterStillWatchingPrompt() },
-                style = com.nuvio.app.core.ui.DialogButtonStyle.Primary,
-            )
-        }
-    }
+    StillWatchingDialog(
+        countdownProgress = countdown.value,
+        remainingSeconds = remainingSeconds,
+        isLiveTv = isLiveTvPlayback,
+        consecutiveEpisodes = consecutiveEpisodesPlayed,
+        liveTvMinutes = playerSettingsUiState.stillWatchingLiveTvMinutes,
+        nextEpisode = nextEpisodeInfo,
+        blurNextEpisodeThumbnail = metaScreenSettingsUiState.blurUnwatchedEpisodes && nextEpisodeInfo?.isWatched == false,
+        onContinue = { continueAfterStillWatchingPrompt() },
+        onExit = { exitAfterStillWatchingPrompt() },
+    )
 }
 
 @Composable

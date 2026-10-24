@@ -101,6 +101,10 @@ actual object PlayerSettingsStorage {
     private const val rememberAudioDelayPerDeviceKey = "remember_audio_delay_per_device"
     private const val stillWatchingLiveTvEnabledKey = "still_watching_live_tv_enabled"
     private const val stillWatchingLiveTvMinutesKey = "still_watching_live_tv_minutes"
+    // One JSON per device class (phone, tablet, TV); the flat keys above hold the pre-split values.
+    private const val stillWatchingSettingsKey = "still_watching_settings"
+    private fun stillWatchingSettingsKey(formFactor: SubtitleSizeFormFactor) =
+        "${stillWatchingSettingsKey}_${formFactor.storageSuffix}"
     private const val seekIntervalSecondsKey = "seek_interval_seconds"
     private const val useLibassKey = "use_libass"
     private const val libassRenderTypeKey = "libass_render_type"
@@ -185,6 +189,7 @@ actual object PlayerSettingsStorage {
         rememberAudioDelayPerDeviceKey,
         stillWatchingLiveTvEnabledKey,
         stillWatchingLiveTvMinutesKey,
+        *SubtitleSizeFormFactor.entries.map(::stillWatchingSettingsKey).toTypedArray(),
         seekIntervalSecondsKey,
         useLibassKey,
         libassRenderTypeKey,
@@ -1325,6 +1330,16 @@ actual object PlayerSettingsStorage {
             ?.apply()
     }
 
+    actual fun loadStillWatchingSettings(formFactor: SubtitleSizeFormFactor): String? =
+        preferences?.getString(ProfileScopedKey.of(stillWatchingSettingsKey(formFactor)), null)
+
+    actual fun saveStillWatchingSettings(formFactor: SubtitleSizeFormFactor, value: String) {
+        preferences
+            ?.edit()
+            ?.putString(ProfileScopedKey.of(stillWatchingSettingsKey(formFactor)), value)
+            ?.apply()
+    }
+
     actual fun loadSeekIntervalSeconds(): Int? =
         preferences?.let { sharedPreferences ->
             val key = ProfileScopedKey.of(seekIntervalSecondsKey)
@@ -1558,6 +1573,9 @@ actual object PlayerSettingsStorage {
         loadRememberAudioDelayPerDevice()?.let { put(rememberAudioDelayPerDeviceKey, encodeSyncBoolean(it)) }
         loadStillWatchingLiveTvEnabled()?.let { put(stillWatchingLiveTvEnabledKey, encodeSyncBoolean(it)) }
         loadStillWatchingLiveTvMinutes()?.let { put(stillWatchingLiveTvMinutesKey, encodeSyncInt(it)) }
+        SubtitleSizeFormFactor.entries.forEach { formFactor ->
+            loadStillWatchingSettings(formFactor)?.let { put(stillWatchingSettingsKey(formFactor), encodeSyncString(it)) }
+        }
         loadSeekIntervalSeconds()?.let { put(seekIntervalSecondsKey, encodeSyncInt(it)) }
         loadUseLibass()?.let { put(useLibassKey, encodeSyncBoolean(it)) }
         loadLibassRenderType()?.let { put(libassRenderTypeKey, encodeSyncString(it)) }
@@ -1579,6 +1597,8 @@ actual object PlayerSettingsStorage {
     }
 
     actual fun replaceFromSyncPayload(payload: JsonObject) {
+        // Blobs pushed by older builds lack the per-device still-watching keys: keep the local ones then.
+        val localStillWatching = SubtitleSizeFormFactor.entries.associateWith(::loadStillWatchingSettings)
         preferences?.edit()?.apply {
             syncKeys.forEach { remove(ProfileScopedKey.of(it)) }
         }?.apply()
@@ -1653,6 +1673,10 @@ actual object PlayerSettingsStorage {
         payload.decodeSyncBoolean(rememberAudioDelayPerDeviceKey)?.let(::saveRememberAudioDelayPerDevice)
         payload.decodeSyncBoolean(stillWatchingLiveTvEnabledKey)?.let(::saveStillWatchingLiveTvEnabled)
         payload.decodeSyncInt(stillWatchingLiveTvMinutesKey)?.let(::saveStillWatchingLiveTvMinutes)
+        SubtitleSizeFormFactor.entries.forEach { formFactor ->
+            (payload.decodeSyncString(stillWatchingSettingsKey(formFactor)) ?: localStillWatching[formFactor])
+                ?.let { saveStillWatchingSettings(formFactor, it) }
+        }
         payload.decodeSyncInt(seekIntervalSecondsKey)?.let(::saveSeekIntervalSeconds)
         payload.decodeSyncBoolean(useLibassKey)?.let(::saveUseLibass)
         payload.decodeSyncString(libassRenderTypeKey)?.let(::saveLibassRenderType)

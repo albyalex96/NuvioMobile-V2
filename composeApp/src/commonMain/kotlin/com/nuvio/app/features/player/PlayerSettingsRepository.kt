@@ -114,6 +114,8 @@ data class PlayerSettingsUiState(
     val rememberAudioDelayPerDevice: Boolean = true,
     val stillWatchingLiveTvEnabled: Boolean = false,
     val stillWatchingLiveTvMinutes: Int = DEFAULT_STILL_WATCHING_LIVE_TV_MINUTES,
+    // Every device class; the flat still-watching fields above are this device's copy.
+    val stillWatchingSettings: Map<SubtitleSizeFormFactor, StillWatchingSettings> = defaultStillWatchingSettings(),
     val seekIntervalSeconds: Int = DEFAULT_SEEK_INTERVAL_SECONDS,
     val useLibass: Boolean = false,
     val libassRenderType: String = "CUES",
@@ -201,12 +203,8 @@ object PlayerSettingsRepository {
     private var nextEpisodeThresholdMinutesBeforeEnd = 2f
     private var preloadNextEpisodeSources = false
     private var privateViewingEnabled = false
-    private var stillWatchingPromptEnabled = false
-    private var stillWatchingEpisodeCount = DEFAULT_STILL_WATCHING_EPISODE_COUNT
-    private var stillWatchingNightOnly = false
+    private var stillWatchingByFormFactor = defaultStillWatchingSettings()
     private var rememberAudioDelayPerDevice = true
-    private var stillWatchingLiveTvEnabled = false
-    private var stillWatchingLiveTvMinutes = DEFAULT_STILL_WATCHING_LIVE_TV_MINUTES
     private var seekIntervalSeconds = DEFAULT_SEEK_INTERVAL_SECONDS
     private var useLibass = false
     private var libassRenderType = "CUES"
@@ -299,12 +297,8 @@ object PlayerSettingsRepository {
         nextEpisodeThresholdMinutesBeforeEnd = 2f
         preloadNextEpisodeSources = false
         privateViewingEnabled = false
-        stillWatchingPromptEnabled = false
-        stillWatchingEpisodeCount = DEFAULT_STILL_WATCHING_EPISODE_COUNT
-        stillWatchingNightOnly = false
+        stillWatchingByFormFactor = defaultStillWatchingSettings()
         rememberAudioDelayPerDevice = true
-        stillWatchingLiveTvEnabled = false
-        stillWatchingLiveTvMinutes = DEFAULT_STILL_WATCHING_LIVE_TV_MINUTES
         seekIntervalSeconds = DEFAULT_SEEK_INTERVAL_SECONDS
         useLibass = false
         libassRenderType = "CUES"
@@ -471,15 +465,19 @@ object PlayerSettingsRepository {
         nextEpisodeThresholdMinutesBeforeEnd = PlayerSettingsStorage.loadNextEpisodeThresholdMinutesBeforeEnd() ?: 2f
         preloadNextEpisodeSources = PlayerSettingsStorage.loadPreloadNextEpisodeSources() ?: false
         privateViewingEnabled = PlayerSettingsStorage.loadPrivateViewingEnabled() ?: false
-        stillWatchingPromptEnabled = PlayerSettingsStorage.loadStillWatchingPromptEnabled() ?: false
-        stillWatchingEpisodeCount = (PlayerSettingsStorage.loadStillWatchingEpisodeCount() ?: DEFAULT_STILL_WATCHING_EPISODE_COUNT)
-            .coerceIn(STILL_WATCHING_EPISODE_COUNT_RANGE)
-        stillWatchingNightOnly = PlayerSettingsStorage.loadStillWatchingNightOnly() ?: false
+        // Options saved before the per-device split live in the flat keys: every class starts from them.
+        val legacyStillWatching = StillWatchingSettings(
+            promptEnabled = PlayerSettingsStorage.loadStillWatchingPromptEnabled() ?: false,
+            episodeCount = PlayerSettingsStorage.loadStillWatchingEpisodeCount() ?: DEFAULT_STILL_WATCHING_EPISODE_COUNT,
+            nightOnly = PlayerSettingsStorage.loadStillWatchingNightOnly() ?: false,
+            liveTvEnabled = PlayerSettingsStorage.loadStillWatchingLiveTvEnabled() ?: false,
+            liveTvMinutes = PlayerSettingsStorage.loadStillWatchingLiveTvMinutes() ?: DEFAULT_STILL_WATCHING_LIVE_TV_MINUTES,
+        ).normalized()
+        stillWatchingByFormFactor = SubtitleSizeFormFactor.entries.associateWith { formFactor ->
+            StillWatchingSettings.decode(PlayerSettingsStorage.loadStillWatchingSettings(formFactor))
+                ?: legacyStillWatching
+        }
         rememberAudioDelayPerDevice = PlayerSettingsStorage.loadRememberAudioDelayPerDevice() ?: true
-        stillWatchingLiveTvEnabled = PlayerSettingsStorage.loadStillWatchingLiveTvEnabled() ?: false
-        stillWatchingLiveTvMinutes = normalizeStillWatchingLiveTvMinutes(
-            PlayerSettingsStorage.loadStillWatchingLiveTvMinutes() ?: DEFAULT_STILL_WATCHING_LIVE_TV_MINUTES,
-        )
         seekIntervalSeconds = (PlayerSettingsStorage.loadSeekIntervalSeconds() ?: DEFAULT_SEEK_INTERVAL_SECONDS)
             .coerceIn(SEEK_INTERVAL_SECONDS_RANGE)
         useLibass = PlayerSettingsStorage.loadUseLibass() ?: false
@@ -1083,30 +1081,15 @@ object PlayerSettingsRepository {
         Logger.i("PrivateViewing") { "Private viewing ${if (enabled) "enabled" else "disabled"}" }
     }
 
-    fun setStillWatchingPromptEnabled(enabled: Boolean) {
-        ensureLoaded()
-        if (stillWatchingPromptEnabled == enabled) return
-        stillWatchingPromptEnabled = enabled
-        publish()
-        PlayerSettingsStorage.saveStillWatchingPromptEnabled(enabled)
-    }
+    // The still-watching setters edit one device class (default: this device), from any device.
+    fun setStillWatchingPromptEnabled(enabled: Boolean, formFactor: SubtitleSizeFormFactor? = null) =
+        updateStillWatching(formFactor) { it.copy(promptEnabled = enabled) }
 
-    fun setStillWatchingEpisodeCount(count: Int) {
-        ensureLoaded()
-        val normalized = count.coerceIn(STILL_WATCHING_EPISODE_COUNT_RANGE)
-        if (stillWatchingEpisodeCount == normalized) return
-        stillWatchingEpisodeCount = normalized
-        publish()
-        PlayerSettingsStorage.saveStillWatchingEpisodeCount(normalized)
-    }
+    fun setStillWatchingEpisodeCount(count: Int, formFactor: SubtitleSizeFormFactor? = null) =
+        updateStillWatching(formFactor) { it.copy(episodeCount = count) }
 
-    fun setStillWatchingNightOnly(enabled: Boolean) {
-        ensureLoaded()
-        if (stillWatchingNightOnly == enabled) return
-        stillWatchingNightOnly = enabled
-        publish()
-        PlayerSettingsStorage.saveStillWatchingNightOnly(enabled)
-    }
+    fun setStillWatchingNightOnly(enabled: Boolean, formFactor: SubtitleSizeFormFactor? = null) =
+        updateStillWatching(formFactor) { it.copy(nightOnly = enabled) }
 
     fun setRememberAudioDelayPerDevice(enabled: Boolean) {
         ensureLoaded()
@@ -1116,21 +1099,33 @@ object PlayerSettingsRepository {
         PlayerSettingsStorage.saveRememberAudioDelayPerDevice(enabled)
     }
 
-    fun setStillWatchingLiveTvEnabled(enabled: Boolean) {
-        ensureLoaded()
-        if (stillWatchingLiveTvEnabled == enabled) return
-        stillWatchingLiveTvEnabled = enabled
-        publish()
-        PlayerSettingsStorage.saveStillWatchingLiveTvEnabled(enabled)
-    }
+    fun setStillWatchingLiveTvEnabled(enabled: Boolean, formFactor: SubtitleSizeFormFactor? = null) =
+        updateStillWatching(formFactor) { it.copy(liveTvEnabled = enabled) }
 
-    fun setStillWatchingLiveTvMinutes(minutes: Int) {
+    fun setStillWatchingLiveTvMinutes(minutes: Int, formFactor: SubtitleSizeFormFactor? = null) =
+        updateStillWatching(formFactor) { it.copy(liveTvMinutes = minutes) }
+
+    private fun updateStillWatching(
+        formFactor: SubtitleSizeFormFactor?,
+        transform: (StillWatchingSettings) -> StillWatchingSettings,
+    ) {
         ensureLoaded()
-        val normalized = normalizeStillWatchingLiveTvMinutes(minutes)
-        if (stillWatchingLiveTvMinutes == normalized) return
-        stillWatchingLiveTvMinutes = normalized
+        val target = formFactor ?: subtitleSizeFormFactor
+        val current = stillWatchingByFormFactor.getValue(target)
+        val updated = transform(current).normalized()
+        if (updated == current) return
+        stillWatchingByFormFactor = stillWatchingByFormFactor + (target to updated)
+        PlayerSettingsStorage.saveStillWatchingSettings(target, updated.encode())
+        if (target == subtitleSizeFormFactor) {
+            // Older builds only read the flat keys: keep them on this device's values.
+            PlayerSettingsStorage.saveStillWatchingPromptEnabled(updated.promptEnabled)
+            PlayerSettingsStorage.saveStillWatchingEpisodeCount(updated.episodeCount)
+            PlayerSettingsStorage.saveStillWatchingNightOnly(updated.nightOnly)
+            PlayerSettingsStorage.saveStillWatchingLiveTvEnabled(updated.liveTvEnabled)
+            PlayerSettingsStorage.saveStillWatchingLiveTvMinutes(updated.liveTvMinutes)
+        }
         publish()
-        PlayerSettingsStorage.saveStillWatchingLiveTvMinutes(normalized)
+        Logger.d(STILL_WATCHING_LOG_TAG) { "Still watching options of ${target.storageSuffix} set to $updated" }
     }
 
     fun setSeekIntervalSeconds(seconds: Int) {
@@ -1324,6 +1319,7 @@ object PlayerSettingsRepository {
     }
 
     private fun publish() {
+        val thisDeviceStillWatching = stillWatchingByFormFactor.getValue(subtitleSizeFormFactor)
         _uiState.value = PlayerSettingsUiState(
             useLegacyPlayerLayout = useLegacyPlayerLayout,
             showLoadingOverlay = showLoadingOverlay,
@@ -1387,12 +1383,13 @@ object PlayerSettingsRepository {
             nextEpisodeThresholdMinutesBeforeEnd = nextEpisodeThresholdMinutesBeforeEnd,
             preloadNextEpisodeSources = preloadNextEpisodeSources,
             privateViewingEnabled = privateViewingEnabled,
-            stillWatchingPromptEnabled = stillWatchingPromptEnabled,
-            stillWatchingEpisodeCount = stillWatchingEpisodeCount,
-            stillWatchingNightOnly = stillWatchingNightOnly,
+            stillWatchingPromptEnabled = thisDeviceStillWatching.promptEnabled,
+            stillWatchingEpisodeCount = thisDeviceStillWatching.episodeCount,
+            stillWatchingNightOnly = thisDeviceStillWatching.nightOnly,
             rememberAudioDelayPerDevice = rememberAudioDelayPerDevice,
-            stillWatchingLiveTvEnabled = stillWatchingLiveTvEnabled,
-            stillWatchingLiveTvMinutes = stillWatchingLiveTvMinutes,
+            stillWatchingLiveTvEnabled = thisDeviceStillWatching.liveTvEnabled,
+            stillWatchingLiveTvMinutes = thisDeviceStillWatching.liveTvMinutes,
+            stillWatchingSettings = stillWatchingByFormFactor,
             seekIntervalSeconds = seekIntervalSeconds,
             useLibass = useLibass,
             libassRenderType = libassRenderType,
@@ -1432,6 +1429,7 @@ internal fun normalizeStillWatchingLiveTvMinutes(minutes: Int): Int {
 }
 
 private const val SUBTITLE_SIZE_LOG_TAG = "SubtitleSize"
+private const val STILL_WATCHING_LOG_TAG = "StillWatching"
 
 private fun defaultSubtitleFontSizes(): Map<SubtitleSizeFormFactor, Int> =
     SubtitleSizeFormFactor.entries.associateWith { SubtitleStyleState.DEFAULT.fontSizeSp }

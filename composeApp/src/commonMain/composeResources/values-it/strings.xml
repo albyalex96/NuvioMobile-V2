@@ -736,10 +736,13 @@
   <string name="player_next_episode_thumbnail">Miniatura prossimo episodio</string>
   <string name="player_next_episode_unaired">Non ancora trasmesso</string>
   <string name="player_still_watching_title">Stai ancora guardando?</string>
-  <string name="player_still_watching_message">Hai guardato %1$d episodi di fila. Vuoi continuare a guardare?</string>
+  <plurals name="player_still_watching_message">
+      <item quantity="one">Hai guardato %1$d episodio senza pause. Vuoi continuare a guardare?</item>
+      <item quantity="other">Hai guardato %1$d episodi di fila. Vuoi continuare a guardare?</item>
+  </plurals>
   <string name="player_still_watching_continue">Continua a guardare</string>
   <string name="player_still_watching_stop">Esci dal player</string>
-  <string name="player_still_watching_auto_exit">Il player si chiuderà tra %1$d s</string>
+  <string name="player_still_watching_next_label">Prossimo episodio</string>
   <string name="player_skip">Salta</string>
   <string name="player_skip_intro">Salta Intro</string>
   <string name="player_skip_outro">Salta Finale</string>

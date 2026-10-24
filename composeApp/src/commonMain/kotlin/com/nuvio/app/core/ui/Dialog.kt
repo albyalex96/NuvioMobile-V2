@@ -32,6 +32,7 @@ import com.nuvio.app.tv.tvFocusGroupOnAppear
 import com.nuvio.app.tv.tvFocusOnAppear
 import com.nuvio.app.tv.tvTextInputKeys
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -138,6 +139,7 @@ fun DialogButton(
     style: DialogButtonStyle = DialogButtonStyle.Secondary,
     enabled: Boolean = true,
     loading: Boolean = false,
+    icon: ImageVector? = null,
 ) {
     val tokens = MaterialTheme.nuvio
     val containerColor = when (style) {
@@ -168,6 +170,9 @@ fun DialogButton(
                 modifier = Modifier.size(tokens.icons.sm),
                 color = contentColor,
             )
+            Spacer(modifier = Modifier.width(NuvioTokens.Space.s8))
+        } else if (icon != null) {
+            Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(tokens.icons.sm))
             Spacer(modifier = Modifier.width(NuvioTokens.Space.s8))
         }
         Text(

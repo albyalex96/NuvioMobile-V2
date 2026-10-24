@@ -99,6 +99,10 @@ actual object PlayerSettingsStorage {
     private const val rememberAudioDelayPerDeviceKey = "remember_audio_delay_per_device"
     private const val stillWatchingLiveTvEnabledKey = "still_watching_live_tv_enabled"
     private const val stillWatchingLiveTvMinutesKey = "still_watching_live_tv_minutes"
+    // One JSON per device class (phone, tablet, TV); the flat keys above hold the pre-split values.
+    private const val stillWatchingSettingsKey = "still_watching_settings"
+    private fun stillWatchingSettingsKey(formFactor: SubtitleSizeFormFactor) =
+        "${stillWatchingSettingsKey}_${formFactor.storageSuffix}"
     private const val seekIntervalSecondsKey = "seek_interval_seconds"
 
     // Unscoped mirror read by the Swift NowPlayingController for the remote skip intervals.
@@ -186,6 +190,7 @@ actual object PlayerSettingsStorage {
         rememberAudioDelayPerDeviceKey,
         stillWatchingLiveTvEnabledKey,
         stillWatchingLiveTvMinutesKey,
+        *SubtitleSizeFormFactor.entries.map(::stillWatchingSettingsKey).toTypedArray(),
         seekIntervalSecondsKey,
         useLibassKey,
         libassRenderTypeKey,
@@ -1066,6 +1071,13 @@ actual object PlayerSettingsStorage {
         NSUserDefaults.standardUserDefaults.setInteger(minutes.toLong(), forKey = ProfileScopedKey.of(stillWatchingLiveTvMinutesKey))
     }
 
+    actual fun loadStillWatchingSettings(formFactor: SubtitleSizeFormFactor): String? =
+        NSUserDefaults.standardUserDefaults.stringForKey(ProfileScopedKey.of(stillWatchingSettingsKey(formFactor)))
+
+    actual fun saveStillWatchingSettings(formFactor: SubtitleSizeFormFactor, value: String) {
+        NSUserDefaults.standardUserDefaults.setObject(value, forKey = ProfileScopedKey.of(stillWatchingSettingsKey(formFactor)))
+    }
+
     actual fun loadSeekIntervalSeconds(): Int? {
         val defaults = NSUserDefaults.standardUserDefaults
         val key = ProfileScopedKey.of(seekIntervalSecondsKey)
@@ -1266,6 +1278,9 @@ actual object PlayerSettingsStorage {
         loadRememberAudioDelayPerDevice()?.let { put(rememberAudioDelayPerDeviceKey, encodeSyncBoolean(it)) }
         loadStillWatchingLiveTvEnabled()?.let { put(stillWatchingLiveTvEnabledKey, encodeSyncBoolean(it)) }
         loadStillWatchingLiveTvMinutes()?.let { put(stillWatchingLiveTvMinutesKey, encodeSyncInt(it)) }
+        SubtitleSizeFormFactor.entries.forEach { formFactor ->
+            loadStillWatchingSettings(formFactor)?.let { put(stillWatchingSettingsKey(formFactor), encodeSyncString(it)) }
+        }
         loadSeekIntervalSeconds()?.let { put(seekIntervalSecondsKey, encodeSyncInt(it)) }
         loadUseLibass()?.let { put(useLibassKey, encodeSyncBoolean(it)) }
         loadLibassRenderType()?.let { put(libassRenderTypeKey, encodeSyncString(it)) }
@@ -1287,6 +1302,8 @@ actual object PlayerSettingsStorage {
     }
 
     actual fun replaceFromSyncPayload(payload: JsonObject) {
+        // Blobs pushed by older builds lack the per-device still-watching keys: keep the local ones then.
+        val localStillWatching = SubtitleSizeFormFactor.entries.associateWith(::loadStillWatchingSettings)
         syncKeys.forEach { key ->
             NSUserDefaults.standardUserDefaults.removeObjectForKey(ProfileScopedKey.of(key))
         }
@@ -1359,6 +1376,10 @@ actual object PlayerSettingsStorage {
         payload.decodeSyncBoolean(rememberAudioDelayPerDeviceKey)?.let(::saveRememberAudioDelayPerDevice)
         payload.decodeSyncBoolean(stillWatchingLiveTvEnabledKey)?.let(::saveStillWatchingLiveTvEnabled)
         payload.decodeSyncInt(stillWatchingLiveTvMinutesKey)?.let(::saveStillWatchingLiveTvMinutes)
+        SubtitleSizeFormFactor.entries.forEach { formFactor ->
+            (payload.decodeSyncString(stillWatchingSettingsKey(formFactor)) ?: localStillWatching[formFactor])
+                ?.let { saveStillWatchingSettings(formFactor, it) }
+        }
         payload.decodeSyncInt(seekIntervalSecondsKey)?.let(::saveSeekIntervalSeconds)
         payload.decodeSyncBoolean(useLibassKey)?.let(::saveUseLibass)
         payload.decodeSyncString(libassRenderTypeKey)?.let(::saveLibassRenderType)
