@@ -103,6 +103,10 @@ actual object PlayerSettingsStorage {
     private const val stillWatchingSettingsKey = "still_watching_settings"
     private fun stillWatchingSettingsKey(formFactor: SubtitleSizeFormFactor) =
         "${stillWatchingSettingsKey}_${formFactor.storageSuffix}"
+    // One JSON per device class (phone/tablet, TV).
+    private const val playerClockSettingsKey = "player_clock_settings"
+    private fun playerClockSettingsKey(device: PlayerClockDevice) =
+        "${playerClockSettingsKey}_${device.storageSuffix}"
     private const val seekIntervalSecondsKey = "seek_interval_seconds"
 
     // Unscoped mirror read by the Swift NowPlayingController for the remote skip intervals.
@@ -191,6 +195,7 @@ actual object PlayerSettingsStorage {
         stillWatchingLiveTvEnabledKey,
         stillWatchingLiveTvMinutesKey,
         *SubtitleSizeFormFactor.entries.map(::stillWatchingSettingsKey).toTypedArray(),
+        *PlayerClockDevice.entries.map(::playerClockSettingsKey).toTypedArray(),
         seekIntervalSecondsKey,
         useLibassKey,
         libassRenderTypeKey,
@@ -1078,6 +1083,13 @@ actual object PlayerSettingsStorage {
         NSUserDefaults.standardUserDefaults.setObject(value, forKey = ProfileScopedKey.of(stillWatchingSettingsKey(formFactor)))
     }
 
+    actual fun loadPlayerClockSettings(device: PlayerClockDevice): String? =
+        NSUserDefaults.standardUserDefaults.stringForKey(ProfileScopedKey.of(playerClockSettingsKey(device)))
+
+    actual fun savePlayerClockSettings(device: PlayerClockDevice, value: String) {
+        NSUserDefaults.standardUserDefaults.setObject(value, forKey = ProfileScopedKey.of(playerClockSettingsKey(device)))
+    }
+
     actual fun loadSeekIntervalSeconds(): Int? {
         val defaults = NSUserDefaults.standardUserDefaults
         val key = ProfileScopedKey.of(seekIntervalSecondsKey)
@@ -1281,6 +1293,9 @@ actual object PlayerSettingsStorage {
         SubtitleSizeFormFactor.entries.forEach { formFactor ->
             loadStillWatchingSettings(formFactor)?.let { put(stillWatchingSettingsKey(formFactor), encodeSyncString(it)) }
         }
+        PlayerClockDevice.entries.forEach { device ->
+            loadPlayerClockSettings(device)?.let { put(playerClockSettingsKey(device), encodeSyncString(it)) }
+        }
         loadSeekIntervalSeconds()?.let { put(seekIntervalSecondsKey, encodeSyncInt(it)) }
         loadUseLibass()?.let { put(useLibassKey, encodeSyncBoolean(it)) }
         loadLibassRenderType()?.let { put(libassRenderTypeKey, encodeSyncString(it)) }
@@ -1304,6 +1319,8 @@ actual object PlayerSettingsStorage {
     actual fun replaceFromSyncPayload(payload: JsonObject) {
         // Blobs pushed by older builds lack the per-device still-watching keys: keep the local ones then.
         val localStillWatching = SubtitleSizeFormFactor.entries.associateWith(::loadStillWatchingSettings)
+        // Same for the player clock keys, unknown to builds older than the clock.
+        val localPlayerClock = PlayerClockDevice.entries.associateWith(::loadPlayerClockSettings)
         syncKeys.forEach { key ->
             NSUserDefaults.standardUserDefaults.removeObjectForKey(ProfileScopedKey.of(key))
         }
@@ -1379,6 +1396,10 @@ actual object PlayerSettingsStorage {
         SubtitleSizeFormFactor.entries.forEach { formFactor ->
             (payload.decodeSyncString(stillWatchingSettingsKey(formFactor)) ?: localStillWatching[formFactor])
                 ?.let { saveStillWatchingSettings(formFactor, it) }
+        }
+        PlayerClockDevice.entries.forEach { device ->
+            (payload.decodeSyncString(playerClockSettingsKey(device)) ?: localPlayerClock[device])
+                ?.let { savePlayerClockSettings(device, it) }
         }
         payload.decodeSyncInt(seekIntervalSecondsKey)?.let(::saveSeekIntervalSeconds)
         payload.decodeSyncBoolean(useLibassKey)?.let(::saveUseLibass)

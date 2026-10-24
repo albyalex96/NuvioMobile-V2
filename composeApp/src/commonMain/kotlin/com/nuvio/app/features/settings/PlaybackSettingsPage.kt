@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
@@ -52,6 +53,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.features.addons.AddonRepository
 import com.nuvio.app.features.player.StillWatchingSettings
+import com.nuvio.app.features.player.PlayerClockPosition
+import com.nuvio.app.features.player.PlayerClockSettings
 import com.nuvio.app.features.addons.enabledAddons
 import com.nuvio.app.features.cloudstream.CloudStreamRepository
 import com.nuvio.app.features.player.AndroidLibmpvVideoOutput
@@ -357,6 +360,8 @@ private fun PlaybackSettingsSection(
     var showIosTargetPrimariesDialog by remember { mutableStateOf(false) }
     var showIosTargetTransferDialog by remember { mutableStateOf(false) }
     var showLibassRenderTypeDialog by remember { mutableStateOf(false) }
+    var showPlayerClockFormatDialog by remember { mutableStateOf(false) }
+    var showPlayerClockPositionDialog by remember { mutableStateOf(false) }
     var showAutoPlayModeDialog by remember { mutableStateOf(false) }
     var showAutoPlaySourceDialog by remember { mutableStateOf(false) }
     var showAutoPlayAddonSelectionDialog by remember { mutableStateOf(false) }
@@ -416,6 +421,38 @@ private fun PlaybackSettingsSection(
                     isTablet = isTablet,
                     onCheckedChange = PlayerSettingsRepository::setUseLegacyPlayerLayout,
                 )
+                SettingsGroupDivider(isTablet = isTablet)
+                // Phones/tablets and TVs keep separate clock options (both synced with the profile);
+                // each device shows and edits only its own class.
+                val playerClockDevice = autoPlayPlayerSettings.playerClockDevice
+                val playerClock = autoPlayPlayerSettings.playerClockSettings[playerClockDevice] ?: PlayerClockSettings()
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.settings_playback_player_clock),
+                    description = stringResource(Res.string.settings_playback_player_clock_description),
+                    checked = playerClock.enabled,
+                    isTablet = isTablet,
+                    onCheckedChange = { enabled ->
+                        PlayerSettingsRepository.setPlayerClockEnabled(enabled, playerClockDevice)
+                    },
+                )
+                if (playerClock.enabled) {
+                    SettingsGroupDivider(isTablet = isTablet)
+                    PlayerClockOptionRow(
+                        title = stringResource(Res.string.settings_playback_player_clock_format),
+                        description = stringResource(Res.string.settings_playback_player_clock_format_description),
+                        value = playerClockFormatLabel(playerClock.use24Hour),
+                        isTablet = isTablet,
+                        onClick = { showPlayerClockFormatDialog = true },
+                    )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    PlayerClockOptionRow(
+                        title = stringResource(Res.string.settings_playback_player_clock_position),
+                        description = stringResource(Res.string.settings_playback_player_clock_position_description),
+                        value = playerClockPositionLabel(playerClock.position),
+                        isTablet = isTablet,
+                        onClick = { showPlayerClockPositionDialog = true },
+                    )
+                }
                 SettingsGroupDivider(isTablet = isTablet)
                 SettingsSwitchRow(
                     title = stringResource(Res.string.settings_playback_show_loading_overlay),
@@ -1978,6 +2015,37 @@ private fun PlaybackSettingsSection(
         )
     }
 
+    if (showPlayerClockFormatDialog) {
+        val playerClockDevice = autoPlayPlayerSettings.playerClockDevice
+        IosEnumSelectionDialog(
+            title = stringResource(Res.string.settings_playback_player_clock_format),
+            options = listOf(true, false),
+            selected = autoPlayPlayerSettings.playerClockSettings[playerClockDevice]?.use24Hour ?: true,
+            label = { playerClockFormatLabel(it) },
+            onSelect = {
+                PlayerSettingsRepository.setPlayerClockUse24Hour(it, playerClockDevice)
+                showPlayerClockFormatDialog = false
+            },
+            onDismiss = { showPlayerClockFormatDialog = false },
+        )
+    }
+
+    if (showPlayerClockPositionDialog) {
+        val playerClockDevice = autoPlayPlayerSettings.playerClockDevice
+        IosEnumSelectionDialog(
+            title = stringResource(Res.string.settings_playback_player_clock_position),
+            options = PlayerClockPosition.entries,
+            selected = autoPlayPlayerSettings.playerClockSettings[playerClockDevice]?.position
+                ?: PlayerClockPosition.TopStart,
+            label = { playerClockPositionLabel(it) },
+            onSelect = {
+                PlayerSettingsRepository.setPlayerClockPosition(it, playerClockDevice)
+                showPlayerClockPositionDialog = false
+            },
+            onDismiss = { showPlayerClockPositionDialog = false },
+        )
+    }
+
     if (showLibmpvVideoOutputDialog) {
         IosEnumSelectionDialog(
             title = stringResource(Res.string.settings_playback_libmpv_video_output_dialog),
@@ -2435,6 +2503,50 @@ private fun PlaybackEngineDialog(
         }
     }
 }
+
+/** Clock option row: description below the title, current value on the right. */
+@Composable
+private fun PlayerClockOptionRow(
+    title: String,
+    description: String,
+    value: String,
+    isTablet: Boolean,
+    onClick: () -> Unit,
+) {
+    SettingsNavigationRow(
+        title = title,
+        description = description,
+        isTablet = isTablet,
+        trailingContent = {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.primary,
+                fontWeight = FontWeight.Medium,
+                maxLines = 2,
+                modifier = Modifier.widthIn(max = 160.dp),
+            )
+        },
+        onClick = onClick,
+    )
+}
+
+@Composable
+private fun playerClockFormatLabel(use24Hour: Boolean): String = stringResource(
+    if (use24Hour) Res.string.settings_playback_player_clock_format_24h else Res.string.settings_playback_player_clock_format_12h,
+)
+
+@Composable
+private fun playerClockPositionLabel(position: PlayerClockPosition): String = stringResource(
+    when (position) {
+        PlayerClockPosition.TopStart -> Res.string.settings_playback_player_clock_position_top_left
+        PlayerClockPosition.TopEnd -> Res.string.settings_playback_player_clock_position_top_right
+        PlayerClockPosition.CenterStart -> Res.string.settings_playback_player_clock_position_center_left
+        PlayerClockPosition.CenterEnd -> Res.string.settings_playback_player_clock_position_center_right
+        PlayerClockPosition.BottomStart -> Res.string.settings_playback_player_clock_position_bottom_left
+        PlayerClockPosition.BottomEnd -> Res.string.settings_playback_player_clock_position_bottom_right
+    },
+)
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)

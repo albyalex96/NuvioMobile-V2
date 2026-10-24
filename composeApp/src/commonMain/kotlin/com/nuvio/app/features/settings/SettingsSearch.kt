@@ -741,6 +741,21 @@ internal fun settingsSearchEntries(
                 stringResource(Res.string.settings_playback_legacy_layout_description),
             ),
             PlaybackSearchRow(
+                "player-clock",
+                stringResource(Res.string.settings_playback_player_clock),
+                stringResource(Res.string.settings_playback_player_clock_description),
+            ),
+            PlaybackSearchRow(
+                "player-clock-format",
+                stringResource(Res.string.settings_playback_player_clock_format),
+                stringResource(Res.string.settings_playback_player_clock_format_description),
+            ),
+            PlaybackSearchRow(
+                "player-clock-position",
+                stringResource(Res.string.settings_playback_player_clock_position),
+                stringResource(Res.string.settings_playback_player_clock_position_description),
+            ),
+            PlaybackSearchRow(
                 "loading-overlay",
                 stringResource(Res.string.settings_playback_show_loading_overlay),
                 stringResource(Res.string.settings_playback_show_loading_overlay_description),

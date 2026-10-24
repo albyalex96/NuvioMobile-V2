@@ -91,6 +91,7 @@ internal fun PlayerControlsShell(
     title: String,
     logo: String? = null,
     streamBadges: PlayerStreamBadges? = null,
+    clock: PlayerClockSettings? = null,
     streamTitle: String,
     providerName: String,
     seasonNumber: Int?,
@@ -142,6 +143,7 @@ internal fun PlayerControlsShell(
 ) {
     val density = LocalDensity.current
     var timelineHeight by remember { mutableStateOf(0.dp) }
+    var legacyProgressHeight by remember { mutableStateOf(0.dp) }
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val centerControlHeight = metrics.playIconSize + maxOf(metrics.playButtonPadding, metrics.sideButtonPadding) * 2
         val centerBottomPadding = if (useLegacyLayout) metrics.centerLift else maxOf(
@@ -189,6 +191,8 @@ internal fun PlayerControlsShell(
                     title = title,
                     logo = logo,
                     streamBadges = streamBadges,
+                    clockAboveTitle = clock?.takeIf { it.position == PlayerClockPosition.TopStart },
+                    clockInActions = clock?.takeIf { it.position == PlayerClockPosition.TopEnd },
                     streamTitle = streamTitle,
                     providerName = providerName,
                     seasonNumber = seasonNumber,
@@ -229,6 +233,15 @@ internal fun PlayerControlsShell(
                         partyActive = partyActive,
                         onCastClick = onCastClick,
                         castActive = castActive,
+                        leadingContent = clock?.takeIf { it.position == PlayerClockPosition.TopEnd }?.let { topEndClock ->
+                            {
+                                PlayerClock(
+                                    use24Hour = topEndClock.use24Hour,
+                                    metrics = metrics,
+                                    modifier = Modifier.padding(end = 8.dp),
+                                )
+                            }
+                        },
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .windowInsetsPadding(WindowInsets.safeContent.only(WindowInsetsSides.Top))
@@ -290,6 +303,7 @@ internal fun PlayerControlsShell(
                     onChaptersClick = onChaptersClick,
                     onLiveChannelsClick = onLiveChannelsClick,
                     modifier = Modifier
+                        .onSizeChanged { size -> legacyProgressHeight = with(density) { size.height.toDp() } }
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
                         .padding(horizontal = metrics.horizontalPadding)
@@ -379,6 +393,43 @@ internal fun PlayerControlsShell(
                     )
                 }
             }
+
+            // Top-end clocks sit in the button row; the legacy header shows a top-start clock above the title.
+            if (showPlaybackControls && clock != null && clock.position != PlayerClockPosition.TopEnd &&
+                !(useLegacyLayout && clock.position == PlayerClockPosition.TopStart)
+            ) {
+                val toolbarHeight = metrics.headerIconSize + 16.dp
+                val topInset = Modifier
+                    .windowInsetsPadding(WindowInsets.safeContent.only(WindowInsetsSides.Top))
+                    .padding(top = metrics.verticalPadding / 4)
+                val bottomControlsHeight = if (useLegacyLayout) legacyProgressHeight else timelineHeight
+                val clockModifier = when (clock.position) {
+                    // Centred on the toolbar row, which sits on the opposite side.
+                    PlayerClockPosition.TopStart -> Modifier
+                        .align(Alignment.TopStart)
+                        .then(topInset)
+                        .padding(start = metrics.horizontalPadding)
+                        .height(toolbarHeight)
+                    // Not reached: rendered inside the toolbar row.
+                    PlayerClockPosition.TopEnd -> Modifier.align(Alignment.TopEnd)
+                    PlayerClockPosition.CenterStart -> Modifier
+                        .align(Alignment.CenterStart)
+                        .padding(start = metrics.horizontalPadding, bottom = centerBottomPadding)
+                    PlayerClockPosition.CenterEnd -> Modifier
+                        .align(Alignment.CenterEnd)
+                        .padding(end = metrics.horizontalPadding, bottom = centerBottomPadding)
+                    // Above the timeline and its details.
+                    PlayerClockPosition.BottomStart -> Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(start = metrics.horizontalPadding, bottom = bottomControlsHeight + 8.dp)
+                    PlayerClockPosition.BottomEnd -> Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = metrics.horizontalPadding, bottom = bottomControlsHeight + 8.dp)
+                }
+                Box(modifier = clockModifier, contentAlignment = Alignment.Center) {
+                    PlayerClock(use24Hour = clock.use24Hour, metrics = metrics)
+                }
+            }
         }
     }
 }
@@ -388,6 +439,8 @@ private fun PlayerHeader(
     title: String,
     logo: String?,
     streamBadges: PlayerStreamBadges?,
+    clockAboveTitle: PlayerClockSettings?,
+    clockInActions: PlayerClockSettings?,
     streamTitle: String,
     providerName: String,
     seasonNumber: Int?,
@@ -429,6 +482,7 @@ private fun PlayerHeader(
                     modifier = Modifier.graphicsLayer { alpha = metadataAlpha },
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
+                    clockAboveTitle?.let { clock -> PlayerClock(use24Hour = clock.use24Hour, metrics = metrics) }
                     PlayerTitleLogo(title = title, logo = logo, height = metrics.titleLogoHeight()) {
                         Text(
                             text = title,
@@ -509,6 +563,13 @@ private fun PlayerHeader(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    clockInActions?.let { clock ->
+                        PlayerClock(
+                            use24Hour = clock.use24Hour,
+                            metrics = metrics,
+                            modifier = Modifier.padding(end = 4.dp),
+                        )
+                    }
                     if (onSubmitIntroClick != null) {
                         PlayerHeaderIconButton(
                             icon = Icons.Rounded.Flag,

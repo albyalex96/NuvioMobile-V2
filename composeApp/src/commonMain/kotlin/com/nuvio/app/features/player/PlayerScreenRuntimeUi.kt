@@ -396,6 +396,7 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
             title = title,
             // Live TV keeps the channel name: its logo is the channel's, not a title logo.
             logo = if (isLiveTvPlayback) null else logo,
+            clock = playerSettingsUiState.playerClock.takeIf { it.enabled },
             streamBadges = streamBadgeInfo?.let { info ->
                 PlayerStreamBadges(info = info, animationsEnabled = streamParserSettings.animationsEnabled)
             },

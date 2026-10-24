@@ -168,6 +168,8 @@ internal expect object PlayerSettingsStorage {
     fun saveStillWatchingLiveTvMinutes(minutes: Int)
     fun loadStillWatchingSettings(formFactor: SubtitleSizeFormFactor): String?
     fun saveStillWatchingSettings(formFactor: SubtitleSizeFormFactor, value: String)
+    fun loadPlayerClockSettings(device: PlayerClockDevice): String?
+    fun savePlayerClockSettings(device: PlayerClockDevice, value: String)
     fun loadSeekIntervalSeconds(): Int?
     fun saveSeekIntervalSeconds(seconds: Int)
     fun loadUseLibass(): Boolean?

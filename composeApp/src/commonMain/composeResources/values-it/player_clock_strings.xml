@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_playback_player_clock">Orologio nel player</string>
+    <string name="settings_playback_player_clock_description">Mostra l'ora attuale nei comandi del player. Telefono e tablet hanno opzioni separate dalla TV.</string>
+    <string name="settings_playback_player_clock_format">Formato orario</string>
+    <string name="settings_playback_player_clock_format_description">Mostra l'orologio nel formato 12 ore o 24 ore</string>
+    <string name="settings_playback_player_clock_format_12h">12 ore (2:30 PM)</string>
+    <string name="settings_playback_player_clock_format_24h">24 ore (14:30)</string>
+    <string name="settings_playback_player_clock_position">Posizione dell'orologio</string>
+    <string name="settings_playback_player_clock_position_description">Scegli dove mostrare l'orologio nei comandi del player</string>
+    <string name="settings_playback_player_clock_position_top_left">In alto a sinistra</string>
+    <string name="settings_playback_player_clock_position_top_right">In alto a destra</string>
+    <string name="settings_playback_player_clock_position_center_left">Al centro a sinistra</string>
+    <string name="settings_playback_player_clock_position_center_right">Al centro a destra</string>
+    <string name="settings_playback_player_clock_position_bottom_left">In basso a sinistra</string>
+    <string name="settings_playback_player_clock_position_bottom_right">In basso a destra</string>
+</resources>

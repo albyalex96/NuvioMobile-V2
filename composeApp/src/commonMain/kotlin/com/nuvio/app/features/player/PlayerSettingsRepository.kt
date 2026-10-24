@@ -116,6 +116,10 @@ data class PlayerSettingsUiState(
     val stillWatchingLiveTvMinutes: Int = DEFAULT_STILL_WATCHING_LIVE_TV_MINUTES,
     // Every device class; the flat still-watching fields above are this device's copy.
     val stillWatchingSettings: Map<SubtitleSizeFormFactor, StillWatchingSettings> = defaultStillWatchingSettings(),
+    /** Clock in the player controls: this device's copy, its class, then every device class. */
+    val playerClock: PlayerClockSettings = PlayerClockSettings(),
+    val playerClockDevice: PlayerClockDevice = PlayerClockDevice.Mobile,
+    val playerClockSettings: Map<PlayerClockDevice, PlayerClockSettings> = defaultPlayerClockSettings(),
     val seekIntervalSeconds: Int = DEFAULT_SEEK_INTERVAL_SECONDS,
     val useLibass: Boolean = false,
     val libassRenderType: String = "CUES",
@@ -204,6 +208,7 @@ object PlayerSettingsRepository {
     private var preloadNextEpisodeSources = false
     private var privateViewingEnabled = false
     private var stillWatchingByFormFactor = defaultStillWatchingSettings()
+    private var playerClockByDevice = defaultPlayerClockSettings()
     private var rememberAudioDelayPerDevice = true
     private var seekIntervalSeconds = DEFAULT_SEEK_INTERVAL_SECONDS
     private var useLibass = false
@@ -298,6 +303,7 @@ object PlayerSettingsRepository {
         preloadNextEpisodeSources = false
         privateViewingEnabled = false
         stillWatchingByFormFactor = defaultStillWatchingSettings()
+        playerClockByDevice = defaultPlayerClockSettings()
         rememberAudioDelayPerDevice = true
         seekIntervalSeconds = DEFAULT_SEEK_INTERVAL_SECONDS
         useLibass = false
@@ -476,6 +482,9 @@ object PlayerSettingsRepository {
         stillWatchingByFormFactor = SubtitleSizeFormFactor.entries.associateWith { formFactor ->
             StillWatchingSettings.decode(PlayerSettingsStorage.loadStillWatchingSettings(formFactor))
                 ?: legacyStillWatching
+        }
+        playerClockByDevice = PlayerClockDevice.entries.associateWith { device ->
+            PlayerClockSettings.decode(PlayerSettingsStorage.loadPlayerClockSettings(device)) ?: PlayerClockSettings()
         }
         rememberAudioDelayPerDevice = PlayerSettingsStorage.loadRememberAudioDelayPerDevice() ?: true
         seekIntervalSeconds = (PlayerSettingsStorage.loadSeekIntervalSeconds() ?: DEFAULT_SEEK_INTERVAL_SECONDS)
@@ -1128,6 +1137,31 @@ object PlayerSettingsRepository {
         Logger.d(STILL_WATCHING_LOG_TAG) { "Still watching options of ${target.storageSuffix} set to $updated" }
     }
 
+    // The clock setters edit one device class (default: this device), from any device.
+    fun setPlayerClockEnabled(enabled: Boolean, device: PlayerClockDevice? = null) =
+        updatePlayerClock(device) { it.copy(enabled = enabled) }
+
+    fun setPlayerClockUse24Hour(use24Hour: Boolean, device: PlayerClockDevice? = null) =
+        updatePlayerClock(device) { it.copy(use24Hour = use24Hour) }
+
+    fun setPlayerClockPosition(position: PlayerClockPosition, device: PlayerClockDevice? = null) =
+        updatePlayerClock(device) { it.copy(position = position) }
+
+    private fun updatePlayerClock(
+        device: PlayerClockDevice?,
+        transform: (PlayerClockSettings) -> PlayerClockSettings,
+    ) {
+        ensureLoaded()
+        val target = device ?: currentPlayerClockDevice()
+        val current = playerClockByDevice.getValue(target)
+        val updated = transform(current)
+        if (updated == current) return
+        playerClockByDevice = playerClockByDevice + (target to updated)
+        PlayerSettingsStorage.savePlayerClockSettings(target, updated.encode())
+        publish()
+        Logger.i(PLAYER_CLOCK_LOG_TAG) { "Player clock of ${target.storageSuffix} set to $updated" }
+    }
+
     fun setSeekIntervalSeconds(seconds: Int) {
         ensureLoaded()
         val normalized = seconds.coerceIn(SEEK_INTERVAL_SECONDS_RANGE)
@@ -1390,6 +1424,9 @@ object PlayerSettingsRepository {
             stillWatchingLiveTvEnabled = thisDeviceStillWatching.liveTvEnabled,
             stillWatchingLiveTvMinutes = thisDeviceStillWatching.liveTvMinutes,
             stillWatchingSettings = stillWatchingByFormFactor,
+            playerClock = playerClockByDevice.getValue(currentPlayerClockDevice()),
+            playerClockDevice = currentPlayerClockDevice(),
+            playerClockSettings = playerClockByDevice,
             seekIntervalSeconds = seekIntervalSeconds,
             useLibass = useLibass,
             libassRenderType = libassRenderType,
@@ -1430,6 +1467,7 @@ internal fun normalizeStillWatchingLiveTvMinutes(minutes: Int): Int {
 
 private const val SUBTITLE_SIZE_LOG_TAG = "SubtitleSize"
 private const val STILL_WATCHING_LOG_TAG = "StillWatching"
+private const val PLAYER_CLOCK_LOG_TAG = "PlayerClock"
 
 private fun defaultSubtitleFontSizes(): Map<SubtitleSizeFormFactor, Int> =
     SubtitleSizeFormFactor.entries.associateWith { SubtitleStyleState.DEFAULT.fontSizeSp }

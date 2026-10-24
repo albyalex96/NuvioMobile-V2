@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_playback_player_clock">Clock in the player</string>
+    <string name="settings_playback_player_clock_description">Show the current time in the player controls. Phones and tablets have separate options from the TV.</string>
+    <string name="settings_playback_player_clock_format">Time format</string>
+    <string name="settings_playback_player_clock_format_description">Show the clock in 12-hour or 24-hour format</string>
+    <string name="settings_playback_player_clock_format_12h">12 hours (2:30 PM)</string>
+    <string name="settings_playback_player_clock_format_24h">24 hours (14:30)</string>
+    <string name="settings_playback_player_clock_position">Clock position</string>
+    <string name="settings_playback_player_clock_position_description">Choose where the clock appears in the player controls</string>
+    <string name="settings_playback_player_clock_position_top_left">Top left</string>
+    <string name="settings_playback_player_clock_position_top_right">Top right</string>
+    <string name="settings_playback_player_clock_position_center_left">Center left</string>
+    <string name="settings_playback_player_clock_position_center_right">Center right</string>
+    <string name="settings_playback_player_clock_position_bottom_left">Bottom left</string>
+    <string name="settings_playback_player_clock_position_bottom_right">Bottom right</string>
+</resources>

@@ -69,9 +69,11 @@ internal fun PlayerToolbar(
     partyActive: Boolean = false,
     onCastClick: (() -> Unit)? = null,
     castActive: Boolean = false,
+    leadingContent: (@Composable () -> Unit)? = null,
 ) {
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.weight(1f))
+        leadingContent?.invoke()
         if (onCastClick != null) {
             PlayerAction(
                 description = stringResource(Res.string.cast_action),
