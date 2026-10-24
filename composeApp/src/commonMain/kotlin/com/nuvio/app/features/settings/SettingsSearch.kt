@@ -320,7 +320,7 @@ internal fun settingsSearchEntries(
         category = aboutCategory,
         icon = Icons.Rounded.Info,
     )
-    listOf(
+    listOfNotNull(
         PlaybackSearchRow("nuvio-license", stringResource(Res.string.settings_licenses_attributions_nuvio_title), stringResource(Res.string.settings_licenses_attributions_nuvio_license)),
         PlaybackSearchRow("tmdb-attribution", stringResource(Res.string.settings_licenses_attributions_tmdb_title), stringResource(Res.string.settings_licenses_attributions_tmdb_body)),
         PlaybackSearchRow("trakt-attribution", stringResource(Res.string.settings_licenses_attributions_trakt_title), stringResource(Res.string.settings_licenses_attributions_trakt_body)),
@@ -330,6 +330,22 @@ internal fun settingsSearchEntries(
         PlaybackSearchRow("mdblist-attribution", stringResource(Res.string.settings_licenses_attributions_mdblist_title), stringResource(Res.string.settings_licenses_attributions_mdblist_body)),
         PlaybackSearchRow("introdb-attribution", stringResource(Res.string.settings_licenses_attributions_introdb_title), stringResource(Res.string.settings_licenses_attributions_introdb_body)),
         PlaybackSearchRow("imdb-datasets", stringResource(Res.string.settings_licenses_attributions_imdb_title), stringResource(Res.string.settings_licenses_attributions_imdb_body)),
+        PlaybackSearchRow("myanimelist-attribution", stringResource(Res.string.settings_licenses_attributions_myanimelist_title), stringResource(Res.string.settings_licenses_attributions_myanimelist_body)),
+        PlaybackSearchRow("fribb-attribution", stringResource(Res.string.settings_licenses_attributions_fribb_title), stringResource(Res.string.settings_licenses_attributions_fribb_body)),
+        PlaybackSearchRow("kometa-attribution", stringResource(Res.string.settings_licenses_attributions_kometa_title), stringResource(Res.string.settings_licenses_attributions_kometa_body)),
+        PlaybackSearchRow("animeskip-attribution", stringResource(Res.string.settings_licenses_attributions_animeskip_title), stringResource(Res.string.settings_licenses_attributions_animeskip_body)),
+        PlaybackSearchRow("aniskip-attribution", stringResource(Res.string.settings_licenses_attributions_aniskip_title), stringResource(Res.string.settings_licenses_attributions_aniskip_body)),
+        PlaybackSearchRow("opensubtitles-attribution", stringResource(Res.string.settings_licenses_attributions_opensubtitles_title), stringResource(Res.string.settings_licenses_attributions_opensubtitles_body)),
+        PlaybackSearchRow("subdl-attribution", stringResource(Res.string.settings_licenses_attributions_subdl_title), stringResource(Res.string.settings_licenses_attributions_subdl_body)),
+        PlaybackSearchRow("cloudstream-attribution", stringResource(Res.string.settings_licenses_attributions_cloudstream_title), stringResource(Res.string.settings_licenses_attributions_cloudstream_body))
+            .takeIf { AppFeaturePolicy.pluginsEnabled },
+        PlaybackSearchRow("discord-attribution", stringResource(Res.string.settings_licenses_attributions_discord_title), stringResource(Res.string.settings_licenses_attributions_discord_body))
+            .takeIf { DiscordRpcPlatform.isSupported },
+        PlaybackSearchRow("cerebras-attribution", stringResource(Res.string.settings_licenses_attributions_cerebras_title), stringResource(Res.string.settings_licenses_attributions_cerebras_body)),
+        PlaybackSearchRow("groq-attribution", stringResource(Res.string.settings_licenses_attributions_groq_title), stringResource(Res.string.settings_licenses_attributions_groq_body)),
+        PlaybackSearchRow("gemini-attribution", stringResource(Res.string.settings_licenses_attributions_gemini_title), stringResource(Res.string.settings_licenses_attributions_gemini_body)),
+        PlaybackSearchRow("openrouter-attribution", stringResource(Res.string.settings_licenses_attributions_openrouter_title), stringResource(Res.string.settings_licenses_attributions_openrouter_body)),
+        PlaybackSearchRow("tavily-attribution", stringResource(Res.string.settings_licenses_attributions_tavily_title), stringResource(Res.string.settings_licenses_attributions_tavily_body)),
         PlaybackSearchRow(
             if (isIos) "mpvkit-license" else "exoplayer-license",
             if (isIos) {

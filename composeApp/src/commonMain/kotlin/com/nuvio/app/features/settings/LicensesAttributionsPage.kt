@@ -29,11 +29,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import com.nuvio.app.core.build.AppFeaturePolicy
 import com.nuvio.app.core.ui.NuvioScreen
 import com.nuvio.app.core.ui.NuvioScreenHeader
 import com.nuvio.app.features.cloud.PremiumizeCloudLibraryPosterUrl
 import com.nuvio.app.features.cloud.TorboxCloudLibraryPosterUrl
 import com.nuvio.app.features.cloud.cloudLibraryDisplayArtworkUrl
+import com.nuvio.app.features.discord.DiscordRpcPlatform
 import com.nuvio.app.isIos
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.StringResource
@@ -47,6 +49,20 @@ private const val PremiumizeUrl = "https://www.premiumize.me"
 private const val TorboxUrl = "https://torbox.app"
 private const val MdbListUrl = "https://mdblist.com"
 private const val IntroDbUrl = "https://introdb.app/"
+private const val MyAnimeListUrl = "https://myanimelist.net"
+private const val AnimeSkipUrl = "https://anime-skip.com"
+private const val AniSkipUrl = "https://aniskip.com"
+private const val OpenSubtitlesUrl = "https://www.opensubtitles.com"
+private const val SubDlUrl = "https://subdl.com"
+private const val DiscordUrl = "https://discord.com"
+private const val CloudStreamUrl = "https://github.com/recloudstream/cloudstream"
+private const val FribbAnimeListsUrl = "https://github.com/Fribb/anime-lists"
+private const val KometaAnimeIdsUrl = "https://github.com/Kometa-Team/Anime-IDs"
+private const val CerebrasUrl = "https://www.cerebras.ai"
+private const val GroqUrl = "https://groq.com"
+private const val GeminiUrl = "https://ai.google.dev"
+private const val OpenRouterUrl = "https://openrouter.ai"
+private const val TavilyUrl = "https://tavily.com"
 private const val NuvioRepositoryUrl = "https://github.com/NuvioMedia/NuvioMobile"
 private const val MpvKitUrl = "https://github.com/mpvkit/MPVKit"
 private const val ApacheLicenseUrl = "https://www.apache.org/licenses/LICENSE-2.0"
@@ -115,6 +131,22 @@ private fun LicensesAttributionsBody(
             isTablet = isTablet,
         ) {
             val items = attributionItems()
+            items.forEachIndexed { index, item ->
+                AttributionRow(
+                    item = item,
+                    isTablet = isTablet,
+                )
+                if (index != items.lastIndex) {
+                    PlainStackDivider()
+                }
+            }
+        }
+
+        PlainSettingsStack(
+            title = stringResource(Res.string.settings_licenses_attributions_section_ai),
+            isTablet = isTablet,
+        ) {
+            val items = aiAttributionItems()
             items.forEachIndexed { index, item ->
                 AttributionRow(
                     item = item,
@@ -384,6 +416,95 @@ private fun attributionItems(): List<AttributionItem> = listOf(
         bodyRes = Res.string.settings_licenses_attributions_imdb_body,
         logo = null,
         link = ImdbDatasetsUrl,
+    ),
+    AttributionItem(
+        titleRes = Res.string.settings_licenses_attributions_myanimelist_title,
+        bodyRes = Res.string.settings_licenses_attributions_myanimelist_body,
+        logo = IntegrationLogo.MyAnimeList,
+        link = MyAnimeListUrl,
+    ),
+    AttributionItem(
+        titleRes = Res.string.settings_licenses_attributions_fribb_title,
+        bodyRes = Res.string.settings_licenses_attributions_fribb_body,
+        logo = null,
+        link = FribbAnimeListsUrl,
+    ),
+    AttributionItem(
+        titleRes = Res.string.settings_licenses_attributions_kometa_title,
+        bodyRes = Res.string.settings_licenses_attributions_kometa_body,
+        logo = null,
+        link = KometaAnimeIdsUrl,
+    ),
+    AttributionItem(
+        titleRes = Res.string.settings_licenses_attributions_animeskip_title,
+        bodyRes = Res.string.settings_licenses_attributions_animeskip_body,
+        logo = IntegrationLogo.AnimeSkip,
+        link = AnimeSkipUrl,
+    ),
+    AttributionItem(
+        titleRes = Res.string.settings_licenses_attributions_aniskip_title,
+        bodyRes = Res.string.settings_licenses_attributions_aniskip_body,
+        logo = null,
+        link = AniSkipUrl,
+    ),
+    AttributionItem(
+        titleRes = Res.string.settings_licenses_attributions_opensubtitles_title,
+        bodyRes = Res.string.settings_licenses_attributions_opensubtitles_body,
+        logo = IntegrationLogo.OpenSubtitles,
+        link = OpenSubtitlesUrl,
+    ),
+    AttributionItem(
+        titleRes = Res.string.settings_licenses_attributions_subdl_title,
+        bodyRes = Res.string.settings_licenses_attributions_subdl_body,
+        logo = IntegrationLogo.SubDl,
+        link = SubDlUrl,
+    ),
+) + listOfNotNull(
+    // Same visibility as the CloudStream and Discord entries in the settings.
+    AttributionItem(
+        titleRes = Res.string.settings_licenses_attributions_cloudstream_title,
+        bodyRes = Res.string.settings_licenses_attributions_cloudstream_body,
+        logo = IntegrationLogo.Cloudstream,
+        link = CloudStreamUrl,
+    ).takeIf { AppFeaturePolicy.pluginsEnabled },
+    AttributionItem(
+        titleRes = Res.string.settings_licenses_attributions_discord_title,
+        bodyRes = Res.string.settings_licenses_attributions_discord_body,
+        logo = IntegrationLogo.Discord,
+        link = DiscordUrl,
+    ).takeIf { DiscordRpcPlatform.isSupported },
+)
+
+private fun aiAttributionItems(): List<AttributionItem> = listOf(
+    AttributionItem(
+        titleRes = Res.string.settings_licenses_attributions_cerebras_title,
+        bodyRes = Res.string.settings_licenses_attributions_cerebras_body,
+        logo = null,
+        link = CerebrasUrl,
+    ),
+    AttributionItem(
+        titleRes = Res.string.settings_licenses_attributions_groq_title,
+        bodyRes = Res.string.settings_licenses_attributions_groq_body,
+        logo = null,
+        link = GroqUrl,
+    ),
+    AttributionItem(
+        titleRes = Res.string.settings_licenses_attributions_gemini_title,
+        bodyRes = Res.string.settings_licenses_attributions_gemini_body,
+        logo = null,
+        link = GeminiUrl,
+    ),
+    AttributionItem(
+        titleRes = Res.string.settings_licenses_attributions_openrouter_title,
+        bodyRes = Res.string.settings_licenses_attributions_openrouter_body,
+        logo = null,
+        link = OpenRouterUrl,
+    ),
+    AttributionItem(
+        titleRes = Res.string.settings_licenses_attributions_tavily_title,
+        bodyRes = Res.string.settings_licenses_attributions_tavily_body,
+        logo = null,
+        link = TavilyUrl,
     ),
 )
 
