@@ -16,6 +16,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.nuvio.app.core.format.formatCountriesForDisplay
+import com.nuvio.app.core.format.formatLanguageForDisplay
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
 import com.nuvio.app.core.i18n.localizedMediaStatusLabel
 import com.nuvio.app.features.details.MetaDetails
@@ -46,9 +48,9 @@ fun DetailAdditionalInfoSection(
             add(stringResource(Res.string.details_runtime) to it)
         }
         meta.ageRating?.let { add(stringResource(Res.string.details_certification) to it) }
-        meta.country?.let { add(stringResource(Res.string.details_origin_country) to it) }
+        meta.country?.let { add(stringResource(Res.string.details_origin_country) to formatCountriesForDisplay(it)) }
         meta.language?.let {
-            add(stringResource(Res.string.details_original_language) to it.uppercase())
+            add(stringResource(Res.string.details_original_language) to formatLanguageForDisplay(it))
         }
     }
     if (rows.isEmpty()) return

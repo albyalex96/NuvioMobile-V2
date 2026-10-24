@@ -95,6 +95,8 @@ import co.touchlab.kermit.Logger
 import coil3.compose.AsyncImage
 import com.nuvio.app.core.format.formatEpisodeCodeWithSelectedFormat
 import com.nuvio.app.core.ui.EpisodeCodeChip
+import com.nuvio.app.core.format.formatCountriesForDisplay
+import com.nuvio.app.core.format.formatLanguageForDisplay
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.details.MetaPerson
@@ -554,8 +556,8 @@ private fun MetaInfoRows(model: TvDetailsModel) {
     }?.uppercase()
     val secondaryItems = listOfNotNull(
         meta.runtime?.takeIf { it.isNotBlank() },
-        meta.country?.takeIf { it.isNotBlank() },
-        meta.language?.takeIf { it.isNotBlank() }?.uppercase(),
+        meta.country?.takeIf { it.isNotBlank() }?.let { formatCountriesForDisplay(it) },
+        meta.language?.takeIf { it.isNotBlank() }?.let { formatLanguageForDisplay(it) },
     )
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (primaryItems.isNotEmpty()) {
