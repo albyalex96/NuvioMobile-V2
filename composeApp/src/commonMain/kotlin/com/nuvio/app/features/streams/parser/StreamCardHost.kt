@@ -28,6 +28,7 @@ internal fun StreamCardHost(
     modifier: Modifier = Modifier,
     isCurrent: Boolean = false,
     currentLabel: String? = null,
+    outlined: Boolean = false,
 ) {
     val settings by remember {
         StreamParserSettingsRepository.ensureLoaded()
@@ -47,6 +48,7 @@ internal fun StreamCardHost(
             modifier = modifier,
             isCurrent = isCurrent,
             currentLabel = currentLabel,
+            outlined = outlined,
         )
         return
     }
@@ -64,7 +66,7 @@ internal fun StreamCardHost(
         onClick = onClick,
         onLongClick = onLongClick,
         modifier = modifier,
-        isCurrent = isCurrent || highlightLabel != null,
+        isCurrent = isCurrent || outlined || highlightLabel != null,
         currentLabel = if (isCurrent) currentLabel else highlightLabel,
     )
 }

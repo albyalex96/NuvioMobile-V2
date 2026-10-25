@@ -83,4 +83,6 @@
     <string name="party_chat_send">Invia</string>
     <string name="party_chat_not_sent">Non inviato. Tocca per riprovare</string>
     <string name="party_chat_new_messages">Nuovi messaggi</string>
+    <string name="party_companion_chatting_as">Chatti come %1$s</string>
+    <string name="party_companion_seat_left">L'altro tuo dispositivo ha lasciato la watch party.</string>
 </resources>
