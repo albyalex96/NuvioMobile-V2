@@ -35,6 +35,7 @@ import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Leaderboard
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.NewReleases
 import androidx.compose.material.icons.rounded.Forum
 import androidx.compose.material.icons.rounded.LiveTv
 import androidx.compose.material.icons.rounded.Notifications
@@ -71,6 +72,7 @@ import com.nuvio.app.features.ai.AiProvider
 import com.nuvio.app.supportsPosterNavigationMotion
 import com.nuvio.app.core.mediaproxy.LanMediaProxy
 import com.nuvio.app.features.updater.AppUpdaterPlatform
+import com.nuvio.app.features.updater.InstalledReleaseNotes
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
@@ -80,6 +82,7 @@ internal sealed class SettingsSearchTarget {
     object WatchParty : SettingsSearchTarget()
     object SwitchProfile : SettingsSearchTarget()
     object CheckForUpdates : SettingsSearchTarget()
+    object InstalledReleaseNotes : SettingsSearchTarget()
 }
 
 internal data class SettingsSearchEntry(
@@ -390,6 +393,21 @@ internal fun settingsSearchEntries(
             icon = Icons.Rounded.CloudDownload,
             target = SettingsSearchTarget.CheckForUpdates,
         )
+        if (InstalledReleaseNotes.isAvailable) {
+            add(
+                key = "installed-release-notes",
+                title = stringResource(Res.string.updates_installed_changelog_title),
+                description = stringResource(
+                    Res.string.updates_installed_changelog_description,
+                    InstalledReleaseNotes.installedVersion,
+                ),
+                page = if (supportersContributorsPageEnabled) supportersPage else licensesPage,
+                section = stringResource(Res.string.compose_settings_root_about_section),
+                category = aboutCategory,
+                icon = Icons.Rounded.NewReleases,
+                target = SettingsSearchTarget.InstalledReleaseNotes,
+            )
+        }
     }
 
     addRow(

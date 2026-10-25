@@ -58,6 +58,7 @@ import com.nuvio.app.core.ui.NuvioScreenHeader
 import com.nuvio.app.core.ui.PlatformBackHandler
 import com.nuvio.app.core.ui.isLiquidGlassNativeTabBarSupported
 import com.nuvio.app.features.addons.AddonRepository
+import com.nuvio.app.features.updater.InstalledReleaseNotes
 import com.nuvio.app.features.details.MetaScreenSettingsRepository
 import com.nuvio.app.features.details.MetaScreenSettingsUiState
 import com.nuvio.app.core.ui.PosterCardStyleRepository
@@ -683,6 +684,7 @@ private fun MobileSettingsScreen(
                 SettingsSearchTarget.WatchParty -> onWatchPartyClick()
                 SettingsSearchTarget.SwitchProfile -> onSwitchProfile?.invoke()
                 SettingsSearchTarget.CheckForUpdates -> onCheckForUpdatesClick?.invoke()
+                SettingsSearchTarget.InstalledReleaseNotes -> InstalledReleaseNotes.show()
             }
         }
 
@@ -1162,6 +1164,7 @@ private fun TabletSettingsScreen(
                 SettingsSearchTarget.WatchParty -> onWatchPartyClick()
                     SettingsSearchTarget.SwitchProfile -> onSwitchProfile?.invoke()
                     SettingsSearchTarget.CheckForUpdates -> onCheckForUpdatesClick?.invoke()
+                    SettingsSearchTarget.InstalledReleaseNotes -> InstalledReleaseNotes.show()
                 }
             }
 

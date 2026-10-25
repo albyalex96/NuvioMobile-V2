@@ -2586,4 +2586,21 @@
     <string name="stream_info_subtitle_source_embedded">Embedded</string>
     <string name="stream_info_player_engine">Player Engine</string>
     <string name="stream_info_server">Server</string>
+    <plurals name="updates_changelog_changes">
+        <item quantity="one">%1$d change</item>
+        <item quantity="other">%1$d changes</item>
+    </plurals>
+    <string name="updates_changelog_section_features">New features</string>
+    <string name="updates_changelog_section_fixes">Fixes</string>
+    <string name="updates_changelog_section_performance">Performance</string>
+    <string name="updates_changelog_section_improvements">Improvements</string>
+    <string name="updates_changelog_section_other">Other changes</string>
+    <string name="updates_changelog_full">Full changelog</string>
+    <string name="updates_changelog_open_release">Open on GitHub</string>
+    <string name="updates_changelog_open_change">Open %1$s on GitHub</string>
+    <string name="updates_changelog_installed_label">Installed version</string>
+    <string name="updates_installed_changelog_title">What's new in this version</string>
+    <string name="updates_installed_changelog_description">Changelog of version %1$s, installed on this device</string>
+    <string name="updates_installed_changelog_not_found">No release notes are published for version %1$s.</string>
+    <string name="updates_installed_changelog_failed">Unable to load the release notes.</string>
 </resources>

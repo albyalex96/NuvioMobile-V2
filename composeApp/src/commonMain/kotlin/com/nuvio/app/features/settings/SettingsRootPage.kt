@@ -15,6 +15,7 @@ import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.NewReleases
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.People
@@ -29,6 +30,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
 import com.nuvio.app.core.build.AppVersionConfig
+import com.nuvio.app.features.updater.InstalledReleaseNotes
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.compose_about_made_with
 import nuvio.composeapp.generated.resources.compose_about_version_format
@@ -45,6 +47,8 @@ import nuvio.composeapp.generated.resources.compose_settings_root_account_descri
 import nuvio.composeapp.generated.resources.compose_settings_root_appearance_description
 import nuvio.composeapp.generated.resources.compose_settings_root_check_updates_description
 import nuvio.composeapp.generated.resources.compose_settings_root_check_updates_title
+import nuvio.composeapp.generated.resources.updates_installed_changelog_description
+import nuvio.composeapp.generated.resources.updates_installed_changelog_title
 import nuvio.composeapp.generated.resources.compose_settings_root_content_discovery_description
 import nuvio.composeapp.generated.resources.compose_settings_root_downloads_description
 import nuvio.composeapp.generated.resources.compose_settings_root_downloads_title
@@ -243,6 +247,19 @@ internal fun LazyListScope.settingsRootContent(
                             isTablet = isTablet,
                             onClick = onCheckForUpdatesClick,
                         )
+                        if (InstalledReleaseNotes.isAvailable) {
+                            SettingsGroupDivider(isTablet = isTablet)
+                            SettingsNavigationRow(
+                                title = stringResource(Res.string.updates_installed_changelog_title),
+                                description = stringResource(
+                                    Res.string.updates_installed_changelog_description,
+                                    InstalledReleaseNotes.installedVersion,
+                                ),
+                                icon = Icons.Rounded.NewReleases,
+                                isTablet = isTablet,
+                                onClick = InstalledReleaseNotes::show,
+                            )
+                        }
                     }
                     if (onTestUpdateBannerClick != null) {
                         SettingsGroupDivider(isTablet = isTablet)

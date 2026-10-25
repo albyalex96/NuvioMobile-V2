@@ -57,6 +57,37 @@ internal object AppUpdaterRepository {
             ?: throw NoChannelReleaseException()
     }
 
+    /** Release notes of [version] (the `v<version>` tag), e.g. the version installed on the device. */
+    suspend fun getReleaseNotes(version: String): Result<ReleaseNotesSource> = runCatching {
+        val tag = "v${VersionUtils.normalize(version)}"
+        val response = httpRequestRaw(
+            method = "GET",
+            url = "https://api.github.com/repos/albyalex96/NuvioMobile-V2/releases/tags/$tag",
+            headers = mapOf(
+                "Accept" to "application/vnd.github+json",
+                "User-Agent" to "NuvioMobile",
+            ),
+            body = "",
+        )
+        currentCoroutineContext().ensureActive()
+        if (response.status == 404) throw NoChannelReleaseException()
+        if (response.status !in 200..299) {
+            error(getString(Res.string.updates_github_api_error, response.status))
+        }
+        parseReleaseNotes(response.body, tag)
+    }
+
+    internal fun parseReleaseNotes(responseBody: String, fallbackTag: String): ReleaseNotesSource {
+        val release = json.decodeFromString<GitHubReleaseDto>(responseBody)
+        val tag = release.tagName?.takeIf(String::isNotBlank) ?: fallbackTag
+        return ReleaseNotesSource(
+            tag = tag,
+            title = release.name?.takeIf(String::isNotBlank) ?: tag,
+            notes = release.body.orEmpty(),
+            releaseUrl = release.htmlUrl,
+        )
+    }
+
     internal fun releasePath(channel: UpdateChannel): String = when (channel) {
         UpdateChannel.STABLE -> "releases/latest"
         UpdateChannel.BETA -> "releases?per_page=100"

@@ -411,13 +411,16 @@ class AppUpdaterController internal constructor(
                 tag = "9.9.9",
                 title = "Nuvio 9.9.9",
                 notes = """
-                    A local preview of the new update experience.
+                    - 515408581 feat(integrations): AniSkip Settings Page @albyalex96
+                    - 7cf83b23e feat(integrations): SkipDB Timestamps, Provider Priority and AniSkip Page @albyalex96
+                    - 1dd2aa586 feat(network): DNS over HTTPS @albyalex96
+                    - 27ed43a01 feat(ui): Horizontal List Episode Card Style @albyalex96
+                    - 81983491 fix(tv): Sidebar Selection Focus And Player Info Panel Remote Keys @albyalex96
+                    - perf(player): Local preview entry without a commit link
 
-                    - The banner pushes the app content down.
-                    - Download progress fills the banner with the primary accent.
-                    - Release notes live behind the info button.
+                    **Full changelog:** $ReleaseRepositoryUrl/compare/v0.7.4...v0.7.5
                 """.trimIndent(),
-                releaseUrl = null,
+                releaseUrl = "$ReleaseRepositoryUrl/releases/tag/v0.7.5",
                 assetName = "Nuvio-debug-preview.apk",
                 assetUrl = "debug://update-preview",
                 assetSizeBytes = 185L * 1024L * 1024L,

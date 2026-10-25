@@ -2565,4 +2565,21 @@
   <string name="shuffle_badge">Shuffle episodi attivo</string>
   <string name="shuffle_unwatched">Non visti</string>
   <string name="stream_info_server">Server</string>
+  <plurals name="updates_changelog_changes">
+      <item quantity="one">%1$d modifica</item>
+      <item quantity="other">%1$d modifiche</item>
+    </plurals>
+  <string name="updates_changelog_section_features">Novità</string>
+  <string name="updates_changelog_section_fixes">Correzioni</string>
+  <string name="updates_changelog_section_performance">Prestazioni</string>
+  <string name="updates_changelog_section_improvements">Miglioramenti</string>
+  <string name="updates_changelog_section_other">Altre modifiche</string>
+  <string name="updates_changelog_full">Changelog completo</string>
+  <string name="updates_changelog_open_release">Apri su GitHub</string>
+  <string name="updates_changelog_open_change">Apri %1$s su GitHub</string>
+  <string name="updates_changelog_installed_label">Versione installata</string>
+  <string name="updates_installed_changelog_title">Novità di questa versione</string>
+  <string name="updates_installed_changelog_description">Changelog della versione %1$s, installata su questo dispositivo</string>
+  <string name="updates_installed_changelog_not_found">Nessuna nota di rilascio pubblicata per la versione %1$s.</string>
+  <string name="updates_installed_changelog_failed">Impossibile caricare le note di rilascio.</string>
 </resources>
