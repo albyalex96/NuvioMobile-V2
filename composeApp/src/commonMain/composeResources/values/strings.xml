@@ -582,6 +582,9 @@
     <string name="settings_licenses_attributions_haze_title">Haze 1.7.2</string>
     <string name="settings_licenses_attributions_haze_body">Used for background blur effects. Created by Chris Banes.</string>
     <string name="settings_licenses_attributions_haze_license">Licensed under the Apache License, Version 2.0.</string>
+    <string name="settings_licenses_attributions_aniskip_logo_title">AniSkip logo</string>
+    <string name="settings_licenses_attributions_aniskip_logo_body">The AniSkip icon shown in the integrations comes from the AniSkip browser extension. Copyright (c) 2021 Lexes Jan Mantiquilla.</string>
+    <string name="settings_licenses_attributions_aniskip_logo_license">Licensed under the MIT License.</string>
     <string name="settings_licenses_attributions_nuvio_title">Nuvio Mobile</string>
     <string name="settings_licenses_attributions_nuvio_body">Source code and license terms are available in the project repository.</string>
     <string name="settings_licenses_attributions_nuvio_license">Licensed under the GNU General Public License v3.0.</string>
@@ -600,6 +603,8 @@
     <string name="settings_licenses_attributions_mdblist_title">MDBList</string>
     <string name="settings_licenses_attributions_mdblist_body">Nuvio uses MDBList for ratings, watched history and playback tracking. Nuvio is not affiliated with or endorsed by MDBList.</string>
     <string name="settings_licenses_attributions_introdb_title">IntroDB</string>
+    <string name="settings_licenses_attributions_skipdb_title">SkipDB</string>
+    <string name="settings_licenses_attributions_skipdb_body">Nuvio uses the SkipDB API for community-provided intro, recap and outro timestamps used by skip controls, and to submit timestamps when enabled. SkipDB data is made available under the Open Database License (ODbL 1.0). Nuvio is not affiliated with or endorsed by SkipDB.</string>
     <string name="settings_licenses_attributions_introdb_body">Nuvio uses the IntroDB API for community-provided intro, recap, credits, and preview timestamps used by skip controls. Nuvio is not affiliated with or endorsed by IntroDB.</string>
     <string name="settings_licenses_attributions_mpvkit_title">MPVKit</string>
     <string name="settings_licenses_attributions_mpvkit_body">Used for playback on iOS builds.</string>

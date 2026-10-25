@@ -49,9 +49,11 @@ private const val PremiumizeUrl = "https://www.premiumize.me"
 private const val TorboxUrl = "https://torbox.app"
 private const val MdbListUrl = "https://mdblist.com"
 private const val IntroDbUrl = "https://introdb.app/"
+private const val SkipDbUrl = "https://skipdb.tv"
 private const val MyAnimeListUrl = "https://myanimelist.net"
 private const val AnimeSkipUrl = "https://anime-skip.com"
 private const val AniSkipUrl = "https://aniskip.com"
+private const val AniSkipLogoLicenseUrl = "https://github.com/aniskip/aniskip-extension/blob/main/LICENSE"
 private const val OpenSubtitlesUrl = "https://www.opensubtitles.com"
 private const val SubDlUrl = "https://subdl.com"
 private const val DiscordUrl = "https://discord.com"
@@ -197,6 +199,16 @@ private fun LicensesAttributionsBody(
                     bodyRes = Res.string.settings_licenses_attributions_haze_body,
                     licenseRes = Res.string.settings_licenses_attributions_haze_license,
                     link = HazeLicenseUrl,
+                ),
+                isTablet = isTablet,
+            )
+            PlainStackDivider()
+            LicenseRow(
+                item = LicenseItem(
+                    titleRes = Res.string.settings_licenses_attributions_aniskip_logo_title,
+                    bodyRes = Res.string.settings_licenses_attributions_aniskip_logo_body,
+                    licenseRes = Res.string.settings_licenses_attributions_aniskip_logo_license,
+                    link = AniSkipLogoLicenseUrl,
                 ),
                 isTablet = isTablet,
             )
@@ -431,6 +443,12 @@ private fun attributionItems(): List<AttributionItem> = listOf(
         link = IntroDbUrl,
     ),
     AttributionItem(
+        titleRes = Res.string.settings_licenses_attributions_skipdb_title,
+        bodyRes = Res.string.settings_licenses_attributions_skipdb_body,
+        logo = IntegrationLogo.SkipDb,
+        link = SkipDbUrl,
+    ),
+    AttributionItem(
         titleRes = Res.string.settings_licenses_attributions_imdb_title,
         bodyRes = Res.string.settings_licenses_attributions_imdb_body,
         logo = null,
@@ -463,7 +481,7 @@ private fun attributionItems(): List<AttributionItem> = listOf(
     AttributionItem(
         titleRes = Res.string.settings_licenses_attributions_aniskip_title,
         bodyRes = Res.string.settings_licenses_attributions_aniskip_body,
-        logo = null,
+        logo = IntegrationLogo.AniSkip,
         link = AniSkipUrl,
     ),
     AttributionItem(

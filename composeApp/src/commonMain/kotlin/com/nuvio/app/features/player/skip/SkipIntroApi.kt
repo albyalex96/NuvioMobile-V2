@@ -99,6 +99,71 @@ internal object SkipIntroApi {
         }
     }
 
+    // --- SkipDB ---
+
+    suspend fun getSkipDbSegments(
+        imdbId: String,
+        season: Int?,
+        episode: Int?,
+        durationSec: Double?,
+        adjust: SkipDbAdjustMode,
+    ): SkipDbSegmentsResponse? {
+        val url = skipDbSegmentsUrl(imdbId, season, episode, durationSec, adjust)
+        return try {
+            json.decodeFromString<SkipDbSegmentsResponse>(httpGetText(url))
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /** Returns the HTTP status, or null when the request could not be sent. */
+    suspend fun submitSkipDbSegment(apiKey: String, request: SkipDbSubmitRequest): SkipDbSubmitResult? {
+        if (apiKey.isBlank()) return null
+        return try {
+            val response = com.nuvio.app.features.addons.httpRequestRaw(
+                method = "POST",
+                url = SKIPDB_BASE + "api/segments",
+                headers = skipDbAuthHeaders(apiKey),
+                body = json.encodeToString(SkipDbSubmitRequest.serializer(), request),
+            )
+            val status = runCatching { json.decodeFromString<SkipDbSubmitResponse>(response.body).status }.getOrNull()
+            SkipDbSubmitResult(httpStatus = response.status, status = status)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /**
+     * SkipDB has no key check endpoint: an empty submission is rejected with 400/422 once the key is
+     * accepted, and with 401/403 when it is not.
+     */
+    suspend fun verifySkipDbApiKey(apiKey: String): Boolean {
+        if (apiKey.isBlank()) return false
+        return try {
+            val response = com.nuvio.app.features.addons.httpRequestRaw(
+                method = "POST",
+                url = SKIPDB_BASE + "api/segments",
+                headers = skipDbAuthHeaders(apiKey),
+                body = "{}",
+            )
+            response.status in setOf(200, 201, 400, 409, 422)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    private fun skipDbAuthHeaders(apiKey: String) = mapOf(
+        "Authorization" to "Bearer $apiKey",
+        "Content-Type" to "application/json",
+        "Accept" to "application/json",
+    )
+
     // --- AniSkip ---
 
     suspend fun getAniSkipTimes(
@@ -135,6 +200,32 @@ internal object SkipIntroApi {
             null
         }
     }
+}
+
+internal data class SkipDbSubmitResult(
+    val httpStatus: Int,
+    /** `approved`, `pending`, `rejected` or `already_approved`. */
+    val status: String?,
+) {
+    /** Accepted (even if pending review) or already present with the same timing. */
+    val isAccepted: Boolean
+        get() = httpStatus in 200..201 && status != "rejected" ||
+            httpStatus == 409 && status == "already_approved"
+}
+
+private const val SKIPDB_BASE = "https://api.skipdb.tv/"
+
+internal fun skipDbSegmentsUrl(
+    imdbId: String,
+    season: Int?,
+    episode: Int?,
+    durationSec: Double?,
+    adjust: SkipDbAdjustMode,
+): String = buildString {
+    append(SKIPDB_BASE).append("api/segments?imdb_id=").append(imdbId)
+    if (season != null && episode != null) append("&season=").append(season).append("&episode=").append(episode)
+    durationSec?.takeIf { it.isFinite() && it > 0 }?.let { append("&duration=").append(it.toLong()) }
+    if (adjust != SkipDbAdjustMode.CONSERVATIVE) append("&adjust=").append(adjust.apiValue)
 }
 
 internal fun introDbMovieSegmentsUrl(baseUrl: String, imdbId: String): String =

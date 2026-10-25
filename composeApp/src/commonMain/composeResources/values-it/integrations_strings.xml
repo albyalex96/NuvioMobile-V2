@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="settings_integrations_section_timestamps">Timestamp</string>
+    <string name="settings_integrations_section_timestamps">Salto dei segmenti</string>
     <string name="settings_integrations_section_lists">Liste</string>
     <string name="settings_integrations_section_subtitles">Sottotitoli</string>
     <string name="settings_integrations_section_extra">Extra</string>
@@ -30,4 +30,40 @@
     <string name="settings_work_in_progress_badge">Lavori in corso</string>
     <string name="settings_work_in_progress_title">%1$s sta arrivando</string>
     <string name="settings_work_in_progress_message">Questa integrazione è in fase di sviluppo. Sarà disponibile in un prossimo aggiornamento.</string>
+    <string name="timestamp_priority_title">Priorità dei servizi</string>
+    <string name="timestamp_priority_dialog_message">Se più servizi hanno lo stesso segmento (intro, riassunto o finale), si usa quello più in alto nell'elenco. I servizi più in basso completano solo i segmenti che mancano a quelli più in alto.</string>
+    <string name="timestamp_provider_status_active">Attivo</string>
+    <string name="timestamp_provider_status_inactive">Non configurato</string>
+    <string name="timestamp_submit_targets_title">Invia i timestamp a</string>
+    <string name="timestamp_submit_targets_dialog_message">I timestamp inseriti nel player vengono inviati a tutti i servizi selezionati.</string>
+    <string name="timestamp_submit_targets_none">Nessuno</string>
+    <string name="timestamp_submit_targets_unavailable">Nessun servizio configurato per l'invio</string>
+    <string name="timestamp_submit_target_not_ready">Attiva l'invio e inserisci la chiave API nella pagina del servizio</string>
+    <string name="skipdb_section_lookup">Ricerca</string>
+    <string name="skipdb_section_submit">Invio</string>
+    <string name="skipdb_send_duration">Invia la durata del flusso</string>
+    <string name="skipdb_send_duration_description">Permette a SkipDB di abbinare o spostare i timestamp sulla versione esatta in riproduzione. La ricerca attende che il player conosca la durata.</string>
+    <string name="skipdb_ignore_out_of_range">Ignora le corrispondenze non affidabili</string>
+    <string name="skipdb_ignore_out_of_range_description">Scarta i timestamp registrati su una versione di durata troppo diversa da quella in riproduzione.</string>
+    <string name="skipdb_min_confidence">Confidenza minima</string>
+    <string name="skipdb_min_confidence_description">Ignora i segmenti con una confidenza più bassa. SkipDB la calcola dagli invii concordi e dai voti della community.</string>
+    <string name="skipdb_adjust_mode">Modalità di adattamento</string>
+    <string name="skipdb_adjust_mode_description">Come SkipDB sposta i timestamp registrati su una versione di durata diversa.</string>
+    <string name="skipdb_adjust_conservative">Conservativa</string>
+    <string name="skipdb_adjust_conservative_description">Sposta i timestamp solo quando la differenza è affidabile (predefinita).</string>
+    <string name="skipdb_adjust_greedy">Aggressiva</string>
+    <string name="skipdb_adjust_greedy_description">Sposta i timestamp anche quando la corrispondenza è meno certa.</string>
+    <string name="skipdb_adjust_none">Nessuna</string>
+    <string name="skipdb_adjust_none_description">Non sposta mai: i timestamp vengono usati come registrati.</string>
+    <string name="skipdb_submit_enabled">Attiva l'invio a SkipDB</string>
+    <string name="skipdb_submit_enabled_description">Permette di inviare i timestamp dal player a SkipDB. Richiede una chiave API.</string>
+    <string name="skipdb_api_key">Chiave API SkipDB</string>
+    <string name="skipdb_api_key_description">Genera una chiave su skipdb.tv, senza bisogno di un account. Serve per inviare i timestamp.</string>
+    <string name="submit_intro_targets">Invio a: %1$s</string>
+    <string name="submit_intro_result_failed">Invio non riuscito a %1$s</string>
+    <string name="submit_intro_result_partial">Inviato a %1$s, non riuscito per %2$s</string>
+    <string name="timestamp_merge_providers">Combina i servizi</string>
+    <string name="timestamp_merge_providers_description">Se il servizio con priorità più alta non ha tutti i segmenti, prende quelli mancanti dai servizi successivi (es. intro da A, recap e outro da B). Se disattivato, si usa solo il servizio con priorità più alta che ha dei timestamp.</string>
+    <string name="compose_settings_page_aniskip">AniSkip</string>
+    <string name="settings_integrations_aniskip_description">Timestamp della community per sigle iniziali e finali degli anime</string>
 </resources>

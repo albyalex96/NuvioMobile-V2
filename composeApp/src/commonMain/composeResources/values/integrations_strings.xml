@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="settings_integrations_section_timestamps">Timestamps</string>
+    <string name="settings_integrations_section_timestamps">Segment skipping</string>
     <string name="settings_integrations_section_lists">Lists</string>
     <string name="settings_integrations_section_subtitles">Subtitles</string>
     <string name="settings_integrations_section_extra">Extra</string>
@@ -30,4 +30,40 @@
     <string name="settings_work_in_progress_badge">Work in progress</string>
     <string name="settings_work_in_progress_title">%1$s is coming soon</string>
     <string name="settings_work_in_progress_message">This integration is being built. It will be available in a future update.</string>
+    <string name="timestamp_priority_title">Provider priority</string>
+    <string name="timestamp_priority_dialog_message">When several services have the same segment (intro, recap or outro), the one higher in the list is used. Lower services only fill in the segments the higher ones are missing.</string>
+    <string name="timestamp_provider_status_active">Active</string>
+    <string name="timestamp_provider_status_inactive">Not configured</string>
+    <string name="timestamp_submit_targets_title">Submit timestamps to</string>
+    <string name="timestamp_submit_targets_dialog_message">Timestamps entered in the player are sent to every selected service.</string>
+    <string name="timestamp_submit_targets_none">None</string>
+    <string name="timestamp_submit_targets_unavailable">No service set up for submissions</string>
+    <string name="timestamp_submit_target_not_ready">Enable submission and add the API key in this service's page</string>
+    <string name="skipdb_section_lookup">Lookup</string>
+    <string name="skipdb_section_submit">Submission</string>
+    <string name="skipdb_send_duration">Send stream duration</string>
+    <string name="skipdb_send_duration_description">Lets SkipDB match or shift the timestamps to the exact release being played. The lookup waits until the player knows the duration.</string>
+    <string name="skipdb_ignore_out_of_range">Ignore unreliable matches</string>
+    <string name="skipdb_ignore_out_of_range_description">Skip timestamps recorded on a release whose length differs too much from the one being played.</string>
+    <string name="skipdb_min_confidence">Minimum confidence</string>
+    <string name="skipdb_min_confidence_description">Ignore segments with a lower confidence. SkipDB computes it from matching submissions and community votes.</string>
+    <string name="skipdb_adjust_mode">Adjustment mode</string>
+    <string name="skipdb_adjust_mode_description">How SkipDB shifts timestamps recorded on a release of a different length.</string>
+    <string name="skipdb_adjust_conservative">Conservative</string>
+    <string name="skipdb_adjust_conservative_description">Shifts timestamps only when the difference is reliable (default).</string>
+    <string name="skipdb_adjust_greedy">Aggressive</string>
+    <string name="skipdb_adjust_greedy_description">Shifts timestamps even when the match is less certain.</string>
+    <string name="skipdb_adjust_none">None</string>
+    <string name="skipdb_adjust_none_description">Never shifts: timestamps are used as recorded.</string>
+    <string name="skipdb_submit_enabled">Enable SkipDB submission</string>
+    <string name="skipdb_submit_enabled_description">Lets you send timestamps from the player to SkipDB. Requires an API key.</string>
+    <string name="skipdb_api_key">SkipDB API key</string>
+    <string name="skipdb_api_key_description">Generate a key at skipdb.tv, no account needed. Required to submit timestamps.</string>
+    <string name="submit_intro_targets">Sending to: %1$s</string>
+    <string name="submit_intro_result_failed">Could not submit to %1$s</string>
+    <string name="submit_intro_result_partial">Submitted to %1$s, failed for %2$s</string>
+    <string name="timestamp_merge_providers">Combine services</string>
+    <string name="timestamp_merge_providers_description">If the highest-priority service does not have every segment, the missing ones are taken from the next services (e.g. intro from A, recap and outro from B). When off, only the highest-priority service with timestamps is used.</string>
+    <string name="compose_settings_page_aniskip">AniSkip</string>
+    <string name="settings_integrations_aniskip_description">Community skip timestamps for anime openings and endings</string>
 </resources>

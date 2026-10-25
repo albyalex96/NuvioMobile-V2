@@ -69,6 +69,7 @@ import com.nuvio.app.features.servers.ServerStorage
 import com.nuvio.app.features.simkl.SimklAuthStorage
 import com.nuvio.app.features.mal.MalAuthStorage
 import com.nuvio.app.features.anime.AnimeTrackingStorage
+import com.nuvio.app.features.player.skip.TimestampProviderStorage
 import com.nuvio.app.features.simkl.SimklSyncStorage
 import com.nuvio.app.features.tmdb.TmdbSettingsStorage
 import com.nuvio.app.features.updater.AndroidAppUpdaterPlatform
@@ -149,6 +150,7 @@ open class MainActivity : AppCompatActivity() {
         SimklAuthStorage.initialize(applicationContext)
         MalAuthStorage.initialize(applicationContext)
         AnimeTrackingStorage.initialize(applicationContext)
+        TimestampProviderStorage.initialize(applicationContext)
         SimklSyncStorage.initialize(applicationContext)
         LibraryDisplaySettingsStorage.initialize(applicationContext)
         ContinueWatchingPreferencesStorage.initialize(applicationContext)

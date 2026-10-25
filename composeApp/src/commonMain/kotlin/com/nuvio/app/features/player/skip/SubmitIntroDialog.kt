@@ -56,12 +56,16 @@ import nuvio.composeapp.generated.resources.action_close
 import nuvio.composeapp.generated.resources.submit_intro_button_submit
 import nuvio.composeapp.generated.resources.submit_intro_capture_button
 import nuvio.composeapp.generated.resources.submit_intro_end_time_label
+import nuvio.composeapp.generated.resources.submit_intro_result_failed
+import nuvio.composeapp.generated.resources.submit_intro_result_partial
+import nuvio.composeapp.generated.resources.submit_intro_targets
 import nuvio.composeapp.generated.resources.submit_intro_segment_intro
 import nuvio.composeapp.generated.resources.submit_intro_segment_outro
 import nuvio.composeapp.generated.resources.submit_intro_segment_recap
 import nuvio.composeapp.generated.resources.submit_intro_segment_type_label
 import nuvio.composeapp.generated.resources.submit_intro_start_time_label
 import nuvio.composeapp.generated.resources.submit_intro_title
+import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.floor
 
@@ -72,6 +76,7 @@ fun SubmitIntroDialog(
     season: Int,
     episode: Int,
     currentTimeSec: Double,
+    durationSec: Double?,
     segmentType: String,
     onSegmentTypeChange: (String) -> Unit,
     startTimeStr: String,
@@ -84,6 +89,8 @@ fun SubmitIntroDialog(
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
     var isSubmitting by remember { mutableStateOf(false) }
+    var resultMessage by remember { mutableStateOf<String?>(null) }
+    val targetNames = remember { SkipIntroRepository.submitTargetNames() }
 
     DialogSurface(
         onDismissRequest = onDismiss,
@@ -114,6 +121,14 @@ fun SubmitIntroDialog(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
+            }
+
+            if (targetNames.isNotEmpty()) {
+                Text(
+                    text = stringResource(Res.string.submit_intro_targets, targetNames.joinToString(", ")),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
 
             // Segment Type
@@ -168,6 +183,14 @@ fun SubmitIntroDialog(
                 onCapture = { onEndTimeChange(formatSecondsToMMSS(currentTimeSec)) }
             )
 
+            resultMessage?.let { message ->
+                Text(
+                    text = message,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+
             Spacer(modifier = Modifier.height(8.dp))
 
             // Actions
@@ -201,18 +224,31 @@ fun SubmitIntroDialog(
                             val end = parseTimeToSeconds(endTimeStr)
                             if (start != null && end != null && end > start) {
                                 isSubmitting = true
+                                resultMessage = null
                                 scope.launch {
-                                    val result = SkipIntroRepository.submitIntro(
+                                    val results = SkipIntroRepository.submitIntro(
                                         imdbId = imdbId,
                                         season = season,
                                         episode = episode,
                                         startSec = start,
                                         endSec = end,
                                         segmentType = segmentType,
+                                        durationSec = durationSec,
                                     )
                                     isSubmitting = false
-                                    if (result) {
-                                        onSuccess()
+                                    val failed = results.filterValues { !it }.keys
+                                    val succeeded = results.filterValues { it }.keys
+                                    when {
+                                        results.isNotEmpty() && failed.isEmpty() -> onSuccess()
+                                        succeeded.isEmpty() -> resultMessage = getString(
+                                            Res.string.submit_intro_result_failed,
+                                            (failed.takeIf { it.isNotEmpty() } ?: targetNames).joinToString(", "),
+                                        )
+                                        else -> resultMessage = getString(
+                                            Res.string.submit_intro_result_partial,
+                                            succeeded.joinToString(", "),
+                                            failed.joinToString(", "),
+                                        )
                                     }
                                 }
                             }

@@ -13,8 +13,10 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Cloud
+import androidx.compose.material.icons.rounded.CloudUpload
 import androidx.compose.material.icons.rounded.Send
 import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material.icons.rounded.Subtitles
 import androidx.compose.material.icons.rounded.ViewList
 import androidx.compose.material.icons.filled.Sync
@@ -329,12 +331,14 @@ internal fun settingsSearchEntries(
         PlaybackSearchRow("torbox-attribution", stringResource(Res.string.settings_licenses_attributions_torbox_title), stringResource(Res.string.settings_licenses_attributions_torbox_body)),
         PlaybackSearchRow("mdblist-attribution", stringResource(Res.string.settings_licenses_attributions_mdblist_title), stringResource(Res.string.settings_licenses_attributions_mdblist_body)),
         PlaybackSearchRow("introdb-attribution", stringResource(Res.string.settings_licenses_attributions_introdb_title), stringResource(Res.string.settings_licenses_attributions_introdb_body)),
+        PlaybackSearchRow("skipdb-attribution", stringResource(Res.string.settings_licenses_attributions_skipdb_title), stringResource(Res.string.settings_licenses_attributions_skipdb_body)),
         PlaybackSearchRow("imdb-datasets", stringResource(Res.string.settings_licenses_attributions_imdb_title), stringResource(Res.string.settings_licenses_attributions_imdb_body)),
         PlaybackSearchRow("myanimelist-attribution", stringResource(Res.string.settings_licenses_attributions_myanimelist_title), stringResource(Res.string.settings_licenses_attributions_myanimelist_body)),
         PlaybackSearchRow("fribb-attribution", stringResource(Res.string.settings_licenses_attributions_fribb_title), stringResource(Res.string.settings_licenses_attributions_fribb_body)),
         PlaybackSearchRow("kometa-attribution", stringResource(Res.string.settings_licenses_attributions_kometa_title), stringResource(Res.string.settings_licenses_attributions_kometa_body)),
         PlaybackSearchRow("animeskip-attribution", stringResource(Res.string.settings_licenses_attributions_animeskip_title), stringResource(Res.string.settings_licenses_attributions_animeskip_body)),
         PlaybackSearchRow("aniskip-attribution", stringResource(Res.string.settings_licenses_attributions_aniskip_title), stringResource(Res.string.settings_licenses_attributions_aniskip_body)),
+        PlaybackSearchRow("aniskip-logo-license", stringResource(Res.string.settings_licenses_attributions_aniskip_logo_title), stringResource(Res.string.settings_licenses_attributions_aniskip_logo_body) + " " + stringResource(Res.string.settings_licenses_attributions_aniskip_logo_license)),
         PlaybackSearchRow("opensubtitles-attribution", stringResource(Res.string.settings_licenses_attributions_opensubtitles_title), stringResource(Res.string.settings_licenses_attributions_opensubtitles_body)),
         PlaybackSearchRow("subdl-attribution", stringResource(Res.string.settings_licenses_attributions_subdl_title), stringResource(Res.string.settings_licenses_attributions_subdl_body)),
         PlaybackSearchRow("cloudstream-attribution", stringResource(Res.string.settings_licenses_attributions_cloudstream_title), stringResource(Res.string.settings_licenses_attributions_cloudstream_body))
@@ -1721,7 +1725,12 @@ private fun addAdditionalSearchEntries(
         }
     }
 
-    // Integrations: timestamps (AnimeSkip, IntroDB)
+    // Integrations: segment skipping (provider priority, submission targets, AnimeSkip, IntroDB, SkipDB)
+    val integrationsPageLabel = stringResource(Res.string.compose_settings_page_integrations)
+    val segmentSkippingSection = stringResource(Res.string.settings_integrations_section_timestamps)
+    row(SettingsPage.Integrations, "timestamp-priority", stringResource(Res.string.timestamp_priority_title), stringResource(Res.string.timestamp_priority_dialog_message), integrationsPageLabel, segmentSkippingSection, icon = Icons.Rounded.SwapVert)
+    row(SettingsPage.Integrations, "timestamp-merge-providers", stringResource(Res.string.timestamp_merge_providers), stringResource(Res.string.timestamp_merge_providers_description), integrationsPageLabel, segmentSkippingSection, icon = Icons.Rounded.SkipNext)
+    row(SettingsPage.Integrations, "timestamp-submit-targets", stringResource(Res.string.timestamp_submit_targets_title), stringResource(Res.string.timestamp_submit_targets_dialog_message), integrationsPageLabel, segmentSkippingSection, icon = Icons.Rounded.CloudUpload)
     val animeSkipPage = stringResource(Res.string.compose_settings_page_anime_skip)
     addPage(
         SettingsPage.AnimeSkip,
@@ -1751,6 +1760,24 @@ private fun addAdditionalSearchEntries(
         PlaybackSearchRow("introdb-key", stringResource(Res.string.settings_playback_introdb_api_key), stringResource(Res.string.settings_playback_introdb_api_key_description)),
     ).forEach { item ->
         row(SettingsPage.IntroDb, item.key, item.title, item.description, introDbPage, introDbPage, icon = Icons.Rounded.SkipNext)
+    }
+    val skipDbPage = stringResource(Res.string.compose_settings_page_skipdb)
+    addPage(SettingsPage.SkipDb, "skipdb", skipDbPage, stringResource(Res.string.settings_integrations_skipdb_description), generalCategory, Icons.Rounded.SkipNext)
+    val skipDbLookupSection = stringResource(Res.string.skipdb_section_lookup)
+    listOf(
+        PlaybackSearchRow("skipdb-send-duration", stringResource(Res.string.skipdb_send_duration), stringResource(Res.string.skipdb_send_duration_description)),
+        PlaybackSearchRow("skipdb-ignore-out-of-range", stringResource(Res.string.skipdb_ignore_out_of_range), stringResource(Res.string.skipdb_ignore_out_of_range_description)),
+        PlaybackSearchRow("skipdb-min-confidence", stringResource(Res.string.skipdb_min_confidence), stringResource(Res.string.skipdb_min_confidence_description)),
+        PlaybackSearchRow("skipdb-adjust-mode", stringResource(Res.string.skipdb_adjust_mode), stringResource(Res.string.skipdb_adjust_mode_description)),
+    ).forEach { item ->
+        row(SettingsPage.SkipDb, item.key, item.title, item.description, skipDbPage, skipDbLookupSection, icon = Icons.Rounded.SkipNext)
+    }
+    val skipDbSubmitSection = stringResource(Res.string.skipdb_section_submit)
+    listOf(
+        PlaybackSearchRow("skipdb-submit", stringResource(Res.string.skipdb_submit_enabled), stringResource(Res.string.skipdb_submit_enabled_description)),
+        PlaybackSearchRow("skipdb-key", stringResource(Res.string.skipdb_api_key), stringResource(Res.string.skipdb_api_key_description)),
+    ).forEach { item ->
+        row(SettingsPage.SkipDb, item.key, item.title, item.description, skipDbPage, skipDbSubmitSection, icon = Icons.Rounded.SkipNext)
     }
 
     val openSubtitlesPage = stringResource(Res.string.compose_settings_page_opensubtitles)
@@ -1805,7 +1832,7 @@ private fun addAdditionalSearchEntries(
 
     addPage(SettingsPage.MyAnimeList, "myanimelist", stringResource(Res.string.compose_settings_page_myanimelist), stringResource(Res.string.settings_integrations_myanimelist_description), generalCategory, Icons.Rounded.ViewList)
     // Integrations: placeholder pages (work in progress)
-    addPage(SettingsPage.SkipDb, "skipdb", stringResource(Res.string.compose_settings_page_skipdb), stringResource(Res.string.settings_integrations_skipdb_description), generalCategory, Icons.Rounded.SkipNext)
+    addPage(SettingsPage.AniSkip, "aniskip", stringResource(Res.string.compose_settings_page_aniskip), stringResource(Res.string.settings_integrations_aniskip_description), generalCategory, Icons.Rounded.SkipNext)
     addPage(SettingsPage.Kitsu, "kitsu", stringResource(Res.string.compose_settings_page_kitsu), stringResource(Res.string.settings_integrations_kitsu_description), generalCategory, Icons.Rounded.ViewList)
     addPage(SettingsPage.AniList, "anilist", stringResource(Res.string.compose_settings_page_anilist), stringResource(Res.string.settings_integrations_anilist_description), generalCategory, Icons.Rounded.ViewList)
     addPage(SettingsPage.Telegram, "telegram", stringResource(Res.string.compose_settings_page_telegram), stringResource(Res.string.settings_integrations_telegram_description), generalCategory, Icons.Rounded.Send)

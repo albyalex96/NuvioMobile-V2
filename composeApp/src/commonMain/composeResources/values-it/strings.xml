@@ -1346,6 +1346,8 @@
   <string name="settings_licenses_attributions_mdblist_title">MDBList</string>
   <string name="settings_licenses_attributions_mdblist_body">Nuvio utilizza MDBList per valutazioni e dati di fornitori di punteggi esterni. Nuvio non è affiliato né approvato da MDBList.</string>
   <string name="settings_licenses_attributions_introdb_title">IntroDB</string>
+  <string name="settings_licenses_attributions_skipdb_title">SkipDB</string>
+  <string name="settings_licenses_attributions_skipdb_body">Nuvio utilizza l'API di SkipDB per i timestamp di intro, riassunti e finali forniti dalla community e utilizzati dai controlli di salto, e per inviare i timestamp quando l'invio è attivo. I dati di SkipDB sono distribuiti con la Open Database License (ODbL 1.0). Nuvio non è affiliato né approvato da SkipDB.</string>
   <string name="settings_licenses_attributions_introdb_body">Nuvio utilizza l'API di IntroDB per i timestamp di intro, riassunti, titoli di coda e anteprime forniti dalla community e utilizzati dai controlli di salto. Nuvio non è affiliato né approvato da IntroDB.</string>
   <string name="settings_licenses_attributions_mpvkit_title">MPVKit</string>
   <string name="settings_licenses_attributions_mpvkit_body">Utilizzato per la riproduzione sulle build iOS.</string>
@@ -2131,6 +2133,9 @@
   <string name="settings_licenses_attributions_haze_title">Haze 1.7.2</string>
   <string name="settings_licenses_attributions_haze_body">Usata per gli effetti di sfocatura dello sfondo. Creata da Chris Banes.</string>
   <string name="settings_licenses_attributions_haze_license">Distribuita con licenza Apache License, Version 2.0.</string>
+  <string name="settings_licenses_attributions_aniskip_logo_title">Logo di AniSkip</string>
+  <string name="settings_licenses_attributions_aniskip_logo_body">L'icona di AniSkip mostrata nelle integrazioni proviene dall'estensione per browser di AniSkip. Copyright (c) 2021 Lexes Jan Mantiquilla.</string>
+  <string name="settings_licenses_attributions_aniskip_logo_license">Distribuita con licenza MIT.</string>
   <string name="settings_licenses_attributions_simkl_title">Simkl</string>
   <string name="settings_licenses_attributions_simkl_body">Nuvio si connette a Simkl per l'autenticazione dell'account, le watchlist, la cronologia di visione, i progressi di riproduzione e lo scrobbling. I dati di tracking di film, serie TV e anime sono forniti da Simkl. Nuvio non è affiliato né approvato da Simkl.</string>
   <string name="settings_licenses_attributions_section_ai">SERVIZI DELL'ASSISTENTE AI</string>

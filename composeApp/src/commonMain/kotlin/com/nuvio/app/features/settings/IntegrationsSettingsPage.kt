@@ -16,6 +16,8 @@ import nuvio.composeapp.generated.resources.compose_settings_page_kitsu
 import nuvio.composeapp.generated.resources.compose_settings_page_myanimelist
 import nuvio.composeapp.generated.resources.compose_settings_page_opensubtitles
 import nuvio.composeapp.generated.resources.compose_settings_page_skipdb
+import nuvio.composeapp.generated.resources.compose_settings_page_aniskip
+import nuvio.composeapp.generated.resources.settings_integrations_aniskip_description
 import nuvio.composeapp.generated.resources.compose_settings_page_subdl
 import nuvio.composeapp.generated.resources.compose_settings_page_telegram
 import nuvio.composeapp.generated.resources.settings_integrations_ai_assistant_description
@@ -80,6 +82,8 @@ internal fun LazyListScope.integrationsContent(
             isTablet = isTablet,
         ) {
             SettingsGroup(isTablet = isTablet) {
+                TimestampPreferenceRows(isTablet = isTablet)
+                SettingsGroupDivider(isTablet = isTablet)
                 SettingsNavigationRow(
                     title = stringResource(Res.string.compose_settings_page_anime_skip),
                     description = stringResource(Res.string.settings_integrations_anime_skip_description),
@@ -102,6 +106,14 @@ internal fun LazyListScope.integrationsContent(
                     iconPainter = integrationLogoPainter(IntegrationLogo.SkipDb),
                     isTablet = isTablet,
                     onClick = { onPageClick(SettingsPage.SkipDb) },
+                )
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsNavigationRow(
+                    title = stringResource(Res.string.compose_settings_page_aniskip),
+                    description = stringResource(Res.string.settings_integrations_aniskip_description),
+                    iconPainter = integrationLogoPainter(IntegrationLogo.AniSkip),
+                    isTablet = isTablet,
+                    onClick = { onPageClick(SettingsPage.AniSkip) },
                 )
             }
         }

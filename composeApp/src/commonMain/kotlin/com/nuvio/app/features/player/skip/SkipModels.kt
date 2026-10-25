@@ -140,3 +140,77 @@ data class AnimeSkipTimestamp(
 data class AnimeSkipTimestampType(
     @SerialName("name") val name: String,
 )
+
+// --- SkipDB API models ---
+
+@Serializable
+data class SkipDbSegmentsResponse(
+    @SerialName("segments") val segments: SkipDbSegments? = null,
+)
+
+@Serializable
+data class SkipDbSegments(
+    @SerialName("intro") val intro: SkipDbSegment? = null,
+    @SerialName("recap") val recap: SkipDbSegment? = null,
+    @SerialName("outro") val outro: SkipDbSegment? = null,
+    @SerialName("preview") val preview: SkipDbSegment? = null,
+)
+
+@Serializable
+data class SkipDbSegment(
+    @SerialName("start_ms") val startMs: Long? = null,
+    @SerialName("end_ms") val endMs: Long? = null,
+    /** `exact`, `shifted`, `agnostic` (no duration sent) or `out-of-range`. */
+    @SerialName("match") val match: String? = null,
+    @SerialName("confidence") val confidence: Double? = null,
+)
+
+@Serializable
+data class SkipDbSubmitRequest(
+    @SerialName("imdb_id") val imdbId: String,
+    @SerialName("segment_type") val segmentType: String,
+    @SerialName("season") val season: Int,
+    @SerialName("episode") val episode: Int,
+    @SerialName("start_ms") val startMs: Long,
+    @SerialName("end_ms") val endMs: Long,
+    @SerialName("duration_ms") val durationMs: Long? = null,
+)
+
+@Serializable
+data class SkipDbSubmitResponse(
+    @SerialName("status") val status: String? = null,
+)
+
+internal const val SkipDbOutOfRangeMatch = "out-of-range"
+
+/**
+ * Converts a SkipDB answer into skip intervals, applying the user's filters. Outros without an end
+ * run to the end of the stream. Previews are ignored: the player has no action for them.
+ */
+internal fun SkipDbSegmentsResponse.toSkipIntervals(
+    settings: SkipDbSettings,
+    durationSec: Double?,
+    isMovie: Boolean,
+): List<SkipInterval> {
+    val segments = segments ?: return emptyList()
+    return listOfNotNull(
+        segments.intro.toSkipIntervalOrNull("intro", settings, durationSec),
+        segments.recap.toSkipIntervalOrNull("recap", settings, durationSec),
+        segments.outro.toSkipIntervalOrNull(if (isMovie) "movie-credits" else "outro", settings, durationSec),
+    )
+}
+
+private fun SkipDbSegment?.toSkipIntervalOrNull(
+    type: String,
+    settings: SkipDbSettings,
+    durationSec: Double?,
+): SkipInterval? {
+    if (this == null) return null
+    if (settings.ignoreOutOfRange && match.equals(SkipDbOutOfRangeMatch, ignoreCase = true)) return null
+    if (confidence != null && confidence * 100 < settings.minConfidencePercent) return null
+    val start = startMs?.let { it / 1000.0 } ?: return null
+    val end = endMs?.let { it / 1000.0 }
+        ?: if (type == "outro" || type == "movie-credits") durationSec else null
+    if (end == null || !start.isFinite() || !end.isFinite() || start < 0 || end <= start) return null
+    return SkipInterval(startTime = start, endTime = end, type = type, provider = "skipdb")
+}

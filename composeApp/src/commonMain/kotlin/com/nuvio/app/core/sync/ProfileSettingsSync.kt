@@ -42,6 +42,7 @@ import com.nuvio.app.features.mal.MalAuthRepository
 import com.nuvio.app.features.mal.MalProfileSync
 import com.nuvio.app.features.opensubtitles.OpenSubtitlesProfileSync
 import com.nuvio.app.features.player.skip.TimestampIntegrationsProfileSync
+import com.nuvio.app.features.player.skip.TimestampProviderSettingsRepository
 import com.nuvio.app.features.opensubtitles.OpenSubtitlesRepository
 import com.nuvio.app.features.subdl.SubDlProfileSync
 import com.nuvio.app.features.ai.AiAssistantProfileSync
@@ -236,6 +237,7 @@ object ProfileSettingsSync {
             DiscordRpcRepository.uiState.map(DiscordRpcProfileSync::syncSignature).distinctUntilChanged(),
             MalAuthRepository.uiState.map(MalProfileSync::syncSignature).distinctUntilChanged(),
             AnimeTrackingSettingsRepository.uiState.map { "anime_tracking_$it" }.distinctUntilChanged(),
+            TimestampProviderSettingsRepository.uiState.map(TimestampIntegrationsProfileSync::syncSignature).distinctUntilChanged(),
             OpenSubtitlesRepository.uiState.map(OpenSubtitlesProfileSync::syncSignature).distinctUntilChanged(),
             SubDlRepository.uiState.map(SubDlProfileSync::syncSignature).distinctUntilChanged(),
             AiAssistantRepository.uiState.map(AiAssistantProfileSync::syncSignature).distinctUntilChanged(),

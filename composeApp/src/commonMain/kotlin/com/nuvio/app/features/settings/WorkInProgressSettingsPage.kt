@@ -62,7 +62,7 @@ internal fun LazyListScope.workInProgressIntegrationContent(
             log.d { "Opened placeholder page for ${page.name}" }
         }
         val logo = when (page) {
-            SettingsPage.SkipDb -> IntegrationLogo.SkipDb
+            SettingsPage.AniSkip -> IntegrationLogo.AniSkip
             SettingsPage.Kitsu -> IntegrationLogo.Kitsu
             SettingsPage.AniList -> IntegrationLogo.AniList
             SettingsPage.Telegram -> IntegrationLogo.Telegram

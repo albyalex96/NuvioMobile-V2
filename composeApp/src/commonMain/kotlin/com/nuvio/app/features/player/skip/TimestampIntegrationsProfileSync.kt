@@ -10,7 +10,8 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 
 /**
- * Profile sync of the AnimeSkip and IntroDB settings (toggles and credentials), carried inside the
+ * Profile sync of the timestamp integrations (AnimeSkip, IntroDB and SkipDB toggles and credentials,
+ * provider priority and submission targets), carried inside the
  * `stream_badge_settings` payload of the profile settings blob like the other local extras: the
  * custom credential RPCs are not reliable on the server, so the client ID and the API key travel
  * with the blob instead.
@@ -20,17 +21,27 @@ internal object TimestampIntegrationsProfileSync {
     private const val ANIMESKIP_CLIENT_ID_KEY = "timestamp_animeskip_client_id"
     private const val INTRODB_SUBMIT_ENABLED_KEY = "timestamp_introdb_submit_enabled"
     private const val INTRODB_API_KEY_KEY = "timestamp_introdb_api_key"
+    private const val SKIPDB_SETTINGS_KEY = "timestamp_skipdb_settings"
+    private const val PRIORITY_KEY = "timestamp_provider_priority"
+    private const val SUBMIT_TARGETS_KEY = "timestamp_submit_targets"
+    private const val MERGE_PROVIDERS_KEY = "timestamp_merge_providers"
 
     private val log = Logger.withTag("TimestampIntegrations")
 
     fun exportToSyncPayload(): JsonObject {
         PlayerSettingsRepository.ensureLoaded()
         val settings = PlayerSettingsRepository.uiState.value
+        val providers = TimestampProviderSettingsRepository.current()
         return buildJsonObject {
             put(ANIMESKIP_ENABLED_KEY, encodeSyncBoolean(settings.animeSkipEnabled))
             put(ANIMESKIP_CLIENT_ID_KEY, encodeSyncString(settings.animeSkipClientId.trim()))
             put(INTRODB_SUBMIT_ENABLED_KEY, encodeSyncBoolean(settings.introSubmitEnabled))
             put(INTRODB_API_KEY_KEY, encodeSyncString(settings.introDbApiKey.trim()))
+            put(SKIPDB_SETTINGS_KEY, encodeSyncString(TimestampProviderSettingsRepository.encodeSkipDb(providers.skipDb)))
+            put(MERGE_PROVIDERS_KEY, encodeSyncBoolean(providers.mergeProviders))
+            put(PRIORITY_KEY, encodeSyncString(providers.priority.joinToString(LIST_SEPARATOR)))
+            // Until the user chooses, the default (highest-priority ready service) is not synced.
+            providers.submitTargets?.let { put(SUBMIT_TARGETS_KEY, encodeSyncString(it.joinToString(LIST_SEPARATOR))) }
         }
     }
 
@@ -53,8 +64,34 @@ internal object TimestampIntegrationsProfileSync {
             PlayerSettingsRepository.setIntroDbApiKey(it.trim())
             applied++
         }
+        payload.decodeSyncString(SKIPDB_SETTINGS_KEY)
+            ?.let(TimestampProviderSettingsRepository::decodeSkipDb)
+            ?.let { remote ->
+                TimestampProviderSettingsRepository.updateSkipDb { remote }
+                applied++
+            }
+        payload.decodeSyncBoolean(MERGE_PROVIDERS_KEY)?.let {
+            TimestampProviderSettingsRepository.setMergeProviders(it)
+            applied++
+        }
+        payload.decodeSyncString(PRIORITY_KEY)?.let {
+            TimestampProviderSettingsRepository.setPriority(decodeIdList(it))
+            applied++
+        }
+        payload.decodeSyncString(SUBMIT_TARGETS_KEY)?.let {
+            TimestampProviderSettingsRepository.setSubmitTargets(decodeIdList(it))
+            applied++
+        }
         if (applied > 0) {
-            log.d { "Applied $applied AnimeSkip/IntroDB settings from the profile blob" }
+            log.d { "Applied $applied timestamp integration settings from the profile blob" }
         }
     }
+
+    /** Signature of the synced values, so a local change schedules a blob upload. */
+    fun syncSignature(settings: TimestampProviderSettings): String = "timestamp_providers_${settings.hashCode()}"
+
+    private fun decodeIdList(value: String): List<String> =
+        value.split(LIST_SEPARATOR).map(String::trim).filter(String::isNotEmpty)
+
+    private const val LIST_SEPARATOR = ","
 }

@@ -36,7 +36,11 @@ import com.nuvio.app.features.tracking.TrackingScrobbleAction
 import com.nuvio.app.features.watchprogress.WatchProgressRepository
 import com.nuvio.app.features.watchprogress.buildPlaybackVideoId
 import com.nuvio.app.features.watching.application.WatchingState
+import androidx.compose.runtime.snapshotFlow
+import com.nuvio.app.features.watching.domain.isShortPlaceholderDuration
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
@@ -560,7 +564,7 @@ private fun PlayerScreenRuntime.BindPlayerMetadataAndSkipEffects() {
         val vid = activeVideoId
         if (!playerSettingsUiState.skipIntroEnabled) return@LaunchedEffect
         if ((contentType ?: parentMetaType).equals("movie", ignoreCase = true)) {
-            skipIntervals = SkipIntroRepository.getMovieSkipIntervals(parentMetaId, vid)
+            skipIntervals = SkipIntroRepository.getMovieSkipIntervals(parentMetaId, vid, durationSec = { awaitStreamDurationSec() })
             return@LaunchedEffect
         }
         if (season == null || episode == null || vid == null) return@LaunchedEffect
@@ -574,16 +578,17 @@ private fun PlayerScreenRuntime.BindPlayerMetadataAndSkipEffects() {
             val intervals = when {
                 vid.startsWith("mal:") -> {
                     val malId = vid.removePrefix("mal:").substringBefore(':')
-                    SkipIntroRepository.getSkipIntervalsForMal(malId = malId, episode = episode, imdbId = imdbFromContent, imdbSeason = season, imdbEpisode = episode)
+                    SkipIntroRepository.getSkipIntervalsForMal(malId = malId, episode = episode, imdbId = imdbFromContent, imdbSeason = season, imdbEpisode = episode, durationSec = { awaitStreamDurationSec() })
                 }
                 vid.startsWith("kitsu:") -> {
                     val kitsuId = vid.removePrefix("kitsu:").substringBefore(':')
-                    SkipIntroRepository.getSkipIntervalsForKitsu(kitsuId = kitsuId, episode = episode, imdbId = imdbFromContent, imdbSeason = season, imdbEpisode = episode)
+                    SkipIntroRepository.getSkipIntervalsForKitsu(kitsuId = kitsuId, episode = episode, imdbId = imdbFromContent, imdbSeason = season, imdbEpisode = episode, durationSec = { awaitStreamDurationSec() })
                 }
                 else -> SkipIntroRepository.getSkipIntervals(
                     imdbId = vid.substringBefore(':').takeIf { it.startsWith("tt") },
                     season = season,
                     episode = episode,
+                    durationSec = { awaitStreamDurationSec() },
                 )
             }
             skipIntervals = intervals
@@ -783,6 +788,18 @@ private fun buildNowPlayingSubtitle(
 
 private fun firstNonBlankUrl(vararg values: String?): String? =
     values.firstOrNull { !it.isNullOrBlank() }?.trim()
+
+/**
+ * Length of the current stream in seconds for the timestamp lookup (SkipDB matches timestamps to it),
+ * waiting until the player reports it for this stream; null if it does not arrive in time.
+ */
+private suspend fun PlayerScreenRuntime.awaitStreamDurationSec(): Double? =
+    withTimeoutOrNull(SkipLookupDurationWaitMs) {
+        snapshotFlow { if (playbackSnapshotKey == activePlaybackKey) playbackSnapshot.durationMs else 0L }
+            .first { it > 0L && !isShortPlaceholderDuration(it) }
+    }?.let { it / 1000.0 }
+
+private const val SkipLookupDurationWaitMs = 20_000L
 
 internal fun PlayerScreenRuntime.removeFailedStreamFromCache() {
     val currentVideoId = activeVideoId ?: return

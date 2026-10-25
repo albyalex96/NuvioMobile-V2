@@ -1,5 +1,7 @@
 package com.nuvio.app.features.player
 
+import com.nuvio.app.features.player.skip.TimestampProviderSettingsRepository
+import com.nuvio.app.features.player.skip.TimestampProviders
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
@@ -366,6 +368,11 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
     val partyActive = partyState.party != null
     val partyAvailable by PartyRepository.available.collectAsStateWithLifecycle()
     val castState by CastPlatform.state.collectAsStateWithLifecycle()
+    remember { TimestampProviderSettingsRepository.ensureLoaded() }
+    val timestampProviderSettings by TimestampProviderSettingsRepository.uiState.collectAsStateWithLifecycle()
+    val canSubmitTimestamps = remember(playerSettingsUiState, timestampProviderSettings) {
+        TimestampProviders.activeSubmitTargets(timestampProviderSettings).isNotEmpty()
+    }
     val streamParserSettings by remember {
         StreamParserSettingsRepository.ensureLoaded()
         StreamParserSettingsRepository.uiState
@@ -509,9 +516,7 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
                 }
             },
             onSubmitIntroClick = if (
-                isSeries &&
-                playerSettingsUiState.introSubmitEnabled &&
-                playerSettingsUiState.introDbApiKey.isNotBlank()
+                isSeries && canSubmitTimestamps
             ) {
                 { showSubmitIntroModal = true }
             } else {
@@ -810,6 +815,7 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
         activeVideoId = activeVideoId,
         metaUiState = metaUiState,
         displayedPositionMs = displayedPositionMs,
+        streamDurationMs = if (playbackSnapshotKey == activePlaybackKey) playbackSnapshot.durationMs else 0L,
         submitIntroSegmentType = submitIntroSegmentType,
         onSubmitIntroSegmentTypeChanged = { submitIntroSegmentType = it },
         submitIntroStartTimeStr = submitIntroStartTimeStr,

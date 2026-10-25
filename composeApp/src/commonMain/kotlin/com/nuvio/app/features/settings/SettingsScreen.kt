@@ -932,7 +932,8 @@ private fun MobileSettingsScreen(
                 SettingsPage.OpenSubtitles -> openSubtitlesSettingsContent(isTablet = false)
                 SettingsPage.SubDl -> subDlSettingsContent(isTablet = false)
                 SettingsPage.MyAnimeList -> myAnimeListSettingsContent(isTablet = false)
-                SettingsPage.SkipDb,
+                SettingsPage.SkipDb -> skipDbSettingsContent(isTablet = false)
+                SettingsPage.AniSkip,
                 SettingsPage.Kitsu,
                 SettingsPage.AniList,
                 SettingsPage.Telegram,
@@ -1451,7 +1452,8 @@ private fun TabletSettingsScreen(
                     SettingsPage.OpenSubtitles -> openSubtitlesSettingsContent(isTablet = true)
                     SettingsPage.SubDl -> subDlSettingsContent(isTablet = true)
                     SettingsPage.MyAnimeList -> myAnimeListSettingsContent(isTablet = true)
-                    SettingsPage.SkipDb,
+                    SettingsPage.SkipDb -> skipDbSettingsContent(isTablet = true)
+                    SettingsPage.AniSkip,
                     SettingsPage.Kitsu,
                     SettingsPage.AniList,
                     SettingsPage.Telegram,

@@ -15,6 +15,7 @@ import nuvio.composeapp.generated.resources.anilist_logo
 import nuvio.composeapp.generated.resources.subdl_logo
 import nuvio.composeapp.generated.resources.telegram_logo
 import nuvio.composeapp.generated.resources.skipdb_logo
+import nuvio.composeapp.generated.resources.aniskip_logo
 import nuvio.composeapp.generated.resources.opensubtitles_logo
 import nuvio.composeapp.generated.resources.cloudstream_logo
 import nuvio.composeapp.generated.resources.introdb_favicon
@@ -37,6 +38,7 @@ internal actual fun integrationLogoPainter(logo: IntegrationLogo): Painter =
         IntegrationLogo.SubDl -> composePainterResource(Res.drawable.subdl_logo)
         IntegrationLogo.Telegram -> composePainterResource(Res.drawable.telegram_logo)
         IntegrationLogo.SkipDb -> composePainterResource(Res.drawable.skipdb_logo)
+        IntegrationLogo.AniSkip -> composePainterResource(Res.drawable.aniskip_logo)
         IntegrationLogo.OpenSubtitles -> composePainterResource(Res.drawable.opensubtitles_logo)
         IntegrationLogo.Cloudstream -> composePainterResource(Res.drawable.cloudstream_logo)
     }

@@ -17,6 +17,7 @@ internal enum class IntegrationLogo {
     SubDl,
     Telegram,
     SkipDb,
+    AniSkip,
     OpenSubtitles,
     Cloudstream,
 }
