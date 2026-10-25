@@ -197,6 +197,29 @@ internal fun PlayerScreenRuntime.BindPlayerRuntimeEffects() {
         subtitleAutoSyncState = SubtitleAutoSyncUiState()
     }
 
+    // The episode counts as started while it is still buffering, so a stream that never loads
+    // still leaves it in Continue Watching.
+    LaunchedEffect(playbackSession.videoId) {
+        if (!shouldTrackWatchProgress) return@LaunchedEffect
+        WatchProgressRepository.markPlaybackStarted(playbackSession)
+    }
+
+    // Also runs for the launch episode: the host ignores an episode it already shows.
+    LaunchedEffect(activeVideoId, activeSeasonNumber, activeEpisodeNumber) {
+        if (isLiveTvPlayback) return@LaunchedEffect
+        val videoId = activeVideoId?.takeIf { it.isNotBlank() } ?: return@LaunchedEffect
+        args.onEpisodeChanged?.invoke(
+            PlayerEpisodeChange(
+                videoId = videoId,
+                seasonNumber = activeSeasonNumber,
+                episodeNumber = activeEpisodeNumber,
+                episodeTitle = activeEpisodeTitle,
+                episodeThumbnail = activeEpisodeThumbnail,
+                pauseDescription = activePauseDescription,
+            ),
+        )
+    }
+
     LaunchedEffect(playerController, subtitleDelayMs) {
         playerController?.setSubtitleDelayMs(subtitleDelayMs)
     }

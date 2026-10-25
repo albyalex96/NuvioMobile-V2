@@ -83,6 +83,23 @@ internal class NuvioNavigator(
         }
         return true
     }
+
+    /**
+     * Swaps the entry right below [expectedRoute] for what [replacement] returns (null keeps it).
+     * Returns false with native navigation, whose stack is not visible here.
+     */
+    fun replaceRouteBelow(
+        expectedRoute: AppRoute,
+        replacement: (AppRoute) -> AppRoute?,
+    ): Boolean {
+        if (onExternalNavigate != null) return false
+        val index = backStack.indexOfLast { it == expectedRoute }
+        if (index <= 0) return false
+        val below = backStack[index - 1] as? AppRoute ?: return false
+        val newRoute = replacement(below) ?: return false
+        backStack[index - 1] = newRoute
+        return true
+    }
 }
 
 internal class NuvioNavigateOptions {

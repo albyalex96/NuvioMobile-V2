@@ -80,6 +80,12 @@ internal object WatchProgressCodec {
         )
 }
 
+/**
+ * Position saved for an episode that is still opening: just enough for Continue Watching to
+ * treat it as started, without moving the resume point.
+ */
+internal const val StartedPlaybackPlaceholderPositionMs = 1L
+
 internal fun shouldStoreWatchProgress(
     positionMs: Long,
     durationMs: Long,

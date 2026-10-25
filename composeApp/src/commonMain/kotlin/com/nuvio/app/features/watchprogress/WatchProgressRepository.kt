@@ -1130,6 +1130,33 @@ object WatchProgressRepository {
         upsert(session = session, snapshot = snapshot, persist = true, syncRemote = syncRemote)
     }
 
+    /**
+     * Marks an episode the player is opening as started, so Continue Watching lists it even when
+     * the stream never gets past buffering. An episode with saved progress (in progress or
+     * completed) is left as it is; the first real position replaces the placeholder.
+     */
+    fun markPlaybackStarted(session: WatchProgressPlaybackSession): Boolean {
+        ensureLoaded()
+        if (session.isLiveTvSession() || session.seasonNumber == null || session.episodeNumber == null) return false
+        if (session.profileId != currentProfileId || ProfileRepository.activeProfileId != session.profileId) return false
+        val existing = progressForVideo(
+            videoId = session.videoId,
+            parentMetaId = session.parentMetaId,
+            seasonNumber = session.seasonNumber,
+            episodeNumber = session.episodeNumber,
+        )
+        if (existing != null) return false
+        upsert(
+            session = session,
+            snapshot = PlayerPlaybackSnapshot(positionMs = StartedPlaybackPlaceholderPositionMs),
+            persist = true,
+            syncRemote = false,
+            startedPlaceholder = true,
+        )
+        log.i { "Marked ${session.parentMetaId} S${session.seasonNumber}E${session.episodeNumber} as started" }
+        return true
+    }
+
     fun applyExternalProgress(entries: List<WatchProgressEntry>) {
         ensureLoaded()
         var changed = false
@@ -1273,6 +1300,7 @@ object WatchProgressRepository {
         snapshot: PlayerPlaybackSnapshot,
         persist: Boolean,
         syncRemote: Boolean,
+        startedPlaceholder: Boolean = false,
     ) {
         if (session.isLiveTvSession()) return
 
@@ -1284,7 +1312,7 @@ object WatchProgressRepository {
             durationMs = durationMs,
             isEnded = snapshot.isEnded,
         )
-        if (!isCompleted && !shouldStoreWatchProgress(positionMs = positionMs, durationMs = durationMs)) {
+        if (!startedPlaceholder && !isCompleted && !shouldStoreWatchProgress(positionMs = positionMs, durationMs = durationMs)) {
             return
         }
 

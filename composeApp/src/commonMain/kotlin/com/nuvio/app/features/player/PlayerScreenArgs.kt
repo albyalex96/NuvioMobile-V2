@@ -19,6 +19,8 @@ internal data class PlayerScreenArgs(
     val onBack: () -> Unit,
     // Closes the player onto the details page of the title; null when the host cannot do it.
     val onExitToDetails: (() -> Unit)? = null,
+    // Told when the player moves to another episode (next episode, episodes panel).
+    val onEpisodeChanged: ((PlayerEpisodeChange) -> Unit)? = null,
     val onOpenInExternalPlayer: ((ExternalPlayerPlaybackRequest) -> Unit)?,
     val onOpenExternalUrl: ((String) -> Unit)?,
     val modifier: Modifier,
@@ -46,4 +48,14 @@ internal data class PlayerScreenArgs(
     val sourceFilename: String? = null,
     val onOpenPartyMedia: (PartyMedia) -> Unit = {},
     val stream: com.nuvio.app.features.streams.StreamItem? = null,
+)
+
+/** The episode the player is playing; it changes with next episode or the episodes panel. */
+data class PlayerEpisodeChange(
+    val videoId: String,
+    val seasonNumber: Int?,
+    val episodeNumber: Int?,
+    val episodeTitle: String?,
+    val episodeThumbnail: String?,
+    val pauseDescription: String?,
 )
