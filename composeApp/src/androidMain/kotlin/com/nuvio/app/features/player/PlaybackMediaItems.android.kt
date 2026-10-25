@@ -2,9 +2,11 @@ package com.nuvio.app.features.player
 
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
-import java.net.HttpURLConnection
-import java.net.URL
+import com.nuvio.app.core.network.nuvioSharedOkHttpClient
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 
 internal fun playbackMediaItemFromUrl(
     url: String,
@@ -200,29 +202,28 @@ internal fun probeMimeType(url: String, headers: Map<String, String>): String? {
     val methods = listOf("HEAD", "GET")
     methods.forEach { method ->
         runCatching {
-            val connection = (URL(url).openConnection() as HttpURLConnection).apply {
-                requestMethod = method
-                connectTimeout = 3_000
-                readTimeout = 3_000
-                instanceFollowRedirects = true
-                setRequestProperty("User-Agent", "Mozilla/5.0")
-                setRequestProperty("Accept", "*/*")
-                headers.forEach { (key, value) ->
-                    setRequestProperty(key, value)
-                }
-            }
-            try {
-                val responseCode = connection.responseCode
-                if (responseCode in 200..299) {
-                    val contentType = connection.contentType
-                    normalizeMimeType(contentType)
-                } else null
-            } finally {
-                connection.disconnect()
+            val request = Request.Builder()
+                .url(url)
+                .method(method, null)
+                .header("User-Agent", "Mozilla/5.0")
+                .header("Accept", "*/*")
+                .apply { headers.forEach { (key, value) -> header(key, value) } }
+                .build()
+            mimeProbeHttpClient.newCall(request).execute().use { response ->
+                if (response.code in 200..299) normalizeMimeType(response.header("Content-Type")) else null
             }
         }.getOrNull()?.let { return it }
     }
     return null
+}
+
+private val mimeProbeHttpClient: OkHttpClient by lazy {
+    nuvioSharedOkHttpClient.newBuilder()
+        .connectTimeout(3, TimeUnit.SECONDS)
+        .readTimeout(3, TimeUnit.SECONDS)
+        .followRedirects(true)
+        .followSslRedirects(true)
+        .build()
 }
 
 private const val MIME_VIDEO_QUICK_TIME = "video/quicktime"

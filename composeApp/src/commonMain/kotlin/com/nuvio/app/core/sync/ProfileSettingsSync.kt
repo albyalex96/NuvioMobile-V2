@@ -7,6 +7,7 @@ import com.nuvio.app.core.auth.AuthRepository
 import com.nuvio.app.core.auth.AuthState
 import com.nuvio.app.core.logging.AppLoggerSettings
 import com.nuvio.app.core.mediaproxy.MediaProxySettingsRepository
+import com.nuvio.app.core.network.dns.DnsOverHttpsRepository
 import com.nuvio.app.core.network.SupabaseProvider
 import com.nuvio.app.features.collection.CollectionMobileSettingsRepository
 import com.nuvio.app.features.collection.CollectionMobileSettingsStorage
@@ -228,6 +229,8 @@ object ProfileSettingsSync {
             PluginRepository.uiState.map { "plugins_group_${it.groupStreamsByRepository}" },
             AppLoggerSettings.enabled.map { "app_logger_$it" },
             MediaProxySettingsRepository.settings.map { "media_proxy_${it.hashCode()}" },
+            combine(DnsOverHttpsRepository.settings, DnsOverHttpsRepository.syncAcrossDevices, DnsOverHttpsRepository::syncSignature)
+                .distinctUntilChanged(),
             LiveTvRepository.uiState.map { "live_tv_${LiveTvProfileSync.syncSignature(it)}" }.distinctUntilChanged(),
             HomeCatalogSettingsRepository.uiState.map(HomeHeroProfileSync::syncSignature).distinctUntilChanged(),
             DiscordRpcRepository.uiState.map(DiscordRpcProfileSync::syncSignature).distinctUntilChanged(),
@@ -299,6 +302,7 @@ object ProfileSettingsSync {
                         PluginGroupingSync.exportToSyncPayload() +
                         AppLoggerSettings.exportToSyncPayload() +
                         MediaProxySettingsRepository.exportToSyncPayload() +
+                        DnsOverHttpsRepository.exportToSyncPayload() +
                         LiveTvProfileSync.exportToSyncPayload() +
                         HomeHeroProfileSync.exportToSyncPayload() +
                         DiscordRpcProfileSync.exportToSyncPayload() +
@@ -372,6 +376,7 @@ object ProfileSettingsSync {
         PluginGroupingSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
         AppLoggerSettings.applyFromSyncPayload(blob.features.streamBadgeSettings)
         MediaProxySettingsRepository.applyFromSyncPayload(blob.features.streamBadgeSettings)
+        DnsOverHttpsRepository.applyFromSyncPayload(blob.features.streamBadgeSettings)
         LiveTvProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
         HomeHeroProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
         DiscordRpcProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
@@ -440,6 +445,7 @@ object ProfileSettingsSync {
         StreamParserSettingsRepository.ensureLoaded()
         AppLoggerSettings.ensureLoaded()
         MediaProxySettingsRepository.ensureLoaded()
+        DnsOverHttpsRepository.ensureLoaded()
         DebridSettingsRepository.ensureLoaded()
         TmdbSettingsRepository.ensureLoaded()
         MdbListSettingsRepository.ensureLoaded()

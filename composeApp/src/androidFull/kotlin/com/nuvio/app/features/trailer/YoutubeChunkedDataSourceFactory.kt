@@ -6,15 +6,19 @@ import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DataSpec
-import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.HttpDataSource
 import androidx.media3.datasource.TransferListener
+import androidx.media3.datasource.okhttp.OkHttpDataSource
+import com.nuvio.app.core.network.nuvioSharedOkHttpClient
 import kotlinx.coroutines.runBlocking
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.player_error_unable_to_play_stream
+import okhttp3.OkHttpClient
 import org.jetbrains.compose.resources.getString
+import java.util.concurrent.TimeUnit
 
 /**
- * A DataSource.Factory that wraps DefaultHttpDataSource and appends YouTube's
+ * A DataSource.Factory that wraps an OkHttp data source (app DNS resolver) and appends YouTube's
  * `&range=start-end` query parameter on each request. YouTube throttles (and
  * kills) connections that try to download full adaptive streams in one shot,
  * but honours chunked range-param requests at full speed.
@@ -31,13 +35,19 @@ class YoutubeChunkedDataSourceFactory(
         private const val TAG = "YTChunkedDS"
         /** 10 MB chunks – large enough to avoid too many requests, small enough to dodge throttle. */
         private const val CHUNK_SIZE = 10L * 1024 * 1024
+
+        private val httpClient: OkHttpClient by lazy {
+            nuvioSharedOkHttpClient.newBuilder()
+                .connectTimeout(15, TimeUnit.SECONDS)
+                .readTimeout(15, TimeUnit.SECONDS)
+                .followRedirects(true)
+                .followSslRedirects(true)
+                .build()
+        }
     }
 
     override fun createDataSource(): DataSource {
-        val upstreamFactory = DefaultHttpDataSource.Factory()
-            .setConnectTimeoutMs(15_000)
-            .setReadTimeoutMs(15_000)
-            .setAllowCrossProtocolRedirects(true)
+        val upstreamFactory = OkHttpDataSource.Factory(httpClient)
         if (defaultRequestHeaders.isNotEmpty()) {
             upstreamFactory.setDefaultRequestProperties(defaultRequestHeaders)
         }
@@ -46,7 +56,7 @@ class YoutubeChunkedDataSourceFactory(
     }
 
     private class YoutubeChunkedDataSource(
-        private val upstream: DefaultHttpDataSource,
+        private val upstream: HttpDataSource,
         private val chunkSize: Long
     ) : DataSource {
 

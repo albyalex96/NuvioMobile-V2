@@ -1,11 +1,15 @@
 package com.nuvio.app.core.network
 
 import io.ktor.client.HttpClient
+import io.ktor.client.engine.HttpClientEngine
 import io.ktor.utils.io.ByteReadChannel
 import io.ktor.utils.io.errors.IOException
 import io.ktor.utils.io.readAvailable
 
 internal expect fun createApiHttpClient(): HttpClient
+
+/** Engine of the Supabase client; null keeps the library default (Android adds the DNS over HTTPS resolver). */
+internal expect fun createSupabaseHttpEngine(): HttpClientEngine?
 
 internal const val API_RESPONSE_MAX_BYTES = 16 * 1024 * 1024
 

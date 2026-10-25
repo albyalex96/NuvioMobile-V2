@@ -18,6 +18,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import co.touchlab.kermit.Logger
+import com.nuvio.app.core.network.NuvioDns
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.websocket.WebSockets
@@ -49,6 +50,7 @@ internal actual fun createDiscordGatewayHttpClient(): HttpClient = HttpClient(Ok
     install(WebSockets)
     engine {
         config {
+            dns(NuvioDns)
             connectTimeout(15, TimeUnit.SECONDS)
             readTimeout(0, TimeUnit.MILLISECONDS)
             writeTimeout(15, TimeUnit.SECONDS)

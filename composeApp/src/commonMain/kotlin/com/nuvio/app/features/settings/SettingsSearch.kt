@@ -341,6 +341,10 @@ internal fun settingsSearchEntries(
             .takeIf { AppFeaturePolicy.pluginsEnabled },
         PlaybackSearchRow("discord-attribution", stringResource(Res.string.settings_licenses_attributions_discord_title), stringResource(Res.string.settings_licenses_attributions_discord_body))
             .takeIf { DiscordRpcPlatform.isSupported },
+        PlaybackSearchRow("doh-attribution", stringResource(Res.string.settings_licenses_attributions_doh_title), stringResource(Res.string.settings_licenses_attributions_doh_body))
+            .takeIf { dnsOverHttpsSettingsVisible },
+        PlaybackSearchRow("okhttp-license", stringResource(Res.string.settings_licenses_attributions_okhttp_title), stringResource(Res.string.settings_licenses_attributions_okhttp_license))
+            .takeIf { dnsOverHttpsSettingsVisible },
         PlaybackSearchRow("cerebras-attribution", stringResource(Res.string.settings_licenses_attributions_cerebras_title), stringResource(Res.string.settings_licenses_attributions_cerebras_body)),
         PlaybackSearchRow("groq-attribution", stringResource(Res.string.settings_licenses_attributions_groq_title), stringResource(Res.string.settings_licenses_attributions_groq_body)),
         PlaybackSearchRow("gemini-attribution", stringResource(Res.string.settings_licenses_attributions_gemini_title), stringResource(Res.string.settings_licenses_attributions_gemini_body)),
@@ -498,6 +502,39 @@ internal fun settingsSearchEntries(
             description = stringResource(Res.string.settings_advanced_sentry_reports_subtitle),
             pageLabel = advancedPage,
             section = stringResource(Res.string.settings_advanced_section_diagnostics),
+            category = advancedCategory,
+            icon = Icons.Rounded.Tune,
+        )
+    }
+    if (dnsOverHttpsSettingsVisible) {
+        val networkSection = stringResource(Res.string.settings_advanced_section_network)
+        addRow(
+            page = SettingsPage.Advanced,
+            key = "dns-over-https",
+            title = stringResource(Res.string.settings_network_doh_title),
+            description = stringResource(Res.string.settings_network_doh_description),
+            pageLabel = advancedPage,
+            section = networkSection,
+            category = advancedCategory,
+            icon = Icons.Rounded.Tune,
+        )
+        addRow(
+            page = SettingsPage.Advanced,
+            key = "dns-over-https-fallback",
+            title = stringResource(Res.string.settings_network_doh_fallback_title),
+            description = stringResource(Res.string.settings_network_doh_fallback_description),
+            pageLabel = advancedPage,
+            section = networkSection,
+            category = advancedCategory,
+            icon = Icons.Rounded.Tune,
+        )
+        addRow(
+            page = SettingsPage.Advanced,
+            key = "dns-over-https-sync",
+            title = stringResource(Res.string.settings_network_doh_sync_title),
+            description = stringResource(Res.string.settings_network_doh_sync_description),
+            pageLabel = advancedPage,
+            section = networkSection,
             category = advancedCategory,
             icon = Icons.Rounded.Tune,
         )

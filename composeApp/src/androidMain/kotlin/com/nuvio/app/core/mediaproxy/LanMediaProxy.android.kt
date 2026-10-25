@@ -13,6 +13,7 @@ import android.os.PowerManager
 import android.util.Base64
 import android.webkit.MimeTypeMap
 import co.touchlab.kermit.Logger
+import com.nuvio.app.core.network.nuvioSharedOkHttpClient
 import java.io.BufferedInputStream
 import java.io.BufferedOutputStream
 import java.io.File
@@ -21,7 +22,6 @@ import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
 import java.io.RandomAccessFile
-import java.net.HttpURLConnection
 import java.net.Inet4Address
 import java.net.InetAddress
 import java.net.NetworkInterface
@@ -29,11 +29,11 @@ import java.net.ServerSocket
 import java.net.Socket
 import java.net.SocketException
 import java.net.URI
-import java.net.URL
 import java.security.SecureRandom
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -42,6 +42,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
 
 private val log = Logger.withTag("LanProxy")
 
@@ -77,6 +80,14 @@ actual object LanMediaProxy {
 
     private val settings: MediaProxySettings
         get() = MediaProxySettingsRepository.settings.value
+
+    /** Redirects are followed by hand in openUpstream; timeouts come from the settings. */
+    private val upstreamHttpClient: OkHttpClient by lazy {
+        nuvioSharedOkHttpClient.newBuilder()
+            .followRedirects(false)
+            .followSslRedirects(false)
+            .build()
+    }
 
     private class Route(
         val token: String,
@@ -390,13 +401,13 @@ actual object LanMediaProxy {
         if (route.restrictedAuthority != null && !authority.equals(route.restrictedAuthority, ignoreCase = true)) {
             return writeEmpty(output, 403, "Forbidden")
         }
-        val connection = openUpstream("$scheme://$authority$rest", route, request) ?: run {
+        val response = openUpstream("$scheme://$authority$rest", route, request) ?: run {
             return writeEmpty(output, 502, "Bad Gateway")
         }
-        try {
-            val code = connection.responseCode
-            val finalUrl = connection.url.toString()
-            val upstreamType = connection.contentType
+        response.use {
+            val code = response.code
+            val finalUrl = response.request.url.toString()
+            val upstreamType = response.header("Content-Type")
             // The stream's response headers describe the link itself, not the segments and keys of a playlist.
             val isEntry = proxiedRemoteUrl(route, source.url) == proxiedRemoteUrl(route, "$scheme://$authority$rest")
             val responseHeaders = if (isEntry) source.responseHeaders else emptyMap()
@@ -409,26 +420,25 @@ actual object LanMediaProxy {
                 }
             }
             val isRange = request.headers.containsKey("range")
-            val body = if (code >= 400) connection.errorStream else connection.inputStream
-            val buffered = body?.let { BufferedInputStream(it, COPY_BUFFER_BYTES) }
+            val buffered = BufferedInputStream(response.body.byteStream(), COPY_BUFFER_BYTES)
 
             val manifest = if (
-                route.options.rewriteManifests && request.method == "GET" && code == 200 && !isRange && buffered != null
+                route.options.rewriteManifests && request.method == "GET" && code == 200 && !isRange
             ) {
                 detectManifest(contentType, finalUrl, buffered)
             } else {
                 null
             }
-            if (manifest != null && buffered != null) {
+            if (manifest != null) {
                 serveManifest(route, manifest, "$scheme://$authority$rest", finalUrl, buffered, output)
                 return
             }
 
             val disguised = if (
                 route.options.rewriteManifests && request.method == "GET" && code == 200 && !isRange &&
-                buffered != null && isDisguisedMediaType(contentType) &&
+                isDisguisedMediaType(contentType) &&
                 // Keys and other tiny files are never segments.
-                (connection.getHeaderField("Content-Length")?.toLongOrNull() ?: Long.MAX_VALUE) >= MIN_SEGMENT_BYTES
+                (response.header("Content-Length")?.toLongOrNull() ?: Long.MAX_VALUE) >= MIN_SEGMENT_BYTES
             ) {
                 sniffDisguisedMedia(route, buffered, authority, rest, contentType)
             } else {
@@ -437,7 +447,7 @@ actual object LanMediaProxy {
 
             val headers = linkedMapOf<String, String>()
             FORWARDED_RESPONSE_HEADERS.forEach { name ->
-                connection.getHeaderField(name)?.let { headers[name] = it }
+                response.header(name)?.let { headers[name] = it }
             }
             contentType?.let { headers["Content-Type"] = it }
             if (disguised != null) {
@@ -446,10 +456,10 @@ actual object LanMediaProxy {
                     // Offsets no longer match the upstream file: no ranges on this response.
                     headers.remove("Accept-Ranges")
                     headers.remove("ETag")
-                    connection.getHeaderField("Content-Length")?.toLongOrNull()
+                    response.header("Content-Length")?.toLongOrNull()
                         ?.let { headers["Content-Length"] = (it - disguised.offset).coerceAtLeast(0L).toString() }
                         ?: headers.remove("Content-Length")
-                    buffered?.skipFully(disguised.offset.toLong())
+                    buffered.skipFully(disguised.offset.toLong())
                 }
             }
             // Segments renamed by the playlist rewrite get the type of their real container.
@@ -458,52 +468,58 @@ actual object LanMediaProxy {
                 route.firstMediaLogged = true
                 log.d {
                     "${route.options.label}: first media response $code for ${describeResource(authority, rest)} " +
-                        "(type=$contentType, length=${connection.getHeaderField("Content-Length")})"
+                        "(type=$contentType, length=${response.header("Content-Length")})"
                 }
             }
             responseHeaders.forEach { (name, value) ->
                 if (name.lowercase() !in PROTECTED_RESPONSE_HEADERS) headers[name] = value
             }
             if (route.options.cors) headers += corsHeaders()
-            writeHead(output, code, connection.responseMessage ?: "OK", headers)
-            if (request.method == "GET" && buffered != null) buffered.copyTo(output, COPY_BUFFER_BYTES)
-        } finally {
-            connection.disconnect()
+            writeHead(output, code, response.message.ifEmpty { "OK" }, headers)
+            if (request.method == "GET") buffered.copyTo(output, COPY_BUFFER_BYTES)
         }
     }
 
-    /** Follows redirects by hand: HttpURLConnection does not follow http <-> https ones. */
-    private fun openUpstream(url: String, route: Route, request: ClientRequest): HttpURLConnection? {
+    /**
+     * Follows redirects by hand, keeping the method and the client headers on every hop. The shared
+     * OkHttp client resolves through NuvioDns, so the upstream follows the DNS over HTTPS option.
+     */
+    private fun openUpstream(url: String, route: Route, request: ClientRequest): Response? {
+        val client = upstreamHttpClient.newBuilder()
+            .connectTimeout(settings.connectTimeoutSeconds.toLong(), TimeUnit.SECONDS)
+            .readTimeout(settings.readTimeoutSeconds.toLong(), TimeUnit.SECONDS)
+            .build()
         var current = url
         repeat(MAX_REDIRECTS + 1) {
-            val connection = runCatching { URL(current).openConnection() as HttpURLConnection }.getOrElse { error ->
+            val upstreamRequest = runCatching {
+                Request.Builder()
+                    .url(current)
+                    .method(request.method, null)
+                    // Identity encoding keeps Content-Length valid for the client (no transparent gzip).
+                    .header("Accept-Encoding", "identity")
+                    .apply {
+                        val hasUserAgent = route.requestHeaders.keys.any { it.equals("user-agent", ignoreCase = true) }
+                        if (!hasUserAgent) {
+                            header("User-Agent", settings.userAgent.ifEmpty { request.headers["user-agent"] ?: DEFAULT_USER_AGENT })
+                        }
+                        route.requestHeaders.forEach { (name, value) -> header(name, value) }
+                        request.headers["range"]?.let { header("Range", it) }
+                        request.headers["if-range"]?.let { header("If-Range", it) }
+                    }
+                    .build()
+            }.getOrElse { error ->
                 log.w(error) { "${route.options.label}: invalid upstream link" }
                 return null
             }
-            connection.instanceFollowRedirects = false
-            connection.connectTimeout = settings.connectTimeoutSeconds * 1_000
-            connection.readTimeout = settings.readTimeoutSeconds * 1_000
-            connection.requestMethod = request.method
-            // Identity encoding keeps Content-Length valid for the client (no transparent gzip).
-            connection.setRequestProperty("Accept-Encoding", "identity")
-            val hasUserAgent = route.requestHeaders.keys.any { it.equals("user-agent", ignoreCase = true) }
-            if (!hasUserAgent) {
-                val userAgent = settings.userAgent.ifEmpty { request.headers["user-agent"] ?: DEFAULT_USER_AGENT }
-                connection.setRequestProperty("User-Agent", userAgent)
-            }
-            route.requestHeaders.forEach { (name, value) -> connection.setRequestProperty(name, value) }
-            request.headers["range"]?.let { connection.setRequestProperty("Range", it) }
-            request.headers["if-range"]?.let { connection.setRequestProperty("If-Range", it) }
-            val code = try {
-                connection.responseCode
+            val response = try {
+                client.newCall(upstreamRequest).execute()
             } catch (error: IOException) {
-                log.w { "${route.options.label}: upstream unreachable (${URL(current).host}): ${error.message}" }
-                connection.disconnect()
+                log.w { "${route.options.label}: upstream unreachable (${upstreamRequest.url.host}): ${error.message}" }
                 return null
             }
-            if (code !in REDIRECT_CODES) return connection
-            val location = connection.getHeaderField("Location")
-            connection.disconnect()
+            if (response.code !in REDIRECT_CODES) return response
+            val location = response.header("Location")
+            response.close()
             current = location?.let { resolveUrl(current, it) } ?: return null
         }
         log.w { "${route.options.label}: too many redirects" }

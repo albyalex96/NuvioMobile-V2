@@ -19,11 +19,13 @@ import android.os.SystemClock
 import co.touchlab.kermit.Logger
 import com.nuvio.app.R
 import com.nuvio.app.core.build.AppFeaturePolicy
+import com.nuvio.app.core.network.nuvioSharedOkHttpClient
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import java.io.ByteArrayOutputStream
 import java.lang.ref.WeakReference
-import java.net.HttpURLConnection
-import java.net.URL
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.math.abs
 
@@ -461,19 +463,23 @@ private fun buildContentIntent(context: Context): PendingIntent? {
     )
 }
 
-private fun downloadArtwork(urlString: String): Bitmap? {
-    val connection = (URL(urlString).openConnection() as HttpURLConnection).apply {
-        connectTimeout = 10_000
-        readTimeout = 15_000
-        instanceFollowRedirects = true
-        requestMethod = "GET"
-        setRequestProperty("Accept", "image/*")
-    }
+private val artworkHttpClient: OkHttpClient by lazy {
+    nuvioSharedOkHttpClient.newBuilder()
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(15, TimeUnit.SECONDS)
+        .followRedirects(true)
+        .build()
+}
 
-    return try {
-        connection.connect()
-        if (connection.responseCode !in 200..299) return null
-        val bytes = connection.inputStream.use { input ->
+private fun downloadArtwork(urlString: String): Bitmap? {
+    val request = Request.Builder()
+        .url(urlString)
+        .header("Accept", "image/*")
+        .build()
+
+    return artworkHttpClient.newCall(request).execute().use { response ->
+        if (response.code !in 200..299) return null
+        val bytes = response.body.byteStream().use { input ->
             val output = ByteArrayOutputStream()
             val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
             var total = 0
@@ -487,8 +493,6 @@ private fun downloadArtwork(urlString: String): Bitmap? {
             output.toByteArray()
         }
         decodeSampledBitmap(bytes, MAX_ARTWORK_EDGE_PX)
-    } finally {
-        connection.disconnect()
     }
 }
 

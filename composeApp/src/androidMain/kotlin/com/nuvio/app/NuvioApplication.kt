@@ -14,6 +14,11 @@ import coil3.svg.SvgDecoder
 import com.nuvio.app.core.logging.AppLogPlatform
 import com.nuvio.app.core.logging.AppLogger
 import com.nuvio.app.core.mediaproxy.LanMediaProxy
+import com.nuvio.app.core.network.NuvioDns
+import com.nuvio.app.core.network.dns.DnsOverHttpsRepository
+import com.nuvio.app.core.network.dns.DnsOverHttpsStorage
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.okhttp.OkHttp
 import com.nuvio.app.core.poster.CustomPosterFallbackInterceptor
 
 /**
@@ -28,6 +33,9 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
         super.onCreate()
         AppLogPlatform.initialize(this)
         AppLogger.install()
+        // Before any request (workers included): every OkHttp client resolves through NuvioDns.
+        DnsOverHttpsStorage.initialize(this)
+        DnsOverHttpsRepository.ensureLoaded()
         LanMediaProxy.initialize(this)
     }
 
@@ -41,6 +49,7 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
                 add(SvgDecoder.Factory())
                 add(
                     KtorNetworkFetcherFactory(
+                        httpClient = { HttpClient(OkHttp) { engine { config { dns(NuvioDns) } } } },
                         cacheStrategy = { CacheControlCacheStrategy() },
                     ),
                 )

@@ -26,6 +26,8 @@ import com.lagradost.cloudstream3.TvSeriesLoadResponse
 import com.lagradost.cloudstream3.TvSeriesSearchResponse
 import com.lagradost.cloudstream3.TvType
 import com.lagradost.cloudstream3.actions.VideoClickActionHolder
+import com.lagradost.cloudstream3.app
+import com.lagradost.cloudstream3.insecureApp
 import com.lagradost.cloudstream3.plugins.BasePlugin
 import com.lagradost.cloudstream3.plugins.Plugin
 import com.lagradost.cloudstream3.plugins.PluginData
@@ -34,6 +36,7 @@ import com.lagradost.cloudstream3.syncproviders.SyncIdName
 import com.lagradost.cloudstream3.utils.ExtractorLink
 import com.lagradost.cloudstream3.utils.ExtractorLinkType
 import com.lagradost.cloudstream3.utils.extractorApis
+import com.nuvio.app.core.network.NuvioDns
 import dalvik.system.PathClassLoader
 import java.io.File
 import java.lang.ref.WeakReference
@@ -71,6 +74,17 @@ internal actual object CloudStreamPlatformRuntime {
         appContext = androidContext.applicationContext
         activityReference = (androidContext as? Activity)?.let(::WeakReference)
         installPluginCrashGuard()
+        installNuvioDns()
+    }
+
+    /** Provider requests go through NiceHttp's clients: they follow the DNS over HTTPS option too. */
+    private fun installNuvioDns() {
+        runCatching {
+            if (app.baseClient.dns !== NuvioDns) app.baseClient = app.baseClient.newBuilder().dns(NuvioDns).build()
+            if (insecureApp.baseClient.dns !== NuvioDns) {
+                insecureApp.baseClient = insecureApp.baseClient.newBuilder().dns(NuvioDns).build()
+            }
+        }.onFailure { error -> log.w(error) { "Could not install the app resolver on the CloudStream clients" } }
     }
 
     /**

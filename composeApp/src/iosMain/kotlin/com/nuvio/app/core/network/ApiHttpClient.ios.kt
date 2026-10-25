@@ -1,6 +1,7 @@
 package com.nuvio.app.core.network
 
 import io.ktor.client.HttpClient
+import io.ktor.client.engine.HttpClientEngine
 import io.ktor.client.engine.darwin.Darwin
 import io.ktor.client.plugins.HttpTimeout
 
@@ -13,3 +14,5 @@ internal actual fun createApiHttpClient(): HttpClient = HttpClient(Darwin) {
         socketTimeoutMillis = 30_000
     }
 }
+
+internal actual fun createSupabaseHttpEngine(): HttpClientEngine? = null

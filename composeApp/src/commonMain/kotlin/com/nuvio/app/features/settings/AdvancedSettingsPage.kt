@@ -124,19 +124,27 @@ internal fun LazyListScope.advancedSettingsContent(
             }
         }
     }
-    if (LanMediaProxy.isSupported) {
+    if (LanMediaProxy.isSupported || dnsOverHttpsSettingsVisible) {
         item {
             SettingsSection(
                 title = stringResource(Res.string.settings_advanced_section_network),
                 isTablet = isTablet,
             ) {
                 SettingsGroup(isTablet = isTablet) {
-                    SettingsNavigationRow(
-                        title = stringResource(Res.string.media_proxy_title),
-                        description = stringResource(Res.string.media_proxy_entry_description),
-                        isTablet = isTablet,
-                        onClick = onMediaProxyClick,
-                    )
+                    if (dnsOverHttpsSettingsVisible) {
+                        DnsOverHttpsRow(isTablet = isTablet)
+                        SettingsGroupDivider(isTablet = isTablet)
+                        DnsOverHttpsSyncRow(isTablet = isTablet)
+                    }
+                    if (LanMediaProxy.isSupported) {
+                        if (dnsOverHttpsSettingsVisible) SettingsGroupDivider(isTablet = isTablet)
+                        SettingsNavigationRow(
+                            title = stringResource(Res.string.media_proxy_title),
+                            description = stringResource(Res.string.media_proxy_entry_description),
+                            isTablet = isTablet,
+                            onClick = onMediaProxyClick,
+                        )
+                    }
                 }
             }
         }

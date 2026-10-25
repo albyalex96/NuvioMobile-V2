@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_network_doh_title">DNS over HTTPS</string>
+    <string name="settings_network_doh_description">Resolves the addresses used by the app through an encrypted DNS server. Does not apply to the mpv player, external players and Chromecast.</string>
+    <string name="settings_network_doh_off">Off (device DNS)</string>
+    <string name="settings_network_doh_custom">Custom</string>
+    <string name="settings_network_doh_dialog_message">Choose the server that resolves the addresses of the servers Nuvio connects to.</string>
+    <string name="settings_network_doh_custom_address_label">Server address</string>
+    <string name="settings_network_doh_custom_address_hint">Host name (dns.example.com), IP address (1.1.1.1) or full https:// URL. Without a path, /dns-query is used.</string>
+    <string name="settings_network_doh_custom_bootstrap_label">Bootstrap IP (optional)</string>
+    <string name="settings_network_doh_custom_bootstrap_hint">IP addresses of the server, separated by commas. They let the app reach it without asking the device DNS.</string>
+    <string name="settings_network_doh_custom_url_preview">Server used: %1$s</string>
+    <string name="settings_network_doh_error_empty">Enter the server address</string>
+    <string name="settings_network_doh_error_not_https">Only https:// addresses are supported</string>
+    <string name="settings_network_doh_error_invalid_host">Invalid address</string>
+    <string name="settings_network_doh_error_bootstrap">Invalid IP address: %1$s</string>
+    <string name="settings_network_doh_fallback_title">Use the device DNS if the server does not answer</string>
+    <string name="settings_network_doh_fallback_description">Keeps the app working when the DNS over HTTPS server is unreachable.</string>
+    <string name="settings_network_doh_test">Test</string>
+    <string name="settings_network_doh_test_success">Working: %1$s resolved in %2$s ms</string>
+    <string name="settings_network_doh_test_failure">Not working: %1$s</string>
+    <string name="settings_network_doh_sync_title">Sync across devices</string>
+    <string name="settings_network_doh_sync_description">Uses the same DNS over HTTPS settings on the other devices of the profile.</string>
+    <string name="settings_licenses_attributions_section_network">NETWORK</string>
+    <string name="settings_licenses_attributions_doh_title">DNS over HTTPS providers</string>
+    <string name="settings_licenses_attributions_doh_body">When DNS over HTTPS is on, Nuvio sends the names of the servers it connects to to the chosen provider (Cloudflare, Google, Quad9, AdGuard, Mullvad, OpenDNS or a custom server) to get their addresses. Nuvio is not affiliated with or endorsed by these providers.</string>
+    <string name="settings_licenses_attributions_okhttp_title">OkHttp</string>
+    <string name="settings_licenses_attributions_okhttp_body">Used for the network requests and the DNS over HTTPS lookups. Created by Square, Inc.</string>
+    <string name="settings_licenses_attributions_okhttp_license">Licensed under the Apache License, Version 2.0.</string>
+</resources>

@@ -67,6 +67,8 @@ private const val NuvioRepositoryUrl = "https://github.com/NuvioMedia/NuvioMobil
 private const val MpvKitUrl = "https://github.com/mpvkit/MPVKit"
 private const val ApacheLicenseUrl = "https://www.apache.org/licenses/LICENSE-2.0"
 private const val HazeLicenseUrl = "https://github.com/chrisbanes/haze/blob/1.7.2/LICENSE"
+private const val DnsOverHttpsRfcUrl = "https://datatracker.ietf.org/doc/html/rfc8484"
+private const val OkHttpLicenseUrl = "https://github.com/square/okhttp/blob/master/LICENSE.txt"
 
 private data class AttributionItem(
     val titleRes: StringResource,
@@ -166,6 +168,23 @@ private fun LicensesAttributionsBody(
                 item = platformLicenseItem(),
                 isTablet = isTablet,
             )
+        }
+
+        if (dnsOverHttpsSettingsVisible) {
+            PlainSettingsStack(
+                title = stringResource(Res.string.settings_licenses_attributions_section_network),
+                isTablet = isTablet,
+            ) {
+                LicenseRow(
+                    item = LicenseItem(
+                        titleRes = Res.string.settings_licenses_attributions_okhttp_title,
+                        bodyRes = Res.string.settings_licenses_attributions_okhttp_body,
+                        licenseRes = Res.string.settings_licenses_attributions_okhttp_license,
+                        link = OkHttpLicenseUrl,
+                    ),
+                    isTablet = isTablet,
+                )
+            }
         }
 
         PlainSettingsStack(
@@ -473,6 +492,13 @@ private fun attributionItems(): List<AttributionItem> = listOf(
         logo = IntegrationLogo.Discord,
         link = DiscordUrl,
     ).takeIf { DiscordRpcPlatform.isSupported },
+    // Same visibility as the DNS over HTTPS option (Settings → Advanced → Network).
+    AttributionItem(
+        titleRes = Res.string.settings_licenses_attributions_doh_title,
+        bodyRes = Res.string.settings_licenses_attributions_doh_body,
+        logo = null,
+        link = DnsOverHttpsRfcUrl,
+    ).takeIf { dnsOverHttpsSettingsVisible },
 )
 
 private fun aiAttributionItems(): List<AttributionItem> = listOf(

@@ -41,6 +41,7 @@ object SupabaseProvider {
             supabaseUrl = configuration.backendUrl,
             supabaseKey = configuration.publishableKey,
         ) {
+            createSupabaseHttpEngine()?.let { engine -> httpEngine = engine }
             httpConfig {
                 install(BackendRateLimitPlugin) {
                     coordinator = rateLimitCoordinator

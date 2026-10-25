@@ -19,6 +19,8 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import co.touchlab.kermit.Logger
+import com.nuvio.app.core.network.NuvioDns
+import com.nuvio.app.core.network.dns.DnsOverHttpsRepository
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
@@ -160,7 +162,11 @@ internal class AndroidDownloadScheduler(val context: Context) {
         val client = if (network != null) {
             downloadHttpClient.newBuilder()
                 .socketFactory(network.socketFactory)
-                .dns { network.getAllByName(it).toList() }
+                // The DNS over HTTPS option wins over the resolver of the bound network.
+                .dns { host ->
+                    if (DnsOverHttpsRepository.settings.value.isEnabled) NuvioDns.lookup(host)
+                    else network.getAllByName(host).toList()
+                }
                 .connectionPool(ConnectionPool())
                 .build()
         } else downloadHttpClient
