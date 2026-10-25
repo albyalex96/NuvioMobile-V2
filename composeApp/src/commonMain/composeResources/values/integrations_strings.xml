@@ -66,4 +66,8 @@
     <string name="timestamp_merge_providers_description">If the highest-priority service does not have every segment, the missing ones are taken from the next services (e.g. intro from A, recap and outro from B). When off, only the highest-priority service with timestamps is used.</string>
     <string name="compose_settings_page_aniskip">AniSkip</string>
     <string name="settings_integrations_aniskip_description">Community skip timestamps for anime openings and endings</string>
+    <string name="aniskip_enabled">Use AniSkip</string>
+    <string name="aniskip_enabled_description">Search AniSkip for anime opening, ending and recap timestamps. No key needed.</string>
+    <string name="aniskip_send_duration">Send episode duration</string>
+    <string name="aniskip_send_duration_description">Lets AniSkip prefer timestamps recorded on a release of the same length as the one being played. The lookup waits until the player knows the duration.</string>
 </resources>

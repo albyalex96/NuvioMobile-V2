@@ -66,4 +66,8 @@
     <string name="timestamp_merge_providers_description">Se il servizio con priorità più alta non ha tutti i segmenti, prende quelli mancanti dai servizi successivi (es. intro da A, recap e outro da B). Se disattivato, si usa solo il servizio con priorità più alta che ha dei timestamp.</string>
     <string name="compose_settings_page_aniskip">AniSkip</string>
     <string name="settings_integrations_aniskip_description">Timestamp della community per sigle iniziali e finali degli anime</string>
+    <string name="aniskip_enabled">Usa AniSkip</string>
+    <string name="aniskip_enabled_description">Cerca su AniSkip i timestamp di sigle iniziali, finali e riassunti degli anime. Non serve una chiave.</string>
+    <string name="aniskip_send_duration">Invia la durata dell'episodio</string>
+    <string name="aniskip_send_duration_description">Permette ad AniSkip di preferire i timestamp registrati su una versione della stessa durata di quella in riproduzione. La ricerca attende che il player conosca la durata.</string>
 </resources>

@@ -1761,6 +1761,14 @@ private fun addAdditionalSearchEntries(
     ).forEach { item ->
         row(SettingsPage.IntroDb, item.key, item.title, item.description, introDbPage, introDbPage, icon = Icons.Rounded.SkipNext)
     }
+    val aniSkipPage = stringResource(Res.string.compose_settings_page_aniskip)
+    addPage(SettingsPage.AniSkip, "aniskip", aniSkipPage, stringResource(Res.string.settings_integrations_aniskip_description), generalCategory, Icons.Rounded.SkipNext)
+    listOf(
+        PlaybackSearchRow("aniskip-enabled", stringResource(Res.string.aniskip_enabled), stringResource(Res.string.aniskip_enabled_description)),
+        PlaybackSearchRow("aniskip-send-duration", stringResource(Res.string.aniskip_send_duration), stringResource(Res.string.aniskip_send_duration_description)),
+    ).forEach { item ->
+        row(SettingsPage.AniSkip, item.key, item.title, item.description, aniSkipPage, aniSkipPage, icon = Icons.Rounded.SkipNext)
+    }
     val skipDbPage = stringResource(Res.string.compose_settings_page_skipdb)
     addPage(SettingsPage.SkipDb, "skipdb", skipDbPage, stringResource(Res.string.settings_integrations_skipdb_description), generalCategory, Icons.Rounded.SkipNext)
     val skipDbLookupSection = stringResource(Res.string.skipdb_section_lookup)
@@ -1832,7 +1840,6 @@ private fun addAdditionalSearchEntries(
 
     addPage(SettingsPage.MyAnimeList, "myanimelist", stringResource(Res.string.compose_settings_page_myanimelist), stringResource(Res.string.settings_integrations_myanimelist_description), generalCategory, Icons.Rounded.ViewList)
     // Integrations: placeholder pages (work in progress)
-    addPage(SettingsPage.AniSkip, "aniskip", stringResource(Res.string.compose_settings_page_aniskip), stringResource(Res.string.settings_integrations_aniskip_description), generalCategory, Icons.Rounded.SkipNext)
     addPage(SettingsPage.Kitsu, "kitsu", stringResource(Res.string.compose_settings_page_kitsu), stringResource(Res.string.settings_integrations_kitsu_description), generalCategory, Icons.Rounded.ViewList)
     addPage(SettingsPage.AniList, "anilist", stringResource(Res.string.compose_settings_page_anilist), stringResource(Res.string.settings_integrations_anilist_description), generalCategory, Icons.Rounded.ViewList)
     addPage(SettingsPage.Telegram, "telegram", stringResource(Res.string.compose_settings_page_telegram), stringResource(Res.string.settings_integrations_telegram_description), generalCategory, Icons.Rounded.Send)

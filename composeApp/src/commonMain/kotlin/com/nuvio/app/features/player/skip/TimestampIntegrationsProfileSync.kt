@@ -10,7 +10,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 
 /**
- * Profile sync of the timestamp integrations (AnimeSkip, IntroDB and SkipDB toggles and credentials,
+ * Profile sync of the timestamp integrations (AnimeSkip, IntroDB, SkipDB and AniSkip toggles and credentials,
  * provider priority and submission targets), carried inside the
  * `stream_badge_settings` payload of the profile settings blob like the other local extras: the
  * custom credential RPCs are not reliable on the server, so the client ID and the API key travel
@@ -22,6 +22,7 @@ internal object TimestampIntegrationsProfileSync {
     private const val INTRODB_SUBMIT_ENABLED_KEY = "timestamp_introdb_submit_enabled"
     private const val INTRODB_API_KEY_KEY = "timestamp_introdb_api_key"
     private const val SKIPDB_SETTINGS_KEY = "timestamp_skipdb_settings"
+    private const val ANISKIP_SETTINGS_KEY = "timestamp_aniskip_settings"
     private const val PRIORITY_KEY = "timestamp_provider_priority"
     private const val SUBMIT_TARGETS_KEY = "timestamp_submit_targets"
     private const val MERGE_PROVIDERS_KEY = "timestamp_merge_providers"
@@ -38,6 +39,7 @@ internal object TimestampIntegrationsProfileSync {
             put(INTRODB_SUBMIT_ENABLED_KEY, encodeSyncBoolean(settings.introSubmitEnabled))
             put(INTRODB_API_KEY_KEY, encodeSyncString(settings.introDbApiKey.trim()))
             put(SKIPDB_SETTINGS_KEY, encodeSyncString(TimestampProviderSettingsRepository.encodeSkipDb(providers.skipDb)))
+            put(ANISKIP_SETTINGS_KEY, encodeSyncString(TimestampProviderSettingsRepository.encodeAniSkip(providers.aniSkip)))
             put(MERGE_PROVIDERS_KEY, encodeSyncBoolean(providers.mergeProviders))
             put(PRIORITY_KEY, encodeSyncString(providers.priority.joinToString(LIST_SEPARATOR)))
             // Until the user chooses, the default (highest-priority ready service) is not synced.
@@ -68,6 +70,12 @@ internal object TimestampIntegrationsProfileSync {
             ?.let(TimestampProviderSettingsRepository::decodeSkipDb)
             ?.let { remote ->
                 TimestampProviderSettingsRepository.updateSkipDb { remote }
+                applied++
+            }
+        payload.decodeSyncString(ANISKIP_SETTINGS_KEY)
+            ?.let(TimestampProviderSettingsRepository::decodeAniSkip)
+            ?.let { remote ->
+                TimestampProviderSettingsRepository.updateAniSkip { remote }
                 applied++
             }
         payload.decodeSyncBoolean(MERGE_PROVIDERS_KEY)?.let {

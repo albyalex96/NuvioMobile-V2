@@ -9,7 +9,6 @@ internal object SkipIntroApi {
 
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
-    private const val ANISKIP_BASE = "https://api.aniskip.com/v2/"
     private const val ANIMESKIP_BASE = "https://api.anime-skip.com/"
 
     // --- IntroDb ---
@@ -169,9 +168,9 @@ internal object SkipIntroApi {
     suspend fun getAniSkipTimes(
         malId: String,
         episode: Int,
+        episodeLengthSec: Double? = null,
     ): AniSkipResponse? {
-        val types = "types=op&types=ed&types=recap&types=mixed-op&types=mixed-ed"
-        val url = "${ANISKIP_BASE}skip-times/$malId/$episode?$types&episodeLength=0"
+        val url = aniSkipTimesUrl(malId, episode, episodeLengthSec)
         return try {
             val text = httpGetText(url)
             json.decodeFromString<AniSkipResponse>(text)
@@ -202,6 +201,13 @@ internal object SkipIntroApi {
     }
 }
 
+/** `episodeLength=0` asks AniSkip for every submission, whatever the length of the release it was recorded on. */
+internal fun aniSkipTimesUrl(malId: String, episode: Int, episodeLengthSec: Double?): String {
+    val types = "types=op&types=ed&types=recap&types=mixed-op&types=mixed-ed"
+    val length = episodeLengthSec?.takeIf { it.isFinite() && it > 0 }?.toLong() ?: 0L
+    return "${ANISKIP_BASE}skip-times/$malId/$episode?$types&episodeLength=$length"
+}
+
 internal data class SkipDbSubmitResult(
     val httpStatus: Int,
     /** `approved`, `pending`, `rejected` or `already_approved`. */
@@ -214,6 +220,7 @@ internal data class SkipDbSubmitResult(
 }
 
 private const val SKIPDB_BASE = "https://api.skipdb.tv/"
+private const val ANISKIP_BASE = "https://api.aniskip.com/v2/"
 
 internal fun skipDbSegmentsUrl(
     imdbId: String,

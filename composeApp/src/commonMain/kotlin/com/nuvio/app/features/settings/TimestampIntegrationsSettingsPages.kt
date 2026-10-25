@@ -56,7 +56,12 @@ import nuvio.composeapp.generated.resources.action_done
 import nuvio.composeapp.generated.resources.action_save
 import nuvio.composeapp.generated.resources.addons_move_down
 import nuvio.composeapp.generated.resources.addons_move_up
+import nuvio.composeapp.generated.resources.aniskip_enabled
+import nuvio.composeapp.generated.resources.aniskip_enabled_description
+import nuvio.composeapp.generated.resources.aniskip_send_duration
+import nuvio.composeapp.generated.resources.aniskip_send_duration_description
 import nuvio.composeapp.generated.resources.compose_settings_page_anime_skip
+import nuvio.composeapp.generated.resources.compose_settings_page_aniskip
 import nuvio.composeapp.generated.resources.compose_settings_page_introdb
 import nuvio.composeapp.generated.resources.settings_playback_anime_skip
 import nuvio.composeapp.generated.resources.settings_playback_anime_skip_client_id
@@ -116,6 +121,14 @@ internal fun LazyListScope.introDbSettingsContent(
 ) {
     item {
         IntroDbSettingsSection(isTablet = isTablet)
+    }
+}
+
+internal fun LazyListScope.aniSkipSettingsContent(
+    isTablet: Boolean,
+) {
+    item {
+        AniSkipSettingsSection(isTablet = isTablet)
     }
 }
 
@@ -423,6 +436,46 @@ private fun IntroDbSettingsSection(
             },
             onDismiss = { showApiKeyDialog = false },
         )
+    }
+}
+
+@Composable
+private fun AniSkipSettingsSection(
+    isTablet: Boolean,
+) {
+    TimestampProviderSettingsRepository.ensureLoaded()
+    val providerSettings by TimestampProviderSettingsRepository.uiState.collectAsStateWithLifecycle()
+    val aniSkip = providerSettings.aniSkip
+
+    SettingsSection(
+        title = stringResource(Res.string.compose_settings_page_aniskip),
+        isTablet = isTablet,
+    ) {
+        SettingsGroup(isTablet = isTablet) {
+            SettingsSwitchRow(
+                title = stringResource(Res.string.aniskip_enabled),
+                description = stringResource(Res.string.aniskip_enabled_description),
+                checked = aniSkip.enabled,
+                isTablet = isTablet,
+                onCheckedChange = { enabled ->
+                    log.i { "AniSkip lookup ${if (enabled) "enabled" else "disabled"}" }
+                    TimestampProviderSettingsRepository.updateAniSkip { it.copy(enabled = enabled) }
+                },
+            )
+            if (aniSkip.enabled) {
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.aniskip_send_duration),
+                    description = stringResource(Res.string.aniskip_send_duration_description),
+                    checked = aniSkip.sendDuration,
+                    isTablet = isTablet,
+                    onCheckedChange = { enabled ->
+                        log.i { "AniSkip episode length ${if (enabled) "enabled" else "disabled"}" }
+                        TimestampProviderSettingsRepository.updateAniSkip { it.copy(sendDuration = enabled) }
+                    },
+                )
+            }
+        }
     }
 }
 

@@ -211,17 +211,37 @@ internal object AnimeSkipTimestampProvider : TimestampProvider {
     }
 }
 
+/**
+ * AniSkip: anime only (keyed by MAL ID), no key. With "send duration" on, the episode length is passed
+ * so AniSkip prefers timestamps recorded on a release of similar length; results then depend on the
+ * stream and are cached here by URL instead of per episode by the repository.
+ */
 internal object AniSkipTimestampProvider : TimestampProvider {
     override val id = "aniskip"
     override val displayName = "AniSkip"
     override val logo = IntegrationLogo.AniSkip
 
-    override fun isLookupActive(): Boolean = true
+    private val responseCache = HashMap<String, AniSkipResponse>()
+
+    private val settings: AniSkipSettings
+        get() = TimestampProviderSettingsRepository.current().aniSkip
+
+    override fun isLookupActive(): Boolean = settings.enabled
+
+    override fun isCacheable(): Boolean = !settings.sendDuration
 
     override suspend fun episodeIntervals(query: TimestampEpisodeQuery): List<SkipInterval> {
         val anime = query.animeEpisode() ?: return emptyList()
         val malId = anime.malId ?: return emptyList()
-        val response = SkipIntroApi.getAniSkipTimes(malId, anime.episode) ?: return emptyList()
+        val duration = if (settings.sendDuration) query.durationSec() else null
+        val key = aniSkipTimesUrl(malId, anime.episode, duration)
+        val response = responseCache[key]
+            ?: SkipIntroApi.getAniSkipTimes(malId, anime.episode, duration)?.also { responseCache[key] = it }
+            ?: run {
+                log.w { "AniSkip lookup failed for MAL $malId episode ${anime.episode}" }
+                return emptyList()
+            }
+        log.d { "AniSkip MAL $malId episode ${anime.episode} length=${duration?.toLong() ?: "none"}: found=${response.found}" }
         if (!response.found) return emptyList()
         return response.results?.map { result ->
             SkipInterval(
@@ -231,5 +251,9 @@ internal object AniSkipTimestampProvider : TimestampProvider {
                 provider = id,
             )
         }.orEmpty()
+    }
+
+    override fun clearCache() {
+        responseCache.clear()
     }
 }

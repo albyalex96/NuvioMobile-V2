@@ -86,6 +86,19 @@ class TimestampProvidersTest {
     }
 
     @Test
+    fun aniSkipUrlSendsEpisodeLengthOnlyWhenKnown() {
+        val types = "types=op&types=ed&types=recap&types=mixed-op&types=mixed-ed"
+        assertEquals(
+            "https://api.aniskip.com/v2/skip-times/38524/1?$types&episodeLength=1420",
+            aniSkipTimesUrl("38524", 1, 1_420.7),
+        )
+        assertEquals(
+            "https://api.aniskip.com/v2/skip-times/38524/1?$types&episodeLength=0",
+            aniSkipTimesUrl("38524", 1, null),
+        )
+    }
+
+    @Test
     fun skipDbSubmissionAcceptsPendingAndAlreadyApproved() {
         assertTrue(SkipDbSubmitResult(201, "pending").isAccepted)
         assertTrue(SkipDbSubmitResult(409, "already_approved").isAccepted)
@@ -104,6 +117,7 @@ class TimestampProvidersTest {
         assertEquals(null, older.submitTargets)
         assertTrue(older.mergeProviders)
         assertEquals(SkipDbSettings(), older.skipDb)
+        assertEquals(AniSkipSettings(enabled = true, sendDuration = true), older.aniSkip)
     }
 
     @Test

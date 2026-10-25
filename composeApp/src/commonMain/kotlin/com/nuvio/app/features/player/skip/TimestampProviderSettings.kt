@@ -40,6 +40,13 @@ data class SkipDbSettings(
 )
 
 @Serializable
+data class AniSkipSettings(
+    @SerialName("enabled") val enabled: Boolean = true,
+    /** Sends the episode length, so AniSkip prefers timestamps recorded on a release of similar length. */
+    @SerialName("send_duration") val sendDuration: Boolean = true,
+)
+
+@Serializable
 data class TimestampProviderSettings(
     /** Provider IDs in priority order; providers missing from it follow in registry order. */
     val priority: List<String> = emptyList(),
@@ -51,6 +58,7 @@ data class TimestampProviderSettings(
      */
     @SerialName("merge_providers") val mergeProviders: Boolean = true,
     @SerialName("skipdb") val skipDb: SkipDbSettings = SkipDbSettings(),
+    @SerialName("aniskip") val aniSkip: AniSkipSettings = AniSkipSettings(),
 )
 
 /**
@@ -103,6 +111,20 @@ object TimestampProviderSettingsRepository {
         if (updated == current().skipDb) return
         save(current().copy(skipDb = updated))
     }
+
+    fun updateAniSkip(transform: (AniSkipSettings) -> AniSkipSettings) {
+        val updated = transform(current().aniSkip)
+        if (updated == current().aniSkip) return
+        save(current().copy(aniSkip = updated))
+    }
+
+    internal fun encodeAniSkip(settings: AniSkipSettings): String =
+        json.encodeToString(AniSkipSettings.serializer(), settings)
+
+    internal fun decodeAniSkip(payload: String): AniSkipSettings? =
+        runCatching { json.decodeFromString(AniSkipSettings.serializer(), payload) }
+            .onFailure { log.w(it) { "Ignoring unreadable AniSkip settings from the profile blob" } }
+            .getOrNull()
 
     internal fun encodeSkipDb(settings: SkipDbSettings): String =
         json.encodeToString(SkipDbSettings.serializer(), settings)
