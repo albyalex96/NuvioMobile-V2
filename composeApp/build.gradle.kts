@@ -460,7 +460,8 @@ kotlin {
                 // DNS over HTTPS (Settings → Advanced → Network); same version as the resolved OkHttp.
                 implementation("com.squareup.okhttp3:okhttp-dnsoverhttps:5.3.2")
                 implementation("com.google.code.gson:gson:2.11.0")
-                implementation("io.github.peerless2012:ass-media:0.5.1")
+                // libass - atlas-based subtitle rendering (from NuvioMedia/nuvio-libass)
+                implementation(files("libs/nuvio-libass-release.aar"))
                 implementation(libs.ktor.client.okhttp)
                 implementation(libs.sentry.android)
                 implementation(libs.androidx.media3.exoplayer.hls)

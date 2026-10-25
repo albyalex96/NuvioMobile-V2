@@ -121,8 +121,9 @@ data class PlayerSettingsUiState(
     val playerClockDevice: PlayerClockDevice = PlayerClockDevice.Mobile,
     val playerClockSettings: Map<PlayerClockDevice, PlayerClockSettings> = defaultPlayerClockSettings(),
     val seekIntervalSeconds: Int = DEFAULT_SEEK_INTERVAL_SECONDS,
-    val useLibass: Boolean = false,
+    val useLibass: Boolean = true,
     val libassRenderType: String = "CUES",
+    val libassRenderScale: String = "FULL",
     val iosVideoOutputPreset: IosVideoOutputPreset = IosVideoOutputPreset.NativeEdr,
     val iosToneMappingMode: IosToneMappingMode = IosToneMappingMode.Auto,
     val iosTargetPrimaries: IosTargetPrimaries = IosTargetPrimaries.Auto,
@@ -211,8 +212,9 @@ object PlayerSettingsRepository {
     private var playerClockByDevice = defaultPlayerClockSettings()
     private var rememberAudioDelayPerDevice = true
     private var seekIntervalSeconds = DEFAULT_SEEK_INTERVAL_SECONDS
-    private var useLibass = false
-    private var libassRenderType = "CUES"
+    private var useLibass = true
+    private var libassRenderType = "OVERLAY_OPEN_GL"
+    private var libassRenderScale = "FULL"
     private var iosVideoOutputPreset = IosVideoOutputPreset.NativeEdr
     private var iosToneMappingMode = IosToneMappingMode.Auto
     private var iosTargetPrimaries = IosTargetPrimaries.Auto
@@ -306,8 +308,9 @@ object PlayerSettingsRepository {
         playerClockByDevice = defaultPlayerClockSettings()
         rememberAudioDelayPerDevice = true
         seekIntervalSeconds = DEFAULT_SEEK_INTERVAL_SECONDS
-        useLibass = false
-        libassRenderType = "CUES"
+        useLibass = true
+        libassRenderType = "OVERLAY_OPEN_GL"
+        libassRenderScale = "FULL"
         iosVideoOutputPreset = IosVideoOutputPreset.NativeEdr
         iosToneMappingMode = IosToneMappingMode.Auto
         iosTargetPrimaries = IosTargetPrimaries.Auto
@@ -489,8 +492,9 @@ object PlayerSettingsRepository {
         rememberAudioDelayPerDevice = PlayerSettingsStorage.loadRememberAudioDelayPerDevice() ?: true
         seekIntervalSeconds = (PlayerSettingsStorage.loadSeekIntervalSeconds() ?: DEFAULT_SEEK_INTERVAL_SECONDS)
             .coerceIn(SEEK_INTERVAL_SECONDS_RANGE)
-        useLibass = PlayerSettingsStorage.loadUseLibass() ?: false
+        useLibass = PlayerSettingsStorage.loadUseLibass() ?: true
         libassRenderType = PlayerSettingsStorage.loadLibassRenderType() ?: "CUES"
+        libassRenderScale = PlayerSettingsStorage.loadLibassRenderScale() ?: "FULL"
         iosVideoOutputPreset = PlayerSettingsStorage.loadIosVideoOutputPreset()
             ?.let { runCatching { IosVideoOutputPreset.valueOf(it) }.getOrNull() }
             ?: IosVideoOutputPreset.NativeEdr
@@ -1187,6 +1191,14 @@ object PlayerSettingsRepository {
         PlayerSettingsStorage.saveLibassRenderType(renderType)
     }
 
+    fun setLibassRenderScale(scale: String) {
+        ensureLoaded()
+        if (libassRenderScale == scale) return
+        libassRenderScale = scale
+        publish()
+        PlayerSettingsStorage.saveLibassRenderScale(scale)
+    }
+
     fun setIosVideoOutputPreset(preset: IosVideoOutputPreset) {
         ensureLoaded()
         iosVideoOutputPreset = preset
@@ -1430,6 +1442,7 @@ object PlayerSettingsRepository {
             seekIntervalSeconds = seekIntervalSeconds,
             useLibass = useLibass,
             libassRenderType = libassRenderType,
+            libassRenderScale = libassRenderScale,
             iosVideoOutputPreset = iosVideoOutputPreset,
             iosToneMappingMode = iosToneMappingMode,
             iosTargetPrimaries = iosTargetPrimaries,
