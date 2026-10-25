@@ -424,6 +424,8 @@
   <string name="settings_mdb_api_key_title">Chiave API MDBList</string>
   <string name="settings_mdb_enable_ratings">Abilita valutazioni MDBList</string>
   <string name="settings_mdb_enable_ratings_description">Mostra le valutazioni esterne di MDBList nelle pagine dei metadati quando è disponibile un ID IMDb.</string>
+  <string name="settings_mdb_show_on_hero">Valutazioni nell'hero</string>
+  <string name="settings_mdb_show_on_hero_description">Mostra le valutazioni di MDBList nell'hero della home</string>
   <string name="settings_mdb_section_api_key">CHIAVE API</string>
   <string name="settings_mdb_section_rating_providers">FORNITORI VALUTAZIONI</string>
   <string name="settings_mdb_section_title">MDBLIST</string>
