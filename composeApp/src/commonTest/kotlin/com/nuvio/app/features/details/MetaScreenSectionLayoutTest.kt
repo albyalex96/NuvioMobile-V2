@@ -21,6 +21,20 @@ class MetaScreenSectionLayoutTest {
     }
 
     @Test
+    fun `horizontal list episodes render outside a multi-section tab group`() {
+        assertNull(groupedEpisodes.tabGroupForRendering(MetaEpisodeCardStyle.HorizontalList))
+    }
+
+    @Test
+    fun `episode card styles round trip through their persisted value`() {
+        MetaEpisodeCardStyle.entries.forEach { style ->
+            assertEquals(style, MetaEpisodeCardStyle.parse(MetaEpisodeCardStyle.persist(style)))
+        }
+        assertEquals("horizontal_list", MetaEpisodeCardStyle.persist(MetaEpisodeCardStyle.HorizontalList))
+        assertNull(MetaEpisodeCardStyle.parse("unknown"))
+    }
+
+    @Test
     fun `horizontal episodes retain their configured tab group`() {
         assertEquals(3, groupedEpisodes.tabGroupForRendering(MetaEpisodeCardStyle.Horizontal))
     }

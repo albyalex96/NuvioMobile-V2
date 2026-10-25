@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -52,6 +54,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.build.AppFeaturePolicy
 import com.nuvio.app.core.build.TrailerPlaybackMode
@@ -85,6 +88,8 @@ import nuvio.composeapp.generated.resources.settings_meta_episode_cards
 import nuvio.composeapp.generated.resources.settings_meta_episode_cards_description
 import nuvio.composeapp.generated.resources.settings_meta_episode_style_horizontal
 import nuvio.composeapp.generated.resources.settings_meta_episode_style_horizontal_description
+import nuvio.composeapp.generated.resources.settings_meta_episode_style_horizontal_list
+import nuvio.composeapp.generated.resources.settings_meta_episode_style_horizontal_list_description
 import nuvio.composeapp.generated.resources.settings_meta_episode_style_list
 import nuvio.composeapp.generated.resources.settings_meta_episode_style_list_description
 import nuvio.composeapp.generated.resources.settings_meta_episodes
@@ -458,12 +463,15 @@ private fun MetaEpisodeCardStyleSelector(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        // Three options do not fit side by side on phones: they scroll horizontally there.
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(if (isTablet) Modifier else Modifier.horizontalScroll(rememberScrollState())),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             MetaEpisodeCardStyle.entries.forEach { style ->
-                Box(modifier = Modifier.weight(1f)) {
+                Box(modifier = if (isTablet) Modifier.weight(1f) else Modifier.width(172.dp)) {
                     MetaEpisodeCardStyleOption(
                         style = style,
                         selected = selectedStyle == style,
@@ -536,12 +544,14 @@ private val MetaEpisodeCardStyle.labelRes: StringResource
     get() = when (this) {
         MetaEpisodeCardStyle.Horizontal -> Res.string.settings_meta_episode_style_horizontal
         MetaEpisodeCardStyle.List -> Res.string.settings_meta_episode_style_list
+        MetaEpisodeCardStyle.HorizontalList -> Res.string.settings_meta_episode_style_horizontal_list
     }
 
 private val MetaEpisodeCardStyle.descriptionRes: StringResource
     get() = when (this) {
         MetaEpisodeCardStyle.Horizontal -> Res.string.settings_meta_episode_style_horizontal_description
         MetaEpisodeCardStyle.List -> Res.string.settings_meta_episode_style_list_description
+        MetaEpisodeCardStyle.HorizontalList -> Res.string.settings_meta_episode_style_horizontal_list_description
     }
 
 private val MetaScreenSectionKey.titleRes: StringResource
@@ -585,39 +595,12 @@ private fun MetaEpisodeCardStylePreview(
         verticalArrangement = Arrangement.Center,
     ) {
         when (style) {
-            MetaEpisodeCardStyle.Horizontal -> {
-                Box(
-                    modifier = Modifier
-                        .width(128.dp)
-                        .height(80.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f)),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(26.dp)
-                            .align(Alignment.BottomCenter)
-                            .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.36f)),
-                    )
-                    Box(
-                        modifier = Modifier
-                            .width(42.dp)
-                            .height(7.dp)
-                            .align(Alignment.TopStart)
-                            .padding(start = 6.dp, top = 6.dp)
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.26f)),
-                    )
-                    Box(
-                        modifier = Modifier
-                            .width(72.dp)
-                            .height(6.dp)
-                            .align(Alignment.BottomStart)
-                            .padding(start = 8.dp, bottom = 8.dp)
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f)),
-                    )
+            MetaEpisodeCardStyle.Horizontal -> MetaEpisodeHorizontalCardPreview(width = 128.dp, height = 80.dp)
+
+            MetaEpisodeCardStyle.HorizontalList -> {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    MetaEpisodeHorizontalCardPreview(width = 112.dp, height = 52.dp)
+                    MetaEpisodeHorizontalCardPreview(width = 112.dp, height = 52.dp)
                 }
             }
 
@@ -666,5 +649,42 @@ private fun MetaEpisodeCardStylePreview(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun MetaEpisodeHorizontalCardPreview(width: Dp, height: Dp) {
+    Box(
+        modifier = Modifier
+            .width(width)
+            .height(height)
+            .clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f)),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(height * 0.32f)
+                .align(Alignment.BottomCenter)
+                .background(MaterialTheme.colorScheme.scrim.copy(alpha = 0.36f)),
+        )
+        Box(
+            modifier = Modifier
+                .width(42.dp)
+                .height(7.dp)
+                .align(Alignment.TopStart)
+                .padding(start = 6.dp, top = 6.dp)
+                .clip(RoundedCornerShape(3.dp))
+                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.26f)),
+        )
+        Box(
+            modifier = Modifier
+                .width(width * 0.56f)
+                .height(6.dp)
+                .align(Alignment.BottomStart)
+                .padding(start = 8.dp, bottom = 8.dp)
+                .clip(RoundedCornerShape(3.dp))
+                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.18f)),
+        )
     }
 }

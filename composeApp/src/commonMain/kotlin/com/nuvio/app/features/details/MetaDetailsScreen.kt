@@ -111,6 +111,7 @@ import com.nuvio.app.features.details.components.DetailPosterRailSection
 import com.nuvio.app.features.details.components.DetailProductionSection
 import com.nuvio.app.features.details.components.DetailSeriesContent
 import com.nuvio.app.features.details.components.DetailSeriesListEpisode
+import com.nuvio.app.features.details.components.DetailSeriesHorizontalListEpisode
 import com.nuvio.app.features.details.components.DetailSeriesListHeader
 import com.nuvio.app.features.details.components.DetailTrailersSection
 import com.nuvio.app.features.details.components.EpisodeWatchedActionSheet
@@ -705,7 +706,7 @@ fun MetaDetailsScreen(
                     meta.type,
                     metaScreenSettingsUiState.episodeCardStyle,
                 ) {
-                    if (metaScreenSettingsUiState.episodeCardStyle == MetaEpisodeCardStyle.List) {
+                    if (metaScreenSettingsUiState.episodeCardStyle.usesLazyEpisodeList) {
                         meta.groupedEpisodesForDisplay()
                     } else {
                         emptyMap()
@@ -2192,6 +2193,34 @@ private fun LazyListScope.configuredMetaSectionItems(
                 )
             }
         }
+        if (settings.episodeCardStyle == MetaEpisodeCardStyle.HorizontalList) {
+            itemsIndexed(
+                items = episodes,
+                key = { index, episode ->
+                    "$key-episode-horizontal-$currentSeason-${episode.episode}-${episode.id}-$index"
+                },
+                contentType = { _, _ -> "detail-episode-horizontal" },
+            ) { index, episode ->
+                DetailSectionContainer(
+                    horizontalPadding = contentHorizontalPadding,
+                    contentMaxWidth = contentMaxWidth,
+                    bottomPadding = if (index == episodes.lastIndex) 20.dp else 12.dp,
+                ) {
+                    DetailSeriesHorizontalListEpisode(
+                        meta = meta,
+                        episode = episode,
+                        progressByVideoId = progressByVideoId,
+                        watchedKeys = watchedKeys,
+                        episodeRatings = episodeImdbRatings,
+                        episodeRatingsVisibility = settings.episodeRatingsVisibility,
+                        blurUnwatchedEpisodes = blurUnwatchedEpisodes,
+                        onEpisodeClick = onEpisodeClick,
+                        onEpisodeLongPress = onEpisodeLongPress,
+                    )
+                }
+            }
+            return
+        }
         itemsIndexed(
             items = episodes,
             key = { index, episode ->
@@ -2224,7 +2253,7 @@ private fun LazyListScope.configuredMetaSectionItems(
         key: String,
         forceTabLayout: Boolean = false,
     ) {
-        if (section.key == MetaScreenSectionKey.EPISODES && settings.episodeCardStyle == MetaEpisodeCardStyle.List) {
+        if (section.key == MetaScreenSectionKey.EPISODES && settings.episodeCardStyle.usesLazyEpisodeList) {
             addLazyEpisodeListItems(key)
         } else {
             addSectionItem(

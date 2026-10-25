@@ -1,12 +1,15 @@
 package com.nuvio.app.features.details.components
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -59,6 +62,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.text.TextStyle
@@ -67,6 +71,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -247,6 +252,24 @@ fun DetailSeriesContent(
                             onEpisodeClick = onEpisodeClick,
                             onEpisodeLongPress = onEpisodeLongPress,
                         )
+                    } else if (episodeCardStyle == MetaEpisodeCardStyle.HorizontalList) {
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            seasonEpisodes.forEach { episode ->
+                                DetailSeriesHorizontalListEpisode(
+                                    meta = meta,
+                                    episode = episode,
+                                    progressByVideoId = progressByVideoId,
+                                    watchedKeys = watchedKeys,
+                                    episodeRatings = episodeRatings,
+                                    episodeRatingsVisibility = episodeRatingsVisibility,
+                                    blurUnwatchedEpisodes = blurUnwatchedEpisodes,
+                                    onEpisodeClick = onEpisodeClick,
+                                    onEpisodeLongPress = onEpisodeLongPress,
+                                )
+                            }
+                        }
                     } else {
                         Column(
                             verticalArrangement = Arrangement.spacedBy(sizing.cardGap),
@@ -358,6 +381,64 @@ internal fun DetailSeriesListEpisode(
             episodeRatingsVisibility = episodeRatingsVisibility,
             blurUnwatchedEpisodes = blurUnwatchedEpisodes,
             sizing = sizing,
+            onClick = { onEpisodeClick?.invoke(episode) },
+            onLongPress = { onEpisodeLongPress?.invoke(episode) },
+        )
+    }
+}
+
+/**
+ * One episode of the "horizontal list" style: the backdrop card of the horizontal row stretched to the full
+ * width (up to a maximum width, centered, keeping its aspect ratio); the overview opens below the artwork.
+ */
+@Composable
+internal fun DetailSeriesHorizontalListEpisode(
+    meta: MetaDetails,
+    episode: MetaVideo,
+    progressByVideoId: Map<String, WatchProgressEntry>,
+    watchedKeys: Set<String>,
+    episodeRatings: Map<Pair<Int, Int>, Double>,
+    episodeRatingsVisibility: EpisodeRatingsVisibility,
+    blurUnwatchedEpisodes: Boolean,
+    onEpisodeClick: ((MetaVideo) -> Unit)?,
+    onEpisodeLongPress: ((MetaVideo) -> Unit)?,
+    modifier: Modifier = Modifier,
+) {
+    BoxWithConstraints(
+        modifier = modifier.fillMaxWidth(),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        val baseMetrics = rememberEpisodeHorizontalCardMetrics(maxWidth.value)
+        // Full width on phones; on wide screens (tablets) the card is capped and centered, keeping the
+        // artwork aspect ratio so the image is never cropped.
+        val cardWidth = maxWidth.coerceAtMost(HORIZONTAL_LIST_MAX_CARD_WIDTH)
+        val metrics = remember(baseMetrics, cardWidth) {
+            baseMetrics.copy(
+                cardWidth = cardWidth,
+                cardHeight = cardWidth * (baseMetrics.cardHeight / baseMetrics.cardWidth),
+            )
+        }
+        val episodeVideoId = buildPlaybackVideoId(
+            parentMetaId = meta.id,
+            seasonNumber = episode.season,
+            episodeNumber = episode.episode,
+            fallbackVideoId = episode.id,
+        )
+        EpisodeHorizontalListCard(
+            video = episode,
+            fallbackImage = meta.background ?: meta.poster,
+            progressEntry = progressByVideoId[episodeVideoId],
+            imdbRating = episode.seasonEpisodeKey()?.let { episodeRatings[it] } ?: episode.rating,
+            isWatched = progressByVideoId[episodeVideoId]?.isEffectivelyCompleted == true ||
+                WatchingState.isEpisodeWatched(
+                    watchedKeys = watchedKeys,
+                    metaType = meta.type,
+                    metaId = meta.id,
+                    episode = episode,
+                ),
+            episodeRatingsVisibility = episodeRatingsVisibility,
+            blurUnwatchedEpisodes = blurUnwatchedEpisodes,
+            metrics = metrics,
             onClick = { onEpisodeClick?.invoke(episode) },
             onLongPress = { onEpisodeLongPress?.invoke(episode) },
         )
@@ -951,41 +1032,12 @@ private fun EpisodeHorizontalCard(
                 )
             }
 
-            if (runtimeLabel != null || ratingLabel != null || formattedDate != null) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    runtimeLabel?.let { runtime ->
-                        Text(
-                            text = runtime,
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = metrics.metaTextSize),
-                            color = Color.White.copy(alpha = 0.78f),
-                            maxLines = 1,
-                        )
-                    }
-                    ratingLabel?.let { rating ->
-                        ImdbEpisodeRatingBadge(
-                            rating = rating,
-                            logoWidth = metrics.imdbLogoWidth,
-                            logoHeight = metrics.imdbLogoHeight,
-                            textSize = metrics.metaTextSize,
-                        )
-                    }
-                    Spacer(modifier = Modifier.weight(1f))
-                    formattedDate?.let { date ->
-                        Text(
-                            text = date,
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = metrics.metaTextSize),
-                            color = Color.White.copy(alpha = 0.78f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            textAlign = TextAlign.End,
-                        )
-                    }
-                }
-            }
+            EpisodeHorizontalMetaRow(
+                runtimeLabel = runtimeLabel,
+                ratingLabel = ratingLabel,
+                formattedDate = formattedDate,
+                metrics = metrics,
+            )
         }
 
         visibleProgressEntry?.let { entry ->
@@ -1003,6 +1055,265 @@ private fun EpisodeHorizontalCard(
                 trackColor = Color.White.copy(alpha = 0.22f),
                 fillColor = MaterialTheme.colorScheme.primary,
             )
+        }
+    }
+}
+
+/**
+ * Card of the "horizontal list" style: same look as [EpisodeHorizontalCard]. The overview toggle sits at the
+ * top right corner of the artwork; expanding moves the whole text block (badge, title, full overview, meta)
+ * from over the artwork to a section below it, growing the card smoothly.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun EpisodeHorizontalListCard(
+    video: MetaVideo,
+    fallbackImage: String?,
+    progressEntry: WatchProgressEntry?,
+    imdbRating: Double?,
+    isWatched: Boolean,
+    episodeRatingsVisibility: EpisodeRatingsVisibility,
+    blurUnwatchedEpisodes: Boolean,
+    metrics: EpisodeHorizontalCardMetrics,
+    onClick: (() -> Unit)? = null,
+    onLongPress: (() -> Unit)? = null,
+) {
+    val cardShape = RoundedCornerShape(metrics.cornerRadius)
+    val ratingLabel = remember(imdbRating, episodeRatingsVisibility, isWatched) {
+        imdbRating?.takeIf { it > 0.0 && episodeRatingsVisibility.showRating(isWatched) }
+            ?.let(::formatEpisodeRating)
+    }
+    val dateFormat = ThemeSettingsRepository.dateFormatState.value
+    val formattedDate = remember(video.released, dateFormat) { video.released?.let { formatReleaseDateForDisplay(it) } }
+    val runtimeLabel = remember(video.runtime) { video.runtime?.takeIf { it > 0 }?.let(::formatEpisodeRuntime) }
+    val imageUrl = video.thumbnail ?: fallbackImage
+    val overview = video.overview?.takeIf { it.isNotBlank() }
+    val visibleProgressEntry = progressEntry?.takeIf { it.durationMs > 0L && !it.isCompleted }
+    val progressBarHeight = 4.dp
+    val progressBarBottomSpacing = 8.dp
+    val overlayBottomPadding = if (visibleProgressEntry != null) {
+        6.dp + progressBarHeight + progressBarBottomSpacing
+    } else {
+        metrics.contentBottomPadding
+    }
+    var overviewExpanded by remember(video.id) { mutableStateOf(false) }
+    var canExpand by remember(overview) { mutableStateOf(false) }
+    val sizeSpec = tween<IntSize>(EPISODE_OVERVIEW_ANIMATION_MS)
+    val fadeSpec = tween<Float>(EPISODE_OVERVIEW_ANIMATION_MS)
+    val overlayTextAlpha by animateFloatAsState(
+        targetValue = if (overviewExpanded) 0f else 1f,
+        animationSpec = fadeSpec,
+        label = "episode_overlay_text",
+    )
+
+    // Same text block in both places: over the artwork (preview lines) or below it (full overview).
+    val textBlock: @Composable (Boolean, Modifier) -> Unit = { expanded, modifier ->
+        Column(
+            modifier = modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            EpisodeCodeBadge(
+                text = video.episodeBadge(),
+                textSize = metrics.badgeTextSize,
+                radius = metrics.badgeRadius,
+                horizontalPadding = metrics.badgeHorizontalPadding,
+                verticalPadding = metrics.badgeVerticalPadding,
+            )
+            Text(
+                text = video.title,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontSize = metrics.titleTextSize,
+                    fontWeight = FontWeight.ExtraBold,
+                    lineHeight = metrics.titleLineHeight,
+                ),
+                color = Color.White,
+                maxLines = if (expanded) Int.MAX_VALUE else 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            overview?.let { text ->
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        fontSize = metrics.bodyTextSize,
+                        lineHeight = metrics.bodyLineHeight,
+                    ),
+                    color = Color.White.copy(alpha = 0.86f),
+                    maxLines = if (expanded) Int.MAX_VALUE else metrics.overviewMaxLines,
+                    overflow = TextOverflow.Ellipsis,
+                    onTextLayout = { result ->
+                        if (!expanded) canExpand = result.hasVisualOverflow
+                    },
+                )
+            }
+            EpisodeHorizontalMetaRow(
+                runtimeLabel = runtimeLabel,
+                ratingLabel = ratingLabel,
+                formattedDate = formattedDate,
+                metrics = metrics,
+            )
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .width(metrics.cardWidth)
+            .clip(cardShape)
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f))
+            .nuvioCardDepth(
+                shape = cardShape,
+                surface = NuvioCardDepthSurface.EpisodeCards,
+                fallbackBorderAlpha = 0.12f,
+            )
+            .posterCardClickable(
+                onClick = onClick,
+                onLongClick = onLongPress,
+                zoomImageUrl = imageUrl,
+                zoomCornerRadius = metrics.cornerRadius,
+            ),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(metrics.cardHeight),
+        ) {
+            if (imageUrl != null) {
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = video.title,
+                    modifier = Modifier
+                        .matchParentSize()
+                        .then(if (blurUnwatchedEpisodes && !isWatched) Modifier.blur(18.dp) else Modifier),
+                    contentScale = ContentScale.Crop,
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.verticalGradient(
+                            0f to Color.Transparent,
+                            0.42f to Color.Transparent,
+                            0.56f to Color.Black.copy(alpha = 0.20f),
+                            0.70f to Color.Black.copy(alpha = 0.45f),
+                            0.84f to Color.Black.copy(alpha = 0.68f),
+                            1f to Color.Black.copy(alpha = 0.92f),
+                        ),
+                    ),
+            )
+
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(metrics.contentPadding),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                NuvioAnimatedWatchedBadge(isVisible = isWatched)
+                if (overview != null && (canExpand || overviewExpanded)) {
+                    EpisodeOverviewToggle(
+                        expanded = overviewExpanded,
+                        onToggle = { overviewExpanded = !overviewExpanded },
+                        containerColor = Color.Black.copy(alpha = 0.55f),
+                        contentColor = Color.White,
+                        size = 26.dp,
+                    )
+                }
+            }
+
+            if (overlayTextAlpha > 0f) {
+                textBlock(
+                    false,
+                    Modifier
+                        .align(Alignment.BottomStart)
+                        .graphicsLayer { alpha = overlayTextAlpha }
+                        .padding(
+                            start = metrics.contentPadding,
+                            end = metrics.contentPadding,
+                            top = metrics.contentPadding,
+                            bottom = overlayBottomPadding,
+                        ),
+                )
+            }
+
+            visibleProgressEntry?.let { entry ->
+                NuvioProgressBar(
+                    progress = entry.progressFraction,
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .fillMaxWidth()
+                        .padding(
+                            start = metrics.contentPadding,
+                            end = metrics.contentPadding,
+                            bottom = progressBarBottomSpacing,
+                        ),
+                    height = progressBarHeight,
+                    trackColor = Color.White.copy(alpha = 0.22f),
+                    fillColor = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+
+        AnimatedVisibility(
+            visible = overviewExpanded,
+            enter = fadeIn(fadeSpec) + expandVertically(sizeSpec, expandFrom = Alignment.Top),
+            exit = fadeOut(fadeSpec) + shrinkVertically(sizeSpec, shrinkTowards = Alignment.Top),
+        ) {
+            textBlock(
+                true,
+                Modifier
+                    .background(Color.Black.copy(alpha = 0.92f))
+                    .padding(
+                        start = metrics.contentPadding,
+                        end = metrics.contentPadding,
+                        top = 12.dp,
+                        bottom = metrics.contentBottomPadding,
+                    ),
+            )
+        }
+    }
+}
+
+@Composable
+private fun EpisodeHorizontalMetaRow(
+    runtimeLabel: String?,
+    ratingLabel: String?,
+    formattedDate: String?,
+    metrics: EpisodeHorizontalCardMetrics,
+) {
+    if (runtimeLabel != null || ratingLabel != null || formattedDate != null) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            runtimeLabel?.let { runtime ->
+                Text(
+                    text = runtime,
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = metrics.metaTextSize),
+                    color = Color.White.copy(alpha = 0.78f),
+                    maxLines = 1,
+                )
+            }
+            ratingLabel?.let { rating ->
+                ImdbEpisodeRatingBadge(
+                    rating = rating,
+                    logoWidth = metrics.imdbLogoWidth,
+                    logoHeight = metrics.imdbLogoHeight,
+                    textSize = metrics.metaTextSize,
+                )
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            formattedDate?.let { date ->
+                Text(
+                    text = date,
+                    style = MaterialTheme.typography.labelSmall.copy(fontSize = metrics.metaTextSize),
+                    color = Color.White.copy(alpha = 0.78f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    textAlign = TextAlign.End,
+                )
+            }
         }
     }
 }
@@ -1382,6 +1693,7 @@ private fun EpisodeListCard(
 }
 
 private const val EPISODE_OVERVIEW_ANIMATION_MS = 280
+private val HORIZONTAL_LIST_MAX_CARD_WIDTH = 560.dp
 private const val EPISODE_LIST_CARD_EXPAND_ANIMATION_MS = 380
 
 /**
@@ -1454,11 +1766,6 @@ private fun ExpandableEpisodeOverview(
     modifier: Modifier = Modifier,
 ) {
     var canExpand by remember(text) { mutableStateOf(false) }
-    val arrowRotation by animateFloatAsState(
-        targetValue = if (expanded) 180f else 0f,
-        animationSpec = tween(EPISODE_OVERVIEW_ANIMATION_MS),
-        label = "episode_overview_arrow",
-    )
 
     Box(modifier = modifier.fillMaxWidth()) {
         Text(
@@ -1477,27 +1784,50 @@ private fun ExpandableEpisodeOverview(
         )
 
         if (canExpand || expanded) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .size(toggleSize)
-                    .clip(CircleShape)
-                    .background(toggleContainerColor)
-                    .clickable(onClick = onToggle),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.KeyboardArrowDown,
-                    contentDescription = stringResource(
-                        if (expanded) Res.string.details_show_less else Res.string.details_show_more,
-                    ),
-                    tint = toggleContentColor,
-                    modifier = Modifier
-                        .size(toggleSize * 0.8f)
-                        .rotate(arrowRotation),
-                )
-            }
+            EpisodeOverviewToggle(
+                expanded = expanded,
+                onToggle = onToggle,
+                containerColor = toggleContainerColor,
+                contentColor = toggleContentColor,
+                size = toggleSize,
+                modifier = Modifier.align(Alignment.BottomEnd),
+            )
         }
+    }
+}
+
+@Composable
+private fun EpisodeOverviewToggle(
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    containerColor: Color,
+    contentColor: Color,
+    size: Dp,
+    modifier: Modifier = Modifier,
+) {
+    val arrowRotation by animateFloatAsState(
+        targetValue = if (expanded) 180f else 0f,
+        animationSpec = tween(EPISODE_OVERVIEW_ANIMATION_MS),
+        label = "episode_overview_arrow",
+    )
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(containerColor)
+            .clickable(onClick = onToggle),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.KeyboardArrowDown,
+            contentDescription = stringResource(
+                if (expanded) Res.string.details_show_less else Res.string.details_show_more,
+            ),
+            tint = contentColor,
+            modifier = Modifier
+                .size(size * 0.8f)
+                .rotate(arrowRotation),
+        )
     }
 }
 

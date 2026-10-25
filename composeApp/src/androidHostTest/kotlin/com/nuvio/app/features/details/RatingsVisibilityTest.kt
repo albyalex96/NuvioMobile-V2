@@ -85,7 +85,11 @@ class RatingsVisibilityTest {
                 } else {
                     DetailSeriesContent(
                         meta = meta,
-                        episodeCardStyle = if (layout.value == 0) MetaEpisodeCardStyle.Horizontal else MetaEpisodeCardStyle.List,
+                        episodeCardStyle = when (layout.value) {
+                            0 -> MetaEpisodeCardStyle.Horizontal
+                            1 -> MetaEpisodeCardStyle.List
+                            else -> MetaEpisodeCardStyle.HorizontalList
+                        },
                         progressByVideoId = progress.value,
                         watchedKeys = watchedKeys.value,
                         episodeRatings = ratings.value,
@@ -94,7 +98,7 @@ class RatingsVisibilityTest {
                 }
             }
         }
-        for (currentLayout in 0..2) {
+        for (currentLayout in 0..3) {
             compose.runOnIdle {
                 layout.value = currentLayout
                 visibility.value = EpisodeRatingsVisibility.SHOW_ALL

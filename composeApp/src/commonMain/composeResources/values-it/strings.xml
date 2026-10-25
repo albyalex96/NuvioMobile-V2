@@ -445,6 +445,8 @@
   <string name="settings_meta_episode_style_horizontal_description">Schede a riga in stile sfondo</string>
   <string name="settings_meta_episode_style_list">Elenco</string>
   <string name="settings_meta_episode_style_list_description">Schede impilate con focus sui dettagli</string>
+  <string name="settings_meta_episode_style_horizontal_list">Orizzontale ad elenco</string>
+  <string name="settings_meta_episode_style_horizontal_list_description">Schede in stile sfondo in un elenco verticale</string>
   <string name="settings_meta_episodes">Episodi</string>
   <string name="settings_meta_episodes_description">Stagioni ed elenco episodi per le serie.</string>
   <string name="settings_meta_group_label">Gruppo %1$d</string>

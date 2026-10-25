@@ -1,5 +1,6 @@
 package com.nuvio.app.features.details
 
+import co.touchlab.kermit.Logger
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -84,18 +85,25 @@ enum class MetaScreenBackgroundMode {
 enum class MetaEpisodeCardStyle {
     Horizontal,
     List,
+    HorizontalList,
     ;
+
+    /** Episodes rendered as items of the details page list (one row per episode) instead of a single row. */
+    val usesLazyEpisodeList: Boolean
+        get() = this != Horizontal
 
     companion object {
         fun parse(raw: String?): MetaEpisodeCardStyle? = when (raw?.lowercase()) {
             "horizontal" -> Horizontal
             "list" -> List
+            "horizontal_list" -> HorizontalList
             else -> null
         }
 
         fun persist(style: MetaEpisodeCardStyle): String = when (style) {
             Horizontal -> "horizontal"
             List -> "list"
+            HorizontalList -> "horizontal_list"
         }
     }
 }
@@ -103,7 +111,7 @@ enum class MetaEpisodeCardStyle {
 internal fun MetaScreenSectionItem.tabGroupForRendering(
     episodeCardStyle: MetaEpisodeCardStyle,
 ): Int? = if (
-    key == MetaScreenSectionKey.EPISODES && episodeCardStyle == MetaEpisodeCardStyle.List
+    key == MetaScreenSectionKey.EPISODES && episodeCardStyle.usesLazyEpisodeList
 ) {
     null
 } else {
@@ -293,6 +301,9 @@ object MetaScreenSettingsRepository {
 
     fun setEpisodeCardStyle(style: MetaEpisodeCardStyle) {
         ensureLoaded()
+        if (episodeCardStyle != style) {
+            Logger.withTag("MetaScreenSettings").i { "Episode card style: ${episodeCardStyle.name} -> ${style.name}" }
+        }
         episodeCardStyle = style
         publish()
         persist()
