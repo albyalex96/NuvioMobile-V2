@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_playback_section_seek_thumbnails">Seek thumbnails</string>
+    <string name="settings_playback_seek_thumbnails">Seek thumbnails</string>
+    <string name="settings_playback_seek_thumbnails_description">Show a picture of the scene above the progress bar while you seek. Works with single files (MKV, MP4), HLS streams and downloads; not with P2P, live or DASH streams</string>
+    <string name="settings_playback_seek_thumbnails_wifi_only">Only on Wi-Fi</string>
+    <string name="settings_playback_seek_thumbnails_wifi_only_description">Make thumbnails of online streams only on Wi-Fi or Ethernet, so they use no mobile data. Downloads always get them</string>
+    <string name="settings_playback_seek_thumbnails_size">Thumbnail size</string>
+    <string name="settings_playback_seek_thumbnails_size_small">Small</string>
+    <string name="settings_playback_seek_thumbnails_size_medium">Medium</string>
+    <string name="settings_playback_seek_thumbnails_size_large">Large</string>
+    <string name="settings_licenses_attributions_nuvio_arc_title">Nuvio Arc</string>
+    <string name="settings_licenses_attributions_nuvio_arc_body">The seek thumbnail engine (keyframe index readers and keyframe decoder) is adapted from Nuvio Arc, a fork of Nuvio TV, under the GNU GPL v3. It decodes through the FFmpeg libraries already included with libmpv (LGPL v2.1 or later).</string>
+    <string name="settings_licenses_attributions_nuvio_arc_license">Licensed under the GNU General Public License v3.0.</string>
+</resources>

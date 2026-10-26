@@ -151,73 +151,78 @@ internal fun PlayerTimeline(
     )
 
     CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-        Slider(
-            value = displayedPositionMs.coerceIn(0L, durationMs).toFloat(),
-            onValueChange = { value ->
-                val position = value.toLong().coerceIn(0L, durationMs)
-                scrubPosition = position
-                onScrubChange(position)
-            },
-            onValueChangeFinished = {
-                onScrubFinished((scrubPosition ?: displayedPositionMs).coerceIn(0L, durationMs))
-                scrubPosition = null
-            },
-            valueRange = 0f..rangeEnd,
-            enabled = enabled && durationMs > 0L,
-            interactionSource = interactionSource,
-            thumb = {},
-            track = { state ->
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                        .drawBehind {
-                            val trackHeight = trackThickness.toPx()
-                            val trackOrigin = Offset(0f, 35.dp.toPx() - trackHeight / 2)
-                            val radius = CornerRadius(trackHeight / 2)
-                            drawRoundRect(
-                                color = Color.White.copy(alpha = 0.3f),
-                                topLeft = trackOrigin,
-                                size = Size(size.width, trackHeight),
-                                cornerRadius = radius,
-                            )
-                            drawRoundRect(
-                                color = accent.copy(alpha = 0.35f),
-                                topLeft = trackOrigin,
-                                size = Size(size.width * bufferedFraction, trackHeight),
-                                cornerRadius = radius,
-                            )
-                            val progressWidth = size.width * (state.value / rangeEnd).coerceIn(0f, 1f)
-                            drawRoundRect(
-                                brush = accentBrush,
-                                topLeft = trackOrigin,
-                                size = Size(progressWidth, trackHeight),
-                                cornerRadius = radius,
-                            )
-                            val markWidth = PlayerChapterMarkWidth.toPx()
-                            chapterMarks.forEach { fraction ->
-                                drawRect(
-                                    color = PlayerChapterMarkColor,
-                                    topLeft = Offset(size.width * fraction - markWidth / 2f, trackOrigin.y),
-                                    size = Size(markWidth, trackHeight),
+        Box(Modifier.fillMaxWidth()) {
+            Slider(
+                value = displayedPositionMs.coerceIn(0L, durationMs).toFloat(),
+                onValueChange = { value ->
+                    val position = value.toLong().coerceIn(0L, durationMs)
+                    scrubPosition = position
+                    onScrubChange(position)
+                },
+                onValueChangeFinished = {
+                    onScrubFinished((scrubPosition ?: displayedPositionMs).coerceIn(0L, durationMs))
+                    scrubPosition = null
+                },
+                valueRange = 0f..rangeEnd,
+                enabled = enabled && durationMs > 0L,
+                interactionSource = interactionSource,
+                thumb = {},
+                track = { state ->
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .drawBehind {
+                                val trackHeight = trackThickness.toPx()
+                                val trackOrigin = Offset(0f, 35.dp.toPx() - trackHeight / 2)
+                                val radius = CornerRadius(trackHeight / 2)
+                                drawRoundRect(
+                                    color = Color.White.copy(alpha = 0.3f),
+                                    topLeft = trackOrigin,
+                                    size = Size(size.width, trackHeight),
+                                    cornerRadius = radius,
                                 )
-                            }
-                            if (isFocused) {
-                                drawCircle(
-                                    color = Color.White,
-                                    radius = trackHeight,
-                                    center = Offset(progressWidth, trackOrigin.y + trackHeight / 2),
+                                drawRoundRect(
+                                    color = accent.copy(alpha = 0.35f),
+                                    topLeft = trackOrigin,
+                                    size = Size(size.width * bufferedFraction, trackHeight),
+                                    cornerRadius = radius,
                                 )
-                            }
-                        },
-                )
-            },
-            modifier = modifier
-                .fillMaxWidth()
-                .height(24.dp)
-                .wrapContentHeight(Alignment.Bottom, unbounded = true)
-                .requiredHeight(48.dp)
-                .semantics { contentDescription = description },
-        )
+                                val progressWidth = size.width * (state.value / rangeEnd).coerceIn(0f, 1f)
+                                drawRoundRect(
+                                    brush = accentBrush,
+                                    topLeft = trackOrigin,
+                                    size = Size(progressWidth, trackHeight),
+                                    cornerRadius = radius,
+                                )
+                                val markWidth = PlayerChapterMarkWidth.toPx()
+                                chapterMarks.forEach { fraction ->
+                                    drawRect(
+                                        color = PlayerChapterMarkColor,
+                                        topLeft = Offset(size.width * fraction - markWidth / 2f, trackOrigin.y),
+                                        size = Size(markWidth, trackHeight),
+                                    )
+                                }
+                                if (isFocused) {
+                                    drawCircle(
+                                        color = Color.White,
+                                        radius = trackHeight,
+                                        center = Offset(progressWidth, trackOrigin.y + trackHeight / 2),
+                                    )
+                                }
+                            },
+                    )
+                },
+                modifier = modifier
+                    .fillMaxWidth()
+                    .height(24.dp)
+                    .wrapContentHeight(Alignment.Bottom, unbounded = true)
+                    .requiredHeight(48.dp)
+                    .semantics { contentDescription = description },
+            )
+            if (enabled && durationMs > 0L) {
+                SeekThumbnailPreview(positionMs = displayedPositionMs.coerceIn(0L, durationMs), durationMs = durationMs)
+            }
+        }
     }
 }

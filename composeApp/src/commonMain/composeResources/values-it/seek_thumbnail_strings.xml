@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="settings_playback_section_seek_thumbnails">Anteprime di ricerca</string>
+    <string name="settings_playback_seek_thumbnails">Anteprime di ricerca</string>
+    <string name="settings_playback_seek_thumbnails_description">Mostra un'immagine della scena sopra la barra di avanzamento mentre scorri. Funziona con i file singoli (MKV, MP4), gli stream HLS e i download; non con gli stream P2P, live o DASH</string>
+    <string name="settings_playback_seek_thumbnails_wifi_only">Solo con Wi-Fi</string>
+    <string name="settings_playback_seek_thumbnails_wifi_only_description">Crea le anteprime degli stream online solo con Wi-Fi o Ethernet, così non consumano dati mobili. I download le hanno sempre</string>
+    <string name="settings_playback_seek_thumbnails_size">Dimensione anteprima</string>
+    <string name="settings_playback_seek_thumbnails_size_small">Piccola</string>
+    <string name="settings_playback_seek_thumbnails_size_medium">Media</string>
+    <string name="settings_playback_seek_thumbnails_size_large">Grande</string>
+    <string name="settings_licenses_attributions_nuvio_arc_title">Nuvio Arc</string>
+    <string name="settings_licenses_attributions_nuvio_arc_body">Il motore delle anteprime di ricerca (lettura degli indici dei keyframe e decoder dei keyframe) è adattato da Nuvio Arc, un fork di Nuvio TV, con licenza GNU GPL v3. Decodifica tramite le librerie FFmpeg già incluse in libmpv (LGPL v2.1 o successiva).</string>
+    <string name="settings_licenses_attributions_nuvio_arc_license">Distribuito con licenza GNU General Public License v3.0.</string>
+</resources>

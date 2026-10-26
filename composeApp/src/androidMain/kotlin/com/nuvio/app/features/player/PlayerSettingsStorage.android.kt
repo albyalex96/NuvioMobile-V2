@@ -99,6 +99,9 @@ actual object PlayerSettingsStorage {
     private const val stillWatchingEpisodeCountKey = "still_watching_episode_count"
     private const val stillWatchingNightOnlyKey = "still_watching_night_only"
     private const val rememberAudioDelayPerDeviceKey = "remember_audio_delay_per_device"
+    private const val seekThumbnailsEnabledKey = "seek_thumbnails_enabled"
+    private const val seekThumbnailsWifiOnlyKey = "seek_thumbnails_wifi_only"
+    private const val seekThumbnailSizeKey = "seek_thumbnail_size"
     private const val stillWatchingLiveTvEnabledKey = "still_watching_live_tv_enabled"
     private const val stillWatchingLiveTvMinutesKey = "still_watching_live_tv_minutes"
     // One JSON per device class (phone, tablet, TV); the flat keys above hold the pre-split values.
@@ -192,6 +195,9 @@ actual object PlayerSettingsStorage {
         stillWatchingEpisodeCountKey,
         stillWatchingNightOnlyKey,
         rememberAudioDelayPerDeviceKey,
+        seekThumbnailsEnabledKey,
+        seekThumbnailsWifiOnlyKey,
+        seekThumbnailSizeKey,
         stillWatchingLiveTvEnabledKey,
         stillWatchingLiveTvMinutesKey,
         *SubtitleSizeFormFactor.entries.map(::stillWatchingSettingsKey).toTypedArray(),
@@ -1306,6 +1312,46 @@ actual object PlayerSettingsStorage {
             ?.apply()
     }
 
+    actual fun loadSeekThumbnailsEnabled(): Boolean? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(seekThumbnailsEnabledKey)
+            if (sharedPreferences.contains(key)) {
+                sharedPreferences.getBoolean(key, true)
+            } else null
+        }
+
+    actual fun saveSeekThumbnailsEnabled(enabled: Boolean) {
+        preferences
+            ?.edit()
+            ?.putBoolean(ProfileScopedKey.of(seekThumbnailsEnabledKey), enabled)
+            ?.apply()
+    }
+
+    actual fun loadSeekThumbnailsWifiOnly(): Boolean? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(seekThumbnailsWifiOnlyKey)
+            if (sharedPreferences.contains(key)) {
+                sharedPreferences.getBoolean(key, true)
+            } else null
+        }
+
+    actual fun saveSeekThumbnailsWifiOnly(enabled: Boolean) {
+        preferences
+            ?.edit()
+            ?.putBoolean(ProfileScopedKey.of(seekThumbnailsWifiOnlyKey), enabled)
+            ?.apply()
+    }
+
+    actual fun loadSeekThumbnailSize(): String? =
+        preferences?.getString(ProfileScopedKey.of(seekThumbnailSizeKey), null)
+
+    actual fun saveSeekThumbnailSize(size: String) {
+        preferences
+            ?.edit()
+            ?.putString(ProfileScopedKey.of(seekThumbnailSizeKey), size)
+            ?.apply()
+    }
+
     actual fun loadStillWatchingLiveTvEnabled(): Boolean? =
         preferences?.let { sharedPreferences ->
             val key = ProfileScopedKey.of(stillWatchingLiveTvEnabledKey)
@@ -1597,6 +1643,9 @@ actual object PlayerSettingsStorage {
         loadStillWatchingEpisodeCount()?.let { put(stillWatchingEpisodeCountKey, encodeSyncInt(it)) }
         loadStillWatchingNightOnly()?.let { put(stillWatchingNightOnlyKey, encodeSyncBoolean(it)) }
         loadRememberAudioDelayPerDevice()?.let { put(rememberAudioDelayPerDeviceKey, encodeSyncBoolean(it)) }
+        loadSeekThumbnailsEnabled()?.let { put(seekThumbnailsEnabledKey, encodeSyncBoolean(it)) }
+        loadSeekThumbnailsWifiOnly()?.let { put(seekThumbnailsWifiOnlyKey, encodeSyncBoolean(it)) }
+        loadSeekThumbnailSize()?.let { put(seekThumbnailSizeKey, encodeSyncString(it)) }
         loadStillWatchingLiveTvEnabled()?.let { put(stillWatchingLiveTvEnabledKey, encodeSyncBoolean(it)) }
         loadStillWatchingLiveTvMinutes()?.let { put(stillWatchingLiveTvMinutesKey, encodeSyncInt(it)) }
         SubtitleSizeFormFactor.entries.forEach { formFactor ->
@@ -1702,6 +1751,9 @@ actual object PlayerSettingsStorage {
         payload.decodeSyncInt(stillWatchingEpisodeCountKey)?.let(::saveStillWatchingEpisodeCount)
         payload.decodeSyncBoolean(stillWatchingNightOnlyKey)?.let(::saveStillWatchingNightOnly)
         payload.decodeSyncBoolean(rememberAudioDelayPerDeviceKey)?.let(::saveRememberAudioDelayPerDevice)
+        payload.decodeSyncBoolean(seekThumbnailsEnabledKey)?.let(::saveSeekThumbnailsEnabled)
+        payload.decodeSyncBoolean(seekThumbnailsWifiOnlyKey)?.let(::saveSeekThumbnailsWifiOnly)
+        payload.decodeSyncString(seekThumbnailSizeKey)?.let(::saveSeekThumbnailSize)
         payload.decodeSyncBoolean(stillWatchingLiveTvEnabledKey)?.let(::saveStillWatchingLiveTvEnabled)
         payload.decodeSyncInt(stillWatchingLiveTvMinutesKey)?.let(::saveStillWatchingLiveTvMinutes)
         SubtitleSizeFormFactor.entries.forEach { formFactor ->

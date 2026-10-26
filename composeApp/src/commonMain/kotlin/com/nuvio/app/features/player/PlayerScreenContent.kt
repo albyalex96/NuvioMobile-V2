@@ -141,6 +141,7 @@ internal fun PlayerScreenContent(args: PlayerScreenArgs) {
             runtime.lastSyncedSettingsResizeMode = playerSettingsUiState.resizeMode
         }
         runtime.BindCastHandoff()
+        runtime.BindSeekThumbnails()
         runtime.resetIdentityStateIfNeeded()
 
         val keepScreenAwake = runtime.errorMessage == null &&

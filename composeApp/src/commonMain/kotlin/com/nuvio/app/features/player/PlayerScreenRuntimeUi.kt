@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -276,7 +277,9 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
             )
         }
 
-        RenderPlayerControls(displayedPositionMs = displayedPositionMs, isEpisode = isEpisode)
+        CompositionLocalProvider(LocalSeekThumbnails provides rememberSeekThumbnailUi()) {
+            RenderPlayerControls(displayedPositionMs = displayedPositionMs, isEpisode = isEpisode)
+        }
         RenderPlaybackOverlays(
             runtime = runtime,
             displayedPositionMs = displayedPositionMs,
@@ -534,6 +537,7 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
             onScrubChange = { positionMs ->
                 isScrubbingTimeline = true
                 scrubbingPositionMs = positionMs
+                seekThumbnailProvider?.request(positionMs)
             },
             onScrubFinished = { positionMs ->
                 val targetMs = if (isPartyControlLocked) ownSeekTarget(positionMs) else positionMs

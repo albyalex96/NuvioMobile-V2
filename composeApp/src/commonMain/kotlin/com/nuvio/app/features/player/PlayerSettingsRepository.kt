@@ -1,5 +1,7 @@
 package com.nuvio.app.features.player
 
+import com.nuvio.app.features.player.seekthumb.SeekThumbnailSize
+
 import co.touchlab.kermit.Logger
 import com.nuvio.app.core.build.AppFeaturePolicy
 import com.nuvio.app.features.player.skip.AutoSkipSegmentType
@@ -112,6 +114,9 @@ data class PlayerSettingsUiState(
     val stillWatchingEpisodeCount: Int = DEFAULT_STILL_WATCHING_EPISODE_COUNT,
     val stillWatchingNightOnly: Boolean = false,
     val rememberAudioDelayPerDevice: Boolean = true,
+    val seekThumbnailsEnabled: Boolean = true,
+    val seekThumbnailsWifiOnly: Boolean = true,
+    val seekThumbnailSize: SeekThumbnailSize = SeekThumbnailSize.Medium,
     val stillWatchingLiveTvEnabled: Boolean = false,
     val stillWatchingLiveTvMinutes: Int = DEFAULT_STILL_WATCHING_LIVE_TV_MINUTES,
     // Every device class; the flat still-watching fields above are this device's copy.
@@ -211,6 +216,9 @@ object PlayerSettingsRepository {
     private var stillWatchingByFormFactor = defaultStillWatchingSettings()
     private var playerClockByDevice = defaultPlayerClockSettings()
     private var rememberAudioDelayPerDevice = true
+    private var seekThumbnailsEnabled = true
+    private var seekThumbnailsWifiOnly = true
+    private var seekThumbnailSize = SeekThumbnailSize.Medium
     private var seekIntervalSeconds = DEFAULT_SEEK_INTERVAL_SECONDS
     private var useLibass = true
     private var libassRenderType = "OVERLAY_OPEN_GL"
@@ -307,6 +315,9 @@ object PlayerSettingsRepository {
         stillWatchingByFormFactor = defaultStillWatchingSettings()
         playerClockByDevice = defaultPlayerClockSettings()
         rememberAudioDelayPerDevice = true
+        seekThumbnailsEnabled = true
+        seekThumbnailsWifiOnly = true
+        seekThumbnailSize = SeekThumbnailSize.Medium
         seekIntervalSeconds = DEFAULT_SEEK_INTERVAL_SECONDS
         useLibass = true
         libassRenderType = "OVERLAY_OPEN_GL"
@@ -490,6 +501,11 @@ object PlayerSettingsRepository {
             PlayerClockSettings.decode(PlayerSettingsStorage.loadPlayerClockSettings(device)) ?: PlayerClockSettings()
         }
         rememberAudioDelayPerDevice = PlayerSettingsStorage.loadRememberAudioDelayPerDevice() ?: true
+        seekThumbnailsEnabled = PlayerSettingsStorage.loadSeekThumbnailsEnabled() ?: true
+        seekThumbnailsWifiOnly = PlayerSettingsStorage.loadSeekThumbnailsWifiOnly() ?: true
+        seekThumbnailSize = PlayerSettingsStorage.loadSeekThumbnailSize()
+            ?.let { stored -> SeekThumbnailSize.entries.firstOrNull { it.name == stored } }
+            ?: SeekThumbnailSize.Medium
         seekIntervalSeconds = (PlayerSettingsStorage.loadSeekIntervalSeconds() ?: DEFAULT_SEEK_INTERVAL_SECONDS)
             .coerceIn(SEEK_INTERVAL_SECONDS_RANGE)
         useLibass = PlayerSettingsStorage.loadUseLibass() ?: true
@@ -1112,6 +1128,30 @@ object PlayerSettingsRepository {
         PlayerSettingsStorage.saveRememberAudioDelayPerDevice(enabled)
     }
 
+    fun setSeekThumbnailsEnabled(enabled: Boolean) {
+        ensureLoaded()
+        if (seekThumbnailsEnabled == enabled) return
+        seekThumbnailsEnabled = enabled
+        publish()
+        PlayerSettingsStorage.saveSeekThumbnailsEnabled(enabled)
+    }
+
+    fun setSeekThumbnailsWifiOnly(enabled: Boolean) {
+        ensureLoaded()
+        if (seekThumbnailsWifiOnly == enabled) return
+        seekThumbnailsWifiOnly = enabled
+        publish()
+        PlayerSettingsStorage.saveSeekThumbnailsWifiOnly(enabled)
+    }
+
+    fun setSeekThumbnailSize(size: SeekThumbnailSize) {
+        ensureLoaded()
+        if (seekThumbnailSize == size) return
+        seekThumbnailSize = size
+        publish()
+        PlayerSettingsStorage.saveSeekThumbnailSize(size.name)
+    }
+
     fun setStillWatchingLiveTvEnabled(enabled: Boolean, formFactor: SubtitleSizeFormFactor? = null) =
         updateStillWatching(formFactor) { it.copy(liveTvEnabled = enabled) }
 
@@ -1433,6 +1473,9 @@ object PlayerSettingsRepository {
             stillWatchingEpisodeCount = thisDeviceStillWatching.episodeCount,
             stillWatchingNightOnly = thisDeviceStillWatching.nightOnly,
             rememberAudioDelayPerDevice = rememberAudioDelayPerDevice,
+            seekThumbnailsEnabled = seekThumbnailsEnabled,
+            seekThumbnailsWifiOnly = seekThumbnailsWifiOnly,
+            seekThumbnailSize = seekThumbnailSize,
             stillWatchingLiveTvEnabled = thisDeviceStillWatching.liveTvEnabled,
             stillWatchingLiveTvMinutes = thisDeviceStillWatching.liveTvMinutes,
             stillWatchingSettings = stillWatchingByFormFactor,

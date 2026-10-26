@@ -480,6 +480,7 @@ kotlin {
                 implementation("androidx.media3:media3-database:1.8.0")
                 implementation("androidx.annotation:annotation-experimental:1.3.1")
                 implementation(libs.mpv.android.lib)
+                implementation(project(":seekThumbNative"))
                 implementation(libs.androidx.mediarouter)
                 implementation(libs.play.services.cast.framework)
                 implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("lib-*.aar"))))

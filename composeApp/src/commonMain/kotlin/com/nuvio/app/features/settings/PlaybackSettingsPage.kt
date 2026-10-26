@@ -582,6 +582,11 @@ private fun PlaybackSettingsSection(
             }
         }
 
+        SeekThumbnailSettingsSection(
+            settings = autoPlayPlayerSettings,
+            isTablet = isTablet,
+        )
+
         SettingsSection(
             title = stringResource(Res.string.settings_playback_section_subtitle_audio),
             isTablet = isTablet,

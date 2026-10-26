@@ -72,6 +72,11 @@ internal object PlayerPlaybackNetworking {
             .build()
     }
 
+    /** Seek thumbnails read the stream through playback's client and headers (default User-Agent included). */
+    fun seekThumbnailHttpClient(): OkHttpClient = playbackHttpClient
+
+    fun seekThumbnailRequestHeaders(headers: Map<String, String>): Map<String, String> = withDefaultUserAgent(headers)
+
     fun createHttpDataSourceFactory(
         defaultHeaders: Map<String, String> = emptyMap(),
         useLongReadTimeout: Boolean = false,

@@ -84,6 +84,7 @@ import com.nuvio.app.supportsPosterNavigationMotion
 import com.nuvio.app.core.mediaproxy.LanMediaProxy
 import com.nuvio.app.features.updater.AppUpdaterPlatform
 import com.nuvio.app.features.updater.InstalledReleaseNotes
+import com.nuvio.app.features.player.seekthumb.seekThumbnailsSupported
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
@@ -365,6 +366,8 @@ internal fun settingsSearchEntries(
             .takeIf { dnsOverHttpsSettingsVisible },
         PlaybackSearchRow("okhttp-license", stringResource(Res.string.settings_licenses_attributions_okhttp_title), stringResource(Res.string.settings_licenses_attributions_okhttp_license))
             .takeIf { dnsOverHttpsSettingsVisible },
+        PlaybackSearchRow("nuvio-arc-license", stringResource(Res.string.settings_licenses_attributions_nuvio_arc_title), stringResource(Res.string.settings_licenses_attributions_nuvio_arc_body))
+            .takeIf { seekThumbnailsSupported },
         PlaybackSearchRow("cerebras-attribution", stringResource(Res.string.settings_licenses_attributions_cerebras_title), stringResource(Res.string.settings_licenses_attributions_cerebras_body)),
         PlaybackSearchRow("groq-attribution", stringResource(Res.string.settings_licenses_attributions_groq_title), stringResource(Res.string.settings_licenses_attributions_groq_body)),
         PlaybackSearchRow("gemini-attribution", stringResource(Res.string.settings_licenses_attributions_gemini_title), stringResource(Res.string.settings_licenses_attributions_gemini_body)),
@@ -1520,6 +1523,16 @@ private fun addAdditionalSearchEntries(
         }
         add(PlaybackSearchRow("seek-interval", stringResource(Res.string.settings_playback_seek_interval)))
     }
+    val seekThumbnailSection = stringResource(Res.string.settings_playback_section_seek_thumbnails)
+    val seekThumbnailRows = if (seekThumbnailsSupported) {
+        listOf(
+            PlaybackSearchRow("seek-thumbnails", stringResource(Res.string.settings_playback_seek_thumbnails), stringResource(Res.string.settings_playback_seek_thumbnails_description)),
+            PlaybackSearchRow("seek-thumbnails-wifi-only", stringResource(Res.string.settings_playback_seek_thumbnails_wifi_only), stringResource(Res.string.settings_playback_seek_thumbnails_wifi_only_description)),
+            PlaybackSearchRow("seek-thumbnails-size", stringResource(Res.string.settings_playback_seek_thumbnails_size)),
+        )
+    } else {
+        emptyList()
+    }
     val subtitleAudioSection = stringResource(Res.string.settings_playback_section_subtitle_audio)
     val subtitleAudioRows = buildList {
         add(
@@ -1624,6 +1637,7 @@ private fun addAdditionalSearchEntries(
     )
     listOf(
         playerSection to playerRows,
+        seekThumbnailSection to seekThumbnailRows,
         subtitleAudioSection to subtitleAudioRows,
         subtitleRenderingSection to subtitleRenderingRows,
         stringResource(Res.string.settings_playback_section_p2p) to p2pRows,

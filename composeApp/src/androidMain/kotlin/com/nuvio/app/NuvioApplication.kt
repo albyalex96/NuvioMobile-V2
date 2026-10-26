@@ -17,6 +17,7 @@ import com.nuvio.app.core.mediaproxy.LanMediaProxy
 import com.nuvio.app.core.network.NuvioDns
 import com.nuvio.app.core.network.dns.DnsOverHttpsRepository
 import com.nuvio.app.core.network.dns.DnsOverHttpsStorage
+import com.nuvio.app.features.player.seekthumb.SeekThumbnailPlatform
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import com.nuvio.app.core.poster.CustomPosterFallbackInterceptor
@@ -37,6 +38,7 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
         DnsOverHttpsStorage.initialize(this)
         DnsOverHttpsRepository.ensureLoaded()
         LanMediaProxy.initialize(this)
+        SeekThumbnailPlatform.initialize(this)
     }
 
     override fun newImageLoader(context: android.content.Context): ImageLoader {

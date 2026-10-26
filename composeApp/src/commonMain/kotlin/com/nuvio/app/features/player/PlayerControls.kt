@@ -905,19 +905,24 @@ internal fun PlayerSeekBar(
     val chapterMarks = remember(chapters, durationMs) { chapters.chapterMarkFractions(durationMs) }
     val seekDescription = stringResource(Res.string.player_seek_position)
     Column(modifier = modifier) {
-        Slider(
-            modifier = sliderModifier
-                .fillMaxWidth()
-                .height(metrics.sliderTouchHeight)
-                .graphicsLayer(scaleY = metrics.sliderScaleY)
-                .semantics { contentDescription = seekDescription },
-            value = displayedPositionMs.coerceIn(0L, seekDurationMs).toFloat(),
-            onValueChange = { value -> onScrubChange(value.toLong()) },
-            onValueChangeFinished = { onScrubFinished(displayedPositionMs.coerceIn(0L, seekDurationMs)) },
-            enabled = durationMs > 0L,
-            valueRange = 0f..seekDurationMs.toFloat(),
-            track = { sliderState -> PlayerProgressTrack(sliderState, chapterMarks) },
-        )
+        Box(Modifier.fillMaxWidth()) {
+            Slider(
+                modifier = sliderModifier
+                    .fillMaxWidth()
+                    .height(metrics.sliderTouchHeight)
+                    .graphicsLayer(scaleY = metrics.sliderScaleY)
+                    .semantics { contentDescription = seekDescription },
+                value = displayedPositionMs.coerceIn(0L, seekDurationMs).toFloat(),
+                onValueChange = { value -> onScrubChange(value.toLong()) },
+                onValueChangeFinished = { onScrubFinished(displayedPositionMs.coerceIn(0L, seekDurationMs)) },
+                enabled = durationMs > 0L,
+                valueRange = 0f..seekDurationMs.toFloat(),
+                track = { sliderState -> PlayerProgressTrack(sliderState, chapterMarks) },
+            )
+            if (durationMs > 0L) {
+                SeekThumbnailPreview(positionMs = displayedPositionMs.coerceIn(0L, durationMs), durationMs = durationMs)
+            }
+        }
         Row(
             modifier = Modifier
                 .fillMaxWidth()

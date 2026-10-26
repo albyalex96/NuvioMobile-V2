@@ -38,6 +38,7 @@ import com.nuvio.app.features.cloud.TorboxCloudLibraryPosterUrl
 import com.nuvio.app.features.cloud.cloudLibraryDisplayArtworkUrl
 import com.nuvio.app.features.discord.DiscordRpcPlatform
 import com.nuvio.app.isIos
+import com.nuvio.app.features.player.seekthumb.seekThumbnailsSupported
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
@@ -67,6 +68,7 @@ private const val GeminiUrl = "https://ai.google.dev"
 private const val OpenRouterUrl = "https://openrouter.ai"
 private const val TavilyUrl = "https://tavily.com"
 private const val NuvioRepositoryUrl = "https://github.com/NuvioMedia/NuvioMobile"
+private const val NuvioArcRepositoryUrl = "https://github.com/ysosrs123/NuvioTV-Fork"
 private const val MpvKitUrl = "https://github.com/mpvkit/MPVKit"
 private const val ApacheLicenseUrl = "https://www.apache.org/licenses/LICENSE-2.0"
 private const val HazeLicenseUrl = "https://github.com/chrisbanes/haze/blob/1.7.2/LICENSE"
@@ -175,6 +177,18 @@ private fun LicensesAttributionsBody(
                 item = platformLicenseItem(),
                 isTablet = isTablet,
             )
+            if (seekThumbnailsSupported) {
+                PlainStackDivider()
+                LicenseRow(
+                    item = LicenseItem(
+                        titleRes = Res.string.settings_licenses_attributions_nuvio_arc_title,
+                        bodyRes = Res.string.settings_licenses_attributions_nuvio_arc_body,
+                        licenseRes = Res.string.settings_licenses_attributions_nuvio_arc_license,
+                        link = NuvioArcRepositoryUrl,
+                    ),
+                    isTablet = isTablet,
+                )
+            }
         }
 
         if (dnsOverHttpsSettingsVisible) {
