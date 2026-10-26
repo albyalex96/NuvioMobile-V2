@@ -1,5 +1,7 @@
 package com.nuvio.app.features.streams.parser
 
+import kotlinx.atomicfu.locks.SynchronizedObject
+import kotlinx.atomicfu.locks.synchronized
 import com.nuvio.app.features.streams.StreamDebridCacheState
 import com.nuvio.app.features.streams.StreamItem
 
@@ -25,7 +27,23 @@ object GenericStreamParser {
         val allowLanguageWords: Boolean,
     )
 
+    /** Most recent results: the same stream is parsed by the quality filter, the sort and its card. */
+    private const val CACHE_SIZE = 1024
+    private val cacheLock = SynchronizedObject()
+    private val cache = LinkedHashMap<Pair<StreamItem, String?>, StreamParserInfo>()
+
     fun parse(stream: StreamItem, knownTitle: String? = null): StreamParserInfo {
+        val key = stream to knownTitle
+        synchronized(cacheLock) { cache[key] }?.let { return it }
+        val info = parseUncached(stream, knownTitle)
+        synchronized(cacheLock) {
+            cache[key] = info
+            if (cache.size > CACHE_SIZE) cache.remove(cache.keys.first())
+        }
+        return info
+    }
+
+    private fun parseUncached(stream: StreamItem, knownTitle: String?): StreamParserInfo {
         val preparedTitle = knownTitle?.let(StreamParserText::prepare)?.replace('\n', ' ')?.trim()
         val fields = buildFields(stream, preparedTitle)
 

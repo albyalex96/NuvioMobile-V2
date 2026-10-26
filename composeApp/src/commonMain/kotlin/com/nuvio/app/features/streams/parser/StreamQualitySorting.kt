@@ -46,8 +46,12 @@ internal object StreamQualitySorting {
         }
     }
 
+    // Resolution read once per stream: `sortedBy` would call the selector on every comparison.
     fun sortStreams(streams: List<StreamItem>, knownTitle: String?): List<StreamItem> =
-        streams.sortedBy { GenericStreamParser.parse(it, knownTitle).resolution.ordinal }
+        streams
+            .map { stream -> stream to GenericStreamParser.parse(stream, knownTitle).resolution.ordinal }
+            .sortedBy { (_, ordinal) -> ordinal }
+            .map { (stream, _) -> stream }
 
     /** Merges [groups] into a single headerless group sorted by quality. */
     fun mergeGroups(groups: List<AddonStreamGroup>, knownTitle: String?): List<AddonStreamGroup> {
