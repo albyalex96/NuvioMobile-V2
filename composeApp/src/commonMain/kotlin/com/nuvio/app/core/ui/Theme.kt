@@ -235,7 +235,9 @@ fun NuvioTheme(
     )
 
     val density = LocalDensity.current
+    val cardDepthStyle = rememberCardDepthStyleUiState()
     CompositionLocalProvider(
+        LocalCardDepthStyle provides cardDepthStyle,
         LocalDensity provides Density(
             density = density.density,
             fontScale = 1f,
