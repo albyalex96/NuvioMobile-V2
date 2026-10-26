@@ -1,5 +1,6 @@
 package com.nuvio.app.features.streams.parser
 
+import com.nuvio.app.tv.LocalTvShell
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -79,15 +80,23 @@ internal fun StreamParserCard(
 ) {
     val tokens = MaterialTheme.nuvio
     val cardShape = RoundedCornerShape(12.dp)
+    // The faint card shadow (4% black) costs a shadow pass per card on TV GPUs: drawn on phones only.
+    val tv = LocalTvShell.current != null
 
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .shadow(
-                elevation = 2.dp,
-                shape = cardShape,
-                ambientColor = Color.Black.copy(alpha = 0.04f),
-                spotColor = Color.Black.copy(alpha = 0.04f),
+            .then(
+                if (tv) {
+                    Modifier
+                } else {
+                    Modifier.shadow(
+                        elevation = 2.dp,
+                        shape = cardShape,
+                        ambientColor = Color.Black.copy(alpha = 0.04f),
+                        spotColor = Color.Black.copy(alpha = 0.04f),
+                    )
+                },
             )
             .clip(cardShape)
             .background(
