@@ -2,13 +2,17 @@ package com.nuvio.app.features.streams.parser
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.features.streams.LocalStreamHighlight
 import com.nuvio.app.features.streams.StreamBadgePlacement
 import com.nuvio.app.features.streams.StreamCard
 import com.nuvio.app.features.streams.StreamItem
+import com.nuvio.app.tv.LocalTvShell
 
 /**
  * Drop-in replacement for [StreamCard]: renders the Stream Parser card when the feature is
@@ -57,15 +61,19 @@ internal fun StreamCardHost(
     val info = remember(stream, context.title) { GenericStreamParser.parse(stream, context.title) }
     // Same highlight the classic card applies (e.g. the watch party's source).
     val highlightLabel = if (isCurrent) null else LocalStreamHighlight.current(stream)
+    // On TV only the focused card animates its badges: endless animations on every visible card
+    // keep the whole list redrawing at 60 fps, too much for TV sticks.
+    val tv = LocalTvShell.current != null
+    var focused by remember { mutableStateOf(false) }
     StreamParserCard(
         stream = stream,
         info = info,
         context = context,
-        animationsEnabled = settings.animationsEnabled,
+        animationsEnabled = settings.animationsEnabled && (!tv || focused),
         enabled = enabled,
         onClick = onClick,
         onLongClick = onLongClick,
-        modifier = modifier,
+        modifier = if (tv) modifier.onFocusChanged { focused = it.hasFocus } else modifier,
         isCurrent = isCurrent || outlined || highlightLabel != null,
         currentLabel = if (isCurrent) currentLabel else highlightLabel,
     )
