@@ -98,12 +98,19 @@ import com.nuvio.tv.ui.landscapeArtwork
 import com.nuvio.tv.ui.showsLandscape
 import com.nuvio.tv.ui.tvFocusable
 import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.runtime.derivedStateOf
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.graphicsLayer
 import kotlinx.coroutines.delay
+import androidx.compose.runtime.MutableIntState
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.State
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.LayoutDirection
+import kotlinx.coroutines.flow.collectLatest
+import kotlin.math.roundToInt
 
 private val log = Logger.withTag("TvHome")
 
@@ -193,75 +200,30 @@ private fun CenteredMessage(title: String, message: String?, onRetry: (() -> Uni
     }
 }
 
-@Composable
-private fun TvHomeContent(model: TvHomeModel) {
-    val settings = rememberTvLayoutSettings()
-    val metrics = remember(settings) { settings.cardMetrics() }
-    val continueWatchingPrefs by ContinueWatchingPreferencesRepository.uiState.collectAsState()
-    LaunchedEffect(Unit) { ContinueWatchingPreferencesRepository.ensureLoaded() }
-    val requesters = remember { mutableMapOf<String, FocusRequester>() }
-    fun requesterFor(key: String): FocusRequester = requesters.getOrPut(key) { FocusRequester() }
-    var lastFocusedKey by rememberSaveable { mutableStateOf<String?>(null) }
-    // Card focused in a catalog row, and the one widened to its backdrop after the delay.
-    var focusedPosterKey by remember { mutableStateOf<String?>(null) }
-    var expandedPosterKey by remember { mutableStateOf<String?>(null) }
-    val rowsState = rememberLazyListState()
-    LaunchedEffect(focusedPosterKey, settings.expandFocusedPoster, settings.expandDelaySeconds, rowsState.isScrollInProgress) {
-        // Always collapse first: moving the focus or scrolling shrinks the expanded card.
-        expandedPosterKey = null
-        val key = focusedPosterKey ?: return@LaunchedEffect
-        if (!settings.expandFocusedPoster || rowsState.isScrollInProgress) return@LaunchedEffect
-        delay((settings.expandDelaySeconds * 1_000L).coerceAtLeast(MIN_EXPAND_DELAY_MS))
-        expandedPosterKey = key
-        log.d { "Focused poster expanded to its backdrop" }
-    }
+/**
+ * Focus state of the TV home, kept out of [TvHomeContent]: the D-pad moves change it on every key
+ * press, and only the hero and the one card that expands read it (not the whole list of rows).
+ */
+@Stable
+private class TvHomeFocusState(
+    defaultHero: HeroInfo?,
+    private val lastFocused: MutableState<String?>,
+) {
+    /** Preview of the focused card (null while the hero carousel has the focus). */
+    var focusedHero by mutableStateOf<HeroInfo?>(null)
+    /** What the hero shows: follows [focusedHero] after [HERO_FOLLOW_DELAY_MS]. */
+    var displayedHero by mutableStateOf(defaultHero)
+    /** Card focused in a catalog row, and the one widened to its backdrop after the delay. */
+    var focusedPosterKey by mutableStateOf<String?>(null)
+    var expandedPosterKey by mutableStateOf<String?>(null)
+    var heroFocused by mutableStateOf(false)
 
-    val defaultHero = remember(model.heroItems, model.continueWatching) {
-        model.continueWatching.firstOrNull()?.let { heroOf(it, subtitle = null) }
-            ?: model.heroItems.firstOrNull()?.let(::heroOf)
-    }
-    var focusedHero by remember { mutableStateOf<HeroInfo?>(null) }
-    var displayedHero by remember { mutableStateOf(defaultHero) }
-    LaunchedEffect(focusedHero?.key) {
-        val next = focusedHero ?: return@LaunchedEffect
-        delay(HERO_FOLLOW_DELAY_MS)
-        displayedHero = next
-    }
-    if (displayedHero == null && defaultHero != null) displayedHero = defaultHero
-
-    // Hero carousel of NuvioTV (hero sources of Settings -> Home screen): shown while the hero has
-    // the focus or no card was focused yet; a focused card replaces it with its own preview.
-    val carouselItems = model.heroItems
-    val heroRequester = requesterFor(HERO_FOCUS_KEY)
-    var heroIndex by rememberSaveable { mutableIntStateOf(0) }
-    val activeHeroIndex = heroIndex.coerceIn(0, (carouselItems.size - 1).coerceAtLeast(0))
-    var heroFocused by remember { mutableStateOf(false) }
-    val carouselActive = carouselItems.isNotEmpty() && focusedHero == null
-    val carouselHero = carouselItems.getOrNull(activeHeroIndex)?.takeIf { carouselActive }
-    LaunchedEffect(carouselActive, activeHeroIndex, carouselItems.size) {
-        if (!carouselActive || carouselItems.size <= 1) return@LaunchedEffect
-        // A manual change restarts the wait (the effect is keyed on the index).
-        delay(HERO_AUTO_ADVANCE_MS)
-        heroIndex = (activeHeroIndex + 1) % carouselItems.size
-    }
-
-    val firstKey = remember(model) { firstFocusableKey(model) }
-    LaunchedEffect(firstKey) {
-        // NuvioTV starts on the hero carousel when there is one.
-        val initialKey = lastFocusedKey ?: if (carouselItems.isNotEmpty()) HERO_FOCUS_KEY else firstKey
-        val target = initialKey?.let(requesters::get) ?: firstKey?.let(requesters::get) ?: return@LaunchedEffect
-        // The lazy rows compose their first items a few frames after the list.
-        repeat(10) {
-            withFrameNanos { }
-            if (runCatching { target.requestFocus() }.isSuccess) return@LaunchedEffect
-        }
-        log.w { "Could not move the initial focus into the home rows" }
-    }
+    val lastFocusedKey: String? get() = lastFocused.value
 
     fun onCardFocused(key: String, hero: HeroInfo) {
         // Leaving the carousel: the card preview replaces it at once, without the follow delay.
         if (focusedHero == null) displayedHero = hero
-        lastFocusedKey = key
+        lastFocused.value = key
         focusedHero = hero
         focusedPosterKey = null
     }
@@ -271,24 +233,108 @@ private fun TvHomeContent(model: TvHomeModel) {
         focusedPosterKey = key
     }
 
+    fun onHeroFocused() {
+        lastFocused.value = HERO_FOCUS_KEY
+        focusedHero = null
+        focusedPosterKey = null
+    }
+}
+
+/** Top padding of the rows read during layout, so the hero collapse animation does not recompose. */
+private class TvRowsContentPadding(private val top: () -> Dp, private val bottom: Dp) : PaddingValues {
+    override fun calculateTopPadding(): Dp = top()
+    override fun calculateBottomPadding(): Dp = bottom
+    override fun calculateLeftPadding(layoutDirection: LayoutDirection): Dp = 0.dp
+    override fun calculateRightPadding(layoutDirection: LayoutDirection): Dp = 0.dp
+}
+
+@Composable
+private fun TvHomeContent(model: TvHomeModel) {
+    val settings = rememberTvLayoutSettings()
+    val metrics = remember(settings) { settings.cardMetrics() }
+    val continueWatchingPrefs by ContinueWatchingPreferencesRepository.uiState.collectAsState()
+    LaunchedEffect(Unit) { ContinueWatchingPreferencesRepository.ensureLoaded() }
+    val requesters = remember { mutableMapOf<String, FocusRequester>() }
+    val requesterFor = remember { { key: String -> requesters.getOrPut(key) { FocusRequester() } } }
+    val lastFocused = rememberSaveable { mutableStateOf<String?>(null) }
+    val defaultHero = remember(model.heroItems, model.continueWatching) {
+        model.continueWatching.firstOrNull()?.let { heroOf(it, subtitle = null) }
+            ?: model.heroItems.firstOrNull()?.let(::heroOf)
+    }
+    val focus = remember { TvHomeFocusState(defaultHero, lastFocused) }
+    LaunchedEffect(defaultHero) {
+        if (focus.displayedHero == null && defaultHero != null) focus.displayedHero = defaultHero
+    }
+    val onCardFocused = remember(focus) { { key: String, hero: HeroInfo -> focus.onCardFocused(key, hero) } }
+    val onPosterFocused = remember(focus) { { key: String, hero: HeroInfo -> focus.onPosterFocused(key, hero) } }
+    val onFolderFocused = remember(focus) { { focus.focusedPosterKey = null } }
+    val rowsState = rememberLazyListState()
+
+    LaunchedEffect(focus, settings.expandFocusedPoster, settings.expandDelaySeconds) {
+        snapshotFlow { focus.focusedPosterKey to rowsState.isScrollInProgress }.collectLatest { (key, scrolling) ->
+            // Always collapse first: moving the focus or scrolling shrinks the expanded card.
+            focus.expandedPosterKey = null
+            if (key == null || !settings.expandFocusedPoster || scrolling) return@collectLatest
+            delay((settings.expandDelaySeconds * 1_000L).coerceAtLeast(MIN_EXPAND_DELAY_MS))
+            focus.expandedPosterKey = key
+            log.d { "Focused poster expanded to its backdrop" }
+        }
+    }
+    LaunchedEffect(focus) {
+        snapshotFlow { focus.focusedHero }.collectLatest { next ->
+            next ?: return@collectLatest
+            delay(HERO_FOLLOW_DELAY_MS)
+            focus.displayedHero = next
+        }
+    }
+
+    val carouselItems = model.heroItems
+    val heroRequester = requesterFor(HERO_FOCUS_KEY)
+    val heroIndex = rememberSaveable { mutableIntStateOf(0) }
+
+    val firstKey = remember(model) { firstFocusableKey(model) }
+    LaunchedEffect(firstKey) {
+        // NuvioTV starts on the hero carousel when there is one.
+        val initialKey = focus.lastFocusedKey ?: if (carouselItems.isNotEmpty()) HERO_FOCUS_KEY else firstKey
+        val target = initialKey?.let(requesters::get) ?: firstKey?.let(requesters::get) ?: return@LaunchedEffect
+        // The lazy rows compose their first items a few frames after the list.
+        repeat(10) {
+            withFrameNanos { }
+            if (runCatching { target.requestFocus() }.isSuccess) return@LaunchedEffect
+        }
+        log.w { "Could not move the initial focus into the home rows" }
+    }
+
     // The hero belongs to the top of the page: once the first row scrolls off the screen it
     // collapses (backdrop included) and the rows take the whole height.
     val heroHidden by remember { derivedStateOf { rowsState.firstVisibleItemIndex > 0 } }
     LaunchedEffect(heroHidden) { log.d { if (heroHidden) "Hero collapsed" else "Hero expanded" } }
-    val heroProgress by animateFloatAsState(
+    // Read only in the layout and draw phases: the collapse animation never recomposes the home.
+    val heroProgress = animateFloatAsState(
         targetValue = if (heroHidden) 0f else 1f,
         animationSpec = tween(HERO_COLLAPSE_ANIMATION_MS),
         label = "tvHomeHeroCollapse",
     )
+    val heroBackdropVisible by remember { derivedStateOf { heroProgress.value > 0f } }
+    val hasCarousel = carouselItems.isNotEmpty()
+    val rowsPadding = remember(hasCarousel) {
+        TvRowsContentPadding(
+            // Room between the carousel dots and the first row.
+            // Collapsed hero: the rows start below the floating pill / top bar.
+            top = {
+                val progress = heroProgress.value
+                (if (hasCarousel) HERO_ROWS_GAP else 0.dp) * progress + TvDimens.chromeTopInset * (1f - progress)
+            },
+            bottom = 48.dp,
+        )
+    }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         // NuvioTV keeps the rows in the bottom 52% of the screen (49% with landscape posters).
         val heroHeight = maxHeight * (1f - if (settings.landscapePosters) 0.49f else 0.52f)
-        val carouselHeroInfo = remember(carouselHero) { carouselHero?.let(::heroOf) }
-        val shownHero = carouselHeroInfo ?: displayedHero
-        if (heroProgress > 0f) {
-            Box(modifier = Modifier.fillMaxSize().graphicsLayer { alpha = heroProgress }) {
-                HeroBackdrop(url = shownHero?.backdrop, fullScreen = settings.heroFullScreenBackdrop)
+        if (heroBackdropVisible) {
+            Box(modifier = Modifier.fillMaxSize().graphicsLayer { alpha = heroProgress.value }) {
+                TvHomeHeroBackdrop(model = model, focus = focus, heroIndex = heroIndex, fullScreen = settings.heroFullScreenBackdrop)
             }
         }
 
@@ -296,73 +342,35 @@ private fun TvHomeContent(model: TvHomeModel) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(heroHeight * heroProgress)
+                    .collapsingHeight(heroHeight) { heroProgress.value }
                     // Clipped only while collapsing: the dots hang a little below the hero.
-                    .then(if (heroProgress < 1f) Modifier.clipToBounds() else Modifier)
-                    .graphicsLayer { alpha = heroProgress },
+                    .graphicsLayer {
+                        val progress = heroProgress.value
+                        alpha = progress
+                        clip = progress < 1f
+                    },
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        // Full height while collapsing: the hero slides up instead of being squashed.
-                        .wrapContentHeight(Alignment.Bottom, unbounded = true)
-                        .height(heroHeight),
-                ) {
-                    // The carousel dots get their own band below the hero text.
-                    HeroInfoPanel(
-                        hero = shownHero,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(bottom = if (carouselItems.isNotEmpty()) HERO_DOTS_BAND else 0.dp),
-                    )
-                    if (carouselItems.isNotEmpty()) {
-                        HeroCarouselFocusTarget(
-                            count = carouselItems.size,
-                            activeIndex = activeHeroIndex,
-                            visible = carouselActive,
-                            focused = heroFocused,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .focusProperties { canFocus = !heroHidden }
-                                .focusRequester(heroRequester)
-                                .onFocusChanged { state ->
-                                    heroFocused = state.isFocused
-                                    if (state.isFocused) {
-                                        lastFocusedKey = HERO_FOCUS_KEY
-                                        focusedHero = null
-                                        focusedPosterKey = null
-                                    }
-                                },
-                            onPrevious = { (activeHeroIndex > 0).also { moved -> if (moved) heroIndex = activeHeroIndex - 1 } },
-                            onNext = { (activeHeroIndex < carouselItems.lastIndex).also { moved -> if (moved) heroIndex = activeHeroIndex + 1 } },
-                            onClick = {
-                                carouselItems.getOrNull(activeHeroIndex)?.let { item ->
-                                    log.d { "Hero carousel item opened" }
-                                    model.onPosterClick(item)
-                                }
-                            },
-                        )
-                    }
-                }
+                TvHomeHero(
+                    model = model,
+                    focus = focus,
+                    heroIndex = heroIndex,
+                    heroRequester = heroRequester,
+                    heroHidden = { heroHidden },
+                    modifier = Modifier.fillMaxWidth().height(heroHeight),
+                )
             }
             val continueWatchingSubtitle: @Composable (ContinueWatchingItem) -> String = { item ->
                 localizedContinueWatchingSubtitle(item, compact = true)
             }
             LazyColumn(
                 state = rowsState,
-                // Room between the carousel dots and the first row.
-                // Collapsed hero: the rows start below the floating pill / top bar.
-                contentPadding = PaddingValues(
-                    top = (if (carouselItems.isNotEmpty()) HERO_ROWS_GAP else 0.dp) * heroProgress +
-                        TvDimens.chromeTopInset * (1f - heroProgress),
-                    bottom = 48.dp,
-                ),
+                contentPadding = rowsPadding,
                 verticalArrangement = Arrangement.spacedBy(TvDimens.rowGap - TvDimens.rowVerticalPadding * 2),
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f)
                     // Focus leaving the rows (sidebar, top bar) collapses the expanded poster.
-                    .onFocusChanged { state -> if (!state.hasFocus) focusedPosterKey = null }
+                    .onFocusChanged { state -> if (!state.hasFocus) focus.focusedPosterKey = null }
                     .focusRestorer(),
             ) {
                 if (model.continueWatching.isNotEmpty()) {
@@ -378,8 +386,8 @@ private fun TvHomeContent(model: TvHomeModel) {
                             useEpisodeThumbnails = continueWatchingPrefs.useEpisodeThumbnails,
                             blurNextUp = continueWatchingPrefs.blurNextUp,
                             subtitle = continueWatchingSubtitle,
-                            requesterFor = ::requesterFor,
-                            onFocused = ::onCardFocused,
+                            requesterFor = requesterFor,
+                            onFocused = onCardFocused,
                         )
                     }
                 }
@@ -396,8 +404,8 @@ private fun TvHomeContent(model: TvHomeModel) {
                             useEpisodeThumbnails = continueWatchingPrefs.useEpisodeThumbnails,
                             blurNextUp = continueWatchingPrefs.blurNextUp,
                             subtitle = continueWatchingSubtitle,
-                            requesterFor = ::requesterFor,
-                            onFocused = ::onCardFocused,
+                            requesterFor = requesterFor,
+                            onFocused = onCardFocused,
                         )
                     }
                 }
@@ -408,30 +416,123 @@ private fun TvHomeContent(model: TvHomeModel) {
                             model = model,
                             settings = settings,
                             metrics = metrics,
-                            expandedKey = expandedPosterKey,
-                            requesterFor = ::requesterFor,
-                            onFocused = ::onCardFocused,
-                            onPosterFocused = ::onPosterFocused,
+                            focus = focus,
+                            requesterFor = requesterFor,
+                            onFocused = onCardFocused,
+                            onPosterFocused = onPosterFocused,
                         )
                         is TvHomeRow.Folders -> FoldersRow(
                             row = row,
                             model = model,
                             settings = settings,
                             metrics = metrics,
-                            requesterFor = ::requesterFor,
-                            onFocused = { focusedPosterKey = null },
+                            requesterFor = requesterFor,
+                            onFocused = onFolderFocused,
                         )
                         is TvHomeRow.Top10 -> Top10Row(
                             row = row,
                             model = model,
                             settings = settings,
                             metrics = metrics,
-                            requesterFor = ::requesterFor,
-                            onFocused = ::onCardFocused,
+                            requesterFor = requesterFor,
+                            onFocused = onCardFocused,
                         )
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * Height animated during layout: the box takes [fullHeight] times [progress] and its content keeps
+ * the full height, aligned to the bottom, so the hero slides up instead of being squashed.
+ */
+private fun Modifier.collapsingHeight(fullHeight: Dp, progress: () -> Float): Modifier =
+    layout { measurable, constraints ->
+        val fullPx = fullHeight.roundToPx()
+        val placeable = measurable.measure(constraints.copy(minHeight = fullPx, maxHeight = fullPx))
+        val height = (fullPx * progress().coerceIn(0f, 1f)).roundToInt()
+        layout(placeable.width, height) { placeable.place(0, height - fullPx) }
+    }
+
+/** Index of the carousel slide on screen, clamped to the current items. */
+private fun activeHeroIndex(heroIndex: Int, count: Int): Int = heroIndex.coerceIn(0, (count - 1).coerceAtLeast(0))
+
+/** The hero shown by the backdrop and the info panel: the carousel slide, or the focused card. */
+@Composable
+private fun rememberShownHero(model: TvHomeModel, focus: TvHomeFocusState, heroIndex: MutableIntState): State<HeroInfo?> {
+    val carouselItems = model.heroItems
+    return remember(carouselItems, focus, heroIndex) {
+        derivedStateOf {
+            val carouselHero = carouselItems
+                .getOrNull(activeHeroIndex(heroIndex.intValue, carouselItems.size))
+                ?.takeIf { focus.focusedHero == null }
+            carouselHero?.let(::heroOf) ?: focus.displayedHero
+        }
+    }
+}
+
+@Composable
+private fun TvHomeHeroBackdrop(model: TvHomeModel, focus: TvHomeFocusState, heroIndex: MutableIntState, fullScreen: Boolean) {
+    val shownHero by rememberShownHero(model, focus, heroIndex)
+    HeroBackdrop(url = shownHero?.backdrop, fullScreen = fullScreen)
+}
+
+/**
+ * Hero carousel of NuvioTV (hero sources of Settings -> Home screen): shown while the hero has
+ * the focus or no card was focused yet; a focused card replaces it with its own preview.
+ */
+@Composable
+private fun TvHomeHero(
+    model: TvHomeModel,
+    focus: TvHomeFocusState,
+    heroIndex: MutableIntState,
+    heroRequester: FocusRequester,
+    heroHidden: () -> Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val carouselItems = model.heroItems
+    val activeIndex = activeHeroIndex(heroIndex.intValue, carouselItems.size)
+    val carouselActive = carouselItems.isNotEmpty() && focus.focusedHero == null
+    LaunchedEffect(carouselActive, activeIndex, carouselItems.size) {
+        if (!carouselActive || carouselItems.size <= 1) return@LaunchedEffect
+        // A manual change restarts the wait (the effect is keyed on the index).
+        delay(HERO_AUTO_ADVANCE_MS)
+        heroIndex.intValue = (activeIndex + 1) % carouselItems.size
+    }
+    val shownHero by rememberShownHero(model, focus, heroIndex)
+    Box(modifier = modifier) {
+        // The carousel dots get their own band below the hero text.
+        HeroInfoPanel(
+            hero = shownHero,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = if (carouselItems.isNotEmpty()) HERO_DOTS_BAND else 0.dp),
+        )
+        if (carouselItems.isNotEmpty()) {
+            HeroCarouselFocusTarget(
+                count = carouselItems.size,
+                activeIndex = activeIndex,
+                visible = carouselActive,
+                focused = focus.heroFocused,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .focusProperties { canFocus = !heroHidden() }
+                    .focusRequester(heroRequester)
+                    .onFocusChanged { state ->
+                        focus.heroFocused = state.isFocused
+                        if (state.isFocused) focus.onHeroFocused()
+                    },
+                onPrevious = { (activeIndex > 0).also { moved -> if (moved) heroIndex.intValue = activeIndex - 1 } },
+                onNext = { (activeIndex < carouselItems.lastIndex).also { moved -> if (moved) heroIndex.intValue = activeIndex + 1 } },
+                onClick = {
+                    carouselItems.getOrNull(activeIndex)?.let { item ->
+                        log.d { "Hero carousel item opened" }
+                        model.onPosterClick(item)
+                    }
+                },
+            )
         }
     }
 }
@@ -646,7 +747,7 @@ private fun CatalogRow(
     model: TvHomeModel,
     settings: TvLayoutSettings,
     metrics: TvCardMetrics,
-    expandedKey: String?,
+    focus: TvHomeFocusState,
     requesterFor: (String) -> FocusRequester,
     onFocused: (String, HeroInfo) -> Unit,
     onPosterFocused: (String, HeroInfo) -> Unit,
@@ -674,6 +775,8 @@ private fun CatalogRow(
                 val square = item.posterShape == PosterShape.Square
                 // Only portrait posters with a real backdrop expand (NuvioTV: catalog items only).
                 val expandedArtwork = if (square) null else settings.landscapeArtwork(item).takeUnless { it.fitImage }
+                // Derived per card: only the card that expands or collapses recomposes.
+                val expanded by remember(key) { derivedStateOf { focus.expandedPosterKey == key } }
                 TvRowPosterCard(
                     imageUrl = item.poster,
                     title = item.name,
@@ -683,7 +786,7 @@ private fun CatalogRow(
                     showLabel = settings.posterLabels,
                     watched = model.isPosterWatched(item),
                     expandedWidth = metrics.expandedPosterWidth,
-                    expanded = expandedKey == key,
+                    expanded = expanded,
                     expandedArtwork = expandedArtwork,
                     onClick = { model.onPosterClick(item) },
                     onLongClick = model.onPosterLongClick?.let { longClick -> { longClick(item) } },
