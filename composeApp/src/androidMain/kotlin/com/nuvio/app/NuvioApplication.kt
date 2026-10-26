@@ -33,7 +33,9 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
     override fun onCreate() {
         super.onCreate()
         AppLogPlatform.initialize(this)
-        AppLogger.install()
+        AppLogger.install(
+            debuggable = applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0,
+        )
         // Before any request (workers included): every OkHttp client resolves through NuvioDns.
         DnsOverHttpsStorage.initialize(this)
         DnsOverHttpsRepository.ensureLoaded()

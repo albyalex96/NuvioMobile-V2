@@ -11,6 +11,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 
@@ -52,16 +54,34 @@ object AppLogStore {
     @Volatile
     private var started = false
 
+    private val captureState = MutableStateFlow(false)
+
+    /** Set when the buffer changed while nobody was observing [entries]. */
+    private var unpublished = false
+
     /** Whether new log lines are recorded; the stored history stays readable either way. */
     @Volatile
     var captureEnabled: Boolean = false
-        internal set
+        internal set(value) {
+            field = value
+            captureState.value = value
+        }
 
     internal fun start() {
         if (started) return
         started = true
         scope.launch {
+            // The stored history is read only when it is needed (recording on, or the viewer open):
+            // with the logger off the app does no log file work at startup.
+            combine(captureState, _entries.subscriptionCount) { capture, subscribers -> capture || subscribers > 0 }
+                .first { it }
             loadPersisted()
+            launch {
+                // The viewer opened after changes made while nobody was looking: publish them now.
+                _entries.subscriptionCount.collect { subscribers ->
+                    if (subscribers > 0 && unpublished) publish()
+                }
+            }
             while (true) {
                 val batch = mutableListOf(commands.receive())
                 while (true) batch += commands.tryReceive().getOrNull() ?: break
@@ -118,6 +138,12 @@ object AppLogStore {
             val survivors = appended.filter { it.id >= (buffer.firstOrNull()?.id ?: Long.MAX_VALUE) }
             runCatching { AppLogFileStorage.append(encode(survivors)) }
         }
+        // Copying the whole buffer (up to MAX_ENTRIES) is only worth it for an open viewer.
+        if (_entries.subscriptionCount.value > 0) publish() else unpublished = true
+    }
+
+    private fun publish() {
+        unpublished = false
         _entries.value = buffer.toList()
     }
 

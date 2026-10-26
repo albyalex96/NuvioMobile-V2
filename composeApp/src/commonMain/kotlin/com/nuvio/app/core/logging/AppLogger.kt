@@ -3,6 +3,7 @@ package com.nuvio.app.core.logging
 import co.touchlab.kermit.LogWriter
 import co.touchlab.kermit.Logger
 import co.touchlab.kermit.Severity
+import co.touchlab.kermit.platformLogWriter
 import com.nuvio.app.core.sync.decodeSyncBoolean
 import com.nuvio.app.core.sync.encodeSyncBoolean
 import kotlin.concurrent.Volatile
@@ -24,12 +25,41 @@ object AppLogger {
     @Volatile
     private var installed = false
 
-    fun install() {
+    @Volatile
+    private var debuggable = false
+
+    /**
+     * [debuggable] keeps every level on the system log (logcat) and always evaluated. In release
+     * builds the debug/info lines are built only while "Record logs" is on: with the logger off the
+     * `log.d { }` lambdas are skipped and logcat only receives warnings and errors.
+     */
+    fun install(debuggable: Boolean = false) {
         if (installed) return
+        this.debuggable = debuggable
+        Logger.setLogWriters(SystemLogWriter(platformLogWriter(), debuggable), AppLogWriter)
         installed = true
         AppLoggerSettings.ensureLoaded()
+        refreshMinSeverity()
         AppLogStore.start()
-        Logger.addLogWriter(AppLogWriter)
+    }
+
+    internal fun refreshMinSeverity() {
+        if (!installed) return
+        val minSeverity = if (debuggable || AppLogStore.captureEnabled) Severity.Verbose else Severity.Warn
+        Logger.setMinSeverity(minSeverity)
+    }
+}
+
+/** The platform writer (logcat / OSLog), limited to warnings and errors in release builds. */
+private class SystemLogWriter(
+    private val delegate: LogWriter,
+    private val debuggable: Boolean,
+) : LogWriter() {
+    override fun isLoggable(tag: String, severity: Severity): Boolean =
+        (debuggable || severity >= Severity.Warn) && delegate.isLoggable(tag, severity)
+
+    override fun log(severity: Severity, message: String, tag: String, throwable: Throwable?) {
+        delegate.log(severity, message, tag, throwable)
     }
 }
 
@@ -97,5 +127,6 @@ object AppLoggerSettings {
     private fun apply(enabled: Boolean) {
         _enabled.value = enabled
         AppLogStore.captureEnabled = enabled
+        AppLogger.refreshMinSeverity()
     }
 }
