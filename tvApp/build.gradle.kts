@@ -119,6 +119,11 @@ androidComponents {
     }
 }
 
+// Immutable model classes compared by value (see compose_stability_config.conf).
+composeCompiler {
+    stabilityConfigurationFiles.add(rootProject.layout.projectDirectory.file("compose_stability_config.conf"))
+}
+
 dependencies {
     implementation(project(":composeApp"))
     implementation(libs.androidx.appcompat)

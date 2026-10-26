@@ -348,6 +348,11 @@ tasks.withType<KotlinCompilationTask<*>>().configureEach {
     dependsOn(generateRuntimeConfigs)
 }
 
+// Immutable model classes compared by value (see compose_stability_config.conf).
+composeCompiler {
+    stabilityConfigurationFiles.add(rootProject.layout.projectDirectory.file("compose_stability_config.conf"))
+}
+
 kotlin {
     android {
         namespace = "com.nuvio.app"
