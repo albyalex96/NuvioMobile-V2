@@ -111,38 +111,69 @@ fun TvRowPosterCard(
     onLongClick: (() -> Unit)? = null,
     onFocused: () -> Unit = {},
 ) {
-    val showExpanded = expanded && expandedArtwork != null
+    if (expandedArtwork == null) {
+        // Card that never expands (expansion off, square art, no backdrop): no width animation
+        // and no crossfade to keep per card.
+        Column(modifier = modifier.width(width)) {
+            TvRowPosterSurface(height, shape, watched, onClick, onLongClick, onFocused) {
+                PosterArtwork(imageUrl = imageUrl, title = title)
+            }
+            if (showLabel) TvRowCardLabel(title)
+        }
+        return
+    }
+    val showExpanded = expanded
     val animatedWidth by animateDpAsState(
         targetValue = if (showExpanded) expandedWidth else width,
         animationSpec = tween(EXPAND_ANIMATION_MS),
         label = "tvRowCardWidth",
     )
     Column(modifier = modifier.width(animatedWidth)) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(height)
-                .tvRowCardSurface(
-                    shape = shape,
-                    depthSurface = NuvioCardDepthSurface.Posters,
-                    onClick = onClick,
-                    onLongClick = onLongClick,
-                    onFocusChange = { focused -> if (focused) onFocused() },
-                )
-                .background(MaterialTheme.nuvio.colors.surfaceCard),
-        ) {
+        TvRowPosterSurface(height, shape, watched, onClick, onLongClick, onFocused) {
             Crossfade(targetState = showExpanded, animationSpec = tween(EXPAND_ANIMATION_MS), label = "tvRowCardArtwork") { wide ->
-                if (wide && expandedArtwork != null) {
+                if (wide) {
                     LandscapeArtworkContent(artwork = expandedArtwork, title = title, cardHeight = height)
                 } else {
-                    TvRemoteImage(url = imageUrl, modifier = Modifier.fillMaxSize())
-                    if (imageUrl.isNullOrBlank()) RowCardFallbackTitle(title)
+                    PosterArtwork(imageUrl = imageUrl, title = title)
                 }
             }
-            if (watched) TvRowWatchedMarker(modifier = Modifier.align(Alignment.TopEnd))
         }
         if (showLabel && !showExpanded) TvRowCardLabel(title)
     }
+}
+
+@Composable
+private fun TvRowPosterSurface(
+    height: Dp,
+    shape: Shape,
+    watched: Boolean,
+    onClick: () -> Unit,
+    onLongClick: (() -> Unit)?,
+    onFocused: () -> Unit,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(height)
+            .tvRowCardSurface(
+                shape = shape,
+                depthSurface = NuvioCardDepthSurface.Posters,
+                onClick = onClick,
+                onLongClick = onLongClick,
+                onFocusChange = { focused -> if (focused) onFocused() },
+            )
+            .background(MaterialTheme.nuvio.colors.surfaceCard),
+    ) {
+        content()
+        if (watched) TvRowWatchedMarker(modifier = Modifier.align(Alignment.TopEnd))
+    }
+}
+
+@Composable
+private fun BoxScope.PosterArtwork(imageUrl: String?, title: String) {
+    TvRemoteImage(url = imageUrl, modifier = Modifier.fillMaxSize())
+    if (imageUrl.isNullOrBlank()) RowCardFallbackTitle(title)
 }
 
 /** 16:9 card of a home catalog row ("landscape posters" or a landscape catalog). */

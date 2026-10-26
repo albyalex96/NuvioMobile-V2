@@ -774,7 +774,11 @@ private fun CatalogRow(
             } else {
                 val square = item.posterShape == PosterShape.Square
                 // Only portrait posters with a real backdrop expand (NuvioTV: catalog items only).
-                val expandedArtwork = if (square) null else settings.landscapeArtwork(item).takeUnless { it.fitImage }
+                val expandedArtwork = if (square || !settings.expandFocusedPoster) {
+                    null
+                } else {
+                    settings.landscapeArtwork(item).takeUnless { it.fitImage }
+                }
                 // Derived per card: only the card that expands or collapses recomposes.
                 val expanded by remember(key) { derivedStateOf { focus.expandedPosterKey == key } }
                 TvRowPosterCard(
