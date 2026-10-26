@@ -2,7 +2,7 @@
 <resources>
     <string name="settings_playback_section_seek_thumbnails">Anteprime di ricerca</string>
     <string name="settings_playback_seek_thumbnails">Anteprime di ricerca</string>
-    <string name="settings_playback_seek_thumbnails_description">Mostra un'immagine della scena sopra la barra di avanzamento mentre scorri. Funziona con i file singoli (MKV, MP4), gli stream HLS e i download; non con gli stream P2P, live o DASH</string>
+    <string name="settings_playback_seek_thumbnails_description">Mostra un'immagine della scena sopra la barra di avanzamento mentre scorri. Funziona con i file singoli (MKV, MP4), gli stream HLS e i download; non con gli stream P2P, live o DASH. Telefoni e tablet hanno opzioni separate da quelle della TV</string>
     <string name="settings_playback_seek_thumbnails_wifi_only">Solo con Wi-Fi</string>
     <string name="settings_playback_seek_thumbnails_wifi_only_description">Crea le anteprime degli stream online solo con Wi-Fi o Ethernet, così non consumano dati mobili. I download le hanno sempre</string>
     <string name="settings_playback_seek_thumbnails_size">Dimensione anteprima</string>

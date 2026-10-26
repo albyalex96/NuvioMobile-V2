@@ -1,5 +1,6 @@
 package com.nuvio.app.features.player
 
+import com.nuvio.app.features.player.seekthumb.SeekThumbnailDevice
 import kotlinx.serialization.json.JsonObject
 
 internal expect object PlayerSettingsStorage {
@@ -162,12 +163,8 @@ internal expect object PlayerSettingsStorage {
     fun saveStillWatchingNightOnly(enabled: Boolean)
     fun loadRememberAudioDelayPerDevice(): Boolean?
     fun saveRememberAudioDelayPerDevice(enabled: Boolean)
-    fun loadSeekThumbnailsEnabled(): Boolean?
-    fun saveSeekThumbnailsEnabled(enabled: Boolean)
-    fun loadSeekThumbnailsWifiOnly(): Boolean?
-    fun saveSeekThumbnailsWifiOnly(enabled: Boolean)
-    fun loadSeekThumbnailSize(): String?
-    fun saveSeekThumbnailSize(size: String)
+    fun loadSeekThumbnailOptions(device: SeekThumbnailDevice): String?
+    fun saveSeekThumbnailOptions(device: SeekThumbnailDevice, value: String)
     fun loadStillWatchingLiveTvEnabled(): Boolean?
     fun saveStillWatchingLiveTvEnabled(enabled: Boolean)
     fun loadStillWatchingLiveTvMinutes(): Int?

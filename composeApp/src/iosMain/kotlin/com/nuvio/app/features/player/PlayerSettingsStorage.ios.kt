@@ -1,5 +1,6 @@
 package com.nuvio.app.features.player
 
+import com.nuvio.app.features.player.seekthumb.SeekThumbnailDevice
 import com.nuvio.app.core.sync.decodeSyncBoolean
 import com.nuvio.app.core.sync.decodeSyncFloat
 import com.nuvio.app.core.sync.decodeSyncInt
@@ -97,9 +98,10 @@ actual object PlayerSettingsStorage {
     private const val stillWatchingEpisodeCountKey = "still_watching_episode_count"
     private const val stillWatchingNightOnlyKey = "still_watching_night_only"
     private const val rememberAudioDelayPerDeviceKey = "remember_audio_delay_per_device"
-    private const val seekThumbnailsEnabledKey = "seek_thumbnails_enabled"
-    private const val seekThumbnailsWifiOnlyKey = "seek_thumbnails_wifi_only"
-    private const val seekThumbnailSizeKey = "seek_thumbnail_size"
+    // One JSON per device class (phone/tablet, TV).
+    private const val seekThumbnailOptionsKey = "seek_thumbnail_options"
+    private fun seekThumbnailOptionsKey(device: SeekThumbnailDevice) =
+        "${seekThumbnailOptionsKey}_${device.storageSuffix}"
     private const val stillWatchingLiveTvEnabledKey = "still_watching_live_tv_enabled"
     private const val stillWatchingLiveTvMinutesKey = "still_watching_live_tv_minutes"
     // One JSON per device class (phone, tablet, TV); the flat keys above hold the pre-split values.
@@ -195,9 +197,7 @@ actual object PlayerSettingsStorage {
         stillWatchingEpisodeCountKey,
         stillWatchingNightOnlyKey,
         rememberAudioDelayPerDeviceKey,
-        seekThumbnailsEnabledKey,
-        seekThumbnailsWifiOnlyKey,
-        seekThumbnailSizeKey,
+        *SeekThumbnailDevice.entries.map(::seekThumbnailOptionsKey).toTypedArray(),
         stillWatchingLiveTvEnabledKey,
         stillWatchingLiveTvMinutesKey,
         *SubtitleSizeFormFactor.entries.map(::stillWatchingSettingsKey).toTypedArray(),
@@ -1062,23 +1062,11 @@ actual object PlayerSettingsStorage {
         saveBoolean(rememberAudioDelayPerDeviceKey, enabled)
     }
 
-    actual fun loadSeekThumbnailsEnabled(): Boolean? = loadBoolean(seekThumbnailsEnabledKey)
+    actual fun loadSeekThumbnailOptions(device: SeekThumbnailDevice): String? =
+        NSUserDefaults.standardUserDefaults.stringForKey(ProfileScopedKey.of(seekThumbnailOptionsKey(device)))
 
-    actual fun saveSeekThumbnailsEnabled(enabled: Boolean) {
-        saveBoolean(seekThumbnailsEnabledKey, enabled)
-    }
-
-    actual fun loadSeekThumbnailsWifiOnly(): Boolean? = loadBoolean(seekThumbnailsWifiOnlyKey)
-
-    actual fun saveSeekThumbnailsWifiOnly(enabled: Boolean) {
-        saveBoolean(seekThumbnailsWifiOnlyKey, enabled)
-    }
-
-    actual fun loadSeekThumbnailSize(): String? =
-        NSUserDefaults.standardUserDefaults.stringForKey(ProfileScopedKey.of(seekThumbnailSizeKey))
-
-    actual fun saveSeekThumbnailSize(size: String) {
-        NSUserDefaults.standardUserDefaults.setObject(size, forKey = ProfileScopedKey.of(seekThumbnailSizeKey))
+    actual fun saveSeekThumbnailOptions(device: SeekThumbnailDevice, value: String) {
+        NSUserDefaults.standardUserDefaults.setObject(value, forKey = ProfileScopedKey.of(seekThumbnailOptionsKey(device)))
     }
 
     actual fun loadStillWatchingLiveTvEnabled(): Boolean? = loadBoolean(stillWatchingLiveTvEnabledKey)
@@ -1317,9 +1305,9 @@ actual object PlayerSettingsStorage {
         loadStillWatchingEpisodeCount()?.let { put(stillWatchingEpisodeCountKey, encodeSyncInt(it)) }
         loadStillWatchingNightOnly()?.let { put(stillWatchingNightOnlyKey, encodeSyncBoolean(it)) }
         loadRememberAudioDelayPerDevice()?.let { put(rememberAudioDelayPerDeviceKey, encodeSyncBoolean(it)) }
-        loadSeekThumbnailsEnabled()?.let { put(seekThumbnailsEnabledKey, encodeSyncBoolean(it)) }
-        loadSeekThumbnailsWifiOnly()?.let { put(seekThumbnailsWifiOnlyKey, encodeSyncBoolean(it)) }
-        loadSeekThumbnailSize()?.let { put(seekThumbnailSizeKey, encodeSyncString(it)) }
+        SeekThumbnailDevice.entries.forEach { device ->
+            loadSeekThumbnailOptions(device)?.let { put(seekThumbnailOptionsKey(device), encodeSyncString(it)) }
+        }
         loadStillWatchingLiveTvEnabled()?.let { put(stillWatchingLiveTvEnabledKey, encodeSyncBoolean(it)) }
         loadStillWatchingLiveTvMinutes()?.let { put(stillWatchingLiveTvMinutesKey, encodeSyncInt(it)) }
         SubtitleSizeFormFactor.entries.forEach { formFactor ->
@@ -1353,6 +1341,8 @@ actual object PlayerSettingsStorage {
         val localStillWatching = SubtitleSizeFormFactor.entries.associateWith(::loadStillWatchingSettings)
         // Same for the player clock keys, unknown to builds older than the clock.
         val localPlayerClock = PlayerClockDevice.entries.associateWith(::loadPlayerClockSettings)
+        // Same for the seek thumbnail keys, unknown to builds older than the previews.
+        val localSeekThumbnails = SeekThumbnailDevice.entries.associateWith(::loadSeekThumbnailOptions)
         syncKeys.forEach { key ->
             NSUserDefaults.standardUserDefaults.removeObjectForKey(ProfileScopedKey.of(key))
         }
@@ -1423,9 +1413,10 @@ actual object PlayerSettingsStorage {
         payload.decodeSyncInt(stillWatchingEpisodeCountKey)?.let(::saveStillWatchingEpisodeCount)
         payload.decodeSyncBoolean(stillWatchingNightOnlyKey)?.let(::saveStillWatchingNightOnly)
         payload.decodeSyncBoolean(rememberAudioDelayPerDeviceKey)?.let(::saveRememberAudioDelayPerDevice)
-        payload.decodeSyncBoolean(seekThumbnailsEnabledKey)?.let(::saveSeekThumbnailsEnabled)
-        payload.decodeSyncBoolean(seekThumbnailsWifiOnlyKey)?.let(::saveSeekThumbnailsWifiOnly)
-        payload.decodeSyncString(seekThumbnailSizeKey)?.let(::saveSeekThumbnailSize)
+        SeekThumbnailDevice.entries.forEach { device ->
+            (payload.decodeSyncString(seekThumbnailOptionsKey(device)) ?: localSeekThumbnails[device])
+                ?.let { saveSeekThumbnailOptions(device, it) }
+        }
         payload.decodeSyncBoolean(stillWatchingLiveTvEnabledKey)?.let(::saveStillWatchingLiveTvEnabled)
         payload.decodeSyncInt(stillWatchingLiveTvMinutesKey)?.let(::saveStillWatchingLiveTvMinutes)
         SubtitleSizeFormFactor.entries.forEach { formFactor ->

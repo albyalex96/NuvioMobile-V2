@@ -1,6 +1,11 @@
 package com.nuvio.app.features.player
 
+import com.nuvio.app.features.player.seekthumb.SeekThumbnailDevice
+import com.nuvio.app.features.player.seekthumb.SeekThumbnailOptions
 import com.nuvio.app.features.player.seekthumb.SeekThumbnailSize
+import com.nuvio.app.features.player.seekthumb.currentSeekThumbnailDevice
+import com.nuvio.app.features.player.seekthumb.defaultSeekThumbnailOptions
+import com.nuvio.app.features.player.seekthumb.seekThumbLog
 
 import co.touchlab.kermit.Logger
 import com.nuvio.app.core.build.AppFeaturePolicy
@@ -216,9 +221,7 @@ object PlayerSettingsRepository {
     private var stillWatchingByFormFactor = defaultStillWatchingSettings()
     private var playerClockByDevice = defaultPlayerClockSettings()
     private var rememberAudioDelayPerDevice = true
-    private var seekThumbnailsEnabled = true
-    private var seekThumbnailsWifiOnly = true
-    private var seekThumbnailSize = SeekThumbnailSize.Medium
+    private var seekThumbnailsByDevice = defaultSeekThumbnailOptions()
     private var seekIntervalSeconds = DEFAULT_SEEK_INTERVAL_SECONDS
     private var useLibass = true
     private var libassRenderType = "OVERLAY_OPEN_GL"
@@ -315,9 +318,7 @@ object PlayerSettingsRepository {
         stillWatchingByFormFactor = defaultStillWatchingSettings()
         playerClockByDevice = defaultPlayerClockSettings()
         rememberAudioDelayPerDevice = true
-        seekThumbnailsEnabled = true
-        seekThumbnailsWifiOnly = true
-        seekThumbnailSize = SeekThumbnailSize.Medium
+        seekThumbnailsByDevice = defaultSeekThumbnailOptions()
         seekIntervalSeconds = DEFAULT_SEEK_INTERVAL_SECONDS
         useLibass = true
         libassRenderType = "OVERLAY_OPEN_GL"
@@ -501,11 +502,9 @@ object PlayerSettingsRepository {
             PlayerClockSettings.decode(PlayerSettingsStorage.loadPlayerClockSettings(device)) ?: PlayerClockSettings()
         }
         rememberAudioDelayPerDevice = PlayerSettingsStorage.loadRememberAudioDelayPerDevice() ?: true
-        seekThumbnailsEnabled = PlayerSettingsStorage.loadSeekThumbnailsEnabled() ?: true
-        seekThumbnailsWifiOnly = PlayerSettingsStorage.loadSeekThumbnailsWifiOnly() ?: true
-        seekThumbnailSize = PlayerSettingsStorage.loadSeekThumbnailSize()
-            ?.let { stored -> SeekThumbnailSize.entries.firstOrNull { it.name == stored } }
-            ?: SeekThumbnailSize.Medium
+        seekThumbnailsByDevice = SeekThumbnailDevice.entries.associateWith { device ->
+            SeekThumbnailOptions.decode(PlayerSettingsStorage.loadSeekThumbnailOptions(device)) ?: SeekThumbnailOptions()
+        }
         seekIntervalSeconds = (PlayerSettingsStorage.loadSeekIntervalSeconds() ?: DEFAULT_SEEK_INTERVAL_SECONDS)
             .coerceIn(SEEK_INTERVAL_SECONDS_RANGE)
         useLibass = PlayerSettingsStorage.loadUseLibass() ?: true
@@ -1128,28 +1127,23 @@ object PlayerSettingsRepository {
         PlayerSettingsStorage.saveRememberAudioDelayPerDevice(enabled)
     }
 
-    fun setSeekThumbnailsEnabled(enabled: Boolean) {
-        ensureLoaded()
-        if (seekThumbnailsEnabled == enabled) return
-        seekThumbnailsEnabled = enabled
-        publish()
-        PlayerSettingsStorage.saveSeekThumbnailsEnabled(enabled)
-    }
+    fun setSeekThumbnailsEnabled(enabled: Boolean) = updateSeekThumbnails { it.copy(enabled = enabled) }
 
-    fun setSeekThumbnailsWifiOnly(enabled: Boolean) {
-        ensureLoaded()
-        if (seekThumbnailsWifiOnly == enabled) return
-        seekThumbnailsWifiOnly = enabled
-        publish()
-        PlayerSettingsStorage.saveSeekThumbnailsWifiOnly(enabled)
-    }
+    fun setSeekThumbnailsWifiOnly(enabled: Boolean) = updateSeekThumbnails { it.copy(wifiOnly = enabled) }
 
-    fun setSeekThumbnailSize(size: SeekThumbnailSize) {
+    fun setSeekThumbnailSize(size: SeekThumbnailSize) = updateSeekThumbnails { it.copy(size = size) }
+
+    /** Changes the options of this device class only: phones/tablets and TVs keep their own copy. */
+    private fun updateSeekThumbnails(transform: (SeekThumbnailOptions) -> SeekThumbnailOptions) {
         ensureLoaded()
-        if (seekThumbnailSize == size) return
-        seekThumbnailSize = size
+        val device = currentSeekThumbnailDevice()
+        val current = seekThumbnailsByDevice.getValue(device)
+        val updated = transform(current)
+        if (updated == current) return
+        seekThumbnailsByDevice = seekThumbnailsByDevice + (device to updated)
+        PlayerSettingsStorage.saveSeekThumbnailOptions(device, updated.encode())
         publish()
-        PlayerSettingsStorage.saveSeekThumbnailSize(size.name)
+        seekThumbLog.i { "Options of ${device.storageSuffix} set to $updated" }
     }
 
     fun setStillWatchingLiveTvEnabled(enabled: Boolean, formFactor: SubtitleSizeFormFactor? = null) =
@@ -1473,9 +1467,9 @@ object PlayerSettingsRepository {
             stillWatchingEpisodeCount = thisDeviceStillWatching.episodeCount,
             stillWatchingNightOnly = thisDeviceStillWatching.nightOnly,
             rememberAudioDelayPerDevice = rememberAudioDelayPerDevice,
-            seekThumbnailsEnabled = seekThumbnailsEnabled,
-            seekThumbnailsWifiOnly = seekThumbnailsWifiOnly,
-            seekThumbnailSize = seekThumbnailSize,
+            seekThumbnailsEnabled = seekThumbnailsByDevice.getValue(currentSeekThumbnailDevice()).enabled,
+            seekThumbnailsWifiOnly = seekThumbnailsByDevice.getValue(currentSeekThumbnailDevice()).wifiOnly,
+            seekThumbnailSize = seekThumbnailsByDevice.getValue(currentSeekThumbnailDevice()).size,
             stillWatchingLiveTvEnabled = thisDeviceStillWatching.liveTvEnabled,
             stillWatchingLiveTvMinutes = thisDeviceStillWatching.liveTvMinutes,
             stillWatchingSettings = stillWatchingByFormFactor,
