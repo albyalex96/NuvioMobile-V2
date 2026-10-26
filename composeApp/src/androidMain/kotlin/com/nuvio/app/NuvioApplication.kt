@@ -1,5 +1,6 @@
 package com.nuvio.app
 
+import android.app.ActivityManager
 import android.app.Application
 import android.os.Build
 import coil3.ImageLoader
@@ -8,9 +9,15 @@ import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import coil3.network.cachecontrol.CacheControlCacheStrategy
 import coil3.network.ktor3.KtorNetworkFetcherFactory
+import coil3.memory.MemoryCache
 import coil3.request.CachePolicy
+import coil3.request.allowHardware
+import coil3.request.allowRgb565
 import coil3.request.crossfade
+import coil3.size.Precision
 import coil3.svg.SvgDecoder
+import co.touchlab.kermit.Logger
+import com.nuvio.app.tv.TvAppRuntime
 import com.nuvio.app.core.logging.AppLogPlatform
 import com.nuvio.app.core.logging.AppLogger
 import com.nuvio.app.core.mediaproxy.LanMediaProxy
@@ -44,10 +51,13 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
     }
 
     override fun newImageLoader(context: android.content.Context): ImageLoader {
+        val tv = isTvPackage(context)
+        Logger.withTag("ImageLoader").i { "Creating image loader (tv=$tv)" }
         return ImageLoader.Builder(context)
-            .crossfade(true)
+            .crossfade(!tv)
             .diskCachePolicy(CachePolicy.ENABLED)
             .memoryCachePolicy(CachePolicy.ENABLED)
+            .apply { if (tv) configureForTv(context) }
             .components {
                 add(CustomPosterFallbackInterceptor())
                 add(SvgDecoder.Factory())
@@ -65,4 +75,30 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
             }
             .build()
     }
+
+    /**
+     * Image settings of NuvioTV for TV boxes (Fire TV sticks have 1-2 GB of RAM and a slow GPU):
+     * RGB565 bitmaps on the heap (half the memory of ARGB_8888; images with transparency, such as
+     * logos, keep ARGB_8888), inexact sizes so smaller cached versions are reused, and a memory
+     * cache sized on the device RAM. No crossfade: cards draw their image at once.
+     */
+    private fun ImageLoader.Builder.configureForTv(context: android.content.Context): ImageLoader.Builder {
+        val activityManager = context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as ActivityManager
+        val memoryInfo = ActivityManager.MemoryInfo().also(activityManager::getMemoryInfo)
+        val totalRamMb = memoryInfo.totalMem / (1024 * 1024)
+        val cachePercent = when {
+            totalRamMb <= 2048 -> 0.15
+            totalRamMb <= 3072 -> 0.20
+            else -> 0.25
+        }
+        Logger.withTag("ImageLoader").i { "TV image settings: RAM ${totalRamMb} MB, memory cache ${(cachePercent * 100).toInt()}%" }
+        return this
+            .memoryCache { MemoryCache.Builder().maxSizePercent(context, cachePercent).build() }
+            .precision(Precision.INEXACT)
+            .allowHardware(false)
+            .allowRgb565(true)
+    }
+
+    private fun isTvPackage(context: android.content.Context): Boolean =
+        TvAppRuntime.isTvApp || context.packageName.let { it.endsWith(".tv") || ".tv." in it }
 }
