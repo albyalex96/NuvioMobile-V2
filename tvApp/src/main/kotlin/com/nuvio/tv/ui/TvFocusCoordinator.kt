@@ -79,6 +79,7 @@ fun TvFocusCoordinator(content: @Composable () -> Unit) {
                 }
             }
             .tvTextInputKeys()
+            .tvDpadRepeatThrottle()
             .focusRequester(rootRequester)
             .focusGroup(),
     ) {
