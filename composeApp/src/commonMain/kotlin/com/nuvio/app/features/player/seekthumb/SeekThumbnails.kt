@@ -80,6 +80,9 @@ data class SeekThumbnailConfig(
 interface SeekThumbnailProvider {
     val frame: StateFlow<SeekThumbnailFrame?>
 
+    /** False while no picture can come: previews given up for this stream, or waiting for Wi-Fi. */
+    val available: Boolean
+
     fun request(positionMs: Long)
 
     /** The scrub ended: the shown picture is let go, the decoded ones stay cached for the next scrub. */

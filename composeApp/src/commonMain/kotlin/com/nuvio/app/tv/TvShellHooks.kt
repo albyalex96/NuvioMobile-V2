@@ -447,10 +447,20 @@ internal fun PlayerScreenRuntime.BindTvPlayerRemote() {
             }
 
             override fun seekStep(forward: Boolean) {
+                if (runtime.tvSeekPreviewAvailable()) {
+                    if (!runtime.controlsVisible) log.d { "Seek with preview: showing the timeline" }
+                    TvTimelineSeek.request(forward)
+                    runtime.controlsVisible = true
+                    runtime.controlsActivityTick += 1
+                    return
+                }
                 runtime.handleDoubleTapSeek(
                     if (forward) PlayerSeekDirection.Forward else PlayerSeekDirection.Backward,
                 )
             }
+
+            override val seekPreviewPending: Boolean
+                get() = TvTimelineSeek.pending
 
             override fun showControls() {
                 runtime.controlsVisible = true
@@ -459,6 +469,7 @@ internal fun PlayerScreenRuntime.BindTvPlayerRemote() {
 
             override fun hideControls() {
                 runtime.controlsVisible = false
+                TvTimelineSeek.pendingSteps = 0
             }
 
             override fun registerActivity() {
@@ -571,6 +582,7 @@ internal fun PlayerScreenRuntime.BindTvPlayerRemote() {
             if (TvPlayerRemoteRegistry.active === remote) {
                 TvPlayerRemoteRegistry.active = null
             }
+            TvTimelineSeek.pendingSteps = 0
             log.i { "Player remote released" }
         }
     }
@@ -619,6 +631,14 @@ private fun PlayerScreenRuntime.closeTvMenus() {
     showLiveChannelsPanel = false
     showChaptersPanel = false
 }
+
+/**
+ * Seek steps go through the timeline preview: the stream has seek thumbnails and nothing else
+ * (a prompt that takes the focus, locked controls) would keep the timeline from receiving the keys.
+ */
+private fun PlayerScreenRuntime.tvSeekPreviewAvailable(): Boolean =
+    seekThumbnailProvider?.available == true && playbackSnapshot.durationMs > 0L &&
+        !playerControlsLocked && !tvOverlayOpen() && !tvPromptVisible()
 
 /** "Skip intro/recap/outro" or "next episode" is on screen (it takes the focus itself). */
 private fun PlayerScreenRuntime.tvPromptVisible(): Boolean =

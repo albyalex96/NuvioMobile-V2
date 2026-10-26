@@ -208,7 +208,15 @@ interface TvPlayerRemote {
 
     /** Triggers the visible "skip intro/recap/outro" or "next episode" prompt; false if none is shown. */
     fun activatePrompt(): Boolean
+
+    /**
+     * Seeks by the configured interval. With seek thumbnails available it shows the controls and
+     * moves the timeline preview instead: the player seeks once the presses stop.
+     */
     fun seekStep(forward: Boolean)
+
+    /** A previewed seek step is waiting for the timeline: left/right must keep calling [seekStep]. */
+    val seekPreviewPending: Boolean
     fun showControls()
     fun hideControls()
 

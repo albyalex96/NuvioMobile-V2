@@ -133,7 +133,7 @@ private class AndroidSeekThumbnailProvider(
     // Worker thread only.
     private var source: ThumbSource? = null
     private var decoder: FfmpegThumbDecoder? = null
-    private var disabledReason: String? = null
+    @Volatile private var disabledReason: String? = null
     private var openFailures = 0
     private var nextOpenAtMs = 0L
     private var fetchFailures = 0
@@ -172,6 +172,9 @@ private class AndroidSeekThumbnailProvider(
         val t0 = SystemClock.elapsedRealtime()
         if (open() != null) seekThumbLog.d { "Index prepared in advance in ${SystemClock.elapsedRealtime() - t0}ms" }
     }
+
+    override val available: Boolean
+        get() = !closed && disabledReason == null && (local || !config.wifiOnly || onWifiOrEthernet())
 
     override fun request(positionMs: Long) {
         if (closed) return

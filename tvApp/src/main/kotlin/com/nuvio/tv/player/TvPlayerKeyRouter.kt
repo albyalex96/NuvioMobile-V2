@@ -9,7 +9,8 @@ import com.nuvio.app.tv.TvPlayerRemoteRegistry
  * Remote-control mapping for the in-app player, applied before Compose sees the key.
  *
  * - Controls hidden: OK = play/pause (or the visible skip / next-episode prompt),
- *   left/right = cumulative seek by the configured interval, up/down/menu = show controls.
+ *   left/right = seek by the configured interval (with seek thumbnails: the controls open and the
+ *   timeline previews the position, the player seeks once the presses stop), up/down/menu = show controls.
  * - Controls visible: D-pad moves between the player buttons, Back hides the controls.
  * - A panel, modal or prompt is open: keys go untouched to it.
  * - "Info" panel open: up/down scroll it, other navigation keys close it.
@@ -91,6 +92,14 @@ object TvPlayerKeyRouter {
 
         if (remote.controlsVisible) {
             remote.registerActivity()
+            // The timeline that opened for a previewed seek has not taken its steps yet: held keys
+            // keep queueing, or they would move the focus among the buttons meanwhile.
+            if (remote.seekPreviewPending &&
+                (event.keyCode == KeyEvent.KEYCODE_DPAD_LEFT || event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT)
+            ) {
+                remote.seekStep(forward = event.keyCode == KeyEvent.KEYCODE_DPAD_RIGHT)
+                return true
+            }
             if ((event.keyCode == KeyEvent.KEYCODE_BACK || event.keyCode == KeyEvent.KEYCODE_INFO) && firstPress) {
                 remote.hideControls()
                 return true

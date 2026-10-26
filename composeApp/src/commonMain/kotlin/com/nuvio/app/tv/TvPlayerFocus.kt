@@ -4,9 +4,12 @@ import androidx.compose.foundation.focusGroup
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
@@ -23,6 +26,7 @@ import co.touchlab.kermit.Logger
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 import kotlin.time.TimeSource
 
 private val log = Logger.withTag("TvPlayerFocus")
@@ -68,6 +72,23 @@ internal object TvPlayerFocus {
 }
 
 /**
+ * Seek steps asked while the timeline is not on screen yet (left/right with the controls hidden,
+ * rewind/fast-forward keys): the timeline applies them as its own presses as soon as it is
+ * composed, so the seek gets the same preview (seek thumbnail) and delayed commit.
+ */
+internal object TvTimelineSeek {
+    /** Pending steps: positive forward, negative backward. */
+    var pendingSteps by mutableIntStateOf(0)
+
+    /** Steps the timeline has not taken yet: the next left/right presses must reach it too. */
+    val pending: Boolean get() = pendingSteps != 0
+
+    fun request(forward: Boolean) {
+        pendingSteps += if (forward) 1 else -1
+    }
+}
+
+/**
  * Player controls container on TV: Enter restores the last focused control (e.g. the button that
  * opened a panel), the timeline otherwise. No-op without a [TvShell].
  */
@@ -83,7 +104,8 @@ internal fun Modifier.tvPlayerControls(): Modifier {
 /**
  * Timeline of the player on TV: target of the focus when the controls appear. Left/right move a
  * preview of the position by the configured seek interval (holding the key speeds it up); the
- * player seeks once the presses stop. OK plays/pauses. Up/down leave the timeline as usual. No-op without a [TvShell].
+ * player seeks once the presses stop. OK plays/pauses. Up/down leave the timeline as usual. Steps
+ * queued in [TvTimelineSeek] are applied the same way. No-op without a [TvShell].
  */
 @Composable
 internal fun Modifier.tvPlayerTimeline(
@@ -103,6 +125,41 @@ internal fun Modifier.tvPlayerTimeline(
     val currentOnScrubChange by rememberUpdatedState(onScrubChange)
     val currentOnScrubFinished by rememberUpdatedState(onScrubFinished)
     val currentOnTogglePlayback by rememberUpdatedState(onTogglePlayback)
+
+    fun step(forward: Boolean) {
+        val duration = currentDuration
+        if (duration <= 0L) return
+        val now = TimeSource.Monotonic.markNow()
+        val held = seek.lastPress?.let { (now - it).inWholeMilliseconds < SEEK_REPEAT_WINDOW_MS } == true
+        seek.heldPresses = if (held) seek.heldPresses + 1 else 0
+        seek.lastPress = now
+        val multiplier = (1 + seek.heldPresses / SEEK_PRESSES_PER_STEP).coerceAtMost(SEEK_MAX_MULTIPLIER)
+        val stepMs = currentInterval.coerceAtLeast(1) * 1_000L * multiplier
+
+        val base = seek.previewMs ?: currentPosition
+        val target = (base + if (forward) stepMs else -stepMs).coerceIn(0L, duration)
+        seek.previewMs = target
+        currentOnScrubChange(target)
+
+        seek.commitJob?.cancel()
+        seek.commitJob = scope.launch {
+            delay(SEEK_COMMIT_DELAY_MS)
+            val position = seek.previewMs ?: return@launch
+            seek.previewMs = null
+            seek.heldPresses = 0
+            log.d { "Timeline seek to ${position}ms" }
+            currentOnScrubFinished(position)
+        }
+    }
+
+    LaunchedEffect(seek) {
+        snapshotFlow { TvTimelineSeek.pendingSteps }.collect { steps ->
+            if (steps == 0) return@collect
+            TvTimelineSeek.pendingSteps = 0
+            log.d { "Timeline takes $steps queued seek step(s)" }
+            repeat(abs(steps)) { step(forward = steps > 0) }
+        }
+    }
 
     return this
         .focusRequester(TvPlayerFocus.timeline)
@@ -126,31 +183,7 @@ internal fun Modifier.tvPlayerTimeline(
                 Key.DirectionLeft -> false
                 else -> return@onPreviewKeyEvent false
             }
-            if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent true
-            val duration = currentDuration
-            if (duration <= 0L) return@onPreviewKeyEvent true
-
-            val now = TimeSource.Monotonic.markNow()
-            val held = seek.lastPress?.let { (now - it).inWholeMilliseconds < SEEK_REPEAT_WINDOW_MS } == true
-            seek.heldPresses = if (held) seek.heldPresses + 1 else 0
-            seek.lastPress = now
-            val multiplier = (1 + seek.heldPresses / SEEK_PRESSES_PER_STEP).coerceAtMost(SEEK_MAX_MULTIPLIER)
-            val stepMs = currentInterval.coerceAtLeast(1) * 1_000L * multiplier
-
-            val base = seek.previewMs ?: currentPosition
-            val target = (base + if (forward) stepMs else -stepMs).coerceIn(0L, duration)
-            seek.previewMs = target
-            currentOnScrubChange(target)
-
-            seek.commitJob?.cancel()
-            seek.commitJob = scope.launch {
-                delay(SEEK_COMMIT_DELAY_MS)
-                val position = seek.previewMs ?: return@launch
-                seek.previewMs = null
-                seek.heldPresses = 0
-                log.d { "Timeline seek to ${position}ms" }
-                currentOnScrubFinished(position)
-            }
+            if (event.type == KeyEventType.KeyDown) step(forward)
             true
         }
 }

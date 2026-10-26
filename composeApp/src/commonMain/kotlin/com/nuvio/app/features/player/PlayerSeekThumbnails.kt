@@ -22,7 +22,9 @@ import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,6 +40,8 @@ import com.nuvio.app.features.player.seekthumb.SeekThumbnailProvider
 import com.nuvio.app.features.player.seekthumb.SeekThumbnailRequest
 import com.nuvio.app.features.player.seekthumb.createSeekThumbnailProvider
 import com.nuvio.app.features.player.seekthumb.seekThumbnailsSupported
+import com.nuvio.app.tv.LocalTvShell
+import kotlinx.coroutines.delay
 
 /**
  * What the seek bars need to show previews: the stream's provider, its picture width and whether a scrub is under
@@ -94,6 +98,9 @@ internal fun PlayerScreenRuntime.rememberSeekThumbnailUi(): SeekThumbnailUi? {
 }
 
 private val PreviewGap = 10.dp
+
+/** On TV the preview stays this long after the seek, while the player gets to the chosen picture. */
+private const val TV_PREVIEW_LINGER_MS = 600L
 private val PreviewShape = RoundedCornerShape(10.dp)
 
 /**
@@ -108,12 +115,27 @@ internal fun BoxScope.SeekThumbnailPreview(
     val ui = LocalSeekThumbnails.current ?: return
     val provider = ui.provider
     val scrubbing = ui.isScrubbing()
+    val tv = LocalTvShell.current != null
+    var lingering by remember { mutableStateOf(false) }
+    // While it lingers the preview keeps the chosen position: the player may still report the old one.
+    val lastScrubMs = remember { LongArray(1) }
+    if (scrubbing) lastScrubMs[0] = positionMs
     LaunchedEffect(provider, scrubbing) {
-        if (!scrubbing) provider.clearFrame()
+        if (scrubbing) {
+            lingering = false
+            return@LaunchedEffect
+        }
+        if (tv && provider.frame.value != null) {
+            lingering = true
+            delay(TV_PREVIEW_LINGER_MS)
+            lingering = false
+        }
+        provider.clearFrame()
     }
     val frame by provider.frame.collectAsState()
     val current = frame
-    val fraction = if (durationMs > 0L) (positionMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
+    val shownPositionMs = if (scrubbing) positionMs else lastScrubMs[0]
+    val fraction = if (durationMs > 0L) (shownPositionMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
     Box(
         modifier = Modifier
             .matchParentSize()
@@ -128,7 +150,7 @@ internal fun BoxScope.SeekThumbnailPreview(
             },
     ) {
         AnimatedVisibility(
-            visible = scrubbing && current != null,
+            visible = (scrubbing || lingering) && current != null,
             enter = fadeIn(tween(120)),
             exit = fadeOut(tween(160)),
         ) {
@@ -147,7 +169,7 @@ internal fun BoxScope.SeekThumbnailPreview(
                         .border(1.dp, Color.White.copy(alpha = 0.35f), PreviewShape),
                 )
                 Text(
-                    text = formatPlaybackTime(positionMs),
+                    text = formatPlaybackTime(shownPositionMs),
                     style = MaterialTheme.nuvioTypeScale.labelSm.copy(fontSize = 13.sp),
                     color = Color.White,
                     modifier = Modifier
