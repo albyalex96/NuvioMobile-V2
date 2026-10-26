@@ -250,6 +250,7 @@ internal fun SettingsNavigationRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .settingsSearchHighlight(title)
             .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = horizontalPadding, vertical = verticalPadding)
             .alpha(if (enabled) NuvioTokens.Opacity.visible else tokens.opacity.medium),
@@ -330,6 +331,7 @@ internal fun SettingsSwitchRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .settingsSearchHighlight(title)
             .clickable(enabled = enabled) { onCheckedChange(!checked) }
             .padding(horizontal = horizontalPadding, vertical = verticalPadding),
         horizontalArrangement = Arrangement.Start,
@@ -385,6 +387,7 @@ internal fun SettingsChipRow(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .settingsSearchHighlight(title)
             .padding(
                 horizontal = if (isTablet) 20.dp else 16.dp,
                 vertical = if (isTablet) 16.dp else 14.dp,

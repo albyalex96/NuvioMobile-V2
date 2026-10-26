@@ -709,6 +709,7 @@ private fun DebridPreferenceRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .settingsSearchHighlight(title)
             .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = horizontalPadding, vertical = verticalPadding),
         verticalAlignment = Alignment.CenterVertically,

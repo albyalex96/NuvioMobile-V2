@@ -52,7 +52,18 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.text.input.TextFieldLineLimits
+import androidx.compose.foundation.text.input.clearText
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -98,6 +109,8 @@ internal data class SettingsSearchEntry(
     val searchableText: String = normalizeSettingsSearchText(
         listOf(title, description, page, section, category).joinToString(separator = " "),
     )
+
+    val normalizedTitle: String = normalizeSettingsSearchText(title)
 
     val contextLabel: String = listOf(page, section)
         .filter { it.isNotBlank() }
@@ -2012,7 +2025,8 @@ private fun addContinueWatchingRows(
 }
 
 internal fun LazyListScope.settingsSearchRootContent(
-    query: String,
+    query: () -> String,
+    queryBlank: Boolean,
     entries: @Composable () -> List<SettingsSearchEntry>,
     isTablet: Boolean,
     showSearchField: Boolean,
@@ -2020,7 +2034,7 @@ internal fun LazyListScope.settingsSearchRootContent(
     onQueryChange: (String) -> Unit,
     onTargetClick: (SettingsSearchTarget) -> Unit,
 ) {
-    if (showSearchField || query.isNotBlank()) {
+    if (showSearchField || !queryBlank) {
         item(key = "settings-search-field") {
             SettingsSearchRevealItem(animate = animateSearchField) {
                 SettingsSearchField(
@@ -2031,22 +2045,47 @@ internal fun LazyListScope.settingsSearchRootContent(
         }
     }
 
-    if (query.isBlank()) return
+    if (queryBlank) return
 
     item(key = "settings-search-results") {
-        val results = settingsSearchResults(
+        // The index is resolved here, outside the scope that reads the query, so typing doesn't rebuild it.
+        SettingsSearchResults(
             query = query,
             entries = entries(),
+            isTablet = isTablet,
+            onTargetClick = onTargetClick,
         )
-        if (results.isEmpty()) {
-            SettingsSearchEmptyState(isTablet = isTablet)
-        } else {
-            SettingsSection(
-                title = stringResource(Res.string.settings_search_results_section),
-                isTablet = isTablet,
-            ) {
-                SettingsGroup(isTablet = isTablet) {
-                    results.forEachIndexed { index, entry ->
+    }
+}
+
+@Composable
+private fun SettingsSearchResults(
+    query: () -> String,
+    entries: List<SettingsSearchEntry>,
+    isTablet: Boolean,
+    onTargetClick: (SettingsSearchTarget) -> Unit,
+) {
+    val currentQuery = query()
+    val results = remember(currentQuery, entries) {
+        settingsSearchResults(
+            query = currentQuery,
+            entries = entries,
+        )
+    }
+    // The results live in one card (one lazy item): composing hundreds of rows for a one-letter query
+    // blocked the main thread and the typed letters. Show the best matches first, the rest on request.
+    var showAll by remember(currentQuery) { mutableStateOf(false) }
+    val shownResults = if (showAll) results else results.take(SettingsSearchResultsLimit)
+    if (results.isEmpty()) {
+        SettingsSearchEmptyState(isTablet = isTablet)
+    } else {
+        SettingsSection(
+            title = stringResource(Res.string.settings_search_results_section),
+            isTablet = isTablet,
+        ) {
+            SettingsGroup(isTablet = isTablet) {
+                shownResults.forEachIndexed { index, entry ->
+                    key(entry.key) {
                         if (index > 0) {
                             SettingsGroupDivider(isTablet = isTablet)
                         }
@@ -2055,14 +2094,29 @@ internal fun LazyListScope.settingsSearchRootContent(
                             description = entry.resultDescription(),
                             icon = entry.icon,
                             isTablet = isTablet,
-                            onClick = { onTargetClick(entry.target) },
+                            onClick = {
+                                entry.requestHighlight()
+                                onTargetClick(entry.target)
+                            },
                         )
                     }
+                }
+                if (shownResults.size < results.size) {
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsNavigationRow(
+                        title = stringResource(Res.string.settings_search_show_all, results.size),
+                        description = stringResource(Res.string.settings_search_show_all_description),
+                        icon = Icons.Rounded.ViewList,
+                        isTablet = isTablet,
+                        onClick = { showAll = true },
+                    )
                 }
             }
         }
     }
 }
+
+private const val SettingsSearchResultsLimit = 25
 
 @Composable
 private fun SettingsSearchRevealItem(
@@ -2097,15 +2151,21 @@ private fun SettingsSearchRevealItem(
 
 @Composable
 private fun SettingsSearchField(
-    query: String,
+    query: () -> String,
     onQueryChange: (String) -> Unit,
 ) {
     val tokens = MaterialTheme.nuvio
+    // The field owns its text (TextFieldState): typed letters show up right away, without waiting for
+    // the screen to recompose with the new value; the query follows from the field.
+    val state = rememberTextFieldState(initialText = Snapshot.withoutReadObservation(query))
+    val currentOnQueryChange by rememberUpdatedState(onQueryChange)
+    LaunchedEffect(state) {
+        snapshotFlow { state.text.toString() }.collect { currentOnQueryChange(it) }
+    }
     OutlinedTextField(
-        value = query,
-        onValueChange = onQueryChange,
+        state = state,
         modifier = Modifier.fillMaxWidth(),
-        singleLine = true,
+        lineLimits = TextFieldLineLimits.SingleLine,
         shape = tokens.shapes.compactCard,
         leadingIcon = {
             Icon(
@@ -2114,9 +2174,9 @@ private fun SettingsSearchField(
                 tint = tokens.colors.textMuted,
             )
         },
-        trailingIcon = if (query.isNotBlank()) {
+        trailingIcon = if (state.text.isNotEmpty()) {
             {
-                IconButton(onClick = { onQueryChange("") }) {
+                IconButton(onClick = { state.clearText() }) {
                     Icon(
                         imageVector = Icons.Rounded.Close,
                         contentDescription = stringResource(Res.string.compose_search_clear),
@@ -2179,8 +2239,26 @@ private fun settingsSearchResults(
 
     if (terms.isEmpty()) return emptyList()
 
-    return entries.filter { entry ->
-        terms.all { term -> entry.searchableText.contains(term) }
+    val normalizedQuery = terms.joinToString(separator = " ")
+    // Stable sort: titles starting with the query, then titles containing every term, then the rest.
+    return entries
+        .filter { entry -> terms.all { term -> entry.searchableText.contains(term) } }
+        .sortedBy { entry ->
+            when {
+                entry.normalizedTitle.startsWith(normalizedQuery) -> 0
+                terms.all { term -> entry.normalizedTitle.contains(term) } -> 1
+                else -> 2
+            }
+        }
+}
+
+/** Asks the destination page to scroll to and highlight this entry's row; whole-page entries have no row. */
+private fun SettingsSearchEntry.requestHighlight() {
+    val pageTarget = target as? SettingsSearchTarget.Page
+    if (pageTarget == null || (section.isBlank() && title == page)) {
+        SettingsSearchHighlight.clear()
+    } else {
+        SettingsSearchHighlight.request(pageTarget.page, title)
     }
 }
 

@@ -549,6 +549,8 @@
     <string name="settings_search_empty">No settings found.</string>
     <string name="settings_search_placeholder">Search settings...</string>
     <string name="settings_search_results_section">RESULTS</string>
+    <string name="settings_search_show_all">Show all results (%1$d)</string>
+    <string name="settings_search_show_all_description">Keep typing to narrow the search</string>
     <string name="settings_advanced_section_startup">STARTUP</string>
     <string name="settings_advanced_section_diagnostics">DIAGNOSTICS</string>
     <string name="settings_advanced_section_cache">CACHE</string>

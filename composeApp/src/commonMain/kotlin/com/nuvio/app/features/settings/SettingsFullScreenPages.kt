@@ -2,6 +2,7 @@ package com.nuvio.app.features.settings
 
 import com.nuvio.app.core.build.AppFeaturePolicy
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -62,24 +63,28 @@ fun HomescreenSettingsScreen(
         HomeCatalogSettingsRepository.syncCollections(collections)
     }
 
-    NuvioScreen(
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        stickyHeader {
-            NuvioScreenHeader(
-                title = stringResource(Res.string.compose_settings_page_homescreen),
-                onBack = onBack,
+    val listState = rememberLazyListState()
+    SettingsSearchHighlightHost(page = SettingsPage.Homescreen, listState = listState) {
+        NuvioScreen(
+            modifier = Modifier.fillMaxSize(),
+            listState = listState,
+        ) {
+            stickyHeader {
+                NuvioScreenHeader(
+                    title = stringResource(Res.string.compose_settings_page_homescreen),
+                    onBack = onBack,
+                )
+            }
+            homescreenSettingsContent(
+                isTablet = false,
+                heroEnabled = homescreenSettingsUiState.heroEnabled,
+                showCatalogType = homescreenSettingsUiState.showCatalogType,
+                hideUnreleasedContent = homescreenSettingsUiState.hideUnreleasedContent,
+                items = homescreenSettingsUiState.items,
+                isCatalogLoading = addonManifestsLoading,
+                catalogErrorMessage = addonManifestErrorMessage,
             )
         }
-        homescreenSettingsContent(
-            isTablet = false,
-            heroEnabled = homescreenSettingsUiState.heroEnabled,
-            showCatalogType = homescreenSettingsUiState.showCatalogType,
-            hideUnreleasedContent = homescreenSettingsUiState.hideUnreleasedContent,
-            items = homescreenSettingsUiState.items,
-            isCatalogLoading = addonManifestsLoading,
-            catalogErrorMessage = addonManifestErrorMessage,
-        )
     }
 }
 
@@ -92,19 +97,23 @@ fun MetaScreenSettingsScreen(
         MetaScreenSettingsRepository.uiState
     }.collectAsStateWithLifecycle()
 
-    NuvioScreen(
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        stickyHeader {
-            NuvioScreenHeader(
-                title = stringResource(Res.string.compose_settings_page_meta_screen),
-                onBack = onBack,
+    val listState = rememberLazyListState()
+    SettingsSearchHighlightHost(page = SettingsPage.MetaScreen, listState = listState) {
+        NuvioScreen(
+            modifier = Modifier.fillMaxSize(),
+            listState = listState,
+        ) {
+            stickyHeader {
+                NuvioScreenHeader(
+                    title = stringResource(Res.string.compose_settings_page_meta_screen),
+                    onBack = onBack,
+                )
+            }
+            metaScreenSettingsContent(
+                isTablet = false,
+                uiState = metaScreenSettingsUiState,
             )
         }
-        metaScreenSettingsContent(
-            isTablet = false,
-            uiState = metaScreenSettingsUiState,
-        )
     }
 }
 
@@ -117,26 +126,30 @@ fun ContinueWatchingSettingsScreen(
         ContinueWatchingPreferencesRepository.uiState
     }.collectAsStateWithLifecycle()
 
-    NuvioScreen(
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        stickyHeader {
-            NuvioScreenHeader(
-                title = stringResource(Res.string.compose_settings_page_continue_watching),
-                onBack = onBack,
+    val listState = rememberLazyListState()
+    SettingsSearchHighlightHost(page = SettingsPage.ContinueWatching, listState = listState) {
+        NuvioScreen(
+            modifier = Modifier.fillMaxSize(),
+            listState = listState,
+        ) {
+            stickyHeader {
+                NuvioScreenHeader(
+                    title = stringResource(Res.string.compose_settings_page_continue_watching),
+                    onBack = onBack,
+                )
+            }
+            continueWatchingSettingsContent(
+                isTablet = false,
+                isVisible = continueWatchingPreferencesUiState.isVisible,
+                style = continueWatchingPreferencesUiState.style,
+                upNextFromFurthestEpisode = continueWatchingPreferencesUiState.upNextFromFurthestEpisode,
+                useEpisodeThumbnails = continueWatchingPreferencesUiState.useEpisodeThumbnails,
+                showUnairedNextUp = continueWatchingPreferencesUiState.showUnairedNextUp,
+                blurNextUp = continueWatchingPreferencesUiState.blurNextUp,
+                showResumePromptOnLaunch = continueWatchingPreferencesUiState.showResumePromptOnLaunch,
+                sortMode = continueWatchingPreferencesUiState.sortMode,
             )
         }
-        continueWatchingSettingsContent(
-            isTablet = false,
-            isVisible = continueWatchingPreferencesUiState.isVisible,
-            style = continueWatchingPreferencesUiState.style,
-            upNextFromFurthestEpisode = continueWatchingPreferencesUiState.upNextFromFurthestEpisode,
-            useEpisodeThumbnails = continueWatchingPreferencesUiState.useEpisodeThumbnails,
-            showUnairedNextUp = continueWatchingPreferencesUiState.showUnairedNextUp,
-            blurNextUp = continueWatchingPreferencesUiState.blurNextUp,
-            showResumePromptOnLaunch = continueWatchingPreferencesUiState.showResumePromptOnLaunch,
-            sortMode = continueWatchingPreferencesUiState.sortMode,
-        )
     }
 }
 
@@ -148,16 +161,20 @@ fun AddonsSettingsScreen(
         AddonRepository.initialize()
     }
 
-    NuvioScreen(
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        stickyHeader {
-            NuvioScreenHeader(
-                title = stringResource(Res.string.compose_settings_page_addons),
-                onBack = onBack,
-            )
+    val listState = rememberLazyListState()
+    SettingsSearchHighlightHost(page = SettingsPage.Addons, listState = listState) {
+        NuvioScreen(
+            modifier = Modifier.fillMaxSize(),
+            listState = listState,
+        ) {
+            stickyHeader {
+                NuvioScreenHeader(
+                    title = stringResource(Res.string.compose_settings_page_addons),
+                    onBack = onBack,
+                )
+            }
+            addonsSettingsContent()
         }
-        addonsSettingsContent()
     }
 }
 
@@ -174,16 +191,20 @@ fun PluginsSettingsScreen(
         PluginRepository.initialize()
     }
 
-    NuvioScreen(
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        stickyHeader {
-            NuvioScreenHeader(
-                title = stringResource(Res.string.compose_settings_page_plugins),
-                onBack = onBack,
-            )
+    val listState = rememberLazyListState()
+    SettingsSearchHighlightHost(page = SettingsPage.Plugins, listState = listState) {
+        NuvioScreen(
+            modifier = Modifier.fillMaxSize(),
+            listState = listState,
+        ) {
+            stickyHeader {
+                NuvioScreenHeader(
+                    title = stringResource(Res.string.compose_settings_page_plugins),
+                    onBack = onBack,
+                )
+            }
+            pluginsSettingsContent()
         }
-        pluginsSettingsContent()
     }
 }
 
@@ -191,17 +212,21 @@ fun PluginsSettingsScreen(
 fun AccountSettingsScreen(
     onBack: () -> Unit,
 ) {
-    NuvioScreen(
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        stickyHeader {
-            NuvioScreenHeader(
-                title = stringResource(Res.string.compose_settings_page_account),
-                onBack = onBack,
+    val listState = rememberLazyListState()
+    SettingsSearchHighlightHost(page = SettingsPage.Account, listState = listState) {
+        NuvioScreen(
+            modifier = Modifier.fillMaxSize(),
+            listState = listState,
+        ) {
+            stickyHeader {
+                NuvioScreenHeader(
+                    title = stringResource(Res.string.compose_settings_page_account),
+                    onBack = onBack,
+                )
+            }
+            accountSettingsContent(
+                isTablet = false,
             )
         }
-        accountSettingsContent(
-            isTablet = false,
-        )
     }
 }

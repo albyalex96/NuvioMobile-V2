@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -268,16 +269,20 @@ private object SupportersContributorsRepository {
 fun SupportersContributorsSettingsScreen(
     onBack: () -> Unit,
 ) {
-    NuvioScreen(
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        stickyHeader {
-            NuvioScreenHeader(
-                title = stringResource(Res.string.compose_settings_page_supporters_contributors),
-                onBack = onBack,
-            )
+    val listState = rememberLazyListState()
+    SettingsSearchHighlightHost(page = SettingsPage.SupportersContributors, listState = listState) {
+        NuvioScreen(
+            modifier = Modifier.fillMaxSize(),
+            listState = listState,
+        ) {
+            stickyHeader {
+                NuvioScreenHeader(
+                    title = stringResource(Res.string.compose_settings_page_supporters_contributors),
+                    onBack = onBack,
+                )
+            }
+            supportersContributorsContent(isTablet = false)
         }
-        supportersContributorsContent(isTablet = false)
     }
 }
 

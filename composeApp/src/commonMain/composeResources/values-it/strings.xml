@@ -1321,6 +1321,8 @@
   <string name="settings_search_empty">Nessuna impostazione trovata.</string>
   <string name="settings_search_placeholder">Cerca impostazioni...</string>
   <string name="settings_search_results_section">RISULTATI</string>
+  <string name="settings_search_show_all">Mostra tutti i risultati (%1$d)</string>
+  <string name="settings_search_show_all_description">Continua a scrivere per restringere la ricerca</string>
   <string name="settings_advanced_section_startup">AVVIO</string>
   <string name="settings_advanced_remember_last_profile">Ricorda Ultimo Profilo</string>
   <string name="settings_advanced_remember_last_profile_description">Ricorda l'ultimo profilo usato all'avvio</string>

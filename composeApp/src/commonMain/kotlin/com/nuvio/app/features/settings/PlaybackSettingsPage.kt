@@ -263,6 +263,7 @@ internal fun SettingsSliderRow(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .settingsSearchHighlight(title)
             .padding(horizontal = horizontalPadding, vertical = 10.dp)
             .alpha(if (enabled) 1f else 0.55f),
         verticalArrangement = Arrangement.spacedBy(8.dp),
