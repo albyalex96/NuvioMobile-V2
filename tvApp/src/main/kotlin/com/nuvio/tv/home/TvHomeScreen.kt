@@ -130,7 +130,8 @@ private const val HERO_TEXT_WIDTH_FRACTION = 0.5f
 private val HERO_LOGO_HEIGHT = 100.dp
 private val HERO_LOGO_MAX_WIDTH = 220.dp
 
-private class HeroInfo(
+/** Data class: the hero [Crossfade]s compare it, a new but equal value must not restart them. */
+private data class HeroInfo(
     val key: String,
     val title: String,
     val logo: String?,
@@ -283,7 +284,8 @@ private fun TvHomeContent(model: TvHomeModel) {
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         // NuvioTV keeps the rows in the bottom 52% of the screen (49% with landscape posters).
         val heroHeight = maxHeight * (1f - if (settings.landscapePosters) 0.49f else 0.52f)
-        val shownHero = carouselHero?.let(::heroOf) ?: displayedHero
+        val carouselHeroInfo = remember(carouselHero) { carouselHero?.let(::heroOf) }
+        val shownHero = carouselHeroInfo ?: displayedHero
         if (heroProgress > 0f) {
             Box(modifier = Modifier.fillMaxSize().graphicsLayer { alpha = heroProgress }) {
                 HeroBackdrop(url = shownHero?.backdrop, fullScreen = settings.heroFullScreenBackdrop)

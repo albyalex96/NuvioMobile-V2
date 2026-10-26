@@ -88,23 +88,31 @@ enum class TvHomeStatus {
     Empty,
 }
 
+/**
+ * Rows and model of the TV home are data classes: [HomeScreen] rebuilds them on every recomposition,
+ * and equal values let the TV home skip instead of recomposing every row.
+ */
+@Immutable
 sealed interface TvHomeRow {
     val key: String
 
-    class Catalog(
+    @Immutable
+    data class Catalog(
         override val key: String,
         val section: HomeCatalogSection,
         val items: List<MetaPreview>,
         val canOpenCatalog: Boolean,
     ) : TvHomeRow
 
-    class Folders(
+    @Immutable
+    data class Folders(
         override val key: String,
         val collection: Collection,
     ) : TvHomeRow
 
     /** "Top 10" row: [items] are already ranked (rank = index + 1). */
-    class Top10(
+    @Immutable
+    data class Top10(
         override val key: String,
         val title: String,
         val items: List<MetaPreview>,
@@ -112,7 +120,7 @@ sealed interface TvHomeRow {
 }
 
 @Immutable
-class TvHomeModel(
+data class TvHomeModel(
     val status: TvHomeStatus,
     val errorMessage: String?,
     val heroItems: List<MetaPreview>,

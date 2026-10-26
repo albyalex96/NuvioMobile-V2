@@ -500,10 +500,13 @@ fun HomeScreen(
         )
     }
 
-    val cwPosterPattern by com.nuvio.app.core.poster.CustomPosterUrlRepository.let { repo ->
-        repo.ensureLoaded()
-        kotlinx.coroutines.flow.combine(repo.pattern, repo.enabledScreens) { pattern, screens ->
-            if (com.nuvio.app.core.poster.CustomPosterScreen.CONTINUE_WATCHING in screens) pattern else ""
+    // Remembered: a new combined flow on every recomposition would restart the collection each time.
+    val cwPosterPattern by remember {
+        com.nuvio.app.core.poster.CustomPosterUrlRepository.let { repo ->
+            repo.ensureLoaded()
+            kotlinx.coroutines.flow.combine(repo.pattern, repo.enabledScreens) { pattern, screens ->
+                if (com.nuvio.app.core.poster.CustomPosterScreen.CONTINUE_WATCHING in screens) pattern else ""
+            }
         }
     }.collectAsStateWithLifecycle(initialValue = com.nuvio.app.core.poster.CustomPosterUrlRepository.patternForScreen(com.nuvio.app.core.poster.CustomPosterScreen.CONTINUE_WATCHING))
 

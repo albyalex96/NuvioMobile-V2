@@ -169,6 +169,10 @@ internal fun ShellTabsDestination(
     }
 }
 
+// Shared no-op callbacks: a new `{}` per build would make every rebuilt model unequal.
+private val NoOpPosterClick: (MetaPreview) -> Unit = {}
+private val NoOpContinueWatchingClick: (ContinueWatchingItem) -> Unit = {}
+
 internal fun buildTvHomeModel(
     homeUiState: HomeUiState,
     enabledHomeItems: List<HomeCatalogSettingsItem>,
@@ -232,9 +236,9 @@ internal fun buildTvHomeModel(
         upcoming = visibleUpcoming,
         rows = rows,
         isPosterWatched = isPosterWatched,
-        onPosterClick = onPosterClick ?: {},
+        onPosterClick = onPosterClick ?: NoOpPosterClick,
         onPosterLongClick = onPosterLongClick,
-        onContinueWatchingClick = onContinueWatchingClick ?: {},
+        onContinueWatchingClick = onContinueWatchingClick ?: NoOpContinueWatchingClick,
         onContinueWatchingLongClick = onContinueWatchingLongPress,
         onCatalogClick = onCatalogClick,
         onFolderClick = onFolderClick,
