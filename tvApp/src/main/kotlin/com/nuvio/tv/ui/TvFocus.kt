@@ -18,7 +18,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.Key
@@ -57,11 +56,17 @@ fun Modifier.tvFocusable(
 ): Modifier {
     val interactionSource = remember { MutableInteractionSource() }
     val focused by interactionSource.collectIsFocusedAsState()
-    val scale by animateFloatAsState(
-        targetValue = if (focused) focusedScale else 1f,
-        animationSpec = tween(TV_FOCUS_ANIMATION_MS),
-        label = "tvFocusScale",
-    )
+    // Cards that keep their size on focus (NuvioTV home rows) skip the scale animation and its layer.
+    val scales = focusedScale != 1f
+    val scale = if (scales) {
+        animateFloatAsState(
+            targetValue = if (focused) focusedScale else 1f,
+            animationSpec = tween(TV_FOCUS_ANIMATION_MS),
+            label = "tvFocusScale",
+        )
+    } else {
+        null
+    }
     val ringColor = MaterialTheme.nuvio.colors.focusRing
     val currentOnClick by rememberUpdatedState(onClick)
     val currentOnLongClick by rememberUpdatedState(onLongClick)
@@ -81,17 +86,19 @@ fun Modifier.tvFocusable(
             }
             onFocusChange?.invoke(state.hasFocus)
         }
-        .graphicsLayer {
-            scaleX = scale
-            scaleY = scale
-        }
+        .then(
+            if (scale != null) {
+                Modifier.graphicsLayer {
+                    scaleX = scale.value
+                    scaleY = scale.value
+                }
+            } else {
+                Modifier
+            },
+        )
         // Cards that keep their size on focus (NuvioTV home rows) only get the ring.
         .then(if (focused && focusedScale > 1f) Modifier.shadow(elevation = 18.dp, shape = shape, clip = false) else Modifier)
-        .border(
-            width = if (focused) borderWidth else 0.dp,
-            color = if (focused) ringColor else Color.Transparent,
-            shape = shape,
-        )
+        .then(if (focused && borderWidth > 0.dp) Modifier.border(width = borderWidth, color = ringColor, shape = shape) else Modifier)
         .clip(shape)
         .onPreviewKeyEvent { event ->
             val longClick = currentOnLongClick ?: return@onPreviewKeyEvent false
