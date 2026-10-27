@@ -41,6 +41,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -163,38 +164,11 @@ fun TvVoiceSearchButton(onQuery: (String) -> Unit) {
     val accent = MaterialTheme.nuvio.colors.accent
     val interactionSource = remember { MutableInteractionSource() }
     val focused by interactionSource.collectIsFocusedAsState()
-    val pulse = rememberInfiniteTransition(label = "tvVoicePulse")
-    val pulseScale by pulse.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.35f,
-        animationSpec = infiniteRepeatable(tween(800, easing = LinearEasing), RepeatMode.Restart),
-        label = "tvVoicePulseScale",
-    )
-    val pulseAlpha by pulse.animateFloat(
-        initialValue = 0.5f,
-        targetValue = 0f,
-        animationSpec = infiniteRepeatable(tween(800, easing = LinearEasing), RepeatMode.Restart),
-        label = "tvVoicePulseAlpha",
-    )
-    val animatedRms by animateFloatAsState(
-        targetValue = if (listening) rmsLevel else 0f,
-        animationSpec = tween(100),
-        label = "tvVoiceRms",
-    )
 
     Box(contentAlignment = Alignment.Center, modifier = Modifier.size(72.dp)) {
-        if (listening) {
-            Canvas(modifier = Modifier.matchParentSize()) {
-                drawCircle(color = accent.copy(alpha = pulseAlpha * 0.4f), radius = size.minDimension / 2f * pulseScale)
-                if (animatedRms > 0.01f) {
-                    drawCircle(
-                        color = accent.copy(alpha = 0.25f + animatedRms * 0.25f),
-                        radius = size.minDimension / 2f * (1f + animatedRms * 0.35f),
-                        style = Stroke(width = 2.5f + animatedRms * 3f),
-                    )
-                }
-            }
-        }
+        // Composed only while listening: an infinite transition asks for a frame on every vsync for
+        // as long as it is in the composition, even when nothing is drawn.
+        if (listening) ListeningPulse(accent = accent, rmsLevel = rmsLevel, modifier = Modifier.matchParentSize())
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
@@ -219,6 +193,40 @@ fun TvVoiceSearchButton(onQuery: (String) -> Unit) {
                 imageVector = Icons.Filled.Mic,
                 contentDescription = stringResource(R.string.tv_voice_search),
                 tint = if (listening) accent else MaterialTheme.nuvio.colors.textPrimary,
+            )
+        }
+    }
+}
+
+/** Pulse and voice level rings drawn around the button while listening. */
+@Composable
+private fun ListeningPulse(accent: Color, rmsLevel: Float, modifier: Modifier) {
+    val pulse = rememberInfiniteTransition(label = "tvVoicePulse")
+    val pulseScale by pulse.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.35f,
+        animationSpec = infiniteRepeatable(tween(800, easing = LinearEasing), RepeatMode.Restart),
+        label = "tvVoicePulseScale",
+    )
+    val pulseAlpha by pulse.animateFloat(
+        initialValue = 0.5f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(tween(800, easing = LinearEasing), RepeatMode.Restart),
+        label = "tvVoicePulseAlpha",
+    )
+    val animatedRms by animateFloatAsState(
+        targetValue = rmsLevel,
+        animationSpec = tween(100),
+        label = "tvVoiceRms",
+    )
+    // The animated values are read in the draw phase only: the pulse redraws, never recomposes.
+    Canvas(modifier = modifier) {
+        drawCircle(color = accent.copy(alpha = pulseAlpha * 0.4f), radius = size.minDimension / 2f * pulseScale)
+        if (animatedRms > 0.01f) {
+            drawCircle(
+                color = accent.copy(alpha = 0.25f + animatedRms * 0.25f),
+                radius = size.minDimension / 2f * (1f + animatedRms * 0.35f),
+                style = Stroke(width = 2.5f + animatedRms * 3f),
             )
         }
     }
