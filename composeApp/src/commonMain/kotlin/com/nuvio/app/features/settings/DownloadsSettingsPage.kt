@@ -57,10 +57,10 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Replay
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -266,32 +266,28 @@ private fun DownloadsSettingsBody(isTablet: Boolean) {
             isTablet = isTablet,
             actions = {
                 if (anyRunning || anyPaused) {
-                    IconButton(onClick = { if (anyRunning) pauseDownloads(null) else resumeDownloads(null) }) {
-                        Icon(
-                            imageVector = if (anyRunning) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                            contentDescription = stringResource(
-                                if (anyRunning) Res.string.downloads_pause_all else Res.string.downloads_resume_all,
-                            ),
-                            tint = MaterialTheme.nuvio.colors.textMuted,
-                        )
-                    }
-                }
-                if (anyUnfinished) {
-                    IconButton(onClick = { cancelTarget = null to null }) {
-                        Icon(
-                            imageVector = Icons.Rounded.Cancel,
-                            contentDescription = stringResource(Res.string.downloads_cancel_all),
-                            tint = MaterialTheme.nuvio.colors.textMuted,
-                        )
-                    }
-                }
-                IconButton(onClick = { refreshKey++ }) {
-                    Icon(
-                        imageVector = Icons.Rounded.Refresh,
-                        contentDescription = stringResource(Res.string.downloads_settings_refresh),
-                        tint = MaterialTheme.nuvio.colors.textMuted,
+                    DownloadsActionButton(
+                        icon = if (anyRunning) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                        contentDescription = stringResource(
+                            if (anyRunning) Res.string.downloads_pause_all else Res.string.downloads_resume_all,
+                        ),
+                        onClick = { if (anyRunning) pauseDownloads(null) else resumeDownloads(null) },
                     )
                 }
+                if (anyUnfinished) {
+                    DownloadsActionButton(
+                        icon = Icons.Rounded.Delete,
+                        contentDescription = stringResource(Res.string.downloads_cancel_all),
+                        onClick = { cancelTarget = null to null },
+                        tint = MaterialTheme.nuvio.colors.danger,
+                        borderColor = MaterialTheme.nuvio.colors.danger.copy(alpha = 0.5f),
+                    )
+                }
+                DownloadsActionButton(
+                    icon = Icons.Rounded.Refresh,
+                    contentDescription = stringResource(Res.string.downloads_settings_refresh),
+                    onClick = { refreshKey++ },
+                )
             },
         ) {
             if (titleGroups.isEmpty() && sortedExternalFiles.isEmpty()) {
@@ -757,24 +753,21 @@ private fun DownloadTitleGroupCard(
                     }
                 }
                 if (status.canPause || status.canResume) {
-                    IconButton(onClick = if (status.canPause) onPause else onResume) {
-                        Icon(
-                            imageVector = if (status.canPause) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                            contentDescription = stringResource(
-                                if (status.canPause) Res.string.downloads_title_pause else Res.string.downloads_title_resume,
-                            ),
-                            tint = tokens.colors.textPrimary,
-                        )
-                    }
+                    DownloadsActionButton(
+                        icon = if (status.canPause) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                        contentDescription = stringResource(
+                            if (status.canPause) Res.string.downloads_title_pause else Res.string.downloads_title_resume,
+                        ),
+                        onClick = if (status.canPause) onPause else onResume,
+                        tint = tokens.colors.textPrimary,
+                    )
                 }
                 if (status.completed < status.total) {
-                    IconButton(onClick = onCancel) {
-                        Icon(
-                            imageVector = Icons.Rounded.Cancel,
-                            contentDescription = stringResource(Res.string.downloads_title_cancel),
-                            tint = tokens.colors.textMuted,
-                        )
-                    }
+                    DownloadsActionButton(
+                        icon = Icons.Rounded.Cancel,
+                        contentDescription = stringResource(Res.string.downloads_title_cancel),
+                        onClick = onCancel,
+                    )
                 }
                 Icon(
                     imageVector = if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
@@ -1101,7 +1094,9 @@ private fun DownloadTransferButton(item: DownloadItem) {
         DownloadStatus.Paused -> Res.string.action_resume
         else -> Res.string.action_retry
     }
-    IconButton(
+    DownloadsActionButton(
+        icon = icon,
+        contentDescription = stringResource(label),
         onClick = {
             when (item.status) {
                 DownloadStatus.Downloading -> DownloadsRepository.pauseDownload(item.id)
@@ -1109,11 +1104,28 @@ private fun DownloadTransferButton(item: DownloadItem) {
                 else -> DownloadsRepository.retryDownload(item.id)
             }
         },
+    )
+}
+
+/** Icon button with a thin border, used by every action of the downloads list. */
+@Composable
+private fun DownloadsActionButton(
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    tint: Color = MaterialTheme.nuvio.colors.textSecondary,
+    borderColor: Color = MaterialTheme.nuvio.colors.borderSubtle,
+) {
+    OutlinedIconButton(
+        onClick = onClick,
+        modifier = Modifier.padding(horizontal = 2.dp).size(36.dp),
+        border = BorderStroke(1.dp, borderColor),
     ) {
         Icon(
             imageVector = icon,
-            contentDescription = stringResource(label),
-            tint = MaterialTheme.nuvio.colors.textSecondary,
+            contentDescription = contentDescription,
+            modifier = Modifier.size(20.dp),
+            tint = tint,
         )
     }
 }
