@@ -281,6 +281,7 @@ internal fun buildTvDetailsModel(
     showExternalRatings: Boolean,
     episodeRatings: Map<Pair<Int, Int>, Double>,
     onCastClick: ((com.nuvio.app.features.details.MetaPerson) -> Unit)?,
+    onSeasonLongClick: ((Int) -> Unit)?,
 ): TvDetailsModel {
     val isSeries = meta.type == "series" || hasEpisodes
     val seasons = if (hasEpisodes) {
@@ -317,6 +318,7 @@ internal fun buildTvDetailsModel(
         showExternalRatings = showExternalRatings,
         episodeRatings = episodeRatings,
         onCastClick = onCastClick,
+        onSeasonLongClick = onSeasonLongClick,
     )
 }
 

@@ -694,7 +694,12 @@ private fun SeasonSelector(
         if (hasPosters && postersEnabled) {
             SeasonPosters(model = model, seasons = seasons, selectedSeason = selectedSeason, onSeasonSelected = onSeasonSelected)
         } else {
-            SeasonTabs(seasons = seasons, selectedSeason = selectedSeason, onSeasonSelected = onSeasonSelected)
+            SeasonTabs(
+                seasons = seasons,
+                selectedSeason = selectedSeason,
+                onSeasonSelected = onSeasonSelected,
+                onSeasonLongClick = model.onSeasonLongClick,
+            )
         }
     }
 }
@@ -767,6 +772,12 @@ private fun SeasonPosters(
                         .tvFocusable(
                             shape = SeasonPosterShape,
                             onClick = { onSeasonSelected(season.number) },
+                            onLongClick = model.onSeasonLongClick?.let { open ->
+                                {
+                                    log.d { "Season actions: season ${season.number}" }
+                                    open(season.number)
+                                }
+                            },
                             focusedScale = 1f,
                             borderWidth = 3.dp,
                         )
@@ -912,6 +923,7 @@ private fun SeasonTabs(
     seasons: List<TvSeason>,
     selectedSeason: Int,
     onSeasonSelected: (Int) -> Unit,
+    onSeasonLongClick: ((Int) -> Unit)?,
 ) {
     var pendingSeason by remember { mutableStateOf<Int?>(null) }
     LaunchedEffect(pendingSeason) {
@@ -937,6 +949,12 @@ private fun SeasonTabs(
                     .tvFocusable(
                         shape = SeasonTabShape,
                         onClick = { onSeasonSelected(item.number) },
+                        onLongClick = onSeasonLongClick?.let { open ->
+                            {
+                                log.d { "Season actions: season ${item.number}" }
+                                open(item.number)
+                            }
+                        },
                         focusedScale = 1f,
                         onFocusChange = { focused = it },
                     )

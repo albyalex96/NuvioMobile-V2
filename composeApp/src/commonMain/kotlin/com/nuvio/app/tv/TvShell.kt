@@ -177,6 +177,8 @@ class TvDetailsModel(
     val episodeRatings: Map<Pair<Int, Int>, Double> = emptyMap(),
     /** Opens the person page (filmography) of a cast member; null when not available. */
     val onCastClick: ((com.nuvio.app.features.details.MetaPerson) -> Unit)? = null,
+    /** Opens the season actions menu (mark season / previous seasons watched), like the phone long press. */
+    val onSeasonLongClick: ((Int) -> Unit)? = null,
 )
 
 /** State of the TV sign-in screen, backed by `DeviceLinkAuthRepository` (QR login). */

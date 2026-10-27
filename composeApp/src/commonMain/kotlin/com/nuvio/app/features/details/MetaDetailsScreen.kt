@@ -1072,8 +1072,20 @@ fun MetaDetailsScreen(
                             onCastClick = onCastClick?.let { open ->
                                 { person: MetaPerson -> if ((person.tmdbId ?: 0) > 0) open(person, null) }
                             },
+                            onSeasonLongClick = { season -> selectedSeasonForActions = season },
                         ),
                     )
+                    // Same long-press menu as the phone season posters (OK held on a season).
+                    selectedSeasonForActions?.let { selectedSeason ->
+                        SeasonActionsSheet(
+                            meta = meta,
+                            season = selectedSeason,
+                            todayIsoDate = CurrentDateProvider.todayIsoDate(),
+                            watchedKeys = watchedUiState.watchedKeys,
+                            progressByVideoId = progressByVideoId,
+                            onDismiss = { selectedSeasonForActions = null },
+                        )
+                    }
                     return@Box
                 }
                 val listState = rememberLazyListState()
@@ -1533,58 +1545,13 @@ fun MetaDetailsScreen(
                         }
 
                         selectedSeasonForActions?.let { selectedSeason ->
-                            val seasonLabel = selectedSeasonLabel(selectedSeason)
-                            val seasonEpisodes = remember(meta, selectedSeason, todayIsoDate) {
-                                meta.releasedEpisodesForSeason(
-                                    seasonNumber = selectedSeason,
-                                    todayIsoDate = todayIsoDate,
-                                )
-                            }
-                            val previousSeasonEpisodes = remember(meta, selectedSeason, todayIsoDate) {
-                                val normalizedSelectedSeason = selectedSeason.coerceAtLeast(0)
-                                meta.releasedPlayableEpisodes(todayIsoDate)
-                                    .filter { episode ->
-                                        val season = episode.season?.coerceAtLeast(0) ?: 0
-                                        season > 0 && season < normalizedSelectedSeason
-                                    }
-                            }
-                            val isSeasonWatched = remember(seasonEpisodes, watchedUiState.watchedKeys, progressByVideoId) {
-                                areEpisodesWatchedForActions(
-                                    meta = meta,
-                                    episodes = seasonEpisodes,
-                                    watchedKeys = watchedUiState.watchedKeys,
-                                    progressByVideoId = progressByVideoId,
-                                )
-                            }
-                            val canMarkPreviousSeasons = remember(previousSeasonEpisodes, watchedUiState.watchedKeys, progressByVideoId) {
-                                previousSeasonEpisodes.any { episode ->
-                                    !isEpisodeWatchedForActions(
-                                        meta = meta,
-                                        episode = episode,
-                                        watchedKeys = watchedUiState.watchedKeys,
-                                        progressByVideoId = progressByVideoId,
-                                    )
-                                }
-                            }
-                            SeasonWatchedActionSheet(
-                                seasonLabel = seasonLabel,
-                                isSeasonWatched = isSeasonWatched,
-                                canMarkPreviousSeasons = canMarkPreviousSeasons,
+                            SeasonActionsSheet(
+                                meta = meta,
+                                season = selectedSeason,
+                                todayIsoDate = todayIsoDate,
+                                watchedKeys = watchedUiState.watchedKeys,
+                                progressByVideoId = progressByVideoId,
                                 onDismiss = { selectedSeasonForActions = null },
-                                onToggleSeasonWatched = {
-                                    WatchingActions.toggleSeasonWatched(
-                                        meta = meta,
-                                        episodes = seasonEpisodes,
-                                        areCurrentlyWatched = isSeasonWatched,
-                                    )
-                                },
-                                onMarkPreviousSeasonsWatched = {
-                                    WatchingActions.togglePreviousEpisodesWatched(
-                                        meta = meta,
-                                        episodes = previousSeasonEpisodes,
-                                        areCurrentlyWatched = false,
-                                    )
-                                },
                             )
                         }
 
@@ -1947,6 +1914,71 @@ private fun DetailHeaderOverlay(
         onBack = onBack,
         onToggleSaved = onToggleSaved,
         modifier = Modifier.zIndex(2f),
+    )
+}
+
+/** Long-press menu of a season (poster or pill): mark the season, or the previous ones, as watched. */
+@Composable
+private fun SeasonActionsSheet(
+    meta: MetaDetails,
+    season: Int,
+    todayIsoDate: String,
+    watchedKeys: Set<String>,
+    progressByVideoId: Map<String, WatchProgressEntry>,
+    onDismiss: () -> Unit,
+) {
+    val seasonLabel = selectedSeasonLabel(season)
+    val seasonEpisodes = remember(meta, season, todayIsoDate) {
+        meta.releasedEpisodesForSeason(
+            seasonNumber = season,
+            todayIsoDate = todayIsoDate,
+        )
+    }
+    val previousSeasonEpisodes = remember(meta, season, todayIsoDate) {
+        val normalizedSelectedSeason = season.coerceAtLeast(0)
+        meta.releasedPlayableEpisodes(todayIsoDate)
+            .filter { episode ->
+                val episodeSeason = episode.season?.coerceAtLeast(0) ?: 0
+                episodeSeason > 0 && episodeSeason < normalizedSelectedSeason
+            }
+    }
+    val isSeasonWatched = remember(seasonEpisodes, watchedKeys, progressByVideoId) {
+        areEpisodesWatchedForActions(
+            meta = meta,
+            episodes = seasonEpisodes,
+            watchedKeys = watchedKeys,
+            progressByVideoId = progressByVideoId,
+        )
+    }
+    val canMarkPreviousSeasons = remember(previousSeasonEpisodes, watchedKeys, progressByVideoId) {
+        previousSeasonEpisodes.any { episode ->
+            !isEpisodeWatchedForActions(
+                meta = meta,
+                episode = episode,
+                watchedKeys = watchedKeys,
+                progressByVideoId = progressByVideoId,
+            )
+        }
+    }
+    SeasonWatchedActionSheet(
+        seasonLabel = seasonLabel,
+        isSeasonWatched = isSeasonWatched,
+        canMarkPreviousSeasons = canMarkPreviousSeasons,
+        onDismiss = onDismiss,
+        onToggleSeasonWatched = {
+            WatchingActions.toggleSeasonWatched(
+                meta = meta,
+                episodes = seasonEpisodes,
+                areCurrentlyWatched = isSeasonWatched,
+            )
+        },
+        onMarkPreviousSeasonsWatched = {
+            WatchingActions.togglePreviousEpisodesWatched(
+                meta = meta,
+                episodes = previousSeasonEpisodes,
+                areCurrentlyWatched = false,
+            )
+        },
     )
 }
 
