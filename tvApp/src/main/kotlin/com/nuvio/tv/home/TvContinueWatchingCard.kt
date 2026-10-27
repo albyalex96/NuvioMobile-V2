@@ -24,7 +24,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -47,6 +46,7 @@ import com.nuvio.app.tv.tvContinueWatchingArtwork
 import com.nuvio.app.tv.tvShouldBlurContinueWatchingArtwork
 import com.nuvio.tv.R
 import com.nuvio.tv.ui.TvCardMetrics
+import com.nuvio.tv.ui.TvBlurredImage
 import com.nuvio.tv.ui.TvRemoteImage
 import com.nuvio.tv.ui.TvRowProgressBar
 import com.nuvio.tv.ui.tvRowCardSurface
@@ -346,7 +346,11 @@ private fun remainingLabel(item: ContinueWatchingItem): String {
 
 @Composable
 private fun CardArtwork(url: String?, blurred: Boolean) {
-    TvRemoteImage(url = url, modifier = Modifier.fillMaxSize().then(if (blurred) Modifier.blur(12.dp) else Modifier))
+    if (blurred) {
+        TvBlurredImage(url = url, modifier = Modifier.fillMaxSize())
+    } else {
+        TvRemoteImage(url = url, modifier = Modifier.fillMaxSize())
+    }
 }
 
 @Composable

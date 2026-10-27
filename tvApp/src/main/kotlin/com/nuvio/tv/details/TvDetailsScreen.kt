@@ -80,7 +80,6 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.graphicsLayer
 import com.nuvio.app.core.ui.NuvioCardDepthSurface
 import com.nuvio.app.core.ui.nuvioCardDepth
@@ -117,6 +116,7 @@ import com.nuvio.tv.ui.TvRowPosterCard
 import com.nuvio.tv.ui.cardMetrics
 import com.nuvio.tv.ui.landscapeArtwork
 import com.nuvio.tv.ui.TvSectionTitle
+import com.nuvio.tv.ui.TvBlurredImage
 import com.nuvio.tv.ui.tvFocusable
 import kotlinx.coroutines.delay
 
@@ -1265,13 +1265,19 @@ private fun OverviewToggleButton(state: OverviewExpandState) {
 
 @Composable
 private fun EpisodeArtwork(model: TvDetailsModel, episode: MetaVideo, blurred: Boolean, modifier: Modifier) {
+    val artwork = episode.thumbnail ?: model.meta.background
+    val alpha = if (episode.available) 1f else 0.5f
+    if (blurred) {
+        // "Blur unwatched episodes" of the detail page settings (spoiler protection).
+        TvBlurredImage(url = artwork, alpha = alpha, contentDescription = episode.title, modifier = modifier)
+        return
+    }
     AsyncImage(
-        model = episode.thumbnail ?: model.meta.background,
+        model = artwork,
         contentDescription = episode.title,
         contentScale = ContentScale.Crop,
-        alpha = if (episode.available) 1f else 0.5f,
-        // "Blur unwatched episodes" of the detail page settings (spoiler protection).
-        modifier = modifier.then(if (blurred) Modifier.blur(18.dp) else Modifier),
+        alpha = alpha,
+        modifier = modifier,
     )
 }
 

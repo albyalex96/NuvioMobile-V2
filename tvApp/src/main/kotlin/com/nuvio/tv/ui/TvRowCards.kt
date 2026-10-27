@@ -26,7 +26,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -217,7 +216,7 @@ private fun BoxScope.LandscapeArtworkContent(artwork: TvLandscapeArtwork, title:
     val imageUrl = artwork.imageUrl
     if (artwork.fitImage && !imageUrl.isNullOrBlank()) {
         // Artwork not made for 16:9: blurred fill behind the whole, uncropped image.
-        TvRemoteImage(url = imageUrl, modifier = Modifier.fillMaxSize().blur(24.dp).alpha(0.45f))
+        TvBlurredImage(url = imageUrl, decodePx = TvBlurDecodeStrongPx, modifier = Modifier.fillMaxSize().alpha(0.45f))
         AsyncImage(
             model = imageUrl,
             contentDescription = null,

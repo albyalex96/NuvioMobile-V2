@@ -37,11 +37,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -50,6 +50,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import coil3.compose.LocalPlatformContext
+import coil3.request.ImageRequest
+import coil3.size.Precision
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.home.PosterShape
@@ -120,6 +123,45 @@ fun TvRemoteImage(
             )
         }
     }
+}
+
+/** Decode sizes (px) of [TvBlurredImage]: the smaller the decode, the stronger the blur. */
+const val TvBlurDecodeStrongPx = 24
+const val TvBlurDecodeMediumPx = 40
+
+/**
+ * Blurred copy of [url] without `Modifier.blur`: the image is decoded at a few dozen pixels and
+ * scaled up with bilinear filtering, which reads as a blur. `Modifier.blur` is a RenderEffect
+ * redrawn with the card on every frame (heavy on TV GPUs) and does nothing before Android 12;
+ * the tiny decode is done once and stays in the memory cache under its own key (the full-size
+ * image of the same URL is never reused for it, nor the other way round).
+ */
+@Composable
+fun TvBlurredImage(
+    url: String?,
+    modifier: Modifier = Modifier,
+    decodePx: Int = TvBlurDecodeMediumPx,
+    alpha: Float = 1f,
+    contentDescription: String? = null,
+) {
+    if (url.isNullOrBlank()) return
+    val context = LocalPlatformContext.current
+    val request = remember(context, url, decodePx) {
+        ImageRequest.Builder(context)
+            .data(url)
+            .size(decodePx)
+            .precision(Precision.EXACT)
+            .memoryCacheKey("$url#tvBlur$decodePx")
+            .build()
+    }
+    AsyncImage(
+        model = request,
+        contentDescription = contentDescription,
+        contentScale = ContentScale.Crop,
+        filterQuality = FilterQuality.Low,
+        alpha = alpha,
+        modifier = modifier,
+    )
 }
 
 @Composable
