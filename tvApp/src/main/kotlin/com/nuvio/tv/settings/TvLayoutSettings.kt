@@ -5,8 +5,8 @@ import android.content.SharedPreferences
 import android.os.Build
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import co.touchlab.kermit.Logger
 import com.nuvio.app.core.deeplink.ContinueWatchingLaunchAction
 import com.nuvio.app.core.storage.ProfileScopedKey
@@ -163,10 +163,10 @@ object TvLayoutSettingsRepository {
 /** TV layout of the active profile; recomposes on changes and after a profile switch. */
 @Composable
 fun rememberTvLayoutSettings(): TvLayoutSettings {
-    val profile by ProfileRepository.state.collectAsState()
+    val profile by ProfileRepository.state.collectAsStateWithLifecycle()
     val profileId = profile.activeProfile?.profileIndex
     TvLayoutSettingsRepository.ensureLoaded()
     LaunchedEffect(profileId) { TvLayoutSettingsRepository.ensureLoaded() }
-    val settings by TvLayoutSettingsRepository.settings.collectAsState()
+    val settings by TvLayoutSettingsRepository.settings.collectAsStateWithLifecycle()
     return settings
 }

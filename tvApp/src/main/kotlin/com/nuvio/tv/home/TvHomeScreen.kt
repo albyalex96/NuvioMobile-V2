@@ -34,10 +34,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.currentStateAsState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Row
@@ -289,7 +292,12 @@ private class TvRowsContentPadding(private val top: () -> Dp, private val bottom
 private fun TvHomeContent(model: TvHomeModel) {
     val settings = rememberTvLayoutSettings()
     val metrics = remember(settings) { settings.cardMetrics() }
-    val continueWatchingPrefs by ContinueWatchingPreferencesRepository.uiState.collectAsState()
+    val continueWatchingPrefs by ContinueWatchingPreferencesRepository.uiState.collectAsStateWithLifecycle()
+    // The root tabs keep a visited tab composed and RESUMED only while it is on screen: the hero
+    // carousel timer and the hero details stop while the home is hidden (other tab, details, player).
+    val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateAsState()
+    val screenActive = lifecycleState.isAtLeast(Lifecycle.State.RESUMED)
+    LaunchedEffect(screenActive) { log.d { if (screenActive) "Home on screen: hero resumed" else "Home hidden: hero paused" } }
     LaunchedEffect(Unit) { ContinueWatchingPreferencesRepository.ensureLoaded() }
     val requesters = remember { mutableMapOf<String, FocusRequester>() }
     val requesterFor = remember { { key: String -> requesters.getOrPut(key) { FocusRequester() } } }
@@ -325,7 +333,8 @@ private fun TvHomeContent(model: TvHomeModel) {
     }
     // NuvioTV enriches the settled hero (genres, runtime, badges, ratings): only once the focus
     // stops, a new focus cancels the request.
-    LaunchedEffect(focus, model.loadHeroDetails) {
+    LaunchedEffect(focus, model.loadHeroDetails, screenActive) {
+        if (!screenActive) return@LaunchedEffect
         snapshotFlow { focus.displayedHero }.collectLatest { hero ->
             if (hero == null || hero.detailsLoaded) return@collectLatest
             val source = hero.source ?: return@collectLatest
@@ -418,6 +427,7 @@ private fun TvHomeContent(model: TvHomeModel) {
                     heroIndex = heroIndex,
                     heroRequester = heroRequester,
                     heroHidden = { heroHidden },
+                    active = screenActive,
                     portraitMode = !settings.landscapePosters,
                     modifier = Modifier.fillMaxWidth().height(heroHeight),
                 )
@@ -565,14 +575,16 @@ private fun TvHomeHero(
     heroIndex: MutableIntState,
     heroRequester: FocusRequester,
     heroHidden: () -> Boolean,
+    active: Boolean,
     portraitMode: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val carouselItems = model.heroItems
     val activeIndex = activeHeroIndex(heroIndex.intValue, carouselItems.size)
     val carouselActive = carouselItems.isNotEmpty() && focus.focusedHero == null
-    LaunchedEffect(carouselActive, activeIndex, carouselItems.size) {
-        if (!carouselActive || carouselItems.size <= 1) return@LaunchedEffect
+    LaunchedEffect(carouselActive, activeIndex, carouselItems.size, active) {
+        // Hidden home: no slide change (and no backdrop crossfade or image load) off screen.
+        if (!active || !carouselActive || carouselItems.size <= 1) return@LaunchedEffect
         // A manual change restarts the wait (the effect is keyed on the index).
         delay(HERO_AUTO_ADVANCE_MS)
         heroIndex.intValue = (activeIndex + 1) % carouselItems.size
