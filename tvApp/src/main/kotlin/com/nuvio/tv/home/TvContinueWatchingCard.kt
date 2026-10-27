@@ -282,7 +282,7 @@ fun TvContinueWatchingCard(
     }
 }
 
-private class ContinueWatchingText(
+internal class ContinueWatchingText(
     val episode: String?,
     val episodeTitle: String?,
     val badge: String,
@@ -291,7 +291,7 @@ private class ContinueWatchingText(
 )
 
 @Composable
-private fun continueWatchingText(item: ContinueWatchingItem, short: Boolean, upcoming: Boolean): ContinueWatchingText {
+internal fun continueWatchingText(item: ContinueWatchingItem, short: Boolean, upcoming: Boolean): ContinueWatchingText {
     val season = item.seasonNumber
     val episodeNumber = item.episodeNumber
     val episode = if (season != null && episodeNumber != null) {

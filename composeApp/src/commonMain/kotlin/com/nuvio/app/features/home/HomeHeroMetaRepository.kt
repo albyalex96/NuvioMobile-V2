@@ -43,6 +43,8 @@ internal object HomeHeroMetaRepository {
     private val dispatcher = Dispatchers.Default.limitedParallelism(1)
     private val _metas = MutableStateFlow<Map<String, HomeHeroMeta>>(emptyMap())
     val metas: StateFlow<Map<String, HomeHeroMeta>> = _metas.asStateFlow()
+    /** Metas of [enrich], oldest first; only touched on [dispatcher]. */
+    private val focusedMetas = LinkedHashMap<String, HomeHeroMeta>()
 
     suspend fun load(items: List<MetaPreview>, ratingSettings: MdbListSettings?) {
         val keys = items.mapTo(mutableSetOf(), MetaPreview::stableKey)
@@ -72,6 +74,35 @@ internal object HomeHeroMetaRepository {
             val resolved = details.await() ?: return@coroutineScope
             update(key) { meta -> meta.copy(details = resolved) }
         }
+    }
+
+    /**
+     * Details of one title outside the carousel (the focused card of the TV home): genres, runtime,
+     * badges and MDBList ratings. Carousel metas are reused; the others are kept in a small cache.
+     */
+    suspend fun enrich(item: MetaPreview): MetaPreview {
+        val key = item.stableKey()
+        val meta = _metas.value[key] ?: withContext(dispatcher) { focusedMetas[key] } ?: run {
+            val mdbList = MdbListSettingsRepository.uiState.value
+            val ratingSettings = mdbList.takeIf { it.isActive && it.showOnHero }
+            val loaded = coroutineScope {
+                val details = async { fetchDetails(item) }
+                val ratings = ratingSettings
+                    ?.let { settings -> fetchRatings(item, settings) { details.await() } }
+                    .orEmpty()
+                HomeHeroMeta(details = details.await(), ratings = ratings)
+            }
+            // Nothing found: not cached, a later focus tries again.
+            if (loaded.details != null || loaded.ratings.isNotEmpty()) {
+                withContext(dispatcher) {
+                    focusedMetas.remove(key)
+                    focusedMetas[key] = loaded
+                    while (focusedMetas.size > FOCUSED_CACHE_SIZE) focusedMetas.remove(focusedMetas.keys.first())
+                }
+            }
+            loaded
+        }
+        return item.withHeroMeta(meta)
     }
 
     private fun update(key: String, transform: (HomeHeroMeta) -> HomeHeroMeta) {
@@ -121,6 +152,9 @@ internal fun MetaPreview.withHeroMeta(meta: HomeHeroMeta): MetaPreview {
         status = details?.status?.takeIf { it.isNotBlank() } ?: status,
         ageRating = details?.ageRating?.takeIf { it.isNotBlank() } ?: ageRating,
         language = details?.language?.takeIf { it.isNotBlank() } ?: language,
+        // Only filled when missing (continue watching items of the TV hero have neither).
+        releaseInfo = releaseInfo?.takeIf { it.isNotBlank() } ?: details?.releaseInfo,
+        description = description?.takeIf { it.isNotBlank() } ?: details?.description,
         externalRatings = meta.ratings,
     )
 }
@@ -160,3 +194,4 @@ internal fun rememberHomeHeroState(items: List<MetaPreview>): HomeHeroState {
 private const val DETAILS_FETCH_CONCURRENCY = 4
 private const val RATINGS_TIMEOUT_MS = 5_000L
 private const val LOAD_DEBOUNCE_MS = 400L
+private const val FOCUSED_CACHE_SIZE = 64

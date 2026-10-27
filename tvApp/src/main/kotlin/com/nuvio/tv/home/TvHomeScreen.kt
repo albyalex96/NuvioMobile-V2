@@ -3,6 +3,10 @@ package com.nuvio.tv.home
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -76,7 +80,10 @@ import com.nuvio.app.features.home.stableKey
 import com.nuvio.app.features.home.components.Top10RankNumber
 import com.nuvio.app.features.home.components.top10RankSpace
 import com.nuvio.app.features.watchprogress.ContinueWatchingItem
+import com.nuvio.app.tv.TvHeroMeta
+import com.nuvio.app.tv.TvHeroMetaRows
 import com.nuvio.app.tv.TvHomeModel
+import com.nuvio.app.tv.toTvHeroMeta
 import com.nuvio.app.tv.TvHomeRow
 import com.nuvio.app.tv.TvHomeStatus
 import com.nuvio.tv.R
@@ -110,6 +117,12 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.LayoutDirection
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.CancellationException
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.platform.LocalLayoutDirection
+import com.nuvio.app.features.collection.Collection
 import kotlin.math.roundToInt
 
 private val log = Logger.withTag("TvHome")
@@ -132,19 +145,38 @@ private const val HERO_COLLAPSE_ANIMATION_MS = 350
 /** NuvioTV never expands a focused poster sooner than this, even with a 0 s delay. */
 private const val MIN_EXPAND_DELAY_MS = 150L
 
-// Hero text block of the NuvioTV modern home.
-private const val HERO_TEXT_WIDTH_FRACTION = 0.5f
+// Hero text block of the NuvioTV modern home (`HeroTitleContent`).
+private const val HERO_TEXT_WIDTH_FRACTION = 0.42f
+private val HERO_TEXT_END_PADDING = 48.dp
 private val HERO_LOGO_HEIGHT = 100.dp
+private val HERO_LOGO_MIN_WIDTH = 100.dp
 private val HERO_LOGO_MAX_WIDTH = 220.dp
+private const val HERO_DESCRIPTION_MAX_LINES = 4
+/** NuvioTV shrinks the title and the plot a little with portrait posters (taller rows). */
+private const val HERO_PORTRAIT_TITLE_SCALE = 0.92f
+private const val HERO_PORTRAIT_DESCRIPTION_SCALE = 0.9f
 
-/** Data class: the hero [Crossfade]s compare it, a new but equal value must not restart them. */
+// Hero backdrop of the NuvioTV modern home (`ModernHeroMediaLayer`).
+private const val HERO_MEDIA_WIDTH_FRACTION = 0.72f
+private val HERO_MEDIA_END_OVERFLOW = 56.dp
+/** The backdrop ends just under the title of the first row (NuvioTV: row title + 14 dp). */
+private val HERO_MEDIA_BELOW_ROWS_TOP = 24.dp + 14.dp
+private const val HERO_BACKDROP_CROSSFADE_MS = 450
+
+/**
+ * Data class: the hero [Crossfade]s compare it, a new but equal value must not restart them.
+ * [source] is the title whose details complete [meta] once the focus settles on it.
+ */
 private data class HeroInfo(
     val key: String,
     val title: String,
     val logo: String?,
     val backdrop: String?,
-    val metaLine: String?,
+    val meta: TvHeroMeta,
     val description: String?,
+    val source: MetaPreview? = null,
+    val continueWatching: Boolean = false,
+    val detailsLoaded: Boolean = false,
 )
 
 @Composable
@@ -258,7 +290,7 @@ private fun TvHomeContent(model: TvHomeModel) {
     val requesterFor = remember { { key: String -> requesters.getOrPut(key) { FocusRequester() } } }
     val lastFocused = rememberSaveable { mutableStateOf<String?>(null) }
     val defaultHero = remember(model.heroItems, model.continueWatching) {
-        model.continueWatching.firstOrNull()?.let { heroOf(it, subtitle = null) }
+        model.continueWatching.firstOrNull()?.let { heroOf(it, subtitle = null, state = null) }
             ?: model.heroItems.firstOrNull()?.let(::heroOf)
     }
     val focus = remember { TvHomeFocusState(defaultHero, lastFocused) }
@@ -267,7 +299,6 @@ private fun TvHomeContent(model: TvHomeModel) {
     }
     val onCardFocused = remember(focus) { { key: String, hero: HeroInfo -> focus.onCardFocused(key, hero) } }
     val onPosterFocused = remember(focus) { { key: String, hero: HeroInfo -> focus.onPosterFocused(key, hero) } }
-    val onFolderFocused = remember(focus) { { focus.focusedPosterKey = null } }
     val rowsState = rememberLazyListState()
 
     LaunchedEffect(focus, settings.expandFocusedPoster, settings.expandDelaySeconds) {
@@ -285,6 +316,26 @@ private fun TvHomeContent(model: TvHomeModel) {
             next ?: return@collectLatest
             delay(HERO_FOLLOW_DELAY_MS)
             focus.displayedHero = next
+        }
+    }
+    // NuvioTV enriches the settled hero (genres, runtime, badges, ratings): only once the focus
+    // stops, a new focus cancels the request.
+    LaunchedEffect(focus, model.loadHeroDetails) {
+        snapshotFlow { focus.displayedHero }.collectLatest { hero ->
+            if (hero == null || hero.detailsLoaded) return@collectLatest
+            val source = hero.source ?: return@collectLatest
+            val details = try {
+                model.loadHeroDetails(source)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Throwable) {
+                log.w(error) { "Hero details could not be loaded" }
+                return@collectLatest
+            }
+            if (focus.displayedHero?.key == hero.key) {
+                focus.displayedHero = hero.withDetails(details)
+                log.d { "Hero details loaded" }
+            }
         }
     }
 
@@ -334,7 +385,13 @@ private fun TvHomeContent(model: TvHomeModel) {
         val heroHeight = maxHeight * (1f - if (settings.landscapePosters) 0.49f else 0.52f)
         if (heroBackdropVisible) {
             Box(modifier = Modifier.fillMaxSize().graphicsLayer { alpha = heroProgress.value }) {
-                TvHomeHeroBackdrop(model = model, focus = focus, heroIndex = heroIndex, fullScreen = settings.heroFullScreenBackdrop)
+                TvHomeHeroBackdrop(
+                    model = model,
+                    focus = focus,
+                    heroIndex = heroIndex,
+                    fullScreen = settings.heroFullScreenBackdrop,
+                    mediaHeight = heroHeight + (if (hasCarousel) HERO_ROWS_GAP else 0.dp) + HERO_MEDIA_BELOW_ROWS_TOP,
+                )
             }
         }
 
@@ -356,6 +413,7 @@ private fun TvHomeContent(model: TvHomeModel) {
                     heroIndex = heroIndex,
                     heroRequester = heroRequester,
                     heroHidden = { heroHidden },
+                    portraitMode = !settings.landscapePosters,
                     modifier = Modifier.fillMaxWidth().height(heroHeight),
                 )
             }
@@ -427,7 +485,7 @@ private fun TvHomeContent(model: TvHomeModel) {
                             settings = settings,
                             metrics = metrics,
                             requesterFor = requesterFor,
-                            onFocused = onFolderFocused,
+                            onFocused = onCardFocused,
                         )
                         is TvHomeRow.Top10 -> Top10Row(
                             row = row,
@@ -474,9 +532,16 @@ private fun rememberShownHero(model: TvHomeModel, focus: TvHomeFocusState, heroI
 }
 
 @Composable
-private fun TvHomeHeroBackdrop(model: TvHomeModel, focus: TvHomeFocusState, heroIndex: MutableIntState, fullScreen: Boolean) {
+private fun TvHomeHeroBackdrop(
+    model: TvHomeModel,
+    focus: TvHomeFocusState,
+    heroIndex: MutableIntState,
+    fullScreen: Boolean,
+    mediaHeight: Dp,
+) {
     val shownHero by rememberShownHero(model, focus, heroIndex)
-    HeroBackdrop(url = shownHero?.backdrop, fullScreen = fullScreen)
+    val backdrop by remember { derivedStateOf { shownHero?.backdrop } }
+    HeroBackdrop(url = backdrop, fullScreen = fullScreen, mediaHeight = mediaHeight)
 }
 
 /**
@@ -490,6 +555,7 @@ private fun TvHomeHero(
     heroIndex: MutableIntState,
     heroRequester: FocusRequester,
     heroHidden: () -> Boolean,
+    portraitMode: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val carouselItems = model.heroItems
@@ -506,9 +572,12 @@ private fun TvHomeHero(
         // The carousel dots get their own band below the hero text.
         HeroInfoPanel(
             hero = shownHero,
+            portraitMode = portraitMode,
+            showImdbRating = model.showImdbRating,
+            showMdbListRatings = model.showMdbListRatings,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = if (carouselItems.isNotEmpty()) HERO_DOTS_BAND else 0.dp),
+                .padding(bottom = if (carouselItems.isNotEmpty()) HERO_DOTS_BAND else HERO_ROWS_GAP),
         )
         if (carouselItems.isNotEmpty()) {
             HeroCarouselFocusTarget(
@@ -600,107 +669,183 @@ private fun HeroCarouselFocusTarget(
     }
 }
 
+/**
+ * NuvioTV `ModernHeroMediaLayer` + `ModernHeroGradientLayer`: the backdrop fills the top right of
+ * the screen (or the whole screen with "Fullscreen hero backdrop") and fades into the background
+ * on the start side and along the bottom edge. The gradients are drawn in a single draw pass.
+ */
 @Composable
-private fun HeroBackdrop(url: String?, fullScreen: Boolean) {
+private fun HeroBackdrop(url: String?, fullScreen: Boolean, mediaHeight: Dp) {
     val background = MaterialTheme.nuvio.colors.background
+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
+    val mediaModifier = if (fullScreen) {
+        Modifier.fillMaxSize()
+    } else {
+        // Slightly past the end edge, like NuvioTV, so the artwork does not stop at the overscan.
+        Modifier
+            .fillMaxWidth(HERO_MEDIA_WIDTH_FRACTION)
+            .height(mediaHeight)
+            .offset(x = if (rtl) -HERO_MEDIA_END_OVERFLOW else HERO_MEDIA_END_OVERFLOW)
+    }
     Box(modifier = Modifier.fillMaxSize()) {
-        Crossfade(
-            targetState = url,
-            animationSpec = tween(450),
-            label = "tvHomeBackdrop",
-            // "Fullscreen hero backdrop" (NuvioTV): the artwork fills the whole screen.
-            modifier = if (fullScreen) {
-                Modifier.fillMaxSize()
-            } else {
-                Modifier
-                    .align(Alignment.TopEnd)
-                    .fillMaxWidth(0.72f)
-                    .fillMaxHeight(0.72f)
-            },
-        ) { backdrop ->
-            if (!backdrop.isNullOrBlank()) {
-                AsyncImage(
-                    model = backdrop,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    alignment = Alignment.TopCenter,
-                    modifier = Modifier.fillMaxSize(),
-                )
+        Box(modifier = Modifier.align(Alignment.TopEnd).then(mediaModifier)) {
+            Crossfade(
+                targetState = url,
+                animationSpec = tween(HERO_BACKDROP_CROSSFADE_MS),
+                label = "tvHomeBackdrop",
+                modifier = Modifier.fillMaxSize(),
+            ) { backdrop ->
+                if (!backdrop.isNullOrBlank()) {
+                    AsyncImage(
+                        model = backdrop,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        alignment = Alignment.TopEnd,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
             }
+            Box(modifier = Modifier.fillMaxSize().heroGradient(background, fullScreen, rtl))
         }
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.horizontalGradient(
-                        0f to background,
-                        0.32f to background.copy(alpha = 0.92f),
-                        0.6f to background.copy(alpha = 0.25f),
-                        1f to Color.Transparent,
-                    ),
-                ),
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        0f to Color.Transparent,
-                        0.4f to background.copy(alpha = 0.35f),
-                        0.68f to background,
-                    ),
-                ),
-        )
     }
 }
 
-@Composable
-private fun HeroInfoPanel(hero: HeroInfo?, modifier: Modifier = Modifier) {
-    Crossfade(targetState = hero, animationSpec = tween(300), label = "tvHomeHeroInfo", modifier = modifier) { info ->
-        if (info == null) return@Crossfade
-        Column(
-            modifier = Modifier
-                .fillMaxHeight()
-                .fillMaxWidth(HERO_TEXT_WIDTH_FRACTION)
-                .padding(start = TvDimens.rowPadding, top = TvDimens.chromeTopInset),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            if (!info.logo.isNullOrBlank()) {
-                AsyncImage(
-                    model = info.logo,
-                    contentDescription = info.title,
-                    contentScale = ContentScale.Fit,
-                    alignment = Alignment.CenterStart,
-                    modifier = Modifier
-                        .height(HERO_LOGO_HEIGHT)
-                        .widthIn(max = HERO_LOGO_MAX_WIDTH),
+private fun Modifier.heroGradient(background: Color, fullScreen: Boolean, rtl: Boolean): Modifier =
+    drawWithCache {
+        val fadeWidth = size.width * if (fullScreen) 0.65f else 0.45f
+        val horizontalStops = if (fullScreen) {
+            arrayOf(
+                0f to background,
+                0.22f to background.copy(alpha = 0.90f),
+                0.46f to background.copy(alpha = 0.80f),
+                0.76f to background.copy(alpha = 0.42f),
+                1f to Color.Transparent,
+            )
+        } else {
+            arrayOf(
+                0f to background,
+                0.22f to background.copy(alpha = 0.86f),
+                0.46f to background.copy(alpha = 0.56f),
+                0.76f to background.copy(alpha = 0.16f),
+                1f to Color.Transparent,
+            )
+        }
+        val horizontal = if (rtl) {
+            Brush.horizontalGradient(*horizontalStops, startX = size.width, endX = size.width - fadeWidth)
+        } else {
+            Brush.horizontalGradient(*horizontalStops, startX = 0f, endX = fadeWidth)
+        }
+        val bottomStart = size.height * if (fullScreen) 0.64f else 0.82f
+        val vertical = Brush.verticalGradient(
+            *if (fullScreen) {
+                arrayOf(
+                    0f to Color.Transparent,
+                    0.30f to background.copy(alpha = 0.35f),
+                    0.60f to background.copy(alpha = 0.75f),
+                    1f to background,
                 )
             } else {
-                Text(
-                    text = info.title,
-                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold, fontSize = 28.sp),
-                    color = MaterialTheme.nuvio.colors.textPrimary,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
+                arrayOf(
+                    0f to Color.Transparent,
+                    0.40f to background.copy(alpha = 0.25f),
+                    0.75f to background.copy(alpha = 0.65f),
+                    1f to background,
                 )
-            }
-            if (!info.metaLine.isNullOrBlank()) {
-                Text(
-                    text = info.metaLine,
-                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-                    color = MaterialTheme.nuvio.colors.textSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+            },
+            startY = bottomStart,
+            endY = size.height,
+        )
+        onDrawBehind {
+            drawRect(
+                brush = horizontal,
+                topLeft = Offset(if (rtl) size.width - fadeWidth else 0f, 0f),
+                size = Size(fadeWidth, size.height),
+            )
+            drawRect(
+                brush = vertical,
+                topLeft = Offset(0f, bottomStart),
+                size = Size(size.width, size.height - bottomStart),
+            )
+        }
+    }
+
+/**
+ * NuvioTV `HeroTitleContent`: logo (or title), the metadata lines and the plot, anchored to the
+ * bottom of the hero right above the rows. The panel fades only when the title changes: details
+ * arriving for the same title update it in place.
+ */
+@Composable
+private fun HeroInfoPanel(
+    hero: HeroInfo?,
+    portraitMode: Boolean,
+    showImdbRating: Boolean,
+    showMdbListRatings: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val headline = MaterialTheme.typography.headlineLarge
+    val body = MaterialTheme.typography.bodyMedium
+    val titleStyle = remember(headline, portraitMode) {
+        val scale = if (portraitMode) HERO_PORTRAIT_TITLE_SCALE else 1f
+        headline.copy(fontWeight = FontWeight.Bold, fontSize = headline.fontSize * scale, lineHeight = headline.lineHeight * scale)
+    }
+    val descriptionStyle = remember(body, portraitMode) {
+        val scale = if (portraitMode) HERO_PORTRAIT_DESCRIPTION_SCALE else 1f
+        body.copy(fontSize = body.fontSize * scale, lineHeight = body.lineHeight * scale)
+    }
+    AnimatedContent(
+        targetState = hero,
+        transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(300)) },
+        contentKey = { info -> info?.key },
+        label = "tvHomeHeroInfo",
+        modifier = modifier,
+    ) { info ->
+        if (info == null) return@AnimatedContent
+        Box(
+            contentAlignment = Alignment.BottomStart,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(start = TvDimens.rowPadding, end = HERO_TEXT_END_PADDING, top = TvDimens.chromeTopInset),
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(HERO_TEXT_WIDTH_FRACTION),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                var logoFailed by remember(info.logo) { mutableStateOf(false) }
+                if (!info.logo.isNullOrBlank() && !logoFailed) {
+                    AsyncImage(
+                        model = info.logo,
+                        contentDescription = info.title,
+                        contentScale = ContentScale.Fit,
+                        alignment = Alignment.CenterStart,
+                        onError = { logoFailed = true },
+                        modifier = Modifier
+                            .height(HERO_LOGO_HEIGHT)
+                            .widthIn(min = HERO_LOGO_MIN_WIDTH, max = HERO_LOGO_MAX_WIDTH)
+                            .fillMaxWidth(),
+                    )
+                } else if (info.title.isNotBlank()) {
+                    Text(
+                        text = info.title,
+                        style = titleStyle,
+                        color = MaterialTheme.nuvio.colors.textPrimary,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+                TvHeroMetaRows(
+                    meta = info.meta,
+                    showImdbRating = showImdbRating,
+                    showMdbListRatings = showMdbListRatings,
                 )
-            }
-            if (!info.description.isNullOrBlank()) {
-                Text(
-                    text = info.description,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.nuvio.colors.textSecondary,
-                    maxLines = 3,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                if (!info.description.isNullOrBlank()) {
+                    Text(
+                        text = info.description,
+                        style = descriptionStyle,
+                        color = MaterialTheme.nuvio.colors.textPrimary,
+                        maxLines = HERO_DESCRIPTION_MAX_LINES,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }
@@ -725,6 +870,7 @@ private fun ContinueWatchingRow(
         items(items, key = { item -> "$keyPrefix:${continueWatchingKey(item)}" }) { item ->
             val key = "$keyPrefix:${continueWatchingKey(item)}"
             val itemSubtitle = subtitle(item)
+            val state = continueWatchingText(item, short = false, upcoming = upcoming).badge
             TvContinueWatchingCard(
                 item = item,
                 style = settings.continueWatchingStyle,
@@ -734,7 +880,7 @@ private fun ContinueWatchingRow(
                 upcoming = upcoming,
                 onClick = { model.onContinueWatchingClick(item) },
                 onLongClick = model.onContinueWatchingLongClick?.let { longClick -> { longClick(item) } },
-                onFocused = { onFocused(key, heroOf(item, itemSubtitle)) },
+                onFocused = { onFocused(key, heroOf(item, itemSubtitle, state)) },
                 modifier = Modifier.focusRequester(requesterFor(key)),
             )
         }
@@ -868,7 +1014,7 @@ private fun FoldersRow(
     settings: TvLayoutSettings,
     metrics: TvCardMetrics,
     requesterFor: (String) -> FocusRequester,
-    onFocused: () -> Unit,
+    onFocused: (String, HeroInfo) -> Unit,
 ) {
     val onFolderClick = model.onFolderClick ?: return
     // The folder's own tile shape (collection editor) wins over the global landscape posters setting.
@@ -887,7 +1033,7 @@ private fun FoldersRow(
                     showLabel = settings.posterLabels,
                     watched = false,
                     onClick = { onFolderClick(row.collection.id, folder.id) },
-                    onFocused = onFocused,
+                    onFocused = { onFocused(key, heroOf(row.collection, folder)) },
                     modifier = modifier,
                 )
             } else {
@@ -900,7 +1046,7 @@ private fun FoldersRow(
                     showLabel = settings.posterLabels,
                     watched = false,
                     onClick = { onFolderClick(row.collection.id, folder.id) },
-                    onFocused = onFocused,
+                    onFocused = { onFocused(key, heroOf(row.collection, folder)) },
                     modifier = modifier,
                 )
             }
@@ -963,19 +1109,51 @@ private fun heroOf(item: MetaPreview): HeroInfo = HeroInfo(
     title = item.name,
     logo = item.logo,
     backdrop = item.banner ?: item.landscapePoster ?: item.poster,
-    metaLine = listOfNotNull(
-        item.releaseInfo?.takeIf { it.isNotBlank() }?.let(::formatReleaseDateForDisplay),
-        item.imdbRating?.takeIf { it.isNotBlank() }?.let { "★ $it" },
-        item.genres.take(3).takeIf { it.isNotEmpty() }?.joinToString(", "),
-    ).joinToString("  ·  ").ifBlank { null },
+    meta = item.toTvHeroMeta(),
     description = item.description,
+    source = item,
 )
 
-private fun heroOf(item: ContinueWatchingItem, subtitle: String?): HeroInfo = HeroInfo(
+/** NuvioTV continue watching preview: the episode instead of the type, the watch state on line two. */
+private fun heroOf(item: ContinueWatchingItem, subtitle: String?, state: String?): HeroInfo = HeroInfo(
     key = "cw:${continueWatchingKey(item)}",
     title = item.title,
     logo = item.logo,
     backdrop = item.background ?: item.imageUrl ?: item.poster,
-    metaLine = subtitle,
+    meta = TvHeroMeta(type = item.parentMetaType, episodeLabel = subtitle, highlight = state),
     description = item.pauseDescription,
+    source = MetaPreview(id = item.parentMetaId, type = item.parentMetaType, name = item.title),
+    continueWatching = true,
 )
+
+/** Folder of a collection: its hero backdrop and title logo (NuvioTV `buildCollectionFolderItem`). */
+private fun heroOf(collection: Collection, folder: CollectionFolder): HeroInfo = HeroInfo(
+    key = "folder:${collection.id}:${folder.id}",
+    title = when {
+        folder.hideTitle -> ""
+        !folder.coverEmoji.isNullOrBlank() -> "${folder.coverEmoji}  ${folder.title}"
+        else -> folder.title
+    },
+    logo = folder.titleLogoUrl,
+    backdrop = listOf(folder.heroBackdropUrl, folder.coverImageUrl, collection.backdropImageUrl)
+        .firstOrNull { !it.isNullOrBlank() },
+    meta = TvHeroMeta(),
+    description = null,
+)
+
+/**
+ * Hero completed with the details of its title. A continue watching item keeps its own lines
+ * (episode, watch state) and only gains the genre and the year, like NuvioTV.
+ */
+private fun HeroInfo.withDetails(details: MetaPreview): HeroInfo {
+    val detailsMeta = details.toTvHeroMeta()
+    return copy(
+        meta = if (continueWatching) {
+            meta.copy(genre = meta.genre ?: detailsMeta.genre, releaseInfo = meta.releaseInfo ?: detailsMeta.releaseInfo)
+        } else {
+            detailsMeta
+        },
+        description = description?.takeIf { it.isNotBlank() } ?: details.description,
+        detailsLoaded = true,
+    )
+}

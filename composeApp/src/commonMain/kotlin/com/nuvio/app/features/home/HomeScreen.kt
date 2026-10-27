@@ -1005,6 +1005,9 @@ fun HomeScreen(
                     AddonRepository.refreshAll()
                     HomeRepository.refresh(addonsUiState.addons.enabledAddons(), force = true)
                 },
+                heroItems = homeHeroState.items,
+                showImdbRating = homeHeroState.showImdbRating,
+                showMdbListRatings = homeHeroState.showMdbListRatings,
             ),
         )
         return

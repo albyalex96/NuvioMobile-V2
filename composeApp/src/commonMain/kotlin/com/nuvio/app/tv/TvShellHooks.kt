@@ -44,6 +44,7 @@ import com.nuvio.app.features.details.MetaVideo
 import com.nuvio.app.features.details.groupedEpisodesForDisplay
 import com.nuvio.app.features.home.HomeCatalogSection
 import com.nuvio.app.features.home.HomeCatalogSettingsItem
+import com.nuvio.app.features.home.HomeHeroMetaRepository
 import com.nuvio.app.features.home.HomeUiState
 import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.home.canOpenCatalog
@@ -193,6 +194,9 @@ internal fun buildTvHomeModel(
     onCatalogClick: ((HomeCatalogSection) -> Unit)?,
     onFolderClick: ((collectionId: String, folderId: String) -> Unit)?,
     onRetry: () -> Unit,
+    heroItems: List<MetaPreview> = homeUiState.heroItems,
+    showImdbRating: Boolean = true,
+    showMdbListRatings: Boolean = false,
 ): TvHomeModel {
     val top10Rows = homeUiState.top10Rows.map { row ->
         TvHomeRow.Top10(key = row.key, title = top10Titles[row.kind].orEmpty(), items = row.items)
@@ -231,7 +235,7 @@ internal fun buildTvHomeModel(
     return TvHomeModel(
         status = status,
         errorMessage = homeUiState.errorMessage ?: addonManifestErrorMessage,
-        heroItems = homeUiState.heroItems,
+        heroItems = heroItems,
         continueWatching = visibleContinueWatching,
         upcoming = visibleUpcoming,
         rows = rows,
@@ -243,8 +247,14 @@ internal fun buildTvHomeModel(
         onCatalogClick = onCatalogClick,
         onFolderClick = onFolderClick,
         onRetry = onRetry,
+        showImdbRating = showImdbRating,
+        showMdbListRatings = showMdbListRatings,
+        loadHeroDetails = LoadTvHeroDetails,
     )
 }
+
+// Shared instance, like the no-op callbacks: keeps rebuilt models equal.
+private val LoadTvHeroDetails: suspend (MetaPreview) -> MetaPreview = { item -> HomeHeroMetaRepository.enrich(item) }
 
 internal fun buildTvDetailsModel(
     meta: MetaDetails,

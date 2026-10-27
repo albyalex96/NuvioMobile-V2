@@ -135,7 +135,15 @@ data class TvHomeModel(
     val onCatalogClick: ((HomeCatalogSection) -> Unit)?,
     val onFolderClick: ((collectionId: String, folderId: String) -> Unit)?,
     val onRetry: () -> Unit,
+    /** "Show overall ratings" setting: IMDb rating on the hero. */
+    val showImdbRating: Boolean = true,
+    /** MDBList active with "Show on hero": external ratings on the hero. */
+    val showMdbListRatings: Boolean = false,
+    /** Details of the title on the hero (genres, runtime, badges, ratings), cached; the item itself when unavailable. */
+    val loadHeroDetails: suspend (MetaPreview) -> MetaPreview = NoHeroDetails,
 )
+
+private val NoHeroDetails: suspend (MetaPreview) -> MetaPreview = { it }
 
 @Immutable
 class TvDetailsModel(
