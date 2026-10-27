@@ -11,6 +11,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.launch
+import com.nuvio.app.features.downloads.season.SeasonDownloadRepository
 
 @RequiresApi(34)
 class DownloadsTransferJobService : JobService() {
@@ -40,8 +41,10 @@ class DownloadsTransferJobService : JobService() {
                     updateTransferredNetworkBytes(params, updated.item.downloadedBytes, 0L)
                     DownloadsLiveStatusPlatform.notifyTransfer(updated.item)
                 }
-                jobFinished(params, retry)
                 scheduler.notifyCurrent(fileName)
+                // The job keeps the process alive while the next episodes of a season download start.
+                if (!retry) SeasonDownloadRepository.awaitNextEpisodes(SEASON_HANDOFF_TIMEOUT_MS)
+                jobFinished(params, retry)
             } finally {
                 if (runs[generation] === currentCoroutineContext()[Job]) runs.remove(generation)
             }

@@ -86,6 +86,7 @@ import com.nuvio.app.core.ui.NuvioBackButton
 import com.nuvio.app.core.ui.NuvioCardDepthSurface
 import com.nuvio.app.core.ui.NuvioPosterZoomActionOverlay
 import com.nuvio.app.core.ui.NuvioToastController
+import com.nuvio.app.features.downloads.season.SeasonDownloadRepository
 import com.nuvio.app.core.ui.PosterZoomAnchor
 import com.nuvio.app.core.ui.PosterZoomAnchorHolder
 import com.nuvio.app.core.ui.PosterZoomOverlayAction
@@ -260,6 +261,7 @@ fun MetaDetailsScreen(
     var selectedEpisodeZoomAnchor by remember(type, id) { mutableStateOf<PosterZoomAnchor?>(null) }
     val episodeOverlayHazeState = rememberHazeState()
     var selectedSeasonForActions by remember(type, id) { mutableStateOf<Int?>(null) }
+    val seasonAlreadyDownloadedText = stringResource(Res.string.season_download_all_downloaded)
     var showAiAssistantSheet by remember(type, id) { mutableStateOf(false) }
     val aiAssistantSettings by remember {
         AiAssistantRepository.ensureLoaded()
@@ -1552,6 +1554,20 @@ fun MetaDetailsScreen(
                                 watchedKeys = watchedUiState.watchedKeys,
                                 progressByVideoId = progressByVideoId,
                                 onDismiss = { selectedSeasonForActions = null },
+                                // The stream of the first episode is picked in the streams screen.
+                                onDownloadSeason = if (onPlayManually != null && meta.type == "series") {
+                                    { episodes ->
+                                        val request = SeasonDownloadRepository.requestSeason(meta, selectedSeason, episodes)
+                                        if (request == null) {
+                                            NuvioToastController.show(seasonAlreadyDownloadedText)
+                                        } else {
+                                            episodes.firstOrNull { it.episode == request.firstEpisode.episodeNumber }
+                                                ?.let(onEpisodeManualPlayClick)
+                                        }
+                                    }
+                                } else {
+                                    null
+                                },
                             )
                         }
 
@@ -1926,6 +1942,7 @@ private fun SeasonActionsSheet(
     watchedKeys: Set<String>,
     progressByVideoId: Map<String, WatchProgressEntry>,
     onDismiss: () -> Unit,
+    onDownloadSeason: ((List<MetaVideo>) -> Unit)? = null,
 ) {
     val seasonLabel = selectedSeasonLabel(season)
     val seasonEpisodes = remember(meta, season, todayIsoDate) {
@@ -1979,6 +1996,9 @@ private fun SeasonActionsSheet(
                 areCurrentlyWatched = false,
             )
         },
+        onDownloadSeason = onDownloadSeason
+            ?.takeIf { seasonEpisodes.isNotEmpty() }
+            ?.let { download -> { download(seasonEpisodes) } },
     )
 }
 

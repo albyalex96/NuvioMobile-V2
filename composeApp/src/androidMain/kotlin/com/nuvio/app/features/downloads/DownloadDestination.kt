@@ -77,18 +77,35 @@ internal class FileDownloadDestination(
     }
 }
 
-/** A folder picked through the Storage Access Framework; files are written through the provider. */
+/**
+ * A folder picked through the Storage Access Framework; files are written through the provider,
+ * in the sub-folders of [folderPath] (series and season) when it is not empty.
+ */
 internal class TreeDownloadDestination(
     private val context: Context,
     treeUri: Uri,
     private val fileName: String,
+    private val folderPath: List<String> = emptyList(),
 ) : DownloadDestination {
-    private val tree = SafDownloadTree(context, treeUri)
+    private val root = SafDownloadTree(context, treeUri)
+    private var folder: SafDownloadTree? = null
     private val partialName = "$fileName.part"
 
-    override fun partialLength(): Long = tree.find(partialName)?.sizeBytes ?: 0L
+    /** The folder of the file; looked up once, and created only when something is written. */
+    private fun tree(create: Boolean): SafDownloadTree? {
+        folder?.let { return it }
+        val resolved = if (folderPath.isEmpty()) root else root.directory(folderPath, create)
+        folder = resolved
+        return resolved
+    }
+
+    private fun writableTree(): SafDownloadTree =
+        tree(create = true) ?: throw FileNotFoundException("Cannot create the download folder")
+
+    override fun partialLength(): Long = tree(create = false)?.find(partialName)?.sizeBytes ?: 0L
 
     override fun openPartial(keepBytes: Long): FileOutputStream {
+        val tree = writableTree()
         val uri = tree.find(partialName)?.uri ?: tree.createFile(partialName)
         // "rw" + explicit truncate: "w" does not truncate on every provider and "wa" is not always supported.
         val descriptor = context.contentResolver.openFileDescriptor(uri, "rw")
@@ -104,10 +121,10 @@ internal class TreeDownloadDestination(
         return output
     }
 
-    override fun completedFile(): CompletedDownloadFile? =
-        tree.find(fileName)?.let { CompletedDownloadFile(it.uri.toString(), it.sizeBytes) }
+    override fun completedFile(): CompletedDownloadFile? = completedFile(fileName)
 
     override fun completePartial(): CompletedDownloadFile {
+        val tree = writableTree()
         val partial = tree.find(partialName) ?: throw IOException("Could not finalize the downloaded file")
         val renamed = try {
             tree.rename(partial.uri, fileName)
@@ -118,13 +135,14 @@ internal class TreeDownloadDestination(
     }
 
     override fun deletePartial() {
-        tree.find(partialName)?.let { SafDownloadTree.deleteDocument(context, it.uri) }
+        tree(create = false)?.find(partialName)?.let { SafDownloadTree.deleteDocument(context, it.uri) }
     }
 
     override fun completedFile(name: String): CompletedDownloadFile? =
-        tree.find(name)?.let { CompletedDownloadFile(it.uri.toString(), it.sizeBytes) }
+        tree(create = false)?.find(name)?.let { CompletedDownloadFile(it.uri.toString(), it.sizeBytes) }
 
     override fun adoptFile(source: File, name: String): CompletedDownloadFile {
+        val tree = writableTree()
         val partial = "$name.part"
         val uri = tree.find(partial)?.uri ?: tree.createFile(partial)
         val descriptor = context.contentResolver.openFileDescriptor(uri, "rw")

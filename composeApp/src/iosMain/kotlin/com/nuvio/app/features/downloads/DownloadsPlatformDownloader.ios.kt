@@ -68,6 +68,8 @@ fun pauseDownloadsForAppBackground() {
 internal actual object DownloadsPlatformDownloader {
     actual val supportsHls: Boolean = false
 
+    actual val supportsEpisodeFolders: Boolean = false
+
     actual fun start(
         request: DownloadPlatformRequest,
         onProgress: (downloadedBytes: Long, totalBytes: Long?, conversionProgress: Float?) -> Unit,

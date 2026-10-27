@@ -16,6 +16,9 @@ internal expect object DownloadsPlatformDownloader {
     /** Whether HLS streams can be downloaded (segments fetched and merged into one file). */
     val supportsHls: Boolean
 
+    /** Whether files can be saved in sub-folders ([DownloadItem.folderPath], [DownloadItem.displayFileName]). */
+    val supportsEpisodeFolders: Boolean
+
     fun start(
         request: DownloadPlatformRequest,
         onProgress: (downloadedBytes: Long, totalBytes: Long?, conversionProgress: Float?) -> Unit,

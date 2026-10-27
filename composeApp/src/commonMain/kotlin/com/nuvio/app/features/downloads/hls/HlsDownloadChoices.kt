@@ -2,6 +2,7 @@ package com.nuvio.app.features.downloads.hls
 
 import com.nuvio.app.features.player.languageMatchesPreference
 import com.nuvio.app.features.player.normalizeLanguageCode
+import kotlinx.serialization.Serializable
 
 /** Localized words used by the track labels; kept apart so the label rules stay testable. */
 data class HlsLabelStrings(
@@ -26,6 +27,20 @@ data class HlsTrackOption(
     val label: String,
     /** Audio carried inside the video segments (no own playlist). */
     val isMuxed: Boolean,
+)
+
+/**
+ * The choices of the HLS download dialog in a form that can be applied to the playlist of another
+ * episode: the season downloads ask once and pick the same quality and languages for every episode.
+ */
+@Serializable
+data class HlsDownloadPreferences(
+    val height: Int? = null,
+    val bandwidth: Long? = null,
+    /** Languages (or names, without a language) of the chosen audio tracks. */
+    val audioLanguages: List<String> = emptyList(),
+    val subtitleLanguages: List<String> = emptyList(),
+    val forcedSubtitleLanguages: List<String> = emptyList(),
 )
 
 /** Everything the HLS download dialog can offer for one stream. */
@@ -112,6 +127,57 @@ class HlsDownloadChoices(
         )
     }
 
+    fun preferencesFor(
+        video: HlsVideoOption,
+        audio: List<HlsTrackOption>,
+        subtitles: List<HlsTrackOption>,
+    ): HlsDownloadPreferences = HlsDownloadPreferences(
+        height = video.variant?.height,
+        bandwidth = video.variant?.let { it.averageBandwidth ?: it.bandwidth },
+        audioLanguages = audio.mapNotNull { it.rendition.languageKey }.distinct(),
+        subtitleLanguages = subtitles.filterNot { it.rendition.forced }.mapNotNull { it.rendition.languageKey }.distinct(),
+        forcedSubtitleLanguages = subtitles.filter { it.rendition.forced }.mapNotNull { it.rendition.languageKey }.distinct(),
+    )
+
+    /**
+     * Download of this playlist that follows [preferences]: the same height (the closest bitrate
+     * among equal heights, otherwise the best one below), one track per preferred audio language
+     * (the default audio when none matches) and the subtitles in the same languages.
+     */
+    fun specFor(preferences: HlsDownloadPreferences, durationSeconds: Double?): HlsDownloadSpec {
+        val video = videoFor(preferences)
+        val audioOptions = audioOptions(video)
+        val matchedAudio = preferences.audioLanguages.mapNotNull { language ->
+            audioOptions.firstOrNull { languageMatchesPreference(it.rendition.languageKey, language) }
+        }.distinct()
+        val audio = matchedAudio.ifEmpty {
+            val defaults = defaultAudioIds(audioOptions)
+            audioOptions.filter { it.id in defaults }
+        }
+        val subtitles = subtitleOptions(video).filter { option ->
+            val languages = if (option.rendition.forced) preferences.forcedSubtitleLanguages else preferences.subtitleLanguages
+            languages.any { languageMatchesPreference(option.rendition.languageKey, it) }
+        }.distinctBy { it.rendition.languageKey?.lowercase() to it.rendition.forced }
+        return buildSpec(video, audio, subtitles, durationSeconds)
+    }
+
+    private fun videoFor(preferences: HlsDownloadPreferences): HlsVideoOption {
+        val target = preferences.height ?: return videoOptions.closestBandwidth(preferences.bandwidth)
+        val sameHeight = videoOptions.filter { it.variant?.height == target }
+        if (sameHeight.isNotEmpty()) return sameHeight.closestBandwidth(preferences.bandwidth)
+        // Options are sorted from the highest: the first one below the target, else the lowest above.
+        return videoOptions.firstOrNull { (it.variant?.height ?: 0) in 1 until target }
+            ?: videoOptions.last()
+    }
+
+    private fun List<HlsVideoOption>.closestBandwidth(bandwidth: Long?): HlsVideoOption {
+        if (bandwidth == null) return first()
+        return minBy { option ->
+            val optionBandwidth = option.variant?.let { it.averageBandwidth ?: it.bandwidth } ?: return@minBy Long.MAX_VALUE
+            kotlin.math.abs(optionBandwidth - bandwidth)
+        }
+    }
+
     private fun HlsTrackOption.toTrack(isDefault: Boolean) = HlsDownloadTrack(
         playlistUrl = rendition.uri!!,
         language = rendition.language,
@@ -139,6 +205,9 @@ class HlsDownloadChoices(
         }
     }
 }
+
+private val HlsRendition.languageKey: String?
+    get() = language?.takeIf { it.isNotBlank() } ?: name?.takeIf { it.isNotBlank() }
 
 /** Drops repeated renditions: same playlist, or same language, name and channels. */
 private fun List<HlsRendition>.distinctRenditions(): List<HlsRendition> =

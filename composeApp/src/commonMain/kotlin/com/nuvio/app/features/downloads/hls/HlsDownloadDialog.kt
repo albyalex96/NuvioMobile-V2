@@ -87,53 +87,15 @@ fun HlsDownloadDialog(
     url: String,
     headers: Map<String, String>,
     onDismiss: () -> Unit,
-    onConfirm: (HlsDownloadSpec) -> Unit,
+    onConfirm: (spec: HlsDownloadSpec, preferences: HlsDownloadPreferences) -> Unit,
 ) {
     var state by remember(url) { mutableStateOf<HlsDialogState>(HlsDialogState.Loading) }
 
     LaunchedEffect(url) {
-        val analysis = HlsStreamAnalyzer.analyze(url, headers)
-        val problem = analysis.problem
-        if (problem != null) {
-            log.w { "HLS stream can't be downloaded: $problem" }
-            state = HlsDialogState.Problem(problem)
-            return@LaunchedEffect
+        state = when (val load = loadHlsDownloadChoices(url, headers)) {
+            is HlsChoicesLoad.Problem -> HlsDialogState.Problem(load.problem)
+            is HlsChoicesLoad.Ready -> HlsDialogState.Ready(load.choices, load.durationSeconds)
         }
-        // Templates with a marker in place of the argument: the label rules are plain functions.
-        val trackTemplate = getString(Res.string.hls_download_track, ARGUMENT_MARKER)
-        val bitrateTemplate = getString(Res.string.hls_download_bitrate, ARGUMENT_MARKER)
-        val strings = HlsLabelStrings(
-            track = { index -> trackTemplate.replace(ARGUMENT_MARKER, index.toString()) },
-            forced = getString(Res.string.hls_download_forced),
-            audioDescription = getString(Res.string.hls_download_audio_description),
-            hearingImpaired = getString(Res.string.hls_download_hearing_impaired),
-            singleQuality = getString(Res.string.hls_download_single_quality),
-            bitrate = { mbps -> bitrateTemplate.replace(ARGUMENT_MARKER, mbps) },
-        )
-        // Language names are resolved up front: the label rules themselves are plain functions.
-        val languageNames = analysis.multivariant?.renditions.orEmpty()
-            .mapNotNull { it.language }
-            .distinct()
-            .associateWith { code -> languageLabelResForCode(code)?.let { getString(it) } }
-        // The audio selected by default follows the preferred audio language of the app settings.
-        PlayerSettingsRepository.ensureLoaded()
-        val playerSettings = PlayerSettingsRepository.uiState.value
-        val preferredAudio = resolvePreferredAudioLanguageTargets(
-            preferredAudioLanguage = playerSettings.preferredAudioLanguage,
-            secondaryPreferredAudioLanguage = playerSettings.secondaryPreferredAudioLanguage,
-            deviceLanguages = DeviceLanguagePreferences.preferredLanguageCodes(),
-        )
-        log.d { "Preferred audio languages for the HLS dialog: $preferredAudio" }
-        state = HlsDialogState.Ready(
-            choices = HlsDownloadChoices(
-                playlist = analysis.multivariant,
-                directPlaylistUrl = analysis.playlistUrl,
-                strings = strings,
-                languageName = { code -> languageNames[code] },
-                preferredAudioLanguages = preferredAudio,
-            ),
-            durationSeconds = analysis.firstMedia?.durationSeconds?.takeIf { it > 0.0 },
-        )
     }
 
     when (val current = state) {
@@ -178,11 +140,64 @@ fun HlsDownloadDialog(
     }
 }
 
+internal sealed interface HlsChoicesLoad {
+    data class Problem(val problem: HlsStreamProblem) : HlsChoicesLoad
+    data class Ready(val choices: HlsDownloadChoices, val durationSeconds: Double?) : HlsChoicesLoad
+}
+
+/**
+ * Reads the playlist of an HLS stream and builds what the download can offer. Shared by the dialog
+ * and the season downloads, which apply the choices made for the first episode to the others.
+ */
+internal suspend fun loadHlsDownloadChoices(url: String, headers: Map<String, String>): HlsChoicesLoad {
+    val analysis = HlsStreamAnalyzer.analyze(url, headers)
+    val problem = analysis.problem
+    if (problem != null) {
+        log.w { "HLS stream can't be downloaded: $problem" }
+        return HlsChoicesLoad.Problem(problem)
+    }
+    // Templates with a marker in place of the argument: the label rules are plain functions.
+    val trackTemplate = getString(Res.string.hls_download_track, ARGUMENT_MARKER)
+    val bitrateTemplate = getString(Res.string.hls_download_bitrate, ARGUMENT_MARKER)
+    val strings = HlsLabelStrings(
+        track = { index -> trackTemplate.replace(ARGUMENT_MARKER, index.toString()) },
+        forced = getString(Res.string.hls_download_forced),
+        audioDescription = getString(Res.string.hls_download_audio_description),
+        hearingImpaired = getString(Res.string.hls_download_hearing_impaired),
+        singleQuality = getString(Res.string.hls_download_single_quality),
+        bitrate = { mbps -> bitrateTemplate.replace(ARGUMENT_MARKER, mbps) },
+    )
+    // Language names are resolved up front: the label rules themselves are plain functions.
+    val languageNames = analysis.multivariant?.renditions.orEmpty()
+        .mapNotNull { it.language }
+        .distinct()
+        .associateWith { code -> languageLabelResForCode(code)?.let { getString(it) } }
+    // The audio selected by default follows the preferred audio language of the app settings.
+    PlayerSettingsRepository.ensureLoaded()
+    val playerSettings = PlayerSettingsRepository.uiState.value
+    val preferredAudio = resolvePreferredAudioLanguageTargets(
+        preferredAudioLanguage = playerSettings.preferredAudioLanguage,
+        secondaryPreferredAudioLanguage = playerSettings.secondaryPreferredAudioLanguage,
+        deviceLanguages = DeviceLanguagePreferences.preferredLanguageCodes(),
+    )
+    log.d { "Preferred audio languages for the HLS download: $preferredAudio" }
+    return HlsChoicesLoad.Ready(
+        choices = HlsDownloadChoices(
+            playlist = analysis.multivariant,
+            directPlaylistUrl = analysis.playlistUrl,
+            strings = strings,
+            languageName = { code -> languageNames[code] },
+            preferredAudioLanguages = preferredAudio,
+        ),
+        durationSeconds = analysis.firstMedia?.durationSeconds?.takeIf { it > 0.0 },
+    )
+}
+
 @Composable
 private fun HlsChoicesDialog(
     state: HlsDialogState.Ready,
     onDismiss: () -> Unit,
-    onConfirm: (HlsDownloadSpec) -> Unit,
+    onConfirm: (spec: HlsDownloadSpec, preferences: HlsDownloadPreferences) -> Unit,
 ) {
     val choices = state.choices
     var video by remember { mutableStateOf(choices.videoOptions.first()) }
@@ -310,7 +325,7 @@ private fun HlsChoicesDialog(
                             "${if (spec.includeMuxedAudio) " + muxed audio" else ""}, " +
                             "${spec.subtitles.size} subtitle(s), predicted ${spec.container}"
                     }
-                    onConfirm(spec)
+                    onConfirm(spec, choices.preferencesFor(video, pickedAudio, pickedSubtitles))
                 },
             )
         }

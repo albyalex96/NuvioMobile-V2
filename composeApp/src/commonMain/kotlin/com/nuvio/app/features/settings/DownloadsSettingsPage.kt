@@ -3,6 +3,7 @@ package com.nuvio.app.features.settings
 import com.nuvio.app.core.ui.NuvioActionMenuDivider
 import com.nuvio.app.core.ui.NuvioActionMenuGroup
 import com.nuvio.app.core.ui.NuvioActionMenuRow
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalIndication
@@ -12,6 +13,8 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,7 +35,17 @@ import androidx.compose.material.icons.rounded.Cast
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Cancel
 import androidx.compose.material.icons.rounded.Description
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.material.icons.rounded.HourglassTop
+import androidx.compose.material.icons.rounded.MergeType
+import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.SearchOff
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.Info
@@ -54,6 +67,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -91,9 +106,21 @@ import com.nuvio.app.features.cast.isAvailable
 import com.nuvio.app.features.downloads.DownloadItem
 import com.nuvio.app.features.downloads.DownloadPlaybackMode
 import com.nuvio.app.features.downloads.DownloadStatus
+import com.nuvio.app.features.downloads.DownloadTitleGroup
+import com.nuvio.app.features.downloads.DownloadTitleAction
+import com.nuvio.app.features.downloads.DownloadTitleStatus
+import com.nuvio.app.features.downloads.DownloadsClock
+import com.nuvio.app.features.downloads.downloadTitleStatus
+import com.nuvio.app.features.downloads.season.SeasonDownloadRepository
+import com.nuvio.app.core.i18n.localizedSeasonEpisodeCode
+import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
+import com.nuvio.app.features.downloads.groupDownloadsByTitle
 import com.nuvio.app.features.downloads.DownloadsAction
 import com.nuvio.app.features.downloads.DownloadsActionBridge
 import com.nuvio.app.features.downloads.DownloadsFolderPlatform
+import com.nuvio.app.features.downloads.DownloadsPlatformDownloader
+import com.nuvio.app.features.downloads.DownloadsPreferences
 import com.nuvio.app.features.downloads.DownloadsRepository
 import com.nuvio.app.features.downloads.DownloadsStorageStats
 import com.nuvio.app.features.downloads.ExternalVideoFile
@@ -184,11 +211,21 @@ private fun DownloadsSettingsBody(isTablet: Boolean) {
         if (!DownloadsFolderPlatform.selectFolder(treeUri)) NuvioToastController.show(folderFailedText)
     }
 
-    val entries = remember(uiState.items, externalFiles) {
-        val active = uiState.activeItems.sortedByDescending { it.updatedAtEpochMs }
-        val completed = uiState.completedItems.sortedByDescending { it.updatedAtEpochMs }
-        (active + completed).map { DownloadEntry.App(it) } + externalFiles.map { DownloadEntry.External(it) }
-    }
+    // Stable order: the progress of a download must not move its card (see groupDownloadsByTitle).
+    val titleGroups = remember(uiState.items) { groupDownloadsByTitle(uiState.items) }
+    val sortedExternalFiles = remember(externalFiles) { externalFiles.sortedBy { it.displayName.lowercase() } }
+    val expandedGroups = remember { mutableStateMapOf<String, Boolean>() }
+    val seasonBatches by remember {
+        SeasonDownloadRepository.ensureLoaded()
+        SeasonDownloadRepository.batches
+    }.collectAsStateWithLifecycle()
+    val seasonCooldowns by SeasonDownloadRepository.cooldowns.collectAsStateWithLifecycle()
+    val anyRunning = uiState.items.any { it.status == DownloadStatus.Downloading } ||
+        seasonBatches.any { !it.paused && it.pendingCount > 0 }
+    val anyPaused = uiState.items.any { it.status == DownloadStatus.Paused } || seasonBatches.any { it.paused && !it.isFinished }
+    val anyUnfinished = uiState.items.any { it.status != DownloadStatus.Completed } || seasonBatches.any { !it.isFinished }
+    // Cancel waiting for confirmation: one title (key and name), or everything when the key is null.
+    var cancelTarget by remember { mutableStateOf<Pair<String?, String?>?>(null) }
 
     var menuEntry by remember { mutableStateOf<DownloadEntry?>(null) }
     var infoEntry by remember { mutableStateOf<DownloadEntry?>(null) }
@@ -208,6 +245,10 @@ private fun DownloadsSettingsBody(isTablet: Boolean) {
 
         DownloadsBackgroundSection(isTablet = isTablet)
 
+        DownloadsOrganizationSection(isTablet = isTablet)
+
+        DownloadsSeasonSection(isTablet = isTablet)
+
         SettingsSection(
             title = stringResource(Res.string.downloads_settings_section_summary),
             isTablet = isTablet,
@@ -224,6 +265,26 @@ private fun DownloadsSettingsBody(isTablet: Boolean) {
             title = stringResource(Res.string.downloads_settings_section_files),
             isTablet = isTablet,
             actions = {
+                if (anyRunning || anyPaused) {
+                    IconButton(onClick = { if (anyRunning) pauseDownloads(null) else resumeDownloads(null) }) {
+                        Icon(
+                            imageVector = if (anyRunning) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                            contentDescription = stringResource(
+                                if (anyRunning) Res.string.downloads_pause_all else Res.string.downloads_resume_all,
+                            ),
+                            tint = MaterialTheme.nuvio.colors.textMuted,
+                        )
+                    }
+                }
+                if (anyUnfinished) {
+                    IconButton(onClick = { cancelTarget = null to null }) {
+                        Icon(
+                            imageVector = Icons.Rounded.Cancel,
+                            contentDescription = stringResource(Res.string.downloads_cancel_all),
+                            tint = MaterialTheme.nuvio.colors.textMuted,
+                        )
+                    }
+                }
                 IconButton(onClick = { refreshKey++ }) {
                     Icon(
                         imageVector = Icons.Rounded.Refresh,
@@ -233,7 +294,7 @@ private fun DownloadsSettingsBody(isTablet: Boolean) {
                 }
             },
         ) {
-            if (entries.isEmpty()) {
+            if (titleGroups.isEmpty() && sortedExternalFiles.isEmpty()) {
                 Text(
                     text = stringResource(Res.string.downloads_settings_empty),
                     modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
@@ -241,26 +302,68 @@ private fun DownloadsSettingsBody(isTablet: Boolean) {
                     color = MaterialTheme.nuvio.colors.textMuted,
                 )
             } else {
+                val entryCard: @Composable (DownloadEntry) -> Unit = { entry ->
+                    DownloadFileCard(
+                        entry = entry,
+                        isTablet = isTablet,
+                        onClick = {
+                            if (entry.isPlayable) {
+                                entry.play(DownloadPlaybackMode.Default)
+                            } else {
+                                menuEntry = entry
+                            }
+                        },
+                        onLongClick = { menuEntry = entry },
+                    )
+                }
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    entries.forEach { entry ->
-                        androidx.compose.runtime.key(entry.key) {
-                            DownloadFileCard(
-                                entry = entry,
-                                isTablet = isTablet,
-                                onClick = {
-                                    if (entry.isPlayable) {
-                                        entry.play(DownloadPlaybackMode.Default)
-                                    } else {
-                                        menuEntry = entry
-                                    }
-                                },
-                                onLongClick = { menuEntry = entry },
-                            )
+                    titleGroups.forEach { group ->
+                        androidx.compose.runtime.key("group:${group.key}") {
+                            if (!group.isSeries && group.items.size == 1) {
+                                entryCard(DownloadEntry.App(group.items.single()))
+                            } else {
+                                DownloadTitleGroupCard(
+                                    group = group,
+                                    status = downloadTitleStatus(group, seasonBatches, seasonCooldowns, DownloadsClock.nowEpochMs()),
+                                    isTablet = isTablet,
+                                    expanded = expandedGroups[group.key] == true,
+                                    onToggle = {
+                                        expandedGroups[group.key] = expandedGroups[group.key] != true
+                                    },
+                                    onPause = { pauseDownloads(group.key) },
+                                    onResume = { resumeDownloads(group.key) },
+                                    onCancel = { cancelTarget = group.key to group.title },
+                                ) { item -> entryCard(DownloadEntry.App(item)) }
+                            }
                         }
+                    }
+                    sortedExternalFiles.forEach { file ->
+                        val entry = DownloadEntry.External(file)
+                        androidx.compose.runtime.key(entry.key) { entryCard(entry) }
                     }
                 }
             }
         }
+    }
+
+    cancelTarget?.let { (parentMetaId, title) ->
+        NuvioStatusModal(
+            title = if (title != null) {
+                stringResource(Res.string.downloads_cancel_title_confirm, title)
+            } else {
+                stringResource(Res.string.downloads_cancel_all_confirm)
+            },
+            message = stringResource(Res.string.downloads_cancel_confirm_message),
+            isVisible = true,
+            destructive = true,
+            confirmText = stringResource(Res.string.action_yes),
+            dismissText = stringResource(Res.string.action_no),
+            onConfirm = {
+                cancelTarget = null
+                cancelDownloads(parentMetaId)
+            },
+            onDismiss = { cancelTarget = null },
+        )
     }
 
     menuEntry?.let { entry ->
@@ -356,6 +459,64 @@ private fun DownloadsFolderSection(
         }
         Text(
             text = stringResource(Res.string.downloads_settings_folder_hint),
+            modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.nuvio.colors.textMuted,
+        )
+    }
+}
+
+/**
+ * How the downloaded files are named: the "Series/Season N/<code> - <title>" folders apply to every
+ * episode download, single or from a whole season.
+ */
+@Composable
+private fun DownloadsOrganizationSection(isTablet: Boolean) {
+    if (!DownloadsPlatformDownloader.supportsEpisodeFolders) return
+    val organizeEpisodeFolders by remember {
+        DownloadsPreferences.ensureLoaded()
+        DownloadsPreferences.organizeEpisodeFolders
+    }.collectAsStateWithLifecycle()
+    SettingsSection(
+        title = stringResource(Res.string.downloads_settings_section_organization),
+        isTablet = isTablet,
+    ) {
+        SettingsGroup(isTablet = isTablet) {
+            SettingsSwitchRow(
+                title = stringResource(Res.string.downloads_settings_episode_folders_title),
+                description = stringResource(Res.string.downloads_settings_episode_folders_description),
+                checked = organizeEpisodeFolders,
+                isTablet = isTablet,
+                onCheckedChange = DownloadsPreferences::setOrganizeEpisodeFolders,
+            )
+        }
+    }
+}
+
+/** Season downloads: how many episodes download at the same time. */
+@Composable
+private fun DownloadsSeasonSection(isTablet: Boolean) {
+    val concurrency by remember {
+        DownloadsPreferences.ensureLoaded()
+        DownloadsPreferences.seasonConcurrency
+    }.collectAsStateWithLifecycle()
+    SettingsSection(
+        title = stringResource(Res.string.downloads_settings_section_seasons),
+        isTablet = isTablet,
+    ) {
+        SettingsGroup(isTablet = isTablet) {
+            SettingsSliderRow(
+                title = stringResource(Res.string.downloads_settings_season_concurrency_title),
+                value = concurrency,
+                valueText = { it.toString() },
+                valueRange = DownloadsPreferences.SEASON_CONCURRENCY_RANGE,
+                step = 1,
+                isTablet = isTablet,
+                onValueChange = DownloadsPreferences::setSeasonConcurrency,
+            )
+        }
+        Text(
+            text = stringResource(Res.string.downloads_settings_season_concurrency_description),
             modifier = Modifier.padding(start = 4.dp, end = 4.dp, top = 8.dp),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.nuvio.colors.textMuted,
@@ -534,10 +695,252 @@ private fun DownloadFileCard(
     }
 }
 
+/**
+ * The downloads of a series (or of a title with several files) as one card: tap to show or hide
+ * its episodes. The header sums them up, with the overall progress while some are downloading.
+ */
+@Composable
+private fun DownloadTitleGroupCard(
+    group: DownloadTitleGroup,
+    status: DownloadTitleStatus,
+    isTablet: Boolean,
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    onPause: () -> Unit,
+    onResume: () -> Unit,
+    onCancel: () -> Unit,
+    itemContent: @Composable (DownloadItem) -> Unit,
+) {
+    val tokens = MaterialTheme.nuvio
+    val thumbnailWidth = if (isTablet) 144.dp else 112.dp
+    val first = group.items.first()
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(tokens.shapes.compactCard)
+                .clickable(onClick = onToggle),
+            color = tokens.colors.surface,
+            shape = tokens.shapes.compactCard,
+            border = BorderStroke(tokens.borders.hairline, tokens.colors.borderSubtle),
+        ) {
+            Row(
+                modifier = Modifier.padding(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                DownloadThumbnailImage(imageUrl = first.background ?: first.poster ?: first.episodeThumbnail, width = thumbnailWidth)
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Text(
+                        text = group.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = tokens.colors.textPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = listOf(
+                            stringResource(Res.string.downloads_settings_group_episodes, status.total),
+                            formatDownloadBytes(group.sizeBytes),
+                        ).joinToString(" • "),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = tokens.colors.textSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    if (status.action != DownloadTitleAction.Idle || status.completed < status.total) {
+                        DownloadTitleIndicators(status = status)
+                    }
+                }
+                if (status.canPause || status.canResume) {
+                    IconButton(onClick = if (status.canPause) onPause else onResume) {
+                        Icon(
+                            imageVector = if (status.canPause) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                            contentDescription = stringResource(
+                                if (status.canPause) Res.string.downloads_title_pause else Res.string.downloads_title_resume,
+                            ),
+                            tint = tokens.colors.textPrimary,
+                        )
+                    }
+                }
+                if (status.completed < status.total) {
+                    IconButton(onClick = onCancel) {
+                        Icon(
+                            imageVector = Icons.Rounded.Cancel,
+                            contentDescription = stringResource(Res.string.downloads_title_cancel),
+                            tint = tokens.colors.textMuted,
+                        )
+                    }
+                }
+                Icon(
+                    imageVector = if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
+                    contentDescription = stringResource(
+                        if (expanded) Res.string.downloads_settings_group_collapse else Res.string.downloads_settings_group_expand,
+                    ),
+                    tint = tokens.colors.textMuted,
+                )
+            }
+        }
+        AnimatedVisibility(visible = expanded) {
+            Column(
+                modifier = Modifier.padding(start = if (isTablet) 20.dp else 14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                group.items.forEach { item ->
+                    androidx.compose.runtime.key(item.id) { itemContent(item) }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Indicators of a title card: what it is doing now, the overall progress (episodes of its season
+ * downloads not started yet included) and one chip per state with episodes in it.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun DownloadTitleIndicators(status: DownloadTitleStatus) {
+    val tokens = MaterialTheme.nuvio
+    val action = status.action
+    // The rate limit pause shows the minutes left: refreshed while it lasts.
+    var nowEpochMs by remember { mutableLongStateOf(DownloadsClock.nowEpochMs()) }
+    if (action is DownloadTitleAction.RateLimited) {
+        LaunchedEffect(action.untilEpochMs) {
+            while (nowEpochMs < action.untilEpochMs) {
+                delay(10_000L)
+                nowEpochMs = DownloadsClock.nowEpochMs()
+            }
+        }
+    }
+    val (actionIcon, actionText) = when (action) {
+        is DownloadTitleAction.Converting -> Icons.Rounded.MergeType to stringResource(
+            Res.string.downloads_title_action_converting,
+            action.item.episodeLabel(),
+            percentText(action.item.progressFraction),
+        )
+        is DownloadTitleAction.Downloading -> Icons.Rounded.Download to if (action.others > 0) {
+            stringResource(Res.string.downloads_title_action_downloading_more, action.item.episodeLabel(), percentText(action.item.progressFraction), action.others)
+        } else {
+            stringResource(Res.string.downloads_title_action_downloading, action.item.episodeLabel(), percentText(action.item.progressFraction))
+        }
+        is DownloadTitleAction.Searching -> Icons.Rounded.Search to stringResource(
+            Res.string.downloads_title_action_searching,
+            localizedSeasonEpisodeCode(action.seasonNumber, action.episodeNumber).orEmpty(),
+        )
+        is DownloadTitleAction.RateLimited -> Icons.Rounded.HourglassTop to stringResource(
+            Res.string.downloads_title_action_rate_limited,
+            ((action.untilEpochMs - nowEpochMs + 59_999L) / 60_000L).coerceAtLeast(1L).toInt(),
+        )
+        DownloadTitleAction.Queued -> Icons.Rounded.Schedule to stringResource(Res.string.downloads_title_action_queued)
+        DownloadTitleAction.Paused -> Icons.Rounded.Pause to stringResource(Res.string.downloads_title_action_paused)
+        DownloadTitleAction.Failed -> Icons.Rounded.ErrorOutline to stringResource(Res.string.downloads_title_action_failed)
+        DownloadTitleAction.Idle -> null to null
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        if (actionIcon != null && actionText != null) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Icon(
+                    imageVector = actionIcon,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = if (action == DownloadTitleAction.Failed) tokens.colors.danger else tokens.colors.accent,
+                )
+                Text(
+                    text = actionText,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (action == DownloadTitleAction.Failed) tokens.colors.danger else tokens.colors.textPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        Text(
+            text = stringResource(Res.string.downloads_title_progress, status.completed, status.total, percentText(status.progress)),
+            style = MaterialTheme.typography.labelSmall,
+            color = tokens.colors.textMuted,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        LinearProgressIndicator(
+            progress = { status.progress },
+            modifier = Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)),
+            color = tokens.colors.accent,
+            trackColor = tokens.colors.textPrimary.copy(alpha = tokens.opacity.hover),
+            gapSize = 0.dp,
+            drawStopIndicator = {},
+        )
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            if (status.downloading > 0) TitleStatusChip(Icons.Rounded.Download, stringResource(Res.string.downloads_title_chip_downloading, status.downloading), tokens.colors.accent)
+            if (status.converting > 0) TitleStatusChip(Icons.Rounded.MergeType, stringResource(Res.string.downloads_title_chip_converting, status.converting), tokens.colors.accent)
+            if (status.searching > 0) TitleStatusChip(Icons.Rounded.Search, stringResource(Res.string.downloads_title_chip_searching, status.searching), tokens.colors.info)
+            if (status.queued > 0) TitleStatusChip(Icons.Rounded.Schedule, stringResource(Res.string.downloads_title_chip_queued, status.queued), tokens.colors.textSecondary)
+            if (status.paused > 0) TitleStatusChip(Icons.Rounded.Pause, stringResource(Res.string.downloads_title_chip_paused, status.paused), tokens.colors.warning)
+            if (status.withoutStream > 0) TitleStatusChip(Icons.Rounded.SearchOff, stringResource(Res.string.downloads_title_chip_no_stream, status.withoutStream), tokens.colors.warning)
+            if (status.failed > 0) TitleStatusChip(Icons.Rounded.ErrorOutline, stringResource(Res.string.downloads_title_chip_failed, status.failed), tokens.colors.danger)
+        }
+    }
+}
+
+@Composable
+private fun TitleStatusChip(icon: ImageVector, text: String, color: Color) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(4.dp))
+            .background(color.copy(alpha = 0.16f))
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(3.dp),
+    ) {
+        Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(12.dp), tint = color)
+        Text(text = text, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.SemiBold, color = color, maxLines = 1)
+    }
+}
+
+private fun DownloadItem.episodeLabel(): String =
+    localizedSeasonEpisodeCode(seasonNumber, episodeNumber) ?: displayTitle()
+
+private fun percentText(fraction: Float): String = "${(fraction.coerceIn(0f, 1f) * 100f).roundToInt()}%"
+
+/** Pauses the downloads of [parentMetaId] (all of them when null), season downloads first so no new episode starts. */
+private fun pauseDownloads(parentMetaId: String?) {
+    downloadsSettingsLog.i { "Pause ${parentMetaId?.let { "the downloads of $it" } ?: "every download"}" }
+    SeasonDownloadRepository.pauseAll(parentMetaId)
+    if (parentMetaId == null) DownloadsRepository.pauseActiveDownloads() else DownloadsRepository.pauseTitleDownloads(parentMetaId)
+}
+
+/**
+ * Cancels the downloads of [parentMetaId] (all of them when null): season downloads first so no
+ * new episode starts, then every unfinished download with its partial files. Completed ones stay.
+ */
+private fun cancelDownloads(parentMetaId: String?) {
+    downloadsSettingsLog.i { "Cancel ${parentMetaId?.let { "the downloads of $it" } ?: "every unfinished download"}" }
+    SeasonDownloadRepository.cancelAll(parentMetaId)
+    DownloadsRepository.cancelUnfinishedDownloads(parentMetaId)
+}
+
+private fun resumeDownloads(parentMetaId: String?) {
+    downloadsSettingsLog.i { "Resume ${parentMetaId?.let { "the downloads of $it" } ?: "every download"}" }
+    SeasonDownloadRepository.resumeAll(parentMetaId)
+    DownloadsRepository.resumePausedDownloads(parentMetaId)
+}
+
 @Composable
 private fun DownloadThumbnail(entry: DownloadEntry, width: androidx.compose.ui.unit.Dp) {
-    val tokens = MaterialTheme.nuvio
     val imageUrl = (entry as? DownloadEntry.App)?.item?.let { it.episodeThumbnail ?: it.background ?: it.poster }
+    DownloadThumbnailImage(imageUrl = imageUrl, width = width)
+}
+
+@Composable
+private fun DownloadThumbnailImage(imageUrl: String?, width: androidx.compose.ui.unit.Dp) {
+    val tokens = MaterialTheme.nuvio
     Box(
         modifier = Modifier
             .width(width)

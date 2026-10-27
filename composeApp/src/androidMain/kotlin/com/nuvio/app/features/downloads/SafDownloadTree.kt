@@ -17,14 +17,23 @@ internal data class SafDocument(
     val isDirectory: Boolean get() = mimeType == Document.MIME_TYPE_DIR
 }
 
-/** Files directly inside a folder picked with the Storage Access Framework. */
-internal class SafDownloadTree(private val context: Context, val treeUri: Uri) {
+/**
+ * Files directly inside a folder picked with the Storage Access Framework, or inside one of its
+ * sub-folders when [documentId] is given (see [directory]).
+ */
+internal class SafDownloadTree(
+    private val context: Context,
+    val treeUri: Uri,
+    documentId: String? = null,
+) {
     private val resolver get() = context.contentResolver
     val rootDocumentId: String = DocumentsContract.getTreeDocumentId(treeUri)
     val rootUri: Uri = DocumentsContract.buildDocumentUriUsingTree(treeUri, rootDocumentId)
+    private val documentId: String = documentId ?: rootDocumentId
+    private val documentUri: Uri = DocumentsContract.buildDocumentUriUsingTree(treeUri, this.documentId)
 
     fun children(): List<SafDocument> {
-        val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, rootDocumentId)
+        val childrenUri = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, documentId)
         val cursor = resolver.query(childrenUri, CHILD_PROJECTION, null, null, null)
             ?: throw FileNotFoundException("Downloads folder is not readable")
         return cursor.use {
@@ -49,8 +58,27 @@ internal class SafDownloadTree(private val context: Context, val treeUri: Uri) {
     fun find(name: String): SafDocument? = children().firstOrNull { !it.isDirectory && it.name == name }
 
     fun createFile(name: String, mimeType: String = "application/octet-stream"): Uri =
-        DocumentsContract.createDocument(resolver, rootUri, mimeType, name)
+        DocumentsContract.createDocument(resolver, documentUri, mimeType, name)
             ?: throw FileNotFoundException("Cannot create a file in the downloads folder")
+
+    /**
+     * The sub-folder at [path] (e.g. series and season), created when missing if [create] is set;
+     * null when it does not exist and [create] is not set.
+     */
+    fun directory(path: List<String>, create: Boolean): SafDownloadTree? {
+        var current = this
+        for (name in path) {
+            val existing = current.children().firstOrNull { it.isDirectory && it.name == name }
+            val childId = existing?.documentId ?: run {
+                if (!create) return null
+                val created = DocumentsContract.createDocument(resolver, current.documentUri, Document.MIME_TYPE_DIR, name)
+                    ?: throw FileNotFoundException("Cannot create a folder in the downloads folder")
+                DocumentsContract.getDocumentId(created)
+            }
+            current = SafDownloadTree(context, treeUri, childId)
+        }
+        return current
+    }
 
     /** Renames [uri]; returns the URI of the renamed document (providers may change it). */
     fun rename(uri: Uri, name: String): Uri = DocumentsContract.renameDocument(resolver, uri, name) ?: uri

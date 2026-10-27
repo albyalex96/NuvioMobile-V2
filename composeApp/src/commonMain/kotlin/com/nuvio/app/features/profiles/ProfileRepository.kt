@@ -193,6 +193,7 @@ object ProfileRepository {
         CollectionRepository.onProfileChanged()
         CollectionMobileSettingsRepository.onProfileChanged()
         DownloadsRepository.onProfileChanged()
+        com.nuvio.app.features.downloads.season.SeasonDownloadRepository.onProfileChanged()
         com.nuvio.app.features.livetv.LiveTvRepository.onProfileChanged()
         ServerRepository.onProfileChanged()
         com.nuvio.app.features.discord.DiscordRpcRepository.onProfileChanged()

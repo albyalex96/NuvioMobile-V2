@@ -43,6 +43,9 @@ import com.nuvio.app.core.ui.NuvioScreen
 import com.nuvio.app.core.ui.NuvioScreenHeader
 import com.nuvio.app.core.ui.NuvioStatusModal
 import com.nuvio.app.core.ui.NuvioToastController
+import com.nuvio.app.features.downloads.season.SeasonDownloadBatch
+import com.nuvio.app.features.downloads.season.SeasonDownloadCard
+import com.nuvio.app.features.downloads.season.SeasonDownloadRepository
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
@@ -61,6 +64,10 @@ fun DownloadsScreen(
     LaunchedEffect(uiState.completedItems.size) {
         DownloadsRepository.markCompletedSeen()
     }
+    val seasonBatches by remember {
+        SeasonDownloadRepository.ensureLoaded()
+        SeasonDownloadRepository.batches
+    }.collectAsStateWithLifecycle()
 
     var selectedShowId by rememberSaveable(initialShowId) { mutableStateOf(initialShowId) }
     var downloadPendingDeletionId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -113,6 +120,7 @@ fun DownloadsScreen(
         if (selectedShowId == null) {
             downloadsRootContent(
                 uiState = uiState,
+                seasonBatches = seasonBatches,
                 onOpenDownload = onOpenDownload,
                 onOpenShow = { showId, title ->
                     onNavigateToShow?.invoke(showId, title) ?: run { selectedShowId = showId }
@@ -149,6 +157,7 @@ fun DownloadsScreen(
 
 private fun LazyListScope.downloadsRootContent(
     uiState: DownloadsUiState,
+    seasonBatches: List<SeasonDownloadBatch>,
     onOpenDownload: (DownloadItem) -> Unit,
     onOpenShow: (showId: String, title: String) -> Unit,
     onDeleteDownload: (String) -> Unit,
@@ -164,6 +173,18 @@ private fun LazyListScope.downloadsRootContent(
             }
         }
         .sortedBy { (item, _) -> item.title.lowercase() }
+
+    if (seasonBatches.isNotEmpty()) {
+        item {
+            SectionTitle(stringResource(Res.string.downloads_section_seasons))
+        }
+        items(
+            items = seasonBatches,
+            key = { "season:${it.id}" },
+        ) { batch ->
+            SeasonDownloadCard(batch = batch)
+        }
+    }
 
     if (activeItems.isNotEmpty()) {
         item {
@@ -253,7 +274,7 @@ private fun LazyListScope.downloadsRootContent(
         }
     }
 
-    if (uiState.items.isEmpty()) {
+    if (uiState.items.isEmpty() && seasonBatches.isEmpty()) {
         item {
             Box(
                 modifier = Modifier

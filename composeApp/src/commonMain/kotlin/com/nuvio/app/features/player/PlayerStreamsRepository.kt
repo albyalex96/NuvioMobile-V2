@@ -41,8 +41,10 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.getString
 
@@ -106,6 +108,42 @@ object PlayerStreamsRepository {
             jobHolder = { episodeStreamsJob },
             setJob = { episodeStreamsJob = it },
         )
+    }
+
+    /**
+     * Loads the streams of one title with a private state, apart from the player panels, and
+     * returns them once every source answered or [timeoutMs] elapsed (what arrived until then).
+     * Used by the season downloads, which look up the episodes one at a time in the background.
+     */
+    suspend fun resolveStreams(
+        type: String,
+        videoId: String,
+        season: Int?,
+        episode: Int?,
+        timeoutMs: Long,
+    ): StreamsUiState {
+        val state = MutableStateFlow(StreamsUiState())
+        var requestKey: String? = null
+        var job: Job? = null
+        fetchStreams(
+            type = type,
+            videoId = videoId,
+            season = season,
+            episode = episode,
+            forceRefresh = false,
+            stateFlow = state,
+            requestKeyHolder = { requestKey },
+            setRequestKey = { requestKey = it },
+            jobHolder = { job },
+            setJob = { job = it },
+        )
+        try {
+            val settled = withTimeoutOrNull(timeoutMs) { state.first { !it.isAnyLoading } }
+            if (settled == null) log.w { "Stream lookup for $videoId timed out: ${state.value.streamDiagnostics()}" }
+        } finally {
+            job?.cancel()
+        }
+        return state.value
     }
 
     fun stopSourcesLoading() {

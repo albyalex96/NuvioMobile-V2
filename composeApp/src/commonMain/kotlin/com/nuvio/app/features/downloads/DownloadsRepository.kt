@@ -1,6 +1,7 @@
 package com.nuvio.app.features.downloads
 
 import co.touchlab.kermit.Logger
+import com.nuvio.app.core.i18n.localizedSeasonEpisodeCode
 import com.nuvio.app.features.downloads.hls.HlsDownloadSpec
 import com.nuvio.app.features.downloads.hls.HlsStreamAnalyzer
 import com.nuvio.app.features.player.addonSubtitleRequests
@@ -169,15 +170,22 @@ object DownloadsRepository {
             "Enqueue ${if (hls != null) "HLS " else ""}download $downloadId in " +
                 if (storageTreeUri != null) "the selected folder" else "app storage"
         }
+        val extension = hls?.container?.extension ?: sourceUrl.fileExtensionFromUrl()
         val fileName = buildFileName(
             title = title,
             seasonNumber = seasonNumber,
             episodeNumber = episodeNumber,
             episodeTitle = episodeTitle,
             fallbackTitle = stream.streamLabel,
-            extension = hls?.container?.extension ?: sourceUrl.fileExtensionFromUrl(),
+            extension = extension,
             downloadId = downloadId,
         )
+        val episodeLocation = if (seasonNumber != null && episodeNumber != null) {
+            organizedEpisodeLocation(title, seasonNumber, episodeNumber, episodeTitle, extension)
+        } else {
+            null
+        }
+        episodeLocation?.let { log.d { "Episode $downloadId saved as ${it.folderPath.joinToString("/")}/${it.fileName}" } }
 
         val item = DownloadItem(
             id = downloadId,
@@ -205,6 +213,8 @@ object DownloadsRepository {
             localFileUri = null,
             storageTreeUri = storageTreeUri,
             fileName = fileName,
+            folderPath = episodeLocation?.folderPath.orEmpty(),
+            displayFileName = episodeLocation?.fileName,
             hls = hls,
             status = DownloadStatus.Downloading,
             downloadedBytes = 0L,
@@ -224,6 +234,42 @@ object DownloadsRepository {
         } else {
             DownloadEnqueueResult.Started
         }
+    }
+
+    /** The download of an episode, in any state (one per episode: a new one replaces the old). */
+    fun findEpisodeDownload(parentMetaId: String, seasonNumber: Int, episodeNumber: Int): DownloadItem? {
+        ensureLoaded()
+        val key = buildLogicalKey(parentMetaId, seasonNumber, episodeNumber)
+        return _uiState.value.items.firstOrNull { it.logicalContentKey == key }
+    }
+
+    /**
+     * "Series/Season N/<code> - <title>.<ext>" with the localized names and the episode code
+     * format of the settings, when the episode folders are on and the platform supports them.
+     */
+    private fun organizedEpisodeLocation(
+        title: String,
+        seasonNumber: Int,
+        episodeNumber: Int,
+        episodeTitle: String?,
+        extension: String,
+    ): EpisodeFileLocation? {
+        DownloadsPreferences.ensureLoaded()
+        if (!DownloadsPlatformDownloader.supportsEpisodeFolders || !DownloadsPreferences.organizeEpisodeFolders.value) {
+            return null
+        }
+        val seasonFolder = runBlocking {
+            if (seasonNumber == 0) getString(Res.string.episodes_specials) else getString(Res.string.episodes_season, seasonNumber)
+        }
+        val code = localizedSeasonEpisodeCode(seasonNumber, episodeNumber)?.takeIf { it.isNotBlank() }
+            ?: "S${seasonNumber.toString().padStart(2, '0')}E${episodeNumber.toString().padStart(2, '0')}"
+        return episodeFileLocation(
+            seriesTitle = title,
+            seasonFolderName = seasonFolder,
+            episodeCode = code,
+            episodeTitle = episodeTitle,
+            extension = extension,
+        )
     }
 
     /**
@@ -259,6 +305,38 @@ object DownloadsRepository {
         ensureLoaded()
         _uiState.value.items
             .filter { it.status == DownloadStatus.Downloading }
+            .map { it.id }
+            .forEach(::pauseDownload)
+    }
+
+    /** Resumes the paused downloads (of [parentMetaId] only, when given); failed ones stay failed. */
+    fun resumePausedDownloads(parentMetaId: String? = null) {
+        ensureLoaded()
+        _uiState.value.items
+            .filter { it.status == DownloadStatus.Paused && (parentMetaId == null || it.parentMetaId == parentMetaId) }
+            .map { it.id }
+            .forEach(::resumeDownload)
+    }
+
+    /**
+     * Deletes every download that is not completed (running, paused or failed) of [parentMetaId],
+     * or of every title when it is null, with its partial files. Completed downloads stay.
+     */
+    fun cancelUnfinishedDownloads(parentMetaId: String? = null) {
+        ensureLoaded()
+        val targets = _uiState.value.items
+            .filter { it.status != DownloadStatus.Completed && (parentMetaId == null || it.parentMetaId == parentMetaId) }
+            .map { it.id }
+        if (targets.isEmpty()) return
+        log.i { "Cancel ${targets.size} unfinished download(s)${parentMetaId?.let { " of $it" }.orEmpty()}" }
+        targets.forEach(::cancelDownload)
+    }
+
+    /** Pauses the running downloads of [parentMetaId]. */
+    fun pauseTitleDownloads(parentMetaId: String) {
+        ensureLoaded()
+        _uiState.value.items
+            .filter { it.status == DownloadStatus.Downloading && it.parentMetaId == parentMetaId }
             .map { it.id }
             .forEach(::pauseDownload)
     }

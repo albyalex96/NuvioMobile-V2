@@ -122,16 +122,17 @@ internal class AndroidDownloadScheduler(val context: Context) {
         paused?.let { DownloadsLiveStatusPlatform.notifyTransfer(it.item) }
     }
 
-    fun remove(fileName: String, storageTreeUri: String? = null) {
+    /** Stops and forgets the transfer of [fileName]; [item] locates its files when there is no transfer. */
+    fun remove(fileName: String, item: DownloadItem? = null) {
         val transfer = store.get(fileName)
         store.remove(fileName)
         transfer?.let(::cancelScheduled)
         transfer?.let { DownloadsLiveStatusPlatform.removeNotification(it.item.id) }
-        val treeUri = transfer?.item?.storageTreeUri ?: storageTreeUri
+        val target = transfer?.item ?: item
         cleanupScope.launch {
             lock(fileName).withLock {
                 if (store.get(fileName) == null) {
-                    runCatching { destinationFor(fileName, treeUri).deletePartial() }
+                    target?.let { runCatching { destinationFor(it).deletePartial() } }
                     runCatching { hlsWorkDir(fileName).deleteRecursively() }
                     DownloadSubtitleStorage(subtitleAnchorUri(fileName)).remove()
                 }
@@ -142,9 +143,10 @@ internal class AndroidDownloadScheduler(val context: Context) {
     /** Subtitles always stay in the app storage, next to where an app-storage video would be. */
     fun subtitleAnchorUri(fileName: String): String = File(directory, fileName).toURI().toString()
 
-    private fun destinationFor(fileName: String, storageTreeUri: String?): DownloadDestination =
-        storageTreeUri?.let { TreeDownloadDestination(context, Uri.parse(it), fileName) }
-            ?: FileDownloadDestination(directory, fileName)
+    /** Where the file of [item] is saved: its series and season sub-folders, under its final name. */
+    private fun destinationFor(item: DownloadItem): DownloadDestination =
+        item.storageTreeUri?.let { TreeDownloadDestination(context, Uri.parse(it), item.savedFileName, item.folderPath) }
+            ?: FileDownloadDestination(item.folderPath.fold(directory, ::File), item.savedFileName)
 
     private fun cancelScheduled(transfer: AndroidDownloadTransfer) {
         if (Build.VERSION.SDK_INT >= 34) jobScheduler().cancel(transfer.jobId)
@@ -158,7 +160,7 @@ internal class AndroidDownloadScheduler(val context: Context) {
     ): Boolean = lock(transfer.item.fileName).withLock {
         val fileName = transfer.item.fileName
         if (!isActive(transfer)) return@withLock false
-        val destination = destinationFor(fileName, transfer.item.storageTreeUri)
+        val destination = destinationFor(transfer.item)
         val client = if (network != null) {
             downloadHttpClient.newBuilder()
                 .socketFactory(network.socketFactory)
@@ -246,7 +248,7 @@ internal class AndroidDownloadScheduler(val context: Context) {
         onProgress: (AndroidDownloadTransfer) -> Unit,
     ): CompletedDownloadFile {
         val item = transfer.item
-        val baseName = item.fileName.substringBeforeLast('.')
+        val baseName = item.savedFileName.substringBeforeLast('.')
         val otherNames = HlsOutputContainer.entries.map { "$baseName.${it.extension}" }
         // A previous run may have finished the file under the other container's name.
         withContext(Dispatchers.IO) { otherNames.firstNotNullOfOrNull { destination.completedFile(it) } }?.let { return it }
@@ -272,7 +274,7 @@ internal class AndroidDownloadScheduler(val context: Context) {
             },
         )
         val finalName = "$baseName.${result.container.extension}"
-        if (finalName != item.fileName) Logger.withTag("HlsDownload").i { "Saved as ${result.container} instead of the predicted format" }
+        if (finalName != item.savedFileName) Logger.withTag("HlsDownload").i { "Saved as ${result.container} instead of the predicted format" }
         val completed = withContext(Dispatchers.IO) { destination.adoptFile(result.file, finalName) }
         // MP4 cannot hold the subtitles: they go next to the video, like the addon subtitles.
         result.sidecarSubtitles.forEach { (track, text) ->

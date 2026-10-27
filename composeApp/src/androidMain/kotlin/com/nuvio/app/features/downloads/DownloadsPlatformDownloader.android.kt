@@ -40,6 +40,8 @@ internal actual object DownloadsPlatformDownloader {
 
     actual val supportsHls: Boolean = true
 
+    actual val supportsEpisodeFolders: Boolean = true
+
     actual fun start(
         request: DownloadPlatformRequest,
         onProgress: (downloadedBytes: Long, totalBytes: Long?, conversionProgress: Float?) -> Unit,
@@ -82,12 +84,24 @@ internal actual object DownloadsPlatformDownloader {
             return SafDownloadTree.deleteDocument(context, Uri.parse(localFileUri))
         }
         val file = localFileUri.toLocalFileOrNull() ?: return false
-        return runCatching { file.delete() }.getOrDefault(false)
+        val deleted = runCatching { file.delete() }.getOrDefault(false)
+        if (deleted) appContext?.let { removeEmptyFolders(file.parentFile, File(it.filesDir, "downloads")) }
+        return deleted
+    }
+
+    /** Season and series folders left empty by the deleted episode, up to the downloads folder. */
+    private fun removeEmptyFolders(folder: File?, downloadsDir: File) {
+        var current = folder ?: return
+        val root = downloadsDir.canonicalFile
+        while (current.canonicalFile != root && current.canonicalPath.startsWith(root.path) &&
+            current.listFiles()?.isEmpty() == true && current.delete()) {
+            current = current.parentFile ?: return
+        }
     }
 
     actual fun removePartialFile(item: DownloadItem): Boolean {
         val scheduler = downloadScheduler ?: return false
-        scheduler.remove(item.fileName, item.storageTreeUri)
+        scheduler.remove(item.fileName, item)
         return true
     }
 

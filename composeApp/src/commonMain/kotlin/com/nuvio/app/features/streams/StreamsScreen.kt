@@ -98,6 +98,10 @@ import com.nuvio.app.core.ui.nuvioSafeBottomPadding
 import com.nuvio.app.core.ui.shimmer
 import com.nuvio.app.features.debrid.DebridSettingsRepository
 import com.nuvio.app.features.debrid.DirectDebridPlayableResult
+import com.nuvio.app.features.downloads.hls.HlsDownloadPreferences
+import com.nuvio.app.features.downloads.season.SeasonDownloadPickBanner
+import com.nuvio.app.features.downloads.season.SeasonDownloadRepository
+import com.nuvio.app.features.downloads.season.SeasonDownloadRequest
 import com.nuvio.app.features.debrid.DirectDebridPlaybackResolver
 import com.nuvio.app.features.debrid.toastMessage
 import com.nuvio.app.features.player.PlayerSettingsRepository
@@ -226,6 +230,60 @@ fun StreamsScreen(
             enqueueDownload(stream, null)
         }
     }
+    // Season download opened from the details screen: the stream picked here is the model for
+    // every episode, and picking it starts the download instead of the playback.
+    val pendingSeasonRequest by SeasonDownloadRepository.pendingRequest.collectAsStateWithLifecycle()
+    val seasonRequest = pendingSeasonRequest?.takeIf { it.matches(parentMetaId, seasonNumber, episodeNumber) }
+    // Stream picked as the model of the season, waiting for its HLS choices.
+    var pendingSeasonTemplate by remember(videoId) { mutableStateOf<StreamItem?>(null) }
+    val seasonDownloadStartedText = stringResource(Res.string.season_download_started)
+    DisposableEffect(parentMetaId, seasonNumber, episodeNumber) {
+        onDispose {
+            SeasonDownloadRepository.pendingRequest.value
+                ?.takeIf { it.matches(parentMetaId, seasonNumber, episodeNumber) }
+                ?.let(SeasonDownloadRepository::clearRequest)
+        }
+    }
+    val finishSeasonDownload: (SeasonDownloadRequest, StreamItem, StreamItem, HlsDownloadSpec?, HlsDownloadPreferences?) -> Unit =
+        { request, template, playable, hlsSpec, hlsPreferences ->
+            SeasonDownloadRepository.start(request, template, playable, hlsSpec, hlsPreferences)
+            NuvioToastController.show(seasonDownloadStartedText)
+            onBack()
+        }
+    val startSeasonDownload: (StreamItem) -> Unit = { template ->
+        downloadScope.launch {
+            val request = seasonRequest ?: return@launch
+            val playable = if (DirectDebridPlaybackResolver.shouldResolveToPlayableStream(template)) {
+                when (val resolved = DirectDebridPlaybackResolver.resolveToPlayableStream(template, seasonNumber, episodeNumber)) {
+                    is DirectDebridPlayableResult.Success -> resolved.stream
+                    else -> {
+                        resolved.toastMessage()?.let { NuvioToastController.show(it) }
+                        return@launch
+                    }
+                }
+            } else {
+                template
+            }
+            if (playable.playableDirectUrl == null) {
+                NuvioToastController.show(noDirectStreamLinkText)
+                return@launch
+            }
+            if (DownloadsRepository.isHlsStreamDownload(playable)) {
+                pendingSeasonTemplate = template
+                pendingHlsDownload = playable
+            } else {
+                finishSeasonDownload(request, template, playable, null, null)
+            }
+        }
+    }
+    val selectStream: (StreamItem, Long?, Float?) -> Unit = { stream, positionMs, progressFraction ->
+        if (seasonRequest != null) {
+            startSeasonDownload(stream)
+        } else {
+            PrivatePlaybackRequests.clear()
+            onStreamSelected(stream, positionMs, progressFraction)
+        }
+    }
     val castState by CastPlatform.state.collectAsStateWithLifecycle()
     val castAvailable = castState.isAvailable && !TvAppRuntime.isTvApp
     // Stream waiting for a cast session: it opens in the player (on the receiver) once connected.
@@ -322,10 +380,7 @@ fun StreamsScreen(
                 appendInstantServiceToDefaultName = debridSettings.canResolvePlayableLinks && !debridSettings.hasCustomStreamFormatting,
                 resumePositionMs = effectiveResumePositionMs,
                 resumeProgressFraction = effectiveResumeProgressFraction,
-                onStreamSelected = { stream, positionMs, progressFraction ->
-                    PrivatePlaybackRequests.clear()
-                    onStreamSelected(stream, positionMs, progressFraction)
-                },
+                onStreamSelected = selectStream,
                 onStreamLongPress = onStreamLongPress,
                 onRefresh = reloadStreams,
             )
@@ -345,10 +400,7 @@ fun StreamsScreen(
                 appendInstantServiceToDefaultName = debridSettings.canResolvePlayableLinks && !debridSettings.hasCustomStreamFormatting,
                 resumePositionMs = effectiveResumePositionMs,
                 resumeProgressFraction = effectiveResumeProgressFraction,
-                onStreamSelected = { stream, positionMs, progressFraction ->
-                    PrivatePlaybackRequests.clear()
-                    onStreamSelected(stream, positionMs, progressFraction)
-                },
+                onStreamSelected = selectStream,
                 onStreamLongPress = onStreamLongPress,
                 onRefresh = reloadStreams,
             )
@@ -370,6 +422,17 @@ fun StreamsScreen(
             )
         }
 
+
+        seasonRequest?.let { request ->
+            SeasonDownloadPickBanner(
+                request = request,
+                onCancel = { SeasonDownloadRepository.clearRequest(request) },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .windowInsetsPadding(WindowInsets.safeDrawing.only(WindowInsetsSides.Bottom))
+                    .padding(bottom = 16.dp),
+            )
+        }
 
         DisposableEffect(Unit) {
             onDispose { PrivatePlaybackRequests.clear() }
@@ -438,7 +501,9 @@ fun StreamsScreen(
                 }
             },
             onDownload = { stream ->
-                downloadScope.launch {
+                if (seasonRequest != null) {
+                    startSeasonDownload(stream)
+                } else downloadScope.launch {
                     if (DirectDebridPlaybackResolver.shouldResolveToPlayableStream(stream)) {
                         when (
                             val resolved = DirectDebridPlaybackResolver.resolveToPlayableStream(
@@ -478,10 +543,20 @@ fun StreamsScreen(
                 HlsDownloadDialog(
                     url = url,
                     headers = DownloadsRepository.downloadRequestHeaders(stream),
-                    onDismiss = { pendingHlsDownload = null },
-                    onConfirm = { spec ->
+                    onDismiss = {
                         pendingHlsDownload = null
-                        enqueueDownload(stream, spec)
+                        pendingSeasonTemplate = null
+                    },
+                    onConfirm = { spec, preferences ->
+                        val template = pendingSeasonTemplate
+                        pendingHlsDownload = null
+                        pendingSeasonTemplate = null
+                        val request = seasonRequest
+                        if (template != null && request != null) {
+                            finishSeasonDownload(request, template, stream, spec, preferences)
+                        } else {
+                            enqueueDownload(stream, spec)
+                        }
                     },
                 )
             }

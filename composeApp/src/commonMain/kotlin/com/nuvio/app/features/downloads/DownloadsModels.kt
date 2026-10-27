@@ -47,7 +47,12 @@ data class DownloadItem(
     val localFileUri: String? = null,
     /** Folder picked by the user (Android SAF tree URI) this download is saved in; null = app storage. */
     val storageTreeUri: String? = null,
+    /** Unique key of the transfer (partial files, background job); also the saved name unless [displayFileName] is set. */
     val fileName: String,
+    /** Sub-folders the file is saved in under the downloads folder (series, season); empty = directly in it. */
+    val folderPath: List<String> = emptyList(),
+    /** Name of the saved file when it differs from [fileName], e.g. "S01E01 - Pilot.mkv". */
+    val displayFileName: String? = null,
     /** Set for HLS streams: the tracks to download and merge into one file. */
     val hls: HlsDownloadSpec? = null,
     /** 0..1 while an HLS download is being merged into its final file, null otherwise. */
@@ -59,6 +64,9 @@ data class DownloadItem(
     val createdAtEpochMs: Long,
     val updatedAtEpochMs: Long,
 ) {
+    val savedFileName: String
+        get() = displayFileName ?: fileName
+
     val isEpisode: Boolean
         get() = seasonNumber != null && episodeNumber != null
 

@@ -7,6 +7,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import com.nuvio.app.core.build.AppFeaturePolicy
+import com.nuvio.app.features.downloads.season.SeasonDownloadRepository
 import kotlinx.coroutines.CancellationException
 
 class DownloadsTransferWorker(context: Context, parameters: WorkerParameters) : CoroutineWorker(context, parameters) {
@@ -27,6 +28,8 @@ class DownloadsTransferWorker(context: Context, parameters: WorkerParameters) : 
             }
             val retry = scheduler.execute(transfer) { DownloadsLiveStatusPlatform.notifyTransfer(it.item) }
             scheduler.notifyCurrent(fileName)
+            // The worker keeps the process alive while the next episodes of a season download start.
+            if (!retry) SeasonDownloadRepository.awaitNextEpisodes(SEASON_HANDOFF_TIMEOUT_MS)
             return if (retry) Result.retry() else Result.success()
         } catch (cancelled: CancellationException) {
             throw cancelled
@@ -37,3 +40,6 @@ class DownloadsTransferWorker(context: Context, parameters: WorkerParameters) : 
         }
     }
 }
+
+/** How long a finished background transfer waits for the next season episodes to be looked up. */
+internal const val SEASON_HANDOFF_TIMEOUT_MS = 3 * 60_000L

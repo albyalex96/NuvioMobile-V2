@@ -374,6 +374,8 @@ internal fun MainAppContent(
     val fullyWatchedSeriesKeys by WatchedRepository.fullyWatchedSeriesKeys.collectAsStateWithLifecycle()
     val downloadsUiState by remember {
         DownloadsRepository.ensureLoaded()
+        // Season downloads resume with the app (also those stopped while it was closed).
+        com.nuvio.app.features.downloads.season.SeasonDownloadRepository.ensureLoaded()
         DownloadsRepository.uiState
     }.collectAsStateWithLifecycle()
     val networkStatusUiState by remember {

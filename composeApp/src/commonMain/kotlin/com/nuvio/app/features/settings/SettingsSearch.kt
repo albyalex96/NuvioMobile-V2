@@ -1913,6 +1913,11 @@ private fun addAdditionalSearchEntries(
             add(PlaybackSearchRow("downloads-battery", stringResource(Res.string.downloads_settings_battery_title), stringResource(Res.string.downloads_settings_battery_description), backgroundSection))
             add(PlaybackSearchRow("downloads-phone-settings", stringResource(Res.string.downloads_settings_battery_open_app_settings), stringResource(Res.string.downloads_settings_battery_hint), backgroundSection))
         }
+        val seasonsSection = stringResource(Res.string.downloads_settings_section_seasons)
+        add(PlaybackSearchRow("downloads-season-concurrency", stringResource(Res.string.downloads_settings_season_concurrency_title), stringResource(Res.string.downloads_settings_season_concurrency_description), seasonsSection))
+        if (com.nuvio.app.features.downloads.DownloadsPlatformDownloader.supportsEpisodeFolders) {
+            add(PlaybackSearchRow("downloads-episode-folders", stringResource(Res.string.downloads_settings_episode_folders_title), stringResource(Res.string.downloads_settings_episode_folders_description), stringResource(Res.string.downloads_settings_section_organization)))
+        }
         add(PlaybackSearchRow("downloads-storage", downloadsSummarySection, stringResource(Res.string.downloads_settings_summary_description), downloadsSummarySection))
         add(PlaybackSearchRow("downloads-files", downloadsFilesSection, stringResource(Res.string.downloads_settings_files_description), downloadsFilesSection))
     }.forEach { item ->
