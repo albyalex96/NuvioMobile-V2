@@ -45,6 +45,8 @@ data class TvHeroMeta(
     /** Episode code and title of a continue watching item, shown instead of the type. */
     val episodeLabel: String? = null,
     val genre: String? = null,
+    /** All the genres, listed by the expanded hero. */
+    val genres: List<String> = emptyList(),
     val runtime: String? = null,
     val releaseInfo: String? = null,
     /** Continue watching state ("12 MIN LEFT", "NEXT UP"...), first on the second line. */
@@ -59,6 +61,7 @@ data class TvHeroMeta(
 fun MetaPreview.toTvHeroMeta(): TvHeroMeta = TvHeroMeta(
     type = type,
     genre = genres.firstOrNull()?.takeIf { it.isNotBlank() },
+    genres = genres.filter { it.isNotBlank() },
     runtime = runtime,
     releaseInfo = releaseInfo,
     imdbRating = imdbRating,
@@ -72,6 +75,7 @@ fun MetaPreview.toTvHeroMeta(): TvHeroMeta = TvHeroMeta(
  * The two metadata lines of NuvioTV `HeroTitleContent`: "Type • Genre | runtime | year [IMDb]",
  * then the continue watching state, the age rating / status badge, IMDb, language and MDBList
  * ratings. IMDb moves to the second line for series, or when a badge or the state is there.
+ * [expanded] (hero opened with OK) adds every genre and every MDBList rating on their own lines.
  */
 @Composable
 fun TvHeroMetaRows(
@@ -79,6 +83,7 @@ fun TvHeroMetaRows(
     showImdbRating: Boolean,
     showMdbListRatings: Boolean,
     modifier: Modifier = Modifier,
+    expanded: Boolean = false,
 ) {
     val colors = MaterialTheme.nuvio.colors
     val type = meta.type?.trim()?.lowercase()
@@ -98,6 +103,8 @@ fun TvHeroMetaRows(
         ?.let { localizedMediaStatusLabel(it, isSeries).uppercase() }
     val language = meta.language?.trim()?.takeIf { it.isNotBlank() }?.uppercase()
     val ratings = if (showMdbListRatings) meta.ratings else emptyList()
+    val inlineRatings = if (expanded) emptyList() else ratings
+    val allGenres = meta.genres.takeIf { expanded && it.size > 1 }?.joinToString(" • ")
     // NuvioTV: with MDBList ratings on screen the standalone IMDb rating is not shown.
     val imdb = meta.imdbRating?.trim()
         ?.takeIf { showImdbRating && ratings.isEmpty() }
@@ -128,7 +135,7 @@ fun TvHeroMetaRows(
             }
         }
 
-        if (highlight != null || hasBadge || secondaryImdb != null || language != null || ratings.isNotEmpty()) {
+        if (highlight != null || hasBadge || secondaryImdb != null || language != null || inlineRatings.isNotEmpty()) {
             MetaLine {
                 var first = true
                 fun separator(): Boolean = (!first).also { first = false }
@@ -152,12 +159,23 @@ fun TvHeroMetaRows(
                     if (separator()) MetaDot()
                     MetaText(text = it, color = colors.textMuted)
                 }
-                if (ratings.isNotEmpty()) {
+                if (inlineRatings.isNotEmpty()) {
                     if (separator()) MetaDot()
-                    RatingsRow(ratings = ratings, maxItems = HERO_RATINGS_LIMIT)
+                    RatingsRow(ratings = inlineRatings, maxItems = HERO_RATINGS_LIMIT)
                 }
             }
         }
+
+        allGenres?.let {
+            Text(
+                text = it,
+                style = MaterialTheme.typography.labelMedium,
+                color = colors.textSecondary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        if (expanded && ratings.isNotEmpty()) RatingsRow(ratings = ratings)
     }
 }
 

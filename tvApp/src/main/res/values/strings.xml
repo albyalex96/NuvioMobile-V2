@@ -17,6 +17,8 @@
     <string name="tv_home_no_sources_message">Add an addon or a media server in Settings to fill your home.</string>
     <string name="tv_home_empty_title">Nothing to show</string>
     <string name="tv_home_empty_message">Enable some catalogs in Settings → Homescreen.</string>
+    <string name="tv_home_hero_play">Play</string>
+    <string name="tv_home_hero_resume">Resume</string>
     <string name="tv_home_error_title">Couldn\'t load your home</string>
     <string name="tv_action_retry">Retry</string>
     <string name="tv_action_details">Details</string>

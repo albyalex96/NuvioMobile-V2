@@ -40,7 +40,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -118,16 +120,16 @@ import com.nuvio.tv.ui.landscapeArtwork
 import com.nuvio.tv.ui.TvSectionTitle
 import com.nuvio.tv.ui.TvBlurredImage
 import com.nuvio.tv.ui.tvFocusable
+import com.nuvio.tv.ui.TvActionIconButton
+import com.nuvio.tv.ui.TvPlayButton
 import kotlinx.coroutines.delay
 
 private val log = Logger.withTag("TvDetails")
 
 // Layout of NuvioTV's detail page (HeroSection, EpisodesSection, CastSection) at 960dp width.
 private val HeroHorizontalPadding = 48.dp
-private val ActionButtonSize = 48.dp
 private val EpisodeCardShape = RoundedCornerShape(12.dp)
 private val SeasonTabShape = RoundedCornerShape(20.dp)
-private val PlayButtonShape = RoundedCornerShape(32.dp)
 // NuvioTV `CastSection`: 100dp photo in a 150dp column.
 private val CastPhotoSize = 100.dp
 private val CastItemWidth = 150.dp
@@ -174,6 +176,23 @@ fun TvDetailsScreen(model: TvDetailsModel) {
             log.i { "Playing a random episode: S${pick.season}E${pick.episode}" }
             model.onEpisodeClick(pick)
         }
+    }
+    // "Play" from the expanded home hero: the primary action once a series knows its episodes.
+    val currentModel by rememberUpdatedState(model)
+    LaunchedEffect(meta.id, model.isSeries, model.seasons) {
+        if (model.isSeries && model.seasons.isEmpty()) return@LaunchedEffect
+        if (!TvPendingDetailAction.consumePrimaryAction(meta.id)) return@LaunchedEffect
+        val current = currentModel
+        if (current.primaryActionEnabled) {
+            log.i { "Primary action requested from the home hero: ${current.primaryActionLabel}" }
+            current.onPrimaryAction()
+        } else {
+            log.w { "Primary action requested from the home hero is not available" }
+        }
+    }
+    // A request this page could not run (e.g. a series without episodes) must not fire on a later visit.
+    DisposableEffect(meta.id) {
+        onDispose { TvPendingDetailAction.consumePrimaryAction(meta.id) }
     }
     LaunchedEffect(meta.id) {
         repeat(10) {
@@ -348,7 +367,7 @@ private fun HeroSection(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.focusRestorer(playRequester),
             ) {
-                PlayButton(
+                TvPlayButton(
                     text = model.primaryActionLabel,
                     enabled = model.primaryActionEnabled,
                     progress = model.primaryActionProgress,
@@ -356,14 +375,14 @@ private fun HeroSection(
                     onLongClick = model.onPrimaryActionManual,
                     modifier = Modifier.focusRequester(playRequester),
                 )
-                ActionIconButton(
+                TvActionIconButton(
                     icon = if (model.isSaved) Icons.Filled.Check else Icons.Filled.Add,
                     contentDescription = stringResource(
                         if (model.isSaved) R.string.tv_details_in_library else R.string.tv_details_add_to_library,
                     ),
                     onClick = model.onToggleSaved,
                 )
-                ActionIconButton(
+                TvActionIconButton(
                     icon = if (model.isWatched) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
                     contentDescription = stringResource(
                         if (model.isWatched) R.string.tv_details_watched else R.string.tv_details_mark_watched,
@@ -372,14 +391,14 @@ private fun HeroSection(
                     onClick = model.onToggleWatched,
                 )
                 model.onPrimaryActionManual?.let { manual ->
-                    ActionIconButton(
+                    TvActionIconButton(
                         icon = Icons.AutoMirrored.Filled.List,
                         contentDescription = stringResource(R.string.tv_details_choose_source),
                         onClick = manual,
                     )
                 }
                 model.onShuffleClick?.let { shuffle ->
-                    ActionIconButton(
+                    TvActionIconButton(
                         icon = Icons.Filled.Shuffle,
                         contentDescription = stringResource(
                             if (model.shuffleActive) R.string.tv_details_shuffle_on else R.string.tv_details_shuffle,
@@ -428,111 +447,6 @@ private fun HeroSection(
 
             MetaInfoRows(model)
         }
-    }
-}
-
-/** White pill like NuvioTV's `PlayButton`; OK held (or Menu) opens the manual source choice. */
-@Composable
-private fun PlayButton(
-    text: String,
-    enabled: Boolean,
-    progress: Float?,
-    onClick: () -> Unit,
-    onLongClick: (() -> Unit)?,
-    modifier: Modifier = Modifier,
-) {
-    var focused by remember { mutableStateOf(false) }
-    val contentColor = primaryActionContentColor(enabled)
-    val resume = progress != null && progress > 0f
-    Box(
-        modifier = modifier
-            .focusProperties { up = FocusRequester.Cancel }
-            .tvFocusable(
-                shape = PlayButtonShape,
-                onClick = onClick,
-                onLongClick = onLongClick,
-                focusedScale = 1.05f,
-                enabled = enabled,
-                onFocusChange = { focused = it },
-            )
-            // Same gradient as the phone's main buttons; the accent glow lights up with the focus.
-            .primaryActionSurface(shape = PlayButtonShape, enabled = enabled, glow = focused),
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 13.dp),
-        ) {
-            Icon(
-                imageVector = if (resume) Icons.Rounded.PlayCircle else Icons.Filled.PlayArrow,
-                contentDescription = null,
-                tint = contentColor,
-                modifier = Modifier.size(20.dp),
-            )
-            Text(
-                text = text,
-                style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold, fontSize = 15.sp),
-                color = contentColor,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.widthIn(max = 320.dp),
-            )
-        }
-        if (progress != null && progress > 0f) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(horizontal = 22.dp, vertical = 5.dp)
-                    .width(64.dp)
-                    .height(3.dp)
-                    .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.15f)),
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(progress.coerceIn(0f, 1f))
-                        .height(3.dp)
-                        .background(MaterialTheme.nuvio.colors.accent),
-                )
-            }
-        }
-    }
-}
-
-/** Round icon button of the hero (NuvioTV `ActionIconButton`). */
-@Composable
-private fun ActionIconButton(
-    icon: ImageVector,
-    contentDescription: String,
-    onClick: () -> Unit,
-    selected: Boolean = false,
-) {
-    var focused by remember { mutableStateOf(false) }
-    val accent = MaterialTheme.nuvio.colors.accent
-    val container = when {
-        focused -> accent
-        selected -> Color.White
-        else -> MaterialTheme.nuvio.colors.surfaceCard
-    }
-    val content = when {
-        focused -> MaterialTheme.nuvio.colors.onAccent
-        selected -> Color.Black
-        else -> MaterialTheme.nuvio.colors.textPrimary
-    }
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = Modifier
-            .size(ActionButtonSize)
-            .focusProperties { up = FocusRequester.Cancel }
-            .tvFocusable(
-                shape = CircleShape,
-                onClick = onClick,
-                focusedScale = 1.08f,
-                onFocusChange = { focused = it },
-            )
-            .background(container, CircleShape),
-    ) {
-        Icon(imageVector = icon, contentDescription = contentDescription, tint = content, modifier = Modifier.size(22.dp))
     }
 }
 

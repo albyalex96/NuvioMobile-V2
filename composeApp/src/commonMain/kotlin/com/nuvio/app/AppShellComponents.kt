@@ -99,6 +99,9 @@ internal data class AppTabActions(
     val onCalendarClick: (() -> Unit)? = null,
     val onContinueWatchingClick: ((ContinueWatchingItem) -> Unit)? = null,
     val onContinueWatchingLongPress: ((ContinueWatchingItem) -> Unit)? = null,
+    /** TV home hero: the card menu's library action, and "play" through the details page. */
+    val onPosterLibraryToggle: ((MetaPreview) -> Unit)? = null,
+    val onPosterPlay: ((MetaPreview) -> Unit)? = null,
     val onLiveTvChannelClick: (LiveTvChannel) -> Unit = {},
     val onSwitchProfile: (() -> Unit)? = null,
     val onSettingsPageClick: ((pageName: String, title: String) -> Unit)? = null,
@@ -148,6 +151,8 @@ internal fun AppTabHost(
                         continueWatchingDisintegrationRequest = state.continueWatchingDisintegrationRequest,
                         onFolderClick = actions.onFolderClick,
                         onFirstCatalogRendered = actions.onInitialHomeContentRendered,
+                        onPosterLibraryToggle = actions.onPosterLibraryToggle,
+                        onPosterPlay = actions.onPosterPlay,
                     )
                 }
             }

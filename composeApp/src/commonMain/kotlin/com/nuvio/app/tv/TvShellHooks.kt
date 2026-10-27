@@ -197,6 +197,9 @@ internal fun buildTvHomeModel(
     heroItems: List<MetaPreview> = homeUiState.heroItems,
     showImdbRating: Boolean = true,
     showMdbListRatings: Boolean = false,
+    isSaved: (MetaPreview) -> Boolean = { false },
+    onToggleSaved: ((MetaPreview) -> Unit)? = null,
+    onPlay: ((MetaPreview) -> Unit)? = null,
 ): TvHomeModel {
     val top10Rows = homeUiState.top10Rows.map { row ->
         TvHomeRow.Top10(key = row.key, title = top10Titles[row.kind].orEmpty(), items = row.items)
@@ -250,6 +253,9 @@ internal fun buildTvHomeModel(
         showImdbRating = showImdbRating,
         showMdbListRatings = showMdbListRatings,
         loadHeroDetails = LoadTvHeroDetails,
+        isSaved = isSaved,
+        onToggleSaved = onToggleSaved,
+        onPlay = onPlay,
     )
 }
 

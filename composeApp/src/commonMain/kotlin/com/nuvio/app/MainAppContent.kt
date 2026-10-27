@@ -205,6 +205,7 @@ import com.nuvio.app.tv.ShellTabsDestination
 import com.nuvio.app.features.home.ContinueWatchingHandoff
 import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.tv.TvAppRuntime
+import com.nuvio.app.tv.TvPendingDetailAction
 import com.nuvio.app.tv.tvMetaShortcutActions
 import com.nuvio.app.tv.TvPosterMenuHook
 import dev.chrisbanes.haze.hazeSource
@@ -1514,6 +1515,117 @@ internal fun MainAppContent(
                     .fillMaxSize()
                     .background(MaterialTheme.nuvio.colors.background),
             ) {
+            // Before the tab actions: the TV home hero uses the same library action as the card menu.
+            fun onPosterLibraryAction(posterActionTarget: PosterActionTarget, removesFromLibrary: Boolean) {
+                val preview = posterActionTarget.preview
+                val libraryItem = posterActionTarget.libraryItem
+                    ?: preview.toLibraryItem(savedAtEpochMs = 0L)
+                if (posterActionTarget.libraryItem != null) {
+                    val animationKey = posterActionTarget.libraryListKey
+                        ?.let { listKey -> librarySectionItemKey(listKey, libraryItem) }
+                    // Anime tracker lists (library anime chips and "All") belong to their tracker whatever the source.
+                    if (isRemoteLibrarySource || AnimeLibrarySources.forSection(posterActionTarget.libraryListKey) != null) {
+                        coroutineScope.launch {
+                            val listKey = posterActionTarget.libraryListKey
+                            val removeMembership: suspend (Set<TrackingProviderId>) ->
+                                TrackingMembershipApplyResult = { confirmedProviders ->
+                                if (listKey.isNullOrBlank()) {
+                                    val currentMembership = LibraryRepository.getMembershipSnapshot(libraryItem)
+                                    LibraryRepository.applyMembershipChanges(
+                                        item = libraryItem,
+                                        desiredMembership = currentMembership.mapValues { false },
+                                        confirmedRemovalProviders = confirmedProviders,
+                                    )
+                                } else {
+                                    LibraryRepository.removeFromList(
+                                        item = libraryItem,
+                                        listKey = listKey,
+                                        confirmedRemovalProviders = confirmedProviders,
+                                    )
+                                }
+                            }
+                            val removeMembershipWithAnimation:
+                                suspend (Set<TrackingProviderId>) -> TrackingMembershipApplyResult =
+                                { confirmedProviders ->
+                                    val request = if (removesFromLibrary) {
+                                        animationKey?.let(libraryDisintegrationRequests::arm)
+                                    } else {
+                                        null
+                                    }
+                                    try {
+                                        removeMembership(confirmedProviders).also { result ->
+                                            if (result.requiresRemovalConfirmation && request != null) {
+                                                libraryDisintegrationRequests.cancel(request)
+                                            }
+                                        }
+                                    } catch (error: Throwable) {
+                                        request?.let(libraryDisintegrationRequests::cancel)
+                                        throw error
+                                    }
+                                }
+                            executeTrackingMembershipOperation(
+                                operation = { removeMembershipWithAnimation(emptySet()) },
+                                onSuccess = { result ->
+                                    if (result.requiresRemovalConfirmation) {
+                                        pendingTrackingRemoval = PendingTrackingMembershipRemoval(
+                                            itemTitle = libraryItem.name,
+                                            confirmations = result.requiredRemovalConfirmations,
+                                            retry = removeMembershipWithAnimation,
+                                            onApplied = {},
+                                            onFailure = { error ->
+                                                NuvioToastController.show(
+                                                    error.message
+                                                        ?: trackingListsUpdateFailedMessage,
+                                                )
+                                            },
+                                        )
+                                    }
+                                },
+                                onFailure = { error ->
+                                    NuvioToastController.show(
+                                        error.message ?: trackingListsUpdateFailedMessage,
+                                    )
+                                },
+                            )
+                        }
+                    } else {
+                        if (removesFromLibrary) {
+                            animationKey?.let(libraryDisintegrationRequests::arm)
+                        }
+                        LibraryRepository.remove(libraryItem.id)
+                    }
+                } else {
+                    // An anime with a connected anime tracker always gets the choice of services and lists.
+                    val offersAnimeDestinations = hasAnimeLibraryDestinations(LibraryRepository.libraryListTabs(libraryItem))
+                    if (!isRemoteLibrarySource && !offersAnimeDestinations) {
+                        LibraryRepository.toggleLocalSaved(libraryItem)
+                    } else {
+                        pickerItem = libraryItem
+                        pickerTitle = preview.name
+                        pickerTabs = LibraryRepository.libraryListTabs(libraryItem)
+                        pickerMembership = pickerTabs.associate { it.key to false }
+                        pickerPending = true
+                        pickerError = null
+                        showLibraryListPicker = true
+                        coroutineScope.launch {
+                            runCatching {
+                                val snapshot = LibraryRepository.getMembershipSnapshot(libraryItem)
+                                val tabs = LibraryRepository.libraryListTabs(libraryItem)
+                                pickerTabs = tabs
+                                pickerMembership = libraryPickerInitialMembership(
+                                    tabs = tabs,
+                                    currentMembership = snapshot,
+                                    rememberedDestinations = AnimeTrackingSettingsRepository.lastLibraryDestinations(),
+                                )
+                            }.onFailure { error ->
+                                pickerError = error.message ?: getString(Res.string.trakt_lists_load_failed)
+                            }
+                            pickerPending = false
+                        }
+                    }
+                }
+            }
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -1596,6 +1708,16 @@ internal fun MainAppContent(
                                 onPosterClick = navController::openPreview,
                                 onPosterLongClick = { meta ->
                                     openPosterActions(PosterActionTarget(preview = meta))
+                                },
+                                onPosterLibraryToggle = { meta ->
+                                    // Same decision as the card menu entry ("remove" only from a local library).
+                                    val saved = LibraryRepository.isSaved(meta.id, meta.type) ||
+                                        isSavedToAnimeTracker(meta.id, meta.type)
+                                    onPosterLibraryAction(PosterActionTarget(preview = meta), saved && !isRemoteLibrarySource)
+                                },
+                                onPosterPlay = { meta ->
+                                    TvPendingDetailAction.requestPrimaryAction(meta.id)
+                                    navController.navigate(DetailRoute(type = meta.type, id = meta.id, title = meta.name))
                                 },
                                 onLibraryPosterClick = { item ->
                                     navController.navigate(
@@ -1944,116 +2066,6 @@ internal fun MainAppContent(
                 )
                 }
             }
-            }
-
-            fun onPosterLibraryAction(posterActionTarget: PosterActionTarget, removesFromLibrary: Boolean) {
-                val preview = posterActionTarget.preview
-                val libraryItem = posterActionTarget.libraryItem
-                    ?: preview.toLibraryItem(savedAtEpochMs = 0L)
-                if (posterActionTarget.libraryItem != null) {
-                    val animationKey = posterActionTarget.libraryListKey
-                        ?.let { listKey -> librarySectionItemKey(listKey, libraryItem) }
-                    // Anime tracker lists (library anime chips and "All") belong to their tracker whatever the source.
-                    if (isRemoteLibrarySource || AnimeLibrarySources.forSection(posterActionTarget.libraryListKey) != null) {
-                        coroutineScope.launch {
-                            val listKey = posterActionTarget.libraryListKey
-                            val removeMembership: suspend (Set<TrackingProviderId>) ->
-                                TrackingMembershipApplyResult = { confirmedProviders ->
-                                if (listKey.isNullOrBlank()) {
-                                    val currentMembership = LibraryRepository.getMembershipSnapshot(libraryItem)
-                                    LibraryRepository.applyMembershipChanges(
-                                        item = libraryItem,
-                                        desiredMembership = currentMembership.mapValues { false },
-                                        confirmedRemovalProviders = confirmedProviders,
-                                    )
-                                } else {
-                                    LibraryRepository.removeFromList(
-                                        item = libraryItem,
-                                        listKey = listKey,
-                                        confirmedRemovalProviders = confirmedProviders,
-                                    )
-                                }
-                            }
-                            val removeMembershipWithAnimation:
-                                suspend (Set<TrackingProviderId>) -> TrackingMembershipApplyResult =
-                                { confirmedProviders ->
-                                    val request = if (removesFromLibrary) {
-                                        animationKey?.let(libraryDisintegrationRequests::arm)
-                                    } else {
-                                        null
-                                    }
-                                    try {
-                                        removeMembership(confirmedProviders).also { result ->
-                                            if (result.requiresRemovalConfirmation && request != null) {
-                                                libraryDisintegrationRequests.cancel(request)
-                                            }
-                                        }
-                                    } catch (error: Throwable) {
-                                        request?.let(libraryDisintegrationRequests::cancel)
-                                        throw error
-                                    }
-                                }
-                            executeTrackingMembershipOperation(
-                                operation = { removeMembershipWithAnimation(emptySet()) },
-                                onSuccess = { result ->
-                                    if (result.requiresRemovalConfirmation) {
-                                        pendingTrackingRemoval = PendingTrackingMembershipRemoval(
-                                            itemTitle = libraryItem.name,
-                                            confirmations = result.requiredRemovalConfirmations,
-                                            retry = removeMembershipWithAnimation,
-                                            onApplied = {},
-                                            onFailure = { error ->
-                                                NuvioToastController.show(
-                                                    error.message
-                                                        ?: trackingListsUpdateFailedMessage,
-                                                )
-                                            },
-                                        )
-                                    }
-                                },
-                                onFailure = { error ->
-                                    NuvioToastController.show(
-                                        error.message ?: trackingListsUpdateFailedMessage,
-                                    )
-                                },
-                            )
-                        }
-                    } else {
-                        if (removesFromLibrary) {
-                            animationKey?.let(libraryDisintegrationRequests::arm)
-                        }
-                        LibraryRepository.remove(libraryItem.id)
-                    }
-                } else {
-                    // An anime with a connected anime tracker always gets the choice of services and lists.
-                    val offersAnimeDestinations = hasAnimeLibraryDestinations(LibraryRepository.libraryListTabs(libraryItem))
-                    if (!isRemoteLibrarySource && !offersAnimeDestinations) {
-                        LibraryRepository.toggleLocalSaved(libraryItem)
-                    } else {
-                        pickerItem = libraryItem
-                        pickerTitle = preview.name
-                        pickerTabs = LibraryRepository.libraryListTabs(libraryItem)
-                        pickerMembership = pickerTabs.associate { it.key to false }
-                        pickerPending = true
-                        pickerError = null
-                        showLibraryListPicker = true
-                        coroutineScope.launch {
-                            runCatching {
-                                val snapshot = LibraryRepository.getMembershipSnapshot(libraryItem)
-                                val tabs = LibraryRepository.libraryListTabs(libraryItem)
-                                pickerTabs = tabs
-                                pickerMembership = libraryPickerInitialMembership(
-                                    tabs = tabs,
-                                    currentMembership = snapshot,
-                                    rememberedDestinations = AnimeTrackingSettingsRepository.lastLibraryDestinations(),
-                                )
-                            }.onFailure { error ->
-                                pickerError = error.message ?: getString(Res.string.trakt_lists_load_failed)
-                            }
-                            pickerPending = false
-                        }
-                    }
-                }
             }
 
             selectedPosterActionTarget?.let { posterActionTarget ->

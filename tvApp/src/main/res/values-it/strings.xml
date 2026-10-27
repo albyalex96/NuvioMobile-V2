@@ -17,6 +17,8 @@
     <string name="tv_home_no_sources_message">Aggiungi un addon o un server multimediale nelle Impostazioni per riempire la Home.</string>
     <string name="tv_home_empty_title">Niente da mostrare</string>
     <string name="tv_home_empty_message">Attiva qualche catalogo in Impostazioni → Schermata Home.</string>
+    <string name="tv_home_hero_play">Riproduci</string>
+    <string name="tv_home_hero_resume">Riprendi</string>
     <string name="tv_home_error_title">Impossibile caricare la Home</string>
     <string name="tv_action_retry">Riprova</string>
     <string name="tv_action_details">Dettagli</string>

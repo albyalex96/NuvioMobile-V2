@@ -49,6 +49,8 @@ import com.nuvio.app.features.details.MetaVideo
 import com.nuvio.app.features.details.SeriesPrimaryAction
 import com.nuvio.app.features.details.seriesPrimaryAction
 import com.nuvio.app.features.home.components.HomeCatalogRowSection
+import com.nuvio.app.features.library.LibraryRepository
+import com.nuvio.app.features.library.isSavedToAnimeTracker
 import com.nuvio.app.features.home.components.HomeTop10Section
 import com.nuvio.app.features.home.components.top10RowTitle
 import com.nuvio.app.features.home.components.HomeContinueWatchingSection
@@ -131,6 +133,8 @@ fun HomeScreen(
     continueWatchingDisintegrationRequest: DisintegrationRequest<String>? = null,
     onFolderClick: ((collectionId: String, folderId: String) -> Unit)? = null,
     onFirstCatalogRendered: (() -> Unit)? = null,
+    onPosterLibraryToggle: ((MetaPreview) -> Unit)? = null,
+    onPosterPlay: ((MetaPreview) -> Unit)? = null,
 ) {
     LaunchedEffect(Unit) {
         AddonRepository.initialize()
@@ -974,6 +978,14 @@ fun HomeScreen(
     )
 
     LocalTvShell.current?.let { tvShell ->
+        // Library state of the expanded TV hero: the check of the card menu, renewed when the library changes.
+        val libraryUiState by remember {
+            LibraryRepository.ensureLoaded()
+            LibraryRepository.uiState
+        }.collectAsStateWithLifecycle()
+        val isPosterSaved = remember(libraryUiState) {
+            { item: MetaPreview -> LibraryRepository.isSaved(item.id, item.type) || isSavedToAnimeTracker(item.id, item.type) }
+        }
         tvShell.home(
             buildTvHomeModel(
                 homeUiState = homeUiState,
@@ -1008,6 +1020,9 @@ fun HomeScreen(
                 heroItems = homeHeroState.items,
                 showImdbRating = homeHeroState.showImdbRating,
                 showMdbListRatings = homeHeroState.showMdbListRatings,
+                isSaved = isPosterSaved,
+                onToggleSaved = onPosterLibraryToggle,
+                onPlay = onPosterPlay,
             ),
         )
         return

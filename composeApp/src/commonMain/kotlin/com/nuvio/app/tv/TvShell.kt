@@ -51,19 +51,34 @@ class TvPosterMenu(
 
 /**
  * One-shot action for the next detail page: "watch a random episode" from a card menu opens the
- * series and plays a random episode as soon as its episodes are loaded.
+ * series and plays a random episode as soon as its episodes are loaded; "play" from the expanded
+ * home hero runs the primary action of the page (play, resume or next episode).
  */
 object TvPendingDetailAction {
     private var randomEpisodeFor: String? = null
+    private var primaryActionFor: String? = null
 
     fun requestRandomEpisode(metaId: String) {
         randomEpisodeFor = metaId
+        primaryActionFor = null
     }
 
     /** True once for [metaId] after [requestRandomEpisode]. */
     fun consumeRandomEpisode(metaId: String): Boolean {
         if (randomEpisodeFor != metaId) return false
         randomEpisodeFor = null
+        return true
+    }
+
+    fun requestPrimaryAction(metaId: String) {
+        primaryActionFor = metaId
+        randomEpisodeFor = null
+    }
+
+    /** True once for [metaId] after [requestPrimaryAction]. */
+    fun consumePrimaryAction(metaId: String): Boolean {
+        if (primaryActionFor != metaId) return false
+        primaryActionFor = null
         return true
     }
 }
@@ -141,9 +156,16 @@ data class TvHomeModel(
     val showMdbListRatings: Boolean = false,
     /** Details of the title on the hero (genres, runtime, badges, ratings), cached; the item itself when unavailable. */
     val loadHeroDetails: suspend (MetaPreview) -> MetaPreview = NoHeroDetails,
+    /** Library state of a title (same check as the card menu); a new value when the library changes. */
+    val isSaved: (MetaPreview) -> Boolean = NotSaved,
+    /** Adds or removes a title with the card menu's library action (lists picker, trackers…). */
+    val onToggleSaved: ((MetaPreview) -> Unit)? = null,
+    /** Opens the details of a title and runs its primary action (play, resume, next episode). */
+    val onPlay: ((MetaPreview) -> Unit)? = null,
 )
 
 private val NoHeroDetails: suspend (MetaPreview) -> MetaPreview = { it }
+private val NotSaved: (MetaPreview) -> Boolean = { false }
 
 @Immutable
 class TvDetailsModel(

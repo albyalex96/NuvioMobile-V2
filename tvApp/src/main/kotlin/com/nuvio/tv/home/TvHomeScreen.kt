@@ -128,6 +128,22 @@ import kotlinx.coroutines.CancellationException
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.animation.SizeTransform
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.unit.lerp
+import com.nuvio.app.core.ui.PlatformBackHandler
+import com.nuvio.tv.ui.TV_FOCUS_ANIMATION_MS
+import com.nuvio.tv.ui.TvActionIconButton
+import com.nuvio.tv.ui.TvPlayButton
+import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.LocalLayoutDirection
 import com.nuvio.app.features.collection.Collection
 import kotlin.math.roundToInt
@@ -148,6 +164,17 @@ private val HERO_ROWS_GAP = 14.dp
 
 /** Collapse/expand of the hero when the first row leaves or re-enters the screen. */
 private const val HERO_COLLAPSE_ANIMATION_MS = 350
+
+/** OK on the hero opens it on the whole screen: full plot, every detail, play and library buttons. */
+private const val HERO_EXPAND_ANIMATION_MS = 350
+private const val HERO_EXPANDED_TEXT_WIDTH_FRACTION = 0.55f
+private val HERO_EXPANDED_BOTTOM_PADDING = 36.dp
+/** Share of the visible plot scrolled by one D-pad press in the expanded hero. */
+private const val HERO_PLOT_SCROLL_FRACTION = 0.6f
+/** Focus outline around the hero text: drawn this far outside the text, so the text does not move. */
+private val HERO_OUTLINE_INSET = 12.dp
+private val HERO_OUTLINE_WIDTH = 2.dp
+private val HERO_OUTLINE_RADIUS = 16.dp
 
 /** NuvioTV never expands a focused poster sooner than this, even with a 0 s delay. */
 private const val MIN_EXPAND_DELAY_MS = 150L
@@ -184,6 +211,8 @@ private data class HeroInfo(
     val source: MetaPreview? = null,
     val continueWatching: Boolean = false,
     val detailsLoaded: Boolean = false,
+    /** Continue watching card of the hero: "play" resumes it like the card. */
+    val continueWatchingItem: ContinueWatchingItem? = null,
 )
 
 @Composable
@@ -256,6 +285,8 @@ private class TvHomeFocusState(
     var focusedPosterKey by mutableStateOf<String?>(null)
     var expandedPosterKey by mutableStateOf<String?>(null)
     var heroFocused by mutableStateOf(false)
+    /** The hero is open on the whole screen (OK on the hero): rows pushed out, buttons focused. */
+    var heroExpanded by mutableStateOf(false)
 
     val lastFocusedKey: String? get() = lastFocused.value
 
@@ -272,9 +303,10 @@ private class TvHomeFocusState(
         focusedPosterKey = key
     }
 
-    fun onHeroFocused() {
+    /** [showCarousel]: the carousel replaces the card preview; without carousel the hero keeps the card. */
+    fun onHeroFocused(showCarousel: Boolean) {
         lastFocused.value = HERO_FOCUS_KEY
-        focusedHero = null
+        if (showCarousel) focusedHero = null
         focusedPosterKey = null
     }
 }
@@ -381,6 +413,31 @@ private fun TvHomeContent(model: TvHomeModel) {
         label = "tvHomeHeroCollapse",
     )
     val heroBackdropVisible by remember { derivedStateOf { heroProgress.value > 0f } }
+    val heroExpandProgress = animateFloatAsState(
+        targetValue = if (focus.heroExpanded) 1f else 0f,
+        animationSpec = tween(HERO_EXPAND_ANIMATION_MS),
+        label = "tvHomeHeroExpand",
+    )
+    // Back closes the expanded hero (before the sidebar) and the focus returns to the hero text.
+    // Play closes it too, but then the next page owns the focus: only Back refocuses the hero.
+    var heroRefocusRequests by remember { mutableIntStateOf(0) }
+    PlatformBackHandler(enabled = focus.heroExpanded) {
+        log.i { "Expanded hero closed with Back" }
+        focus.heroExpanded = false
+        heroRefocusRequests++
+    }
+    LaunchedEffect(focus.heroExpanded) {
+        if (focus.heroExpanded) log.i { "Hero expanded on the whole screen" }
+    }
+    LaunchedEffect(heroRefocusRequests) {
+        if (heroRefocusRequests == 0) return@LaunchedEffect
+        // The hero target is not focusable while expanded: wait for the frame that enables it.
+        repeat(10) {
+            withFrameNanos { }
+            if (runCatching { heroRequester.requestFocus() }.getOrDefault(false)) return@LaunchedEffect
+        }
+        log.w { "Could not move the focus back to the hero" }
+    }
     val hasCarousel = carouselItems.isNotEmpty()
     val rowsPadding = remember(hasCarousel) {
         TvRowsContentPadding(
@@ -396,7 +453,13 @@ private fun TvHomeContent(model: TvHomeModel) {
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         // NuvioTV keeps the rows in the bottom 52% of the screen (49% with landscape posters).
-        val heroHeight = maxHeight * (1f - if (settings.landscapePosters) 0.49f else 0.52f)
+        val collapsedHeroHeight = maxHeight * (1f - if (settings.landscapePosters) 0.49f else 0.52f)
+        val screenHeight = maxHeight
+        // The expanded hero takes the whole screen; read in the layout phase, so the animation
+        // does not recompose the home.
+        val heroHeight = remember(collapsedHeroHeight, screenHeight) {
+            { lerp(collapsedHeroHeight, screenHeight, heroExpandProgress.value) }
+        }
         if (heroBackdropVisible) {
             Box(modifier = Modifier.fillMaxSize().graphicsLayer { alpha = heroProgress.value }) {
                 TvHomeHeroBackdrop(
@@ -404,7 +467,7 @@ private fun TvHomeContent(model: TvHomeModel) {
                     focus = focus,
                     heroIndex = heroIndex,
                     fullScreen = settings.heroFullScreenBackdrop,
-                    mediaHeight = heroHeight + (if (hasCarousel) HERO_ROWS_GAP else 0.dp) + HERO_MEDIA_BELOW_ROWS_TOP,
+                    mediaHeight = { heroHeight() + (if (hasCarousel) HERO_ROWS_GAP else 0.dp) + HERO_MEDIA_BELOW_ROWS_TOP },
                 )
             }
         }
@@ -429,7 +492,7 @@ private fun TvHomeContent(model: TvHomeModel) {
                     heroHidden = { heroHidden },
                     active = screenActive,
                     portraitMode = !settings.landscapePosters,
-                    modifier = Modifier.fillMaxWidth().height(heroHeight),
+                    modifier = Modifier.fillMaxSize(),
                 )
             }
             val continueWatchingSubtitle: @Composable (ContinueWatchingItem) -> String = { item ->
@@ -526,12 +589,20 @@ private fun TvHomeContent(model: TvHomeModel) {
  * Height animated during layout: the box takes [fullHeight] times [progress] and its content keeps
  * the full height, aligned to the bottom, so the hero slides up instead of being squashed.
  */
-private fun Modifier.collapsingHeight(fullHeight: Dp, progress: () -> Float): Modifier =
+private fun Modifier.collapsingHeight(fullHeight: () -> Dp, progress: () -> Float): Modifier =
     layout { measurable, constraints ->
-        val fullPx = fullHeight.roundToPx()
+        val fullPx = fullHeight().roundToPx()
         val placeable = measurable.measure(constraints.copy(minHeight = fullPx, maxHeight = fullPx))
         val height = (fullPx * progress().coerceIn(0f, 1f)).roundToInt()
         layout(placeable.width, height) { placeable.place(0, height - fullPx) }
+    }
+
+/** Height read during layout (animated), capped to the space the parent gives. */
+private fun Modifier.layoutHeight(height: () -> Dp): Modifier =
+    layout { measurable, constraints ->
+        val px = height().roundToPx().coerceIn(constraints.minHeight, constraints.maxHeight)
+        val placeable = measurable.measure(constraints.copy(minHeight = px, maxHeight = px))
+        layout(placeable.width, px) { placeable.place(0, 0) }
     }
 
 /** Index of the carousel slide on screen, clamped to the current items. */
@@ -557,7 +628,7 @@ private fun TvHomeHeroBackdrop(
     focus: TvHomeFocusState,
     heroIndex: MutableIntState,
     fullScreen: Boolean,
-    mediaHeight: Dp,
+    mediaHeight: () -> Dp,
 ) {
     val shownHero by rememberShownHero(model, focus, heroIndex)
     val backdrop by remember { derivedStateOf { shownHero?.backdrop } }
@@ -582,14 +653,17 @@ private fun TvHomeHero(
     val carouselItems = model.heroItems
     val activeIndex = activeHeroIndex(heroIndex.intValue, carouselItems.size)
     val carouselActive = carouselItems.isNotEmpty() && focus.focusedHero == null
-    LaunchedEffect(carouselActive, activeIndex, carouselItems.size, active) {
+    val expanded = focus.heroExpanded
+    LaunchedEffect(carouselActive, activeIndex, carouselItems.size, active, expanded) {
         // Hidden home: no slide change (and no backdrop crossfade or image load) off screen.
-        if (!active || !carouselActive || carouselItems.size <= 1) return@LaunchedEffect
+        // The expanded hero stays on its title while it is being read.
+        if (!active || expanded || !carouselActive || carouselItems.size <= 1) return@LaunchedEffect
         // A manual change restarts the wait (the effect is keyed on the index).
         delay(HERO_AUTO_ADVANCE_MS)
         heroIndex.intValue = (activeIndex + 1) % carouselItems.size
     }
     val shownHero by rememberShownHero(model, focus, heroIndex)
+    val hasCarousel = carouselItems.isNotEmpty()
     Box(modifier = modifier) {
         // The carousel dots get their own band below the hero text.
         HeroInfoPanel(
@@ -597,32 +671,104 @@ private fun TvHomeHero(
             portraitMode = portraitMode,
             showImdbRating = model.showImdbRating,
             showMdbListRatings = model.showMdbListRatings,
+            outlined = focus.heroFocused && !expanded,
+            expanded = expanded,
+            actions = { hero -> HeroExpandedActions(hero = hero, model = model, onPlayStarted = { focus.heroExpanded = false }) },
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = if (carouselItems.isNotEmpty()) HERO_DOTS_BAND else HERO_ROWS_GAP),
+                .padding(
+                    bottom = when {
+                        expanded -> HERO_EXPANDED_BOTTOM_PADDING
+                        hasCarousel -> HERO_DOTS_BAND
+                        else -> HERO_ROWS_GAP
+                    },
+                ),
         )
-        if (carouselItems.isNotEmpty()) {
+        // The hero text is reachable with the remote (outlined when focused) and OK opens it on
+        // the whole screen. Left/right change the carousel slide; without a carousel the hero
+        // keeps the preview of the card focused last.
+        if (hasCarousel || shownHero?.source != null) {
             HeroCarouselFocusTarget(
                 count = carouselItems.size,
                 activeIndex = activeIndex,
-                visible = carouselActive,
+                visible = carouselActive && !expanded,
                 focused = focus.heroFocused,
                 modifier = Modifier
                     .fillMaxSize()
-                    .focusProperties { canFocus = !heroHidden() }
+                    .focusProperties { canFocus = !heroHidden() && !focus.heroExpanded }
                     .focusRequester(heroRequester)
                     .onFocusChanged { state ->
                         focus.heroFocused = state.isFocused
-                        if (state.isFocused) focus.onHeroFocused()
+                        if (state.isFocused) focus.onHeroFocused(showCarousel = hasCarousel)
                     },
-                onPrevious = { (activeIndex > 0).also { moved -> if (moved) heroIndex.intValue = activeIndex - 1 } },
-                onNext = { (activeIndex < carouselItems.lastIndex).also { moved -> if (moved) heroIndex.intValue = activeIndex + 1 } },
+                onPrevious = { hasCarousel && (activeIndex > 0).also { moved -> if (moved) heroIndex.intValue = activeIndex - 1 } },
+                onNext = { hasCarousel && (activeIndex < carouselItems.lastIndex).also { moved -> if (moved) heroIndex.intValue = activeIndex + 1 } },
                 onClick = {
-                    carouselItems.getOrNull(activeIndex)?.let { item ->
-                        log.d { "Hero carousel item opened" }
-                        model.onPosterClick(item)
-                    }
+                    if (shownHero?.source != null) focus.heroExpanded = true
                 },
+            )
+        }
+    }
+}
+
+/**
+ * Buttons of the expanded hero, in the style of the detail page: play (or resume, like the
+ * continue watching card) and the card menu's library action. Play takes the focus; up/down
+ * scroll the plot (see [HeroInfoPanel]) and the focus never leaves the hero.
+ */
+@Composable
+private fun HeroExpandedActions(hero: HeroInfo, model: TvHomeModel, onPlayStarted: () -> Unit) {
+    val source = hero.source ?: return
+    val resumable = hero.continueWatchingItem
+        ?: model.continueWatching.firstOrNull { item ->
+            item.parentMetaId == source.id && !item.isNextUp && item.progressFraction > 0f
+        }
+    val progress = resumable?.takeIf { !it.isNextUp }?.progressFraction?.takeIf { it > 0f }
+    val onPlay = model.onPlay
+    val playRequester = remember { FocusRequester() }
+    LaunchedEffect(hero.key) {
+        repeat(10) {
+            withFrameNanos { }
+            if (runCatching { playRequester.requestFocus() }.getOrDefault(false)) return@LaunchedEffect
+        }
+        log.w { "Could not focus the play button of the expanded hero" }
+    }
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        TvPlayButton(
+            text = stringResource(if (progress != null) R.string.tv_home_hero_resume else R.string.tv_home_hero_play),
+            enabled = resumable != null || onPlay != null,
+            progress = progress,
+            onClick = {
+                if (resumable != null) {
+                    log.i { "Expanded hero play: continue watching item" }
+                    model.onContinueWatchingClick(resumable)
+                    onPlayStarted()
+                } else if (onPlay != null) {
+                    log.i { "Expanded hero play: primary action of the details" }
+                    onPlay(source)
+                    onPlayStarted()
+                }
+            },
+            onLongClick = null,
+            modifier = Modifier
+                .focusRequester(playRequester)
+                .focusProperties { start = FocusRequester.Cancel },
+        )
+        model.onToggleSaved?.let { toggleSaved ->
+            val saved = model.isSaved(source)
+            TvActionIconButton(
+                icon = if (saved) Icons.Filled.Check else Icons.Filled.Add,
+                contentDescription = stringResource(
+                    if (saved) R.string.tv_details_in_library else R.string.tv_details_add_to_library,
+                ),
+                onClick = {
+                    log.i { "Expanded hero library action (saved: $saved)" }
+                    toggleSaved(source)
+                },
+                modifier = Modifier.focusProperties { end = FocusRequester.Cancel },
             )
         }
     }
@@ -631,9 +777,9 @@ private fun TvHomeHero(
 private val ConfirmKeys = setOf(Key.DirectionCenter, Key.Enter, Key.NumPadEnter)
 
 /**
- * Focus target of the hero carousel (NuvioTV `HeroCarousel`): left/right change the slide, OK opens
- * the details, the indicator dots sit at the bottom. Left on the first slide is not consumed, so it
- * still opens the sidebar.
+ * Focus target of the hero carousel (NuvioTV `HeroCarousel`): left/right change the slide, OK
+ * expands the hero, the indicator dots sit at the bottom. Left on the first slide is not consumed,
+ * so it still opens the sidebar.
  */
 @Composable
 private fun HeroCarouselFocusTarget(
@@ -697,7 +843,7 @@ private fun HeroCarouselFocusTarget(
  * on the start side and along the bottom edge. The gradients are drawn in a single draw pass.
  */
 @Composable
-private fun HeroBackdrop(url: String?, fullScreen: Boolean, mediaHeight: Dp) {
+private fun HeroBackdrop(url: String?, fullScreen: Boolean, mediaHeight: () -> Dp) {
     val background = MaterialTheme.nuvio.colors.background
     val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
     val mediaModifier = if (fullScreen) {
@@ -706,7 +852,7 @@ private fun HeroBackdrop(url: String?, fullScreen: Boolean, mediaHeight: Dp) {
         // Slightly past the end edge, like NuvioTV, so the artwork does not stop at the overscan.
         Modifier
             .fillMaxWidth(HERO_MEDIA_WIDTH_FRACTION)
-            .height(mediaHeight)
+            .layoutHeight(mediaHeight)
             .offset(x = if (rtl) -HERO_MEDIA_END_OVERFLOW else HERO_MEDIA_END_OVERFLOW)
     }
     Box(modifier = Modifier.fillMaxSize()) {
@@ -802,6 +948,9 @@ private fun HeroInfoPanel(
     portraitMode: Boolean,
     showImdbRating: Boolean,
     showMdbListRatings: Boolean,
+    outlined: Boolean,
+    expanded: Boolean,
+    actions: @Composable (HeroInfo) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val headline = MaterialTheme.typography.headlineLarge
@@ -814,9 +963,17 @@ private fun HeroInfoPanel(
         val scale = if (portraitMode) HERO_PORTRAIT_DESCRIPTION_SCALE else 1f
         body.copy(fontSize = body.fontSize * scale, lineHeight = body.lineHeight * scale)
     }
+    val outlineColor = MaterialTheme.nuvio.colors.focusRing
+    val outlineAlpha = animateFloatAsState(
+        targetValue = if (outlined) 1f else 0f,
+        animationSpec = tween(TV_FOCUS_ANIMATION_MS),
+        label = "tvHomeHeroOutline",
+    )
+    val scope = rememberCoroutineScope()
     AnimatedContent(
         targetState = hero,
-        transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(300)) },
+        // No clipping: the focus outline is drawn a little outside the text.
+        transitionSpec = { (fadeIn(tween(300)) togetherWith fadeOut(tween(300))).using(SizeTransform(clip = false)) },
         contentKey = { info -> info?.key },
         label = "tvHomeHeroInfo",
         modifier = modifier,
@@ -828,8 +985,26 @@ private fun HeroInfoPanel(
                 .fillMaxSize()
                 .padding(start = TvDimens.rowPadding, end = HERO_TEXT_END_PADDING, top = TvDimens.chromeTopInset),
         ) {
+            val plotScroll = rememberScrollState()
             Column(
-                modifier = Modifier.fillMaxWidth(HERO_TEXT_WIDTH_FRACTION),
+                modifier = Modifier
+                    .fillMaxWidth(if (expanded) HERO_EXPANDED_TEXT_WIDTH_FRACTION else HERO_TEXT_WIDTH_FRACTION)
+                    .heroOutline(color = outlineColor, alpha = { outlineAlpha.value })
+                    // Expanded: up/down scroll the plot and never move the focus out of the hero.
+                    .onPreviewKeyEvent { event ->
+                        if (!expanded || event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
+                        val down = when (event.key) {
+                            Key.DirectionDown -> true
+                            Key.DirectionUp -> false
+                            else -> return@onPreviewKeyEvent false
+                        }
+                        val canScroll = if (down) plotScroll.canScrollForward else plotScroll.canScrollBackward
+                        if (canScroll) {
+                            val step = plotScroll.viewportSize * HERO_PLOT_SCROLL_FRACTION
+                            scope.launch { plotScroll.animateScrollBy(if (down) step else -step) }
+                        }
+                        true
+                    },
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 var logoFailed by remember(info.logo) { mutableStateOf(false) }
@@ -858,20 +1033,54 @@ private fun HeroInfoPanel(
                     meta = info.meta,
                     showImdbRating = showImdbRating,
                     showMdbListRatings = showMdbListRatings,
+                    expanded = expanded,
                 )
+                if (expanded) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    actions(info)
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
                 if (!info.description.isNullOrBlank()) {
-                    Text(
-                        text = info.description,
-                        style = descriptionStyle,
-                        color = MaterialTheme.nuvio.colors.textPrimary,
-                        maxLines = HERO_DESCRIPTION_MAX_LINES,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                    if (expanded) {
+                        // The whole plot; a long one scrolls inside the free height of the screen.
+                        Text(
+                            text = info.description,
+                            style = descriptionStyle,
+                            color = MaterialTheme.nuvio.colors.textPrimary,
+                            modifier = Modifier.weight(1f, fill = false).verticalScroll(plotScroll),
+                        )
+                    } else {
+                        Text(
+                            text = info.description,
+                            style = descriptionStyle,
+                            color = MaterialTheme.nuvio.colors.textPrimary,
+                            maxLines = HERO_DESCRIPTION_MAX_LINES,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             }
         }
     }
 }
+
+/** Rounded focus outline drawn [HERO_OUTLINE_INSET] outside the content; [alpha] is read in the draw phase. */
+private fun Modifier.heroOutline(color: Color, alpha: () -> Float): Modifier =
+    drawWithContent {
+        drawContent()
+        val visibility = alpha()
+        if (visibility <= 0f) return@drawWithContent
+        val inset = HERO_OUTLINE_INSET.toPx()
+        val radius = HERO_OUTLINE_RADIUS.toPx()
+        drawRoundRect(
+            color = color,
+            topLeft = Offset(-inset, -inset),
+            size = Size(size.width + inset * 2, size.height + inset * 2),
+            cornerRadius = CornerRadius(radius, radius),
+            style = Stroke(width = HERO_OUTLINE_WIDTH.toPx()),
+            alpha = visibility,
+        )
+    }
 
 @Composable
 private fun ContinueWatchingRow(
@@ -1145,8 +1354,9 @@ private fun heroOf(item: ContinueWatchingItem, subtitle: String?, state: String?
     backdrop = item.background ?: item.imageUrl ?: item.poster,
     meta = TvHeroMeta(type = item.parentMetaType, episodeLabel = subtitle, highlight = state),
     description = item.pauseDescription,
-    source = MetaPreview(id = item.parentMetaId, type = item.parentMetaType, name = item.title),
+    source = MetaPreview(id = item.parentMetaId, type = item.parentMetaType, name = item.title, poster = item.poster),
     continueWatching = true,
+    continueWatchingItem = item,
 )
 
 /** Folder of a collection: its hero backdrop and title logo (NuvioTV `buildCollectionFolderItem`). */
