@@ -75,6 +75,7 @@ import com.nuvio.app.core.ui.jelly.jellyPillPath
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.core.ui.themePalette
 import com.nuvio.app.core.ui.visualNavIndex
+import dev.chrisbanes.haze.HazeInputScale
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
@@ -88,7 +89,8 @@ fun rememberTvGlassBackdrop(): TvGlassBackdrop {
     return remember(hazeState) { TvGlassBackdrop(hazeState) }
 }
 
-fun Modifier.tvGlassBackdropSource(backdrop: TvGlassBackdrop): Modifier = hazeSource(backdrop.hazeState)
+fun Modifier.tvGlassBackdropSource(backdrop: TvGlassBackdrop?): Modifier =
+    if (backdrop == null) this else hazeSource(backdrop.hazeState)
 
 /**
  * One section of [TvGlassNavigationBar]. [leading] replaces the icon (e.g. the profile avatar);
@@ -110,6 +112,7 @@ private val CompactTrackHeight = 52.dp
 private val ExpandedTrackHeight = 66.dp
 private val IconSize = 24.dp
 private val LabelHeight = 16.dp
+private val TvGlassInputScale = HazeInputScale.Fixed(0.66f)
 
 /**
  * TV version of the phone's floating glass bar (same glass surface, glow and jelly pill), driven
@@ -190,7 +193,8 @@ fun TvGlassNavigationBar(
                     drawJellyGlow(motion.frame, accentColor.copy(alpha = accentColor.alpha * glowStrength))
                 },
         ) {
-            GlassBarSurface(backdrop?.hazeState, Modifier.matchParentSize(), glowStrength)
+            // NuvioTV blurs at 66% of the resolution: the bar is small and the blur hides the detail.
+            GlassBarSurface(backdrop?.hazeState, Modifier.matchParentSize(), glowStrength, TvGlassInputScale)
         }
         Box(
             Modifier.matchParentSize().drawWithContent {

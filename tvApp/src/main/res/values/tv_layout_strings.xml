@@ -13,6 +13,8 @@
     <string name="tv_layout_section_home_desc">Hero carousel and backdrop of the home.</string>
     <string name="tv_layout_fullscreen_hero_backdrop">Fullscreen hero backdrop</string>
     <string name="tv_layout_fullscreen_hero_backdrop_sub">Expand the hero backdrop to fill the entire screen.</string>
+    <string name="tv_layout_top_bar_blur">Blur behind the top bar</string>
+    <string name="tv_layout_top_bar_blur_sub">Blurs the page behind the glass top navigation bar. Heavy on slower TV devices: when off, the bar uses a solid translucent background.</string>
     <string name="tv_layout_show_hero">Show hero section</string>
     <string name="tv_layout_show_hero_sub">Display the hero carousel at the top of the home: left/right change title, OK opens it.</string>
     <string name="tv_layout_hero_catalogs">Hero catalogs</string>

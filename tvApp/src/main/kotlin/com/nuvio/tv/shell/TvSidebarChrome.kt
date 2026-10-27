@@ -91,6 +91,8 @@ import com.nuvio.app.tv.TvGlassNavItem
 import com.nuvio.app.tv.TvGlassNavigationBar
 import com.nuvio.app.tv.rememberTvGlassBackdrop
 import com.nuvio.app.tv.tvGlassBackdropSource
+import com.nuvio.tv.settings.TvTopBarBlurSupported
+import com.nuvio.tv.settings.rememberTvLayoutSettings
 import com.nuvio.app.tv.TvTabsChrome
 import com.nuvio.app.tv.tvChromeRegion
 import com.nuvio.app.tv.tvEnterOn
@@ -146,11 +148,19 @@ fun TvSidebarChrome(chrome: TvTabsChrome, content: @Composable () -> Unit) {
     val selectedRequester = remember { FocusRequester() }
     val topBarRequester = remember { FocusRequester() }
     val showPill = !topBar && chrome.selectedTab != AppScreenTab.Search
-    val glassBackdrop = rememberTvGlassBackdrop()
+    val layoutSettings = rememberTvLayoutSettings()
+    // NuvioTV keeps the blur opt-in: with it, the whole page is redrawn into a blurred layer on
+    // every frame. Without it the page is not a blur source at all and the bar is a solid glass.
+    val glassBlur = topBar && layoutSettings.topBarBlur && TvTopBarBlurSupported
+    val hazeBackdrop = rememberTvGlassBackdrop()
+    val glassBackdrop = if (glassBlur) hazeBackdrop else null
 
     LaunchedEffect(topBar) {
         log.i { "Navigation chrome: ${if (topBar) "glass top bar" else "sidebar"}" }
         if (topBar) expanded = false
+    }
+    LaunchedEffect(glassBlur) {
+        if (topBar) log.i { "Glass top bar blur ${if (glassBlur) "on" else "off"}" }
     }
 
     fun focusTopBar(reason: String) {
@@ -243,7 +253,7 @@ fun TvSidebarChrome(chrome: TvTabsChrome, content: @Composable () -> Unit) {
                 .padding(
                     top = if ((showPill || topBar) && chrome.selectedTab != AppScreenTab.Home) TvDimens.chromeTopInset else 0.dp,
                 )
-                .then(if (topBar) Modifier.tvGlassBackdropSource(glassBackdrop) else Modifier)
+                .tvGlassBackdropSource(glassBackdrop)
                 .onFocusChanged { contentHasFocus = it.hasFocus }
                 .onPreviewKeyEvent { event ->
                     if (event.type == KeyEventType.KeyDown && !expanded && !topBar) {

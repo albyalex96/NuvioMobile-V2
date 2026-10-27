@@ -13,6 +13,8 @@
     <string name="tv_layout_section_home_desc">Carosello e sfondo hero della Home.</string>
     <string name="tv_layout_fullscreen_hero_backdrop">Sfondo hero a schermo intero</string>
     <string name="tv_layout_fullscreen_hero_backdrop_sub">Espandi lo sfondo hero per riempire tutto lo schermo.</string>
+    <string name="tv_layout_top_bar_blur">Sfocatura dietro la barra superiore</string>
+    <string name="tv_layout_top_bar_blur_sub">Sfoca la pagina dietro la barra di navigazione in vetro. Pesante sui dispositivi TV più lenti: se disattivata, la barra usa uno sfondo semitrasparente pieno.</string>
     <string name="tv_layout_show_hero">Mostra sezione Hero</string>
     <string name="tv_layout_show_hero_sub">Visualizza il carosello hero nella parte superiore della Home: sinistra/destra cambiano titolo, OK lo apre.</string>
     <string name="tv_layout_hero_catalogs">Cataloghi Hero</string>

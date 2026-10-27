@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.offset
+import dev.chrisbanes.haze.HazeInputScale
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
@@ -27,13 +28,19 @@ import dev.chrisbanes.haze.hazeEffect
 private val GlassSurfaceColor = Color(0xFF1C1C1E)
 
 @Composable
-internal fun GlassBarSurface(hazeState: HazeState?, modifier: Modifier = Modifier, glowStrength: Float = 1f) {
+internal fun GlassBarSurface(
+    hazeState: HazeState?,
+    modifier: Modifier = Modifier,
+    glowStrength: Float = 1f,
+    /** Resolution of the blurred backdrop: below 1 the page is blurred at a lower resolution (cheaper). */
+    inputScale: HazeInputScale = HazeInputScale.Default,
+) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && hazeState?.blurEnabled == true && glowStrength > 0f) {
-        RefractedGlassBar(hazeState, modifier, glowStrength)
+        RefractedGlassBar(hazeState, modifier, glowStrength, inputScale)
     } else {
         Box(
             modifier
-                .then(if (hazeState != null) Modifier.barBackdrop(hazeState) else Modifier)
+                .then(if (hazeState != null) Modifier.barBackdrop(hazeState, inputScale) else Modifier)
                 .drawWithCache {
                     val fill = GlassSurfaceColor.copy(alpha = if (hazeState != null) 0.55f else 0.82f)
                     val edge = Brush.verticalGradient(
@@ -58,7 +65,7 @@ internal fun GlassBarSurface(hazeState: HazeState?, modifier: Modifier = Modifie
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @Composable
-private fun RefractedGlassBar(hazeState: HazeState, modifier: Modifier, glowStrength: Float) {
+private fun RefractedGlassBar(hazeState: HazeState, modifier: Modifier, glowStrength: Float, inputScale: HazeInputScale) {
     val shader = remember { RuntimeShader(GlassBarShader) }
     Box(
         modifier
@@ -76,12 +83,13 @@ private fun RefractedGlassBar(hazeState: HazeState, modifier: Modifier, glowStre
                 shader.setFloatUniform("glowStrength", glowStrength)
                 renderEffect = RenderEffect.createRuntimeShaderEffect(shader, "backdrop").asComposeRenderEffect()
             }
-            .barBackdrop(hazeState),
+            .barBackdrop(hazeState, inputScale),
     )
 }
 
-private fun Modifier.barBackdrop(hazeState: HazeState): Modifier = hazeEffect(state = hazeState) {
+private fun Modifier.barBackdrop(hazeState: HazeState, inputScale: HazeInputScale): Modifier = hazeEffect(state = hazeState) {
     blurRadius = 24.dp
+    this.inputScale = inputScale
     backgroundColor = GlassSurfaceColor
     tints = listOf(HazeTint(Color.Transparent))
     noiseFactor = 0f

@@ -119,6 +119,15 @@ private fun SectionContent(section: TvLayoutSection, navigator: TvSettingsNaviga
                 checked = settings.heroFullScreenBackdrop,
                 onCheckedChange = repository::setHeroFullScreenBackdrop,
             )
+            // The glass blur needs RenderEffect (Android 12+); older devices always get the solid bar.
+            if (TvTopBarBlurSupported) {
+                TvSettingsToggleRow(
+                    title = stringResource(R.string.tv_layout_top_bar_blur),
+                    subtitle = stringResource(R.string.tv_layout_top_bar_blur_sub),
+                    checked = settings.topBarBlur,
+                    onCheckedChange = repository::setTopBarBlur,
+                )
+            }
         }
 
         TvLayoutSection.HomeContent -> {
@@ -534,6 +543,11 @@ private fun tvLayoutSearchEntries(): List<TvSettingsSearchItem> {
         R.string.tv_layout_show_hero to R.string.tv_layout_show_hero_sub,
         R.string.tv_layout_hero_catalogs to null,
         R.string.tv_layout_fullscreen_hero_backdrop to R.string.tv_layout_fullscreen_hero_backdrop_sub,
+        *if (TvTopBarBlurSupported) {
+            arrayOf<Pair<Int, Int?>>(R.string.tv_layout_top_bar_blur to R.string.tv_layout_top_bar_blur_sub)
+        } else {
+            emptyArray<Pair<Int, Int?>>()
+        },
     ) + entries(
         R.string.tv_layout_section_content,
         R.string.tv_layout_poster_labels to R.string.tv_layout_poster_labels_sub,

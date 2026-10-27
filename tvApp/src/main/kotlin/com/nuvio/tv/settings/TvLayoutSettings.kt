@@ -2,6 +2,7 @@ package com.nuvio.tv.settings
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.os.Build
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -26,6 +27,9 @@ const val DefaultTvPosterWidthDp = 126
 const val DefaultTvCornerRadiusDp = 12
 const val DefaultTvExpandDelaySeconds = 3
 
+/** Blur behind the glass top bar: Haze needs RenderEffect, available from Android 12. */
+val TvTopBarBlurSupported: Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+
 /**
  * Layout of the TV app (Settings -> Appearance -> TV layout), ported from NuvioTV's layout
  * settings. TV only: saved on the device for each profile, never synced, so the phone's
@@ -41,6 +45,11 @@ data class TvLayoutSettings(
     val expandFocusedPoster: Boolean = true,
     val expandDelaySeconds: Int = DefaultTvExpandDelaySeconds,
     val heroFullScreenBackdrop: Boolean = false,
+    /**
+     * Blurs the page behind the glass top bar (NuvioTV "sidebar blur"): off by default like
+     * NuvioTV, because the whole page is redrawn into a blurred layer on every frame.
+     */
+    val topBarBlur: Boolean = false,
     /** Publishes "Continue watching" to the launcher "Watch Next" row. */
     val launcherContinueWatching: Boolean = true,
     /** What opening a launcher entry does (the launcher menu itself cannot be customized). */
@@ -61,6 +70,7 @@ object TvLayoutSettingsRepository {
     private const val KEY_EXPAND_FOCUSED_POSTER = "expand_focused_poster"
     private const val KEY_EXPAND_DELAY = "expand_delay_seconds"
     private const val KEY_HERO_FULL_SCREEN = "hero_full_screen_backdrop"
+    private const val KEY_TOP_BAR_BLUR = "top_bar_blur"
     private const val KEY_LAUNCHER_CONTINUE_WATCHING = "launcher_continue_watching"
     private const val KEY_LAUNCHER_OPEN_ACTION = "launcher_open_action"
 
@@ -93,6 +103,7 @@ object TvLayoutSettingsRepository {
             expandDelaySeconds = prefs.getInt(key(KEY_EXPAND_DELAY), DefaultTvExpandDelaySeconds)
                 .coerceIn(TvExpandDelayRange.first, TvExpandDelayRange.last),
             heroFullScreenBackdrop = prefs.getBoolean(key(KEY_HERO_FULL_SCREEN), false),
+            topBarBlur = prefs.getBoolean(key(KEY_TOP_BAR_BLUR), false),
             launcherContinueWatching = prefs.getBoolean(key(KEY_LAUNCHER_CONTINUE_WATCHING), true),
             launcherOpenAction = prefs.getString(key(KEY_LAUNCHER_OPEN_ACTION), null)
                 ?.let { name -> ContinueWatchingLaunchAction.entries.firstOrNull { it.name == name } }
@@ -117,6 +128,7 @@ object TvLayoutSettingsRepository {
     }
     fun setHeroFullScreenBackdrop(enabled: Boolean) =
         update(KEY_HERO_FULL_SCREEN, enabled) { copy(heroFullScreenBackdrop = enabled) }
+    fun setTopBarBlur(enabled: Boolean) = update(KEY_TOP_BAR_BLUR, enabled) { copy(topBarBlur = enabled) }
     fun setLauncherContinueWatching(enabled: Boolean) =
         update(KEY_LAUNCHER_CONTINUE_WATCHING, enabled) { copy(launcherContinueWatching = enabled) }
     fun setLauncherOpenAction(action: ContinueWatchingLaunchAction) =
