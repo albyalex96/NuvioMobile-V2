@@ -35,6 +35,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Row
@@ -104,6 +107,7 @@ import com.nuvio.tv.ui.TvMessage
 import com.nuvio.tv.ui.landscapeArtwork
 import com.nuvio.tv.ui.showsLandscape
 import com.nuvio.tv.ui.tvFocusable
+import com.nuvio.tv.ui.rememberTvRowsBringIntoViewSpec
 import androidx.compose.foundation.layout.offset
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.ui.focus.focusProperties
@@ -280,6 +284,7 @@ private class TvRowsContentPadding(private val top: () -> Dp, private val bottom
     override fun calculateRightPadding(layoutDirection: LayoutDirection): Dp = 0.dp
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun TvHomeContent(model: TvHomeModel) {
     val settings = rememberTvLayoutSettings()
@@ -420,81 +425,86 @@ private fun TvHomeContent(model: TvHomeModel) {
             val continueWatchingSubtitle: @Composable (ContinueWatchingItem) -> String = { item ->
                 localizedContinueWatchingSubtitle(item, compact = true)
             }
-            LazyColumn(
-                state = rowsState,
-                contentPadding = rowsPadding,
-                verticalArrangement = Arrangement.spacedBy(TvDimens.rowGap - TvDimens.rowVerticalPadding * 2),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    // Focus leaving the rows (sidebar, top bar) collapses the expanded poster.
-                    .onFocusChanged { state -> if (!state.hasFocus) focus.focusedPosterKey = null }
-                    .focusRestorer(),
-            ) {
-                if (model.continueWatching.isNotEmpty()) {
-                    item(key = "continue_watching", contentType = "landscape_row") {
-                        ContinueWatchingRow(
-                            title = stringResource(R.string.tv_home_continue_watching),
-                            items = model.continueWatching,
-                            keyPrefix = "cw",
-                            upcoming = false,
-                            model = model,
-                            settings = settings,
-                            metrics = metrics,
-                            useEpisodeThumbnails = continueWatchingPrefs.useEpisodeThumbnails,
-                            blurNextUp = continueWatchingPrefs.blurNextUp,
-                            subtitle = continueWatchingSubtitle,
-                            requesterFor = requesterFor,
-                            onFocused = onCardFocused,
-                        )
+            // NuvioTV row scrolling: the focused row always lands right below the top padding.
+            val rowsTopPadding = remember(rowsPadding) { { rowsPadding.calculateTopPadding() } }
+            val rowsBringIntoViewSpec = rememberTvRowsBringIntoViewSpec(rowsState, rowsTopPadding)
+            CompositionLocalProvider(LocalBringIntoViewSpec provides rowsBringIntoViewSpec) {
+                LazyColumn(
+                    state = rowsState,
+                    contentPadding = rowsPadding,
+                    verticalArrangement = Arrangement.spacedBy(TvDimens.rowGap - TvDimens.rowVerticalPadding * 2),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f)
+                        // Focus leaving the rows (sidebar, top bar) collapses the expanded poster.
+                        .onFocusChanged { state -> if (!state.hasFocus) focus.focusedPosterKey = null }
+                        .focusRestorer(),
+                ) {
+                    if (model.continueWatching.isNotEmpty()) {
+                        item(key = "continue_watching", contentType = "landscape_row") {
+                            ContinueWatchingRow(
+                                title = stringResource(R.string.tv_home_continue_watching),
+                                items = model.continueWatching,
+                                keyPrefix = "cw",
+                                upcoming = false,
+                                model = model,
+                                settings = settings,
+                                metrics = metrics,
+                                useEpisodeThumbnails = continueWatchingPrefs.useEpisodeThumbnails,
+                                blurNextUp = continueWatchingPrefs.blurNextUp,
+                                subtitle = continueWatchingSubtitle,
+                                requesterFor = requesterFor,
+                                onFocused = onCardFocused,
+                            )
+                        }
                     }
-                }
-                if (model.upcoming.isNotEmpty()) {
-                    item(key = "upcoming", contentType = "landscape_row") {
-                        ContinueWatchingRow(
-                            title = stringResource(R.string.tv_home_upcoming),
-                            items = model.upcoming,
-                            keyPrefix = "up",
-                            upcoming = true,
-                            model = model,
-                            settings = settings,
-                            metrics = metrics,
-                            useEpisodeThumbnails = continueWatchingPrefs.useEpisodeThumbnails,
-                            blurNextUp = continueWatchingPrefs.blurNextUp,
-                            subtitle = continueWatchingSubtitle,
-                            requesterFor = requesterFor,
-                            onFocused = onCardFocused,
-                        )
+                    if (model.upcoming.isNotEmpty()) {
+                        item(key = "upcoming", contentType = "landscape_row") {
+                            ContinueWatchingRow(
+                                title = stringResource(R.string.tv_home_upcoming),
+                                items = model.upcoming,
+                                keyPrefix = "up",
+                                upcoming = true,
+                                model = model,
+                                settings = settings,
+                                metrics = metrics,
+                                useEpisodeThumbnails = continueWatchingPrefs.useEpisodeThumbnails,
+                                blurNextUp = continueWatchingPrefs.blurNextUp,
+                                subtitle = continueWatchingSubtitle,
+                                requesterFor = requesterFor,
+                                onFocused = onCardFocused,
+                            )
+                        }
                     }
-                }
-                items(model.rows, key = TvHomeRow::key, contentType = { row -> row::class.simpleName }) { row ->
-                    when (row) {
-                        is TvHomeRow.Catalog -> CatalogRow(
-                            row = row,
-                            model = model,
-                            settings = settings,
-                            metrics = metrics,
-                            focus = focus,
-                            requesterFor = requesterFor,
-                            onFocused = onCardFocused,
-                            onPosterFocused = onPosterFocused,
-                        )
-                        is TvHomeRow.Folders -> FoldersRow(
-                            row = row,
-                            model = model,
-                            settings = settings,
-                            metrics = metrics,
-                            requesterFor = requesterFor,
-                            onFocused = onCardFocused,
-                        )
-                        is TvHomeRow.Top10 -> Top10Row(
-                            row = row,
-                            model = model,
-                            settings = settings,
-                            metrics = metrics,
-                            requesterFor = requesterFor,
-                            onFocused = onCardFocused,
-                        )
+                    items(model.rows, key = TvHomeRow::key, contentType = { row -> row::class.simpleName }) { row ->
+                        when (row) {
+                            is TvHomeRow.Catalog -> CatalogRow(
+                                row = row,
+                                model = model,
+                                settings = settings,
+                                metrics = metrics,
+                                focus = focus,
+                                requesterFor = requesterFor,
+                                onFocused = onCardFocused,
+                                onPosterFocused = onPosterFocused,
+                            )
+                            is TvHomeRow.Folders -> FoldersRow(
+                                row = row,
+                                model = model,
+                                settings = settings,
+                                metrics = metrics,
+                                requesterFor = requesterFor,
+                                onFocused = onCardFocused,
+                            )
+                            is TvHomeRow.Top10 -> Top10Row(
+                                row = row,
+                                model = model,
+                                settings = settings,
+                                metrics = metrics,
+                                requesterFor = requesterFor,
+                                onFocused = onCardFocused,
+                            )
+                        }
                     }
                 }
             }
@@ -972,7 +982,8 @@ private fun Top10Row(
     requesterFor: (String) -> FocusRequester,
     onFocused: (String, HeroInfo) -> Unit,
 ) {
-    TvContentRow(title = row.title) {
+    // The focused poster stops after the room of its rank number, which stays visible.
+    TvContentRow(title = row.title, focusStartInset = top10RankSpace(1, metrics.posterWidth)) {
         itemsIndexed(row.items, key = { _, item -> "${row.key}:${item.stableKey()}" }) { index, item ->
             val key = "${row.key}:${item.stableKey()}"
             val rank = index + 1

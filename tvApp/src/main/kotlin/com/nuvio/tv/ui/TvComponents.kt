@@ -2,7 +2,9 @@ package com.nuvio.tv.ui
 
 import com.nuvio.app.core.ui.primaryActionContentColor
 import com.nuvio.app.core.ui.primaryActionSurface
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -30,6 +32,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -178,25 +181,31 @@ fun TvSectionTitle(text: String, modifier: Modifier = Modifier) {
 }
 
 /** A titled horizontal row of focusable items that restores the last focused item. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun TvContentRow(
     title: String?,
     modifier: Modifier = Modifier,
+    /** Room kept before the focused card when the row scrolls (see [rememberTvRowBringIntoViewSpec]). */
+    focusStartInset: Dp = 0.dp,
     content: LazyListScope.() -> Unit,
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         if (!title.isNullOrBlank()) {
             TvSectionTitle(title)
         }
-        LazyRow(
-            state = rememberLazyListState(),
-            contentPadding = PaddingValues(horizontal = TvDimens.rowPadding, vertical = TvDimens.rowVerticalPadding),
-            horizontalArrangement = Arrangement.spacedBy(TvDimens.rowSpacing),
-            modifier = Modifier
-                .fillMaxWidth()
-                .focusRestorer(),
-            content = content,
-        )
+        // Provided around the row only: the vertical list keeps its own scrolling.
+        CompositionLocalProvider(LocalBringIntoViewSpec provides rememberTvRowBringIntoViewSpec(focusStartInset)) {
+            LazyRow(
+                state = rememberLazyListState(),
+                contentPadding = PaddingValues(horizontal = TvDimens.rowPadding, vertical = TvDimens.rowVerticalPadding),
+                horizontalArrangement = Arrangement.spacedBy(TvDimens.rowSpacing),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRestorer(),
+                content = content,
+            )
+        }
     }
 }
 
