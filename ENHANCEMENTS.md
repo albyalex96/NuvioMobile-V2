@@ -11,11 +11,16 @@ Most settings are saved per profile and synced with your Nuvio account, so they 
 ## Contents
 
 - [Android TV app](#android-tv-app)
+- [Phone as TV remote](#phone-as-tv-remote)
+- [Windows desktop app](#windows-desktop-app)
 - [Live TV and EPG](#live-tv-and-epg)
 - [Chromecast and media proxy](#chromecast-and-media-proxy)
 - [Downloads](#downloads)
 - [Player](#player)
 - [Streams](#streams)
+- [Integrations](#integrations)
+- [CloudStream plugins](#cloudstream-plugins)
+- [Network](#network)
 - [Appearance and interface](#appearance-and-interface)
 - [Diagnostics](#diagnostics)
 - [Sync and settings](#sync-and-settings)
@@ -28,16 +33,36 @@ Most settings are saved per profile and synced with your Nuvio account, so they 
 A dedicated Android TV app, released as a separate APK (`Nuvio-Enhanced-Alby-TV-…`). It shares all the logic of the phone app (accounts, profiles, sync, streams, player) and adds a remote-friendly interface inspired by [NuvioTV](https://github.com/NuvioMedia/NuvioTV).
 
 - **Navigation:** NuvioTV-style "modern sidebar" with a floating pill showing the current section, or an optional **glass top navigation bar** (icons + labels or icons only, with optional glow).
-- **Home:** hero area with an **auto-advancing carousel** (choose up to 2 hero catalogs, synced with the profile), rows sized like NuvioTV, Continue Watching in three styles (Card, Wide, Poster) with badges for time left, next episode, new episode and new season, optional focused-poster expansion.
+- **Home:** NuvioTV "Modern" hero below the navigation bar with an **auto-advancing carousel** (choose up to 2 hero catalogs, synced with the profile), enriched metadata, ratings and age rating, full-screen backdrop kept behind every row. The hero can be **expanded** (plot, Play and Library buttons, hold Play to choose the source manually) and stays open while scrolling the rows. Rows sized and scrolled like NuvioTV, Continue Watching in three styles (Card, Wide, Poster) with badges for time left, next episode, new episode and new season, optional focused-poster expansion.
 - **"TV Layout" settings page:** poster width and corner radius presets, landscape posters, labels under posters, Continue Watching style, poster expansion delay, full-screen hero backdrop, plus shortcuts to the shared Home and Continue Watching options.
-- **Details page:** full-screen backdrop, NuvioTV-style hero, play button (hold OK to choose the source), library/watched/shuffle buttons, MDBList ratings, season posters or text tabs, horizontal or list episode cards (follows the phone setting, with blurred unwatched episodes and expandable overviews), **per-episode IMDb ratings section**, clickable cast that opens the person page, collection and similar titles.
+- **Details page:** full-screen backdrop, NuvioTV-style hero, play button (hold OK to choose the source), library/watched/shuffle buttons, MDBList ratings, season posters or text tabs, horizontal or list episode cards (follows the phone setting, with blurred unwatched episodes and expandable overviews), **per-episode IMDb ratings section**, expandable synopsis, season actions menu on long press, clickable cast that opens the person page, collection and similar titles.
 - **Card options menu:** hold OK or press Menu on any poster or Continue Watching card: view details, watch a random episode, resume/play from start, choose source, mark as watched (without flicker in Continue Watching), add/remove from library, remove from Continue Watching. Streams have their own TV menu too.
 - **Continue Watching on the Android TV home screen:** the row is published to the launcher as a Nuvio "Continue watching" channel and in the "Play next" row (with progress and episode artwork). Opening an item can show the card options menu (resume, choose source and play, details…), resume directly, open the stream list of the right episode or open the details page. Configurable in TV Layout → Android TV home screen.
-- **Remote control in the player:** OK play/pause, left/right cumulative seek with preview (step grows while held), focus on the timeline, skip intro/next episode prompts, panels and dialogs that receive focus automatically.
+- **Remote control in the player:** OK play/pause, left/right cumulative seek with preview (step grows while held), **seek thumbnails** even with the controls hidden, media keys, focus on the timeline, skip intro/next episode prompts, compact resume prompt, panels and dialogs that receive focus automatically. In the Live TV channels panel, a long press on OK opens the channel's EPG guide.
 - **Focus handling everywhere:** focus follows navigation, never gets lost in hidden tabs, settings work in levels (categories → panel → sub-pages, Back goes up one level), dialogs focus the primary button, text fields open the keyboard only when you press OK.
 - **QR code sign-in** (same device-link flow as NuvioTV) with email/password as a fallback.
-- **Voice search** with the system speech recognizer.
+- **Voice search** with the system speech recognizer and from the Google Assistant, plus an **Android TV global search provider** (Nuvio results in the system search). Recent searches always shown as scrollable chips.
 - Centered scrolling with fading edges in Settings, visible focus on profile selection and filter chips.
+- **Performance work:** baseline profile, lighter image loading, NuvioTV-style row scrolling, throttled held D-pad repeats, low-resolution blur instead of real-time blur, optional blur behind the glass top bar, hero paused while the Home is hidden.
+
+## Phone as TV remote
+
+- **Remote control for Android TV playback** from the phone: pair with a code, the in-app QR scanner or automatic TV discovery on the network (manual address as a fallback).
+- Controls in a background notification, on the lock screen and with the volume keys, shown automatically when the TV is detected online.
+- **Telegram login on the TV** done from the paired phone.
+- **View and manage the TV logs** from the phone.
+- **Watch Party companion chat** on the phone.
+
+## Windows desktop app
+
+A Windows app built from the same code, distributed as an MSI installer with in-app updates.
+
+- **libmpv player** with keyboard shortcuts, mouse wheel volume, fullscreen button, cursor auto-hide, controls shown on mouse movement, seek bar hover preview with **FFmpeg seek thumbnails**, compact resume prompt.
+- In-app trailers and hero trailer playback, animated artwork playback modes.
+- **Chromecast** through the Cast v2 protocol (receivers found through the Windows firewall), with a **LAN media proxy** for header-protected and local streams.
+- **P2P streaming** with the Nuvio engine, **JS scraper plugins** on QuickJS.
+- Downloads folder, episode folders and HLS downloads with FFmpeg.
+- Mouse-friendly interface: rows draggable with the mouse, right mouse button as long press, per-device poster width, hover scale and hover preview; desktop counts as its own device for the per-device player settings.
 
 ## Live TV and EPG
 
@@ -65,24 +90,49 @@ Ported from [luqmanfadlli/NuvioMobile-Enhanced](https://github.com/luqmanfadlli/
 - **Downloads settings page:** choose an **external folder** (Storage Access Framework), storage summary with used/free space bars, file cards with play, resume, external player, Chromecast, share, file info, pause/retry and delete.
 - **External files:** videos already in the folder (copied from elsewhere or from another profile) can be played directly, with matching subtitles picked up automatically.
 - **HLS downloads** (Android): choose video quality, audio tracks and subtitles in a dialog (preferred audio language preselected), background download with pause/resume and AES-128 support, then conversion without re-encoding to **MP4 or MKV** with embedded tracks.
+- **Season downloads** with episode folders, downloads grouped by title.
 - **Background downloads section:** battery optimization status and shortcut, with tips for manufacturers with aggressive power saving.
 
 ## Player
 
 - **Custom seek interval** (1–20 seconds) for on-screen buttons, double tap (cumulative), notification/media session and iOS remote commands, with a dynamic icon.
-- **"Still watching?" prompt** (Netflix style): after a configurable number of consecutive auto-played episodes, optionally only at night (22:00–04:00), with a 10-second countdown before the player closes. A separate time-based version for **Live TV** (15 min – 6 h).
+- **"Still watching?" prompt** (Netflix style): after a configurable number of consecutive auto-played episodes, optionally only at night (22:00–04:00), with a 10-second countdown before the player closes (or exits to the details page), with per-device options. A separate time-based version for **Live TV** (15 min – 6 h).
+- **Seek thumbnails** for single files and HLS streams, with separate options for phone and TV.
+- **Richer controls:** title logo, Stream Parser badges, source name, clock and end time above the timeline.
+- **Dialogue boost and dynamic range compression** sliders in the audio panel.
+- **Subtitles:** Nuvio libass atlas pipeline for ASS/SSA, subtitle style applied to embedded ASS tracks, hold-to-repeat subtitle delay buttons, and optional **auto-sync** for add-on, OpenSubtitles and SubDL subtitles (ASS/SSA matched by dialogue, SRT/VTT fallback).
+- **Provider priority auto-play:** auto-play picks the stream following your preferred provider order.
+- Watch progress is saved when leaving the app.
 - **Audio delay** (ported from NuvioTV): ±60 s in 25 ms steps, remembered **per audio output** (speaker, Bluetooth, HDMI…), with support for the `behaviorHints.audioDelayMs` stream hint from addons and plugins. Works with ExoPlayer and mpv.
 - **Chapters** (ported from luqmanfadlli's fork): chapter marks on the seek bar, the current chapter title above it and a **Chapters** panel to jump to any chapter, on phone, tablet and the TV app. Read from MKV/MP4 files with ExoPlayer and directly from mpv (Android libmpv and iOS).
 - **Private Viewing** (ported from luqmanfadlli's fork): a switch in Playback → Player that stops saving watch progress, Continue Watching and watched status and stops scrobbling to connected trackers, for the in-app player and for external player results. Synced with the profile. The stream menu also has **Watch privately** to watch a single movie or episode privately (the following episodes are tracked as usual).
 - **Discord Rich Presence** (ported from luqmanfadlli's fork, Android phone and TV): Settings → Integrations → Discord shows what you are watching on your Discord profile (title, episode, poster, play/pause, elapsed/remaining time, optional IMDb button, optional Live TV channel). Log in with the Discord web login; the account and all the presence settings sync with the Nuvio profile, so the TV picks up the account logged in on the phone. Never shown with Private Viewing. Uses the account token like Kizzy, which may go against Discord's Terms of Service.
-- **Reorganized Integrations page**: sections Integrations (TMDB, MDBList), Timestamps (AnimeSkip and IntroDB, each with its own page, moved out of Playback, plus SkipDB), Lists (MyAnimeList, Kitsu, AniList), Subtitles (OpenSubtitles, SubDL) and Extra (Live TV, Connected Services, AI Assistant, Telegram, Discord). SkipDB, Lists, Subtitles, AI Assistant and Telegram are "work in progress" placeholder pages for now.
 
 ## Streams
 
 - **Stream Parser:** an alternative stream card that reads any stream description and shows resolution badge with animated glow, source, video/audio tags, channels, audio languages (flags), size (estimated when missing), cached/torrent/proxied status, with a unique color per tag.
 - **Sort by video quality:** merges all addons and plugins into one list ordered 8K → SD.
 - **Stream actions menu** (⋮ button) with **"Original description"** to see and copy the raw addon text.
+- **Shown qualities filter:** hide the resolutions you don't want in the stream list.
+- Full plot in the tablet and TV stream selection panel.
 - Plugin "group streams by repository" preference now syncs with the profile.
+
+## Integrations
+
+- **Reorganized Integrations page** with sections for metadata (TMDB, MDBList), timestamps, lists/trackers, subtitles and extras, each service with its own page.
+- **Timestamps:** AniSkip, IntroDB and **SkipDB**, with a provider priority order.
+- **Trackers and lists:** **MyAnimeList**, **Kitsu**, **AniList** and **WeTrakr** (device code login), with login sync, library integration and a **per-service library picker**.
+- **Telegram:** login and stream search from Telegram (images, GIFs and short clips filtered out).
+- **AI Assistant** integration.
+- Every integration is listed in Settings → Licenses and attributions.
+
+## CloudStream plugins
+
+- CloudStream plugin runtime with storage and profile sync: plugins provide sources, catalogs and optionally full details pages. Dedicated settings page.
+
+## Network
+
+- **DNS over HTTPS** (Settings → Advanced → Network): Cloudflare, Google, Quad9, AdGuard, Mullvad, OpenDNS or a custom resolver, fallback to the device DNS, test button and optional sync with the profile. Used by every network client in the app (addons, images, downloads, media proxy…).
 
 ## Appearance and interface
 
@@ -91,6 +141,9 @@ Ported from [luqmanfadlli/NuvioMobile-Enhanced](https://github.com/luqmanfadlli/
 - **Episode code format:** S1 E2, S01E02, S1E2, 01x02, 1x2.
 - **Expandable episode overviews** with an animated layout in both episode list styles.
 - **Landscape posters** applied everywhere (grids, catalogs, library, search, collection folders) without ever cropping portrait posters; collection folders respect their own shape.
+- **Horizontal list** episode card style.
+- **Redesigned Account settings page.**
+- Localized country and language names; TMDB backdrops and posters in the Trailers & Images section.
 - **Gradient primary action buttons** with icons (Play, Resume, Choose episodes, View details).
 - **Top 10 rows** on the home (phone, tablet and TV): two ranked rows with the first 10 titles of a movie catalog and a series catalog, drawn with big numbers next to the posters. Catalogs chosen in Settings → Content discovery → Top 10, synced per profile.
 - New Live TV navigation icon.
@@ -98,17 +151,19 @@ Ported from [luqmanfadlli/NuvioMobile-Enhanced](https://github.com/luqmanfadlli/
 
 ## Diagnostics
 
-- **In-app logger** (Settings → Advanced → Diagnostics): records app logs for 24 hours, filters by level and multiple categories, live updates, copy, share as a file, import the process logcat (Android). Secrets, tokens and addon configs are redacted before saving.
+- **In-app logger** (Settings → Advanced → Diagnostics): records app logs for 24 hours, filters by level and multiple categories, live updates, copy, share as a file, import the process logcat (Android). Secrets, tokens and addon configs are redacted before saving. Includes a **startup timing trace**.
+- **Faster startup:** the system splash stays until the Home shows its first content, and heavy work (Supabase client, Cast, saved downloads, Telegram check, release notifications) is moved off the critical path.
 
 ## Sync and settings
 
-- **Settings search** covers every option, ignoring case and accents.
+- **Settings search** covers every option, ignoring case and accents, with result highlight and an **"Only Enhanced features"** filter.
 - Additional settings synced with the profile: hero toggle and hero sources, media proxy options, logger toggle, Live TV preferences, plugin grouping, Stream Parser options.
 - Fixed ANRs (app freezes) when opening Settings while the Home was loading.
 
 ## Releases and updates
 
-- Releases published at [albyalex96/NuvioMobile-V2](https://github.com/albyalex96/NuvioMobile-V2/releases) with automatic release notes, separate APKs for phone and TV.
+- Releases published at [albyalex96/NuvioMobile-V2](https://github.com/albyalex96/NuvioMobile-V2/releases) with automatic release notes, separate APKs for phone and TV and an MSI installer for Windows.
+- Redesigned changelog panel with the notes of the installed version, optional background auto-download of updates (testing).
 - Centralized versioning in `version.json` with automatic version code.
 - Own app identity (`com.nuvioenhanced.alby`, "Nuvio Enhanced"): installs alongside the official app.
 - The updater downloads releases from this fork and picks the right APK (phone or TV) for the installed app.
