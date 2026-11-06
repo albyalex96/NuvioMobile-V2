@@ -100,7 +100,13 @@ open class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         StartupTrace.mark("MainActivity.onCreate")
         val splashScreen = installSplashScreen()
-        if (savedInstanceState == null && !StartupSplash.isReleased) {
+        // Android TV shows its own Compose startup screen instead (older TV systems draw the
+        // system splash as a black screen without the logo).
+        if (
+            savedInstanceState == null &&
+            !StartupSplash.isReleased &&
+            !com.nuvio.app.tv.TvAppRuntime.isTvApp
+        ) {
             // Cold start: the system splash (smooth, drawn outside the main thread) stays until
             // the home shows its first content, instead of a Compose spinner that stutters while
             // the main thread composes the shell. Time limit as a safety net.

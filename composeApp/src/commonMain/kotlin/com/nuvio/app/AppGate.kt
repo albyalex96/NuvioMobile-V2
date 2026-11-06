@@ -125,7 +125,13 @@ internal fun AppGate(
 
     LaunchedEffect(authState) {
         if (!ownsAppRuntime) return@LaunchedEffect
-        StartupTrace.mark("Auth state ${authState::class.simpleName}")
+        // Readable names: class names are obfuscated in release builds.
+        val stateName = when (authState) {
+            is AuthState.Loading -> "Loading"
+            is AuthState.Unauthenticated -> "Unauthenticated"
+            is AuthState.Authenticated -> "Authenticated"
+        }
+        StartupTrace.mark("Auth state $stateName")
         DeviceSessionRegistration.registerIfAuthenticated(force = true)
     }
 
@@ -330,6 +336,17 @@ internal fun AppGate(
             is AuthState.Loading -> {
                 if (hasCachedProfileAccess) {
                     enterProfileGate(cachedProfiles, syncOnEnter = false)
+                } else if (
+                    gateScreen == AppGateScreen.Main.name ||
+                    gateScreen == AppGateScreen.ProfileSelection.name ||
+                    gateScreen == AppGateScreen.ProfileEdit.name
+                ) {
+                    // The session is being restored or refreshed while the app is already open:
+                    // stay on the current screen instead of flashing the loading spinner. A lost
+                    // session still ends on the sign-in screen (Unauthenticated).
+                    if (ownsAppRuntime) {
+                        StartupTrace.mark("Auth loading kept $gateScreen (${cachedProfiles.size} cached profiles)")
+                    }
                 } else {
                     gateScreen = AppGateScreen.Loading.name
                 }
@@ -597,6 +614,9 @@ internal fun AppGate(
                     AppLoadingContent(modifier = Modifier.fillMaxSize())
                 }
             }
+        }
+        if (ownsAppRuntime && com.nuvio.app.tv.TvAppRuntime.isTvApp) {
+            com.nuvio.app.core.ui.TvStartupScreen()
         }
     }
 }

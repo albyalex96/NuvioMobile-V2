@@ -621,8 +621,10 @@ internal fun MainAppContent(
         }
         NetworkStatusRepository.ensureStarted()
         // The release notifications refresh calls addons and TMDB: it waits for the home to show its
-        // first content (at most 5 s), so it does not compete with the catalogs and posters.
-        kotlinx.coroutines.withTimeoutOrNull(5_000) {
+        // first content (at most 5 s, 10 s on the slower TV boxes), so it does not compete with the
+        // catalogs and posters. The startup splash waits for the same moment.
+        val homeWaitMs = if (com.nuvio.app.tv.TvAppRuntime.isTvApp) 10_000L else 5_000L
+        kotlinx.coroutines.withTimeoutOrNull(homeWaitMs) {
             snapshotFlow { initialHomeReady }.first { it }
         }
         initialHomeReady = true
