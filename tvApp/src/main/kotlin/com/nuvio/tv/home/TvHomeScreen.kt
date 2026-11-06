@@ -162,7 +162,7 @@ private const val HERO_FOCUS_KEY = "hero"
 private val HERO_DOTS_BAND = 12.dp
 private val HERO_ROWS_GAP = 14.dp
 /** The carousel dots sit this much lower than the centre of their band, in the gap above the rows. */
-private val HERO_DOTS_DOWN_SHIFT = 8.dp
+private val HERO_DOTS_DOWN_SHIFT = 14.dp
 
 /** Collapse/expand of the hero when the first row leaves or re-enters the screen. */
 private const val HERO_COLLAPSE_ANIMATION_MS = 350
@@ -437,6 +437,27 @@ private fun TvHomeContent(model: TvHomeModel) {
     LaunchedEffect(focus.heroExpanded) {
         if (focus.heroExpanded) log.i { "Hero expanded with its buttons" }
     }
+    // Down at the end of the plot closes the expanded hero and moves the focus to the first row
+    // (continue watching when there is one).
+    var rowsFocusRequests by remember { mutableIntStateOf(0) }
+    val onExpandedHeroExitDown = remember(focus) {
+        {
+            log.i { "Expanded hero closed with Down at the end of the plot" }
+            focus.heroExpanded = false
+            rowsFocusRequests++
+            Unit
+        }
+    }
+    LaunchedEffect(rowsFocusRequests) {
+        if (rowsFocusRequests == 0) return@LaunchedEffect
+        val key = firstFocusableKey(model) ?: return@LaunchedEffect
+        val target = requesters[key] ?: requesterFor(key)
+        repeat(10) {
+            withFrameNanos { }
+            if (runCatching { target.requestFocus() }.getOrDefault(false)) return@LaunchedEffect
+        }
+        log.w { "Could not move the focus from the expanded hero to the first row" }
+    }
     LaunchedEffect(heroRefocusRequests) {
         if (heroRefocusRequests == 0) return@LaunchedEffect
         // The hero target is not focusable while expanded: wait for the frame that enables it.
@@ -505,6 +526,7 @@ private fun TvHomeContent(model: TvHomeModel) {
                     heroHidden = { heroHidden },
                     active = screenActive,
                     portraitMode = !settings.landscapePosters,
+                    onExpandedExitDown = onExpandedHeroExitDown,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -673,6 +695,7 @@ private fun TvHomeHero(
     heroHidden: () -> Boolean,
     active: Boolean,
     portraitMode: Boolean,
+    onExpandedExitDown: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val carouselItems = model.heroItems
@@ -698,6 +721,7 @@ private fun TvHomeHero(
             showMdbListRatings = model.showMdbListRatings,
             outlined = focus.heroFocused && !expanded,
             expanded = expanded,
+            onExpandedExitDown = onExpandedExitDown,
             actions = { hero -> HeroExpandedActions(hero = hero, model = model, onPlayStarted = { focus.heroExpanded = false }) },
             modifier = Modifier
                 .fillMaxSize()
@@ -1004,6 +1028,7 @@ private fun HeroInfoPanel(
     showMdbListRatings: Boolean,
     outlined: Boolean,
     expanded: Boolean,
+    onExpandedExitDown: () -> Unit,
     actions: @Composable (HeroInfo) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -1046,7 +1071,9 @@ private fun HeroInfoPanel(
                     // NuvioTV `HeroTitleBlock`: anchored above the rows and free to grow upwards, so the
                     // logo, details and the 4 plot lines are never squeezed by the hero height.
                     // Expanded, the buttons are added and the plot scrolls inside a capped height.
-                    .wrapContentHeight(Alignment.Bottom, unbounded = true)
+                    // Expanded, the column stays inside the hero (below the navigation bar): the plot
+                    // takes only the height left and scrolls.
+                    .wrapContentHeight(Alignment.Bottom, unbounded = !expanded)
                     .heroOutline(color = outlineColor, alpha = { outlineAlpha.value })
                     // Expanded: up/down scroll the plot and never move the focus out of the hero.
                     .onPreviewKeyEvent { event ->
@@ -1060,6 +1087,9 @@ private fun HeroInfoPanel(
                         if (canScroll) {
                             val step = plotScroll.viewportSize * HERO_PLOT_SCROLL_FRACTION
                             scope.launch { plotScroll.animateScrollBy(if (down) step else -step) }
+                        } else if (down) {
+                            // End of the plot: leave the hero for the first row.
+                            onExpandedExitDown()
                         }
                         true
                     },
@@ -1105,7 +1135,10 @@ private fun HeroInfoPanel(
                             text = info.description,
                             style = descriptionStyle,
                             color = MaterialTheme.nuvio.colors.textPrimary,
-                            modifier = Modifier.heightIn(max = HERO_EXPANDED_PLOT_MAX_HEIGHT).verticalScroll(plotScroll),
+                            modifier = Modifier
+                                .weight(1f, fill = false)
+                                .heightIn(max = HERO_EXPANDED_PLOT_MAX_HEIGHT)
+                                .verticalScroll(plotScroll),
                         )
                     } else {
                         Text(
