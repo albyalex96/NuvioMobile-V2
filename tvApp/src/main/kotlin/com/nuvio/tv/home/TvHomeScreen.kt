@@ -463,10 +463,13 @@ private fun TvHomeContent(model: TvHomeModel) {
         val screenHeight = maxHeight
         // The expanded hero grows by the buttons row only; read in the layout phase, so the
         // animation does not recompose the home.
-        val expandedHeroHeight = minOf(collapsedHeroHeight + HERO_EXPANDED_EXTRA_HEIGHT, screenHeight)
+        val expandedHeroHeight = minOf(collapsedHeroHeight + HERO_EXPANDED_EXTRA_HEIGHT, screenHeight - TvDimens.chromeTopInset)
         val heroHeight = remember(collapsedHeroHeight, expandedHeroHeight) {
             { lerp(collapsedHeroHeight, expandedHeroHeight, heroExpandProgress.value) }
         }
+        // The home starts below the navigation bar (pill / top bar), so the hero text is never
+        // covered by it; collapsed, the rows padding takes over the same space.
+        val heroTopOffset = remember { { TvDimens.chromeTopInset * heroProgress.value } }
         if (heroBackdropVisible) {
             Box(modifier = Modifier.fillMaxSize().graphicsLayer { alpha = heroProgress.value }) {
                 TvHomeHeroBackdrop(
@@ -474,12 +477,13 @@ private fun TvHomeContent(model: TvHomeModel) {
                     focus = focus,
                     heroIndex = heroIndex,
                     fullScreen = settings.heroFullScreenBackdrop,
-                    mediaHeight = { heroHeight() + (if (hasCarousel) HERO_ROWS_GAP else 0.dp) + HERO_MEDIA_BELOW_ROWS_TOP },
+                    mediaHeight = { heroTopOffset() + heroHeight() + (if (hasCarousel) HERO_ROWS_GAP else 0.dp) + HERO_MEDIA_BELOW_ROWS_TOP },
                 )
             }
         }
 
         Column(modifier = Modifier.fillMaxSize()) {
+            Spacer(modifier = Modifier.fillMaxWidth().layoutHeight(heroTopOffset))
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -594,7 +598,7 @@ private fun TvHomeContent(model: TvHomeModel) {
                 model = model,
                 focus = focus,
                 heroIndex = heroIndex,
-                heroBottom = { heroHeight() * heroProgress.value },
+                heroBottom = { heroTopOffset() + heroHeight() * heroProgress.value },
                 alpha = { heroProgress.value },
                 modifier = Modifier.fillMaxSize(),
             )
