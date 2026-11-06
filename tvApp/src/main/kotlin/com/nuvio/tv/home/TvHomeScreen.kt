@@ -512,8 +512,11 @@ private fun TvHomeContent(model: TvHomeModel) {
         // The home starts below the navigation bar (pill / top bar), so the hero text is never
         // covered by it; collapsed, the rows padding takes over the same space.
         val heroTopOffset = remember { { TvDimens.chromeTopInset * heroProgress.value } }
-        if (heroBackdropVisible) {
-            Box(modifier = Modifier.fillMaxSize().graphicsLayer { alpha = heroProgress.value }) {
+        // Full screen backdrop (NuvioTV): it stays behind every row, following the focused card
+        // (top 10, addon catalogs...), also once the hero has collapsed.
+        val fullScreenBackdrop = settings.heroFullScreenBackdrop
+        if (fullScreenBackdrop || heroBackdropVisible) {
+            Box(modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (fullScreenBackdrop) 1f else heroProgress.value }) {
                 TvHomeHeroBackdrop(
                     model = model,
                     focus = focus,
