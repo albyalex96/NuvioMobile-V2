@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -297,6 +299,8 @@ private class TvHomeFocusState(
     var heroFocused by mutableStateOf(false)
     /** The hero is open on the whole screen (OK on the hero): rows pushed out, buttons focused. */
     var heroExpanded by mutableStateOf(false)
+    /** Height of the expanded hero text (0 until measured): the expanded hero is just this tall. */
+    var expandedContentHeight by mutableStateOf(0.dp)
 
     val lastFocusedKey: String? get() = lastFocused.value
 
@@ -488,10 +492,22 @@ private fun TvHomeContent(model: TvHomeModel) {
         val screenHeight = maxHeight
         // The expanded hero grows by the buttons row only; read in the layout phase, so the
         // animation does not recompose the home.
-        // It takes the whole height below the navigation bar, so buttons and plot are never cut.
-        val expandedHeroHeight = maxOf(collapsedHeroHeight + HERO_EXPANDED_EXTRA_HEIGHT, screenHeight - TvDimens.chromeTopInset)
-        val heroHeight = remember(collapsedHeroHeight, expandedHeroHeight) {
-            { lerp(collapsedHeroHeight, expandedHeroHeight, heroExpandProgress.value) }
+        // It is as tall as its text (no empty space after the plot, so the continue watching row
+        // stays visible), never above the space below the navigation bar.
+        val maxExpandedHeroHeight = screenHeight - TvDimens.chromeTopInset
+        val fallbackExpandedHeroHeight = minOf(collapsedHeroHeight + HERO_EXPANDED_EXTRA_HEIGHT, maxExpandedHeroHeight)
+        val heroBottomPadding = if (hasCarousel) HERO_DOTS_BAND else HERO_ROWS_GAP
+        val heroHeight = remember(collapsedHeroHeight, maxExpandedHeroHeight, heroBottomPadding) {
+            {
+                val content = focus.expandedContentHeight
+                val expandedHeroHeight = if (content > 0.dp) {
+                    (content + HERO_EXPANDED_TOP_PADDING + heroBottomPadding)
+                        .coerceIn(collapsedHeroHeight, maxOf(collapsedHeroHeight, maxExpandedHeroHeight))
+                } else {
+                    fallbackExpandedHeroHeight
+                }
+                lerp(collapsedHeroHeight, expandedHeroHeight, heroExpandProgress.value)
+            }
         }
         // The home starts below the navigation bar (pill / top bar), so the hero text is never
         // covered by it; collapsed, the rows padding takes over the same space.
@@ -725,6 +741,7 @@ private fun TvHomeHero(
             outlined = focus.heroFocused && !expanded,
             expanded = expanded,
             onExpandedExitDown = onExpandedExitDown,
+            onExpandedContentHeight = { height -> focus.expandedContentHeight = height },
             actions = { hero -> HeroExpandedActions(hero = hero, model = model, onPlayStarted = { focus.heroExpanded = false }) },
             modifier = Modifier
                 .fillMaxSize()
@@ -1032,6 +1049,7 @@ private fun HeroInfoPanel(
     outlined: Boolean,
     expanded: Boolean,
     onExpandedExitDown: () -> Unit,
+    onExpandedContentHeight: (Dp) -> Unit,
     actions: @Composable (HeroInfo) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -1052,6 +1070,7 @@ private fun HeroInfoPanel(
         label = "tvHomeHeroOutline",
     )
     val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
     AnimatedContent(
         targetState = hero,
         // No clipping: the focus outline is drawn a little outside the text.
@@ -1077,8 +1096,10 @@ private fun HeroInfoPanel(
                     // Expanded, the buttons are added and the plot scrolls inside a capped height.
                     // Expanded, the column stays inside the hero (below the navigation bar): the plot
                     // takes only the height left and scrolls.
-                    .wrapContentHeight(if (expanded) Alignment.Top else Alignment.Bottom, unbounded = !expanded)
-                    .heroOutline(color = outlineColor, alpha = { outlineAlpha.value })
+                    .wrapContentHeight(if (expanded) Alignment.Top else Alignment.Bottom, unbounded = true)
+                    .onSizeChanged { size ->
+                        if (expanded) onExpandedContentHeight(with(density) { size.height.toDp() })
+                    }
                     // Expanded: up/down scroll the plot and never move the focus out of the hero.
                     .onPreviewKeyEvent { event ->
                         if (!expanded || event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
@@ -1121,6 +1142,32 @@ private fun HeroInfoPanel(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
+                // The plot comes before genres, release badge and ratings.
+                if (!info.description.isNullOrBlank()) {
+                    if (expanded) {
+                        // The whole plot; a long one scrolls inside a few lines (up/down).
+                        Text(
+                            text = info.description,
+                            style = descriptionStyle,
+                            color = MaterialTheme.nuvio.colors.textPrimary,
+                            modifier = Modifier
+                                .heightIn(max = HERO_EXPANDED_PLOT_MAX_HEIGHT)
+                                .verticalScroll(plotScroll),
+                        )
+                    } else {
+                        // The focus outline surrounds the plot only.
+                        Text(
+                            text = info.description,
+                            style = descriptionStyle,
+                            color = MaterialTheme.nuvio.colors.textPrimary,
+                            maxLines = HERO_DESCRIPTION_MAX_LINES,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.heroOutline(color = outlineColor, alpha = { outlineAlpha.value }),
+                        )
+                        // Keeps the outline (drawn outside the plot) clear of the details below.
+                        Spacer(modifier = Modifier.height(HERO_OUTLINE_INSET - 8.dp + HERO_OUTLINE_WIDTH))
+                    }
+                }
                 TvHeroMetaRows(
                     meta = info.meta,
                     showImdbRating = showImdbRating,
@@ -1130,29 +1177,6 @@ private fun HeroInfoPanel(
                 if (expanded) {
                     Spacer(modifier = Modifier.height(4.dp))
                     actions(info)
-                    Spacer(modifier = Modifier.height(4.dp))
-                }
-                if (!info.description.isNullOrBlank()) {
-                    if (expanded) {
-                        // The whole plot; a long one scrolls inside a few lines (up/down).
-                        Text(
-                            text = info.description,
-                            style = descriptionStyle,
-                            color = MaterialTheme.nuvio.colors.textPrimary,
-                            modifier = Modifier
-                                .weight(1f, fill = false)
-                                .heightIn(max = HERO_EXPANDED_PLOT_MAX_HEIGHT)
-                                .verticalScroll(plotScroll),
-                        )
-                    } else {
-                        Text(
-                            text = info.description,
-                            style = descriptionStyle,
-                            color = MaterialTheme.nuvio.colors.textPrimary,
-                            maxLines = HERO_DESCRIPTION_MAX_LINES,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
                 }
             }
         }
