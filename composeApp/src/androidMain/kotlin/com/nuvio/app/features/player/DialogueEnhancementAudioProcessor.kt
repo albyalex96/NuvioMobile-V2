@@ -113,8 +113,11 @@ internal class DialogueEnhancementAudioProcessor(
         val voiceGain = 10f.pow(settings.dialogueGainDb / 20f) - 1f
         val surround = channelCount >= 6
         val centreGain = 1f + 3f * dialogue
-        val otherGain = 1f - 0.35f * dialogue
-        val stereoOriginal = 1f - 0.3f * dialogue
+        val otherGain = 1f - 0.6f * dialogue
+        // Stereo: the voice band of the centre is boosted, the rest (sides = wide music/effects,
+        // out-of-band centre = bass/cymbals) is attenuated, so the contrast is clearly audible.
+        val sideGain = 1f - 0.75f * dialogue
+        val restGain = 1f - 0.6f * dialogue
 
         val compress = settings.compressionPercent > 0
         val threshold = settings.compressionThresholdDb
@@ -133,18 +136,21 @@ internal class DialogueEnhancementAudioProcessor(
                     for (c in 0 until channelCount) {
                         frame[c] *= when (c) {
                             2 -> centreGain
-                            3 -> otherGain * 0.8f // LFE: music/effects only
+                            3 -> otherGain * 0.6f // LFE: music/effects only
                             else -> otherGain
                         }
                     }
                 } else if (channelCount >= 2) {
                     val mid = (frame[0] + frame[1]) * 0.5f
+                    val side = (frame[0] - frame[1]) * 0.5f
                     val voice = lowPass[1].process(lowPass[0].process(highPass[1].process(highPass[0].process(mid))))
-                    frame[0] = frame[0] * stereoOriginal + voice * voiceGain
-                    frame[1] = frame[1] * stereoOriginal + voice * voiceGain
+                    val newMid = voice * (1f + voiceGain) + (mid - voice) * restGain
+                    val newSide = side * sideGain
+                    frame[0] = newMid + newSide
+                    frame[1] = newMid - newSide
                 } else {
                     val voice = lowPass[1].process(lowPass[0].process(highPass[1].process(highPass[0].process(frame[0]))))
-                    frame[0] = frame[0] * stereoOriginal + voice * voiceGain
+                    frame[0] = voice * (1f + voiceGain) + (frame[0] - voice) * restGain
                 }
             }
             var gain = 1f

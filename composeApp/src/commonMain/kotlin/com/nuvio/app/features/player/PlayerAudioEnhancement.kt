@@ -57,9 +57,9 @@ internal fun AudioEnhancementSettings.toMpvAudioFilter(sourceChannels: Int?): St
         if (sourceChannels != null && sourceChannels >= 6) {
             // 5.1/7.1 order: FL FR FC LFE BL BR (SL SR). Centre gain up to 4x, others slightly reduced.
             val centre = fmt(1.0 + 3.0 * strength)
-            val side = fmt(1.0 - 0.35 * strength)
-            val rear = fmt((1.0 - 0.35 * strength) * 0.7)
-            val lfe = fmt((1.0 - 0.5 * strength) * 0.5)
+            val side = fmt(1.0 - 0.6 * strength)
+            val rear = fmt((1.0 - 0.6 * strength) * 0.7)
+            val lfe = fmt((1.0 - 0.7 * strength) * 0.5)
             val left = buildString {
                 append("FL=$side*FL+$centre*FC+$lfe*LFE+$rear*BL")
                 if (sourceChannels >= 8) append("+$rear*SL")
@@ -70,7 +70,7 @@ internal fun AudioEnhancementSettings.toMpvAudioFilter(sourceChannels: Int?): St
             }
             filters += "lavfi=[pan=stereo|$left|$right]"
         } else {
-            val original = fmt(1.0 - 0.5 * strength)
+            val original = fmt(1.0 - 0.8 * strength)
             val enhance = fmt(1.0 + 2.0 * strength)
             filters += "lavfi=[dialoguenhance=original=$original:enhance=$enhance:voice=${fmt(2.0 + 6.0 * strength)}]"
         }
