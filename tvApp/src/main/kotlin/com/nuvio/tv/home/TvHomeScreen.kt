@@ -161,6 +161,8 @@ private const val HERO_FOCUS_KEY = "hero"
 /** Space kept free under the hero text for the carousel dots. */
 private val HERO_DOTS_BAND = 12.dp
 private val HERO_ROWS_GAP = 14.dp
+/** The carousel dots sit this much lower than the centre of their band, in the gap above the rows. */
+private val HERO_DOTS_DOWN_SHIFT = 8.dp
 
 /** Collapse/expand of the hero when the first row leaves or re-enters the screen. */
 private const val HERO_COLLAPSE_ANIMATION_MS = 350
@@ -864,7 +866,7 @@ private fun HeroCarouselDots(
                 // minWidth 0: with the full width the Row would pack the dots at the start.
                 val placeable = measurable.measure(constraints.copy(minWidth = 0, minHeight = 0))
                 val bandTop = (heroBottom() - HERO_DOTS_BAND).roundToPx()
-                val y = bandTop + (HERO_DOTS_BAND.roundToPx() - placeable.height) / 2
+                val y = bandTop + (HERO_DOTS_BAND.roundToPx() - placeable.height) / 2 + HERO_DOTS_DOWN_SHIFT.roundToPx()
                 layout(constraints.maxWidth, constraints.maxHeight) {
                     placeable.place((constraints.maxWidth - placeable.width) / 2, y)
                 }
