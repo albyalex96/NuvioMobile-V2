@@ -1,5 +1,7 @@
 package com.nuvio.app
 
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.EnterTransition
 import com.nuvio.app.core.logging.StartupSplash
 import com.nuvio.app.core.logging.StartupTrace
 import androidx.compose.animation.AnimatedContent
@@ -434,8 +436,14 @@ internal fun AppGate(
             targetState = gateScreen,
             label = "app_gate",
             transitionSpec = {
-                (fadeIn(tween(400)) + scaleIn(tween(400), initialScale = 0.94f))
-                    .togetherWith(fadeOut(tween(250)))
+                if (initialState == AppGateScreen.Loading.name && targetState == AppGateScreen.Main.name) {
+                    // Automatic start (remembered profile): the home replaces the loading screen at
+                    // once, without 400 ms of fade and zoom.
+                    EnterTransition.None.togetherWith(ExitTransition.None)
+                } else {
+                    (fadeIn(tween(400)) + scaleIn(tween(400), initialScale = 0.94f))
+                        .togetherWith(fadeOut(tween(250)))
+                }
             },
         ) { currentGate ->
             when (currentGate) {
