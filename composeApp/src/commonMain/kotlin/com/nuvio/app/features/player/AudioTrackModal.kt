@@ -2,6 +2,8 @@ package com.nuvio.app.features.player
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -62,11 +64,16 @@ fun AudioTrackModal(
             val showEnhancement = onDialogueBoostChanged != null && onCompressionChanged != null
             // Read live from the repository so the sliders follow every change while the panel is open.
             val liveSettings by PlayerSettingsRepository.uiState.collectAsStateWithLifecycle()
-            val enhancementWidth = 380.dp
-            val columnGap = 40.dp
-            // Wide screens (TV, landscape phones, desktop): enhancement sliders in a column on the right.
-            val enhancementSideBySide = showEnhancement && maxWidth >= 444.dp + columnGap + enhancementWidth
-            val railWidth = minOf(maxWidth, 444.dp)
+            val columnGap = 32.dp
+            // Landscape phones, TV, desktop: enhancement sliders in their own column on the right,
+            // so they never end up below the screen edge under the audio delay.
+            val enhancementSideBySide = showEnhancement && maxWidth >= 560.dp
+            val railWidth = if (enhancementSideBySide) {
+                minOf(444.dp, (maxWidth - columnGap) / 2)
+            } else {
+                minOf(maxWidth, 444.dp)
+            }
+            val enhancementWidth = minOf(380.dp, maxWidth - railWidth - columnGap)
             // Room left for the audio delay controls (and stacked sliders) below the track list.
             val delaySectionHeight = (if (onAudioDelayChanged != null) 150.dp else 0.dp) +
                 (if (showEnhancement && !enhancementSideBySide) 230.dp else 0.dp)
@@ -139,7 +146,9 @@ fun AudioTrackModal(
                     modifier = Modifier
                         .padding(start = railWidth + columnGap)
                         .width(enhancementWidth)
-                        .align(Alignment.BottomStart),
+                        .heightIn(max = maxHeight)
+                        .align(Alignment.BottomStart)
+                        .verticalScroll(rememberScrollState()),
                 )
             }
         }
