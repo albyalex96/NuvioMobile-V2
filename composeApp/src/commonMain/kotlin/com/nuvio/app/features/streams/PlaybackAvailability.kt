@@ -1,5 +1,6 @@
 package com.nuvio.app.features.streams
 
+import com.nuvio.app.core.logging.StartupTrace
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -70,7 +71,7 @@ internal fun rememberPlaybackAvailability(): PlaybackAvailability {
     }.collectAsStateWithLifecycle()
     val plugins = if (AppFeaturePolicy.pluginsEnabled) {
         val state by remember {
-            PluginRepository.initialize()
+            StartupTrace.measure("PluginRepository.initialize") { PluginRepository.initialize() }
             PluginRepository.uiState
         }.collectAsStateWithLifecycle()
         state

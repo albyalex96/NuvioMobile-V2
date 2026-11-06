@@ -1,5 +1,6 @@
 package com.nuvio.app
 
+import com.nuvio.app.core.logging.StartupTrace
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.tween
@@ -98,17 +99,18 @@ internal fun AppGate(
         return
     }
 
+    if (ownsAppRuntime) remember { StartupTrace.mark("AppGate first composition") }
     LaunchedEffect(Unit) {
         if (!ownsAppRuntime) return@LaunchedEffect
-        AuthRepository.initialize()
+        StartupTrace.measure("AuthRepository.initialize") { AuthRepository.initialize() }
     }
 
     LaunchedEffect(Unit) {
         if (!ownsAppRuntime) return@LaunchedEffect
         NetworkStatusRepository.ensureStarted()
         MemberAccessRepository.ensureStarted()
-        ProfileRepository.loadCachedProfiles()
-        AvatarRepository.fetchAvatars()
+        StartupTrace.measure("ProfileRepository.loadCachedProfiles") { ProfileRepository.loadCachedProfiles() }
+        StartupTrace.measure("AvatarRepository.fetchAvatars") { AvatarRepository.fetchAvatars() }
     }
 
     val authState by AuthRepository.state.collectAsStateWithLifecycle()
@@ -120,6 +122,7 @@ internal fun AppGate(
 
     LaunchedEffect(authState) {
         if (!ownsAppRuntime) return@LaunchedEffect
+        StartupTrace.mark("Auth state ${authState::class.simpleName}")
         DeviceSessionRegistration.registerIfAuthenticated(force = true)
     }
 
@@ -162,6 +165,9 @@ internal fun AppGate(
         onAppReady?.invoke(ready)
     }
 
+    LaunchedEffect(gateScreen) {
+        if (ownsAppRuntime) StartupTrace.mark("Gate screen $gateScreen")
+    }
     LaunchedEffect(gateScreen, onAppReady) {
         if (gateScreen != AppGateScreen.Main.name) {
             reportAppReady(false)

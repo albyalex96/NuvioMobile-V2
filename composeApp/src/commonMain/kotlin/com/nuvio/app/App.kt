@@ -1,5 +1,6 @@
 package com.nuvio.app
 
+import com.nuvio.app.core.logging.StartupTrace
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -71,6 +72,7 @@ fun App(
 
 @Composable
 internal fun AppEnvironment(content: @Composable () -> Unit) {
+    remember { StartupTrace.mark("AppEnvironment first composition") }
     if (!platformProvidesImageLoader) {
         setSingletonImageLoaderFactory { context ->
             ImageLoader.Builder(context)

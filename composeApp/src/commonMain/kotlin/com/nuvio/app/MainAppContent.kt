@@ -394,7 +394,9 @@ internal fun MainAppContent(
     val networkStatusUiState by remember {
         NetworkStatusRepository.uiState
     }.collectAsStateWithLifecycle()
+    if (ownsAppRuntime) remember { StartupTrace.mark("PlaybackAvailability start") }
     val playbackAvailability = rememberPlaybackAvailability()
+    if (ownsAppRuntime) remember { StartupTrace.mark("PlaybackAvailability done") }
     val playbackUnavailableMessage = stringResource(Res.string.playback_unavailable_message)
     val downloadedProviderLabel = stringResource(Res.string.provider_downloaded)
     val externalPlayerNotConfiguredText = stringResource(Res.string.external_player_not_configured)
@@ -611,6 +613,7 @@ internal fun MainAppContent(
 
     LaunchedEffect(appContentGeneration) {
         if (!ownsAppRuntime) return@LaunchedEffect
+        StartupTrace.mark("MainAppContent first frame")
         NetworkStatusRepository.ensureStarted()
         // The release notifications refresh calls addons and TMDB: it waits for the home to show its
         // first content (at most 5 s), so it does not compete with the catalogs and posters.

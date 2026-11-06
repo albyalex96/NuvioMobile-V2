@@ -1,5 +1,6 @@
 package com.nuvio.app.core.network
 
+import com.nuvio.app.core.logging.StartupTrace
 import com.nuvio.app.core.build.AppVersionConfig
 import io.github.jan.supabase.SupabaseClient
 import io.github.jan.supabase.annotations.SupabaseInternal
@@ -29,7 +30,7 @@ object SupabaseProvider {
     @OptIn(SupabaseInternal::class)
     val client: SupabaseClient
         get() = synchronized(clientLock) {
-            cachedClient ?: createClient().also { cachedClient = it }
+            cachedClient ?: StartupTrace.measure("Supabase client creation") { createClient() }.also { cachedClient = it }
         }
 
     @OptIn(SupabaseInternal::class)
