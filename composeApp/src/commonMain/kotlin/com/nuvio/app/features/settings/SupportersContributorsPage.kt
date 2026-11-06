@@ -59,6 +59,7 @@ import com.nuvio.app.core.ui.NuvioSurfaceCard
 import com.nuvio.app.features.addons.httpRequestRaw
 import com.nuvio.app.features.membership.MembershipOverviewRepository
 import kotlinx.coroutines.launch
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
@@ -88,12 +89,17 @@ private data class CommunityUiState(
 )
 
 @Serializable
-private data class ContributionsResponseDto(
+private data class LegacyContributionsResponseDto(
     val contributors: List<ContributionDto> = emptyList(),
 )
 
 @Serializable
 private data class ContributionDto(
+    val login: String? = null,
+    @SerialName("avatar_url") val avatarUrl: String? = null,
+    @SerialName("html_url") val htmlUrl: String? = null,
+    val contributions: Int? = null,
+    // Legacy contributor endpoint fields.
     val name: String? = null,
     val avatar: String? = null,
     val profile: String? = null,
@@ -172,8 +178,12 @@ private object SupportersContributorsRepository {
             error(getString(Res.string.community_error_contributors_request_failed))
         }
 
-        json.decodeFromString<ContributionsResponseDto>(response.body)
-            .contributors
+        val contributors = runCatching {
+            json.decodeFromString<List<ContributionDto>>(response.body)
+        }.getOrElse {
+            json.decodeFromString<LegacyContributionsResponseDto>(response.body).contributors
+        }
+        contributors
             .mapNotNull(::normalizeContributor)
             .sortedWith(
                 compareByDescending<CommunityContributor> { it.totalContributions }
@@ -243,14 +253,14 @@ private object SupportersContributorsRepository {
     }.getOrNull()
 
     private fun normalizeContributor(dto: ContributionDto): CommunityContributor? {
-        val login = dto.name?.trim().orEmpty()
-        val contributions = dto.total ?: 0
+        val login = (dto.login ?: dto.name)?.trim().orEmpty()
+        val contributions = dto.contributions ?: dto.total ?: 0
         if (login.isBlank() || contributions <= 0) return null
 
         return CommunityContributor(
             login = login,
-            avatarUrl = dto.avatar?.trim()?.takeIf { it.isNotBlank() },
-            profileUrl = dto.profile?.trim()?.takeIf { it.isNotBlank() },
+            avatarUrl = (dto.avatarUrl ?: dto.avatar)?.trim()?.takeIf { it.isNotBlank() },
+            profileUrl = (dto.htmlUrl ?: dto.profile)?.trim()?.takeIf { it.isNotBlank() },
             totalContributions = contributions,
         )
     }
@@ -739,6 +749,15 @@ private fun ContributorRow(
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = stringResource(
+                    Res.string.community_contributor_contributions,
+                    contributor.totalContributions,
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
             )
         }
         Icon(

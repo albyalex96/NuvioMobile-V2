@@ -491,6 +491,7 @@
   <string name="community_load_contributors_failed">Impossibile caricare i collaboratori</string>
   <string name="community_load_supporters_failed">Impossibile caricare i sostenitori</string>
   <string name="community_empty_contributors">Nessun collaboratore trovato.</string>
+  <string name="community_contributor_contributions">%1$d contributi</string>
   <string name="community_empty_supporters">Nessun sostenitore trovato.</string>
   <string name="community_error_unable_load_contributors">Impossibile caricare i collaboratori.</string>
   <string name="community_error_unable_load_supporters">Impossibile caricare i sostenitori.</string>
