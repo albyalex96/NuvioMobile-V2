@@ -23,6 +23,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -47,8 +49,6 @@ fun AudioTrackModal(
     streamAudioDelayMs: Int = 0,
     audioDelaySavedForDeviceLabel: String? = null,
     onAudioDelayChanged: ((Int) -> Unit)? = null,
-    dialogueBoostPercent: Int = 0,
-    compressionPercent: Int = 0,
     onDialogueBoostChanged: ((Int) -> Unit)? = null,
     onCompressionChanged: ((Int) -> Unit)? = null,
 ) {
@@ -60,6 +60,8 @@ fun AudioTrackModal(
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             val showEnhancement = onDialogueBoostChanged != null && onCompressionChanged != null
+            // Read live from the repository so the sliders follow every change while the panel is open.
+            val liveSettings by PlayerSettingsRepository.uiState.collectAsStateWithLifecycle()
             val enhancementWidth = 380.dp
             val columnGap = 40.dp
             // Wide screens (TV, landscape phones, desktop): enhancement sliders in a column on the right.
@@ -120,8 +122,8 @@ fun AudioTrackModal(
                 }
                 if (showEnhancement && !enhancementSideBySide) {
                     AudioEnhancementControls(
-                        dialogueBoostPercent = dialogueBoostPercent,
-                        compressionPercent = compressionPercent,
+                        dialogueBoostPercent = liveSettings.dialogueBoostPercent,
+                        compressionPercent = liveSettings.dynamicCompressionPercent,
                         onDialogueBoostChanged = onDialogueBoostChanged!!,
                         onCompressionChanged = onCompressionChanged!!,
                         modifier = Modifier.padding(top = 16.dp),
@@ -130,8 +132,8 @@ fun AudioTrackModal(
             }
             if (enhancementSideBySide) {
                 AudioEnhancementControls(
-                    dialogueBoostPercent = dialogueBoostPercent,
-                    compressionPercent = compressionPercent,
+                    dialogueBoostPercent = liveSettings.dialogueBoostPercent,
+                    compressionPercent = liveSettings.dynamicCompressionPercent,
                     onDialogueBoostChanged = onDialogueBoostChanged!!,
                     onCompressionChanged = onCompressionChanged!!,
                     modifier = Modifier

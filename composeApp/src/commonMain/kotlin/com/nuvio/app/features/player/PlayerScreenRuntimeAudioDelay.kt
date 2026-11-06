@@ -3,6 +3,8 @@ package com.nuvio.app.features.player
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import co.touchlab.kermit.Logger
 
 private val audioDelayLog = Logger.withTag(AUDIO_DELAY_LOG_TAG)
@@ -58,9 +60,11 @@ internal fun PlayerScreenRuntime.setAudioDelay(delayMs: Int) {
 /** Pushes the dialogue boost / compression sliders to the active engine. */
 @Composable
 internal fun PlayerScreenRuntime.BindAudioEnhancement() {
+    // Observed directly: runtime.playerSettingsUiState is a plain field, not Compose state.
+    val playerSettings by PlayerSettingsRepository.uiState.collectAsStateWithLifecycle()
     val settings = AudioEnhancementSettings(
-        dialogueBoostPercent = playerSettingsUiState.dialogueBoostPercent,
-        compressionPercent = playerSettingsUiState.dynamicCompressionPercent,
+        dialogueBoostPercent = playerSettings.dialogueBoostPercent,
+        compressionPercent = playerSettings.dynamicCompressionPercent,
     )
     LaunchedEffect(playerController, settings) {
         val controller = playerController ?: return@LaunchedEffect
