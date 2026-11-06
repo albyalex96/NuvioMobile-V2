@@ -416,10 +416,11 @@ private fun TvHomeContent(model: TvHomeModel) {
         log.w { "Could not move the initial focus into the home rows" }
     }
 
-    // The hero belongs to the top of the page: once the first row scrolls off the screen it
-    // collapses (backdrop included) and the rows take the whole height.
-    val heroHidden by remember { derivedStateOf { rowsState.firstVisibleItemIndex > 0 } }
-    LaunchedEffect(heroHidden) { log.d { if (heroHidden) "Hero collapsed" else "Hero expanded" } }
+    // The hero stays open while the rows scroll and follows the focused card of any row
+    // (NuvioTV modern home); it can take the focus only while the first row is on screen, so Up
+    // inside the rows keeps moving between rows.
+    val heroHidden = false
+    val heroFocusBlocked by remember { derivedStateOf { rowsState.firstVisibleItemIndex > 0 } }
     // Read only in the layout and draw phases: the collapse animation never recomposes the home.
     val heroProgress = animateFloatAsState(
         targetValue = if (heroHidden) 0f else 1f,
@@ -545,7 +546,7 @@ private fun TvHomeContent(model: TvHomeModel) {
                     focus = focus,
                     heroIndex = heroIndex,
                     heroRequester = heroRequester,
-                    heroHidden = { heroHidden },
+                    heroHidden = { heroFocusBlocked },
                     active = screenActive,
                     portraitMode = !settings.landscapePosters,
                     onExpandedExitDown = onExpandedHeroExitDown,
