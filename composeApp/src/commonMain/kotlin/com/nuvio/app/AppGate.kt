@@ -98,6 +98,9 @@ internal fun AppGate(
             onSwitchProfile = appGateController?.let { controller ->
                 controller::requestProfileSelection
             } ?: {},
+            onEditProfile = appGateController?.let { controller ->
+                controller::requestProfileEdit
+            } ?: {},
         )
         return
     }
@@ -157,6 +160,8 @@ internal fun AppGate(
 
     var gateScreen by rememberSaveable { mutableStateOf(AppGateScreen.Loading.name) }
     var editingProfile by remember { mutableStateOf<NuvioProfile?>(null) }
+    // Edit opened from Settings > Profile: back and save return to the app, not to profile selection.
+    var profileEditReturnsToMain by remember { mutableStateOf(false) }
     var autoSkipProfileSelection by rememberSaveable { mutableStateOf(false) }
     var profileSelectionLoading by rememberSaveable { mutableStateOf(false) }
     var profileSelectionTransitionActive by rememberSaveable { mutableStateOf(false) }
@@ -206,6 +211,15 @@ internal fun AppGate(
                 onMainContentMountChanged?.invoke(false)
             }
             else -> onMainContentMountChanged?.invoke(mainContentStarted)
+        }
+    }
+
+    LaunchedEffect(appGateController, renderMainContent) {
+        if (renderMainContent) return@LaunchedEffect
+        appGateController?.profileEditRequests?.collect {
+            editingProfile = ProfileRepository.state.value.activeProfile ?: return@collect
+            profileEditReturnsToMain = true
+            gateScreen = AppGateScreen.ProfileEdit.name
         }
     }
 
@@ -485,13 +499,21 @@ internal fun AppGate(
                     )
                 }
                 AppGateScreen.ProfileEdit.name -> {
+                    val leaveProfileEdit = {
+                        gateScreen = if (profileEditReturnsToMain) {
+                            AppGateScreen.Main.name
+                        } else {
+                            AppGateScreen.ProfileSelection.name
+                        }
+                        profileEditReturnsToMain = false
+                    }
                     PlatformBackHandler(enabled = gateScreen == AppGateScreen.ProfileEdit.name) {
-                        gateScreen = AppGateScreen.ProfileSelection.name
+                        leaveProfileEdit()
                     }
                     ProfileEditScreen(
                         profile = editingProfile,
-                        onBack = { gateScreen = AppGateScreen.ProfileSelection.name },
-                        onSaved = { gateScreen = AppGateScreen.ProfileSelection.name },
+                        onBack = leaveProfileEdit,
+                        onSaved = leaveProfileEdit,
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
@@ -525,6 +547,11 @@ internal fun AppGate(
                                 profileSelectionTransitionActive = false
                                 skipProfileSelectionEnterAnimation = false
                                 gateScreen = AppGateScreen.ProfileSelection.name
+                            },
+                            onEditProfile = {
+                                editingProfile = ProfileRepository.state.value.activeProfile
+                                profileEditReturnsToMain = true
+                                gateScreen = AppGateScreen.ProfileEdit.name
                             },
                         )
                     }

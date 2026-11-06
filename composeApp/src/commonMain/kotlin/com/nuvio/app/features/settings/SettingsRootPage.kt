@@ -56,8 +56,8 @@ import nuvio.composeapp.generated.resources.compose_settings_root_general_sectio
 import nuvio.composeapp.generated.resources.compose_settings_root_integrations_description
 import nuvio.composeapp.generated.resources.compose_settings_root_notifications_description
 import nuvio.composeapp.generated.resources.compose_settings_root_privacy_policy_description
-import nuvio.composeapp.generated.resources.compose_settings_root_switch_profile_description
-import nuvio.composeapp.generated.resources.compose_settings_root_switch_profile_title
+import nuvio.composeapp.generated.resources.compose_settings_root_profile_description
+import nuvio.composeapp.generated.resources.compose_settings_root_profile_title
 import nuvio.composeapp.generated.resources.compose_settings_root_tracking_description
 import nuvio.composeapp.generated.resources.compose_settings_root_about_section
 import nuvio.composeapp.generated.resources.compose_settings_root_account_section
@@ -115,8 +115,8 @@ internal fun LazyListScope.settingsRootContent(
                 SettingsGroup(isTablet = isTablet) {
                     if (onSwitchProfileClick != null) {
                         SettingsNavigationRow(
-                            title = stringResource(Res.string.compose_settings_root_switch_profile_title),
-                            description = stringResource(Res.string.compose_settings_root_switch_profile_description),
+                            title = stringResource(Res.string.compose_settings_root_profile_title),
+                            description = stringResource(Res.string.compose_settings_root_profile_description),
                             icon = Icons.Rounded.People,
                             isTablet = isTablet,
                             onClick = onSwitchProfileClick,

@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="compose_settings_page_profile">Profilo</string>
+    <string name="compose_settings_root_profile_title">Profilo</string>
+    <string name="compose_settings_root_profile_description">Attività, libreria e gusti del profilo attivo</string>
+
+    <string name="profile_insights_title">Profilo di %1$s</string>
+    <string name="profile_insights_subtitle">Un riepilogo delle tue visioni e dei contenuti salvati</string>
+    <string name="profile_insights_switch_profile">Cambia profilo</string>
+    <string name="profile_insights_edit_profile">Modifica profilo</string>
+
+    <string name="profile_insights_section_overview">Panoramica</string>
+    <string name="profile_insights_section_taste">Gusti</string>
+
+    <string name="profile_insights_stat_continue">Continua a guardare</string>
+    <string name="profile_insights_stat_continue_caption">Titoli in corso di visione</string>
+    <string name="profile_insights_stat_completed">Completati</string>
+    <string name="profile_insights_stat_completed_caption">Film e serie che hai finito</string>
+    <string name="profile_insights_stat_library">Libreria</string>
+    <string name="profile_insights_stat_library_caption">Titoli salvati nella libreria</string>
+    <string name="profile_insights_stat_time">Tempo di visione</string>
+    <string name="profile_insights_stat_time_caption">Tempo stimato registrato su questo profilo</string>
+    <string name="profile_insights_stat_recent">Attività recente</string>
+    <string name="profile_insights_stat_recent_caption">Attività degli ultimi sette giorni</string>
+    <string name="profile_insights_stat_upcoming">In uscita</string>
+    <string name="profile_insights_stat_upcoming_caption">Titoli salvati con uscite in arrivo</string>
+
+    <string name="profile_insights_collection_count">%1$d titoli</string>
+    <string name="profile_insights_hours">%1$d h</string>
+    <string name="profile_insights_minutes">%1$d min</string>
+
+    <string name="profile_insights_taste_dna_title">DNA dei gusti</string>
+    <string name="profile_insights_taste_subtitle">In base ai generi e ai tipi di contenuto di questo profilo</string>
+    <string name="profile_insights_taste_empty">Sto ancora imparando</string>
+    <string name="profile_insights_taste_balance_title">Equilibrio film e serie</string>
+    <string name="profile_insights_type_movie">Film</string>
+    <string name="profile_insights_type_series">Serie</string>
+
+    <string name="profile_insights_taste_balance_learning">Sto imparando i tuoi gusti</string>
+    <string name="profile_insights_taste_balance_movie">Più film</string>
+    <string name="profile_insights_taste_balance_series">Più serie</string>
+    <string name="profile_insights_taste_balance_balanced">Equilibrato</string>
+
+    <string name="profile_insights_taste_chip_learning">In apprendimento</string>
+    <string name="profile_insights_taste_chip_movie">Fan dei film</string>
+    <string name="profile_insights_taste_chip_series">Fan delle serie</string>
+    <string name="profile_insights_taste_chip_balanced">Spettatore equilibrato</string>
+    <string name="profile_insights_taste_chip_binge">Da maratona</string>
+    <string name="profile_insights_taste_chip_active">Molto attivo</string>
+    <string name="profile_insights_taste_chip_collector">Collezionista</string>
+    <string name="profile_insights_taste_chip_radar">Radar delle uscite</string>
+    <string name="profile_insights_taste_chip_completionist">Completista</string>
+</resources>

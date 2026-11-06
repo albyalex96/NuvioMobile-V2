@@ -41,6 +41,8 @@ internal fun SettingsRootDestination(
     navController: NuvioNavigator,
     useNativeNavigation: Boolean,
     collectionsTitle: String,
+    onSwitchProfile: () -> Unit,
+    onEditProfile: () -> Unit,
     onCheckForUpdates: (() -> Unit)?,
     onTestUpdateBanner: (() -> Unit)?,
 ) {
@@ -55,6 +57,8 @@ internal fun SettingsRootDestination(
         },
         onExternalBack = onBack,
         showInternalHeader = !useNativeNavigation,
+        onSwitchProfile = onSwitchProfile,
+        onEditProfile = onEditProfile,
         onCollectionsClick = {
             navController.navigate(CollectionsRoute(collectionsTitle))
         },

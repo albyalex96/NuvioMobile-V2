@@ -270,6 +270,16 @@ internal fun settingsSearchEntries(
             target = SettingsSearchTarget.SwitchProfile,
         )
     }
+    if (switchProfileAvailable) {
+        addPage(
+            page = SettingsPage.Profile,
+            key = "profile-insights",
+            title = stringResource(Res.string.compose_settings_root_profile_title),
+            description = stringResource(Res.string.compose_settings_root_profile_description),
+            category = accountCategory,
+            icon = Icons.Rounded.People,
+        )
+    }
     addPage(
         page = SettingsPage.Account,
         key = "account",

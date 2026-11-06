@@ -157,6 +157,7 @@ fun SettingsScreen(
     onExternalBack: (() -> Unit)? = null,
     showInternalHeader: Boolean = true,
     onSwitchProfile: (() -> Unit)? = null,
+    onEditProfile: (() -> Unit)? = null,
     onHomescreenClick: () -> Unit = {},
     onMetaScreenClick: () -> Unit = {},
     onContinueWatchingClick: () -> Unit = {},
@@ -473,6 +474,7 @@ fun SettingsScreen(
                         continueWatchingPreferencesUiState = continueWatchingPreferencesUiState,
                         posterCardStyleUiState = posterCardStyleUiState,
                         onSwitchProfile = onSwitchProfile,
+                        onEditProfile = onEditProfile,
                         onSupportersContributorsClick = openSupportersContributors,
                         onLicensesAttributionsClick = openLicensesAttributions,
                         onCheckForUpdatesClick = onCheckForUpdatesClick,
@@ -544,6 +546,7 @@ fun SettingsScreen(
                         continueWatchingPreferencesUiState = continueWatchingPreferencesUiState,
                         posterCardStyleUiState = posterCardStyleUiState,
                         onSwitchProfile = onSwitchProfile,
+                        onEditProfile = onEditProfile,
                         onHomescreenClick = openHomescreen,
                         onMetaScreenClick = openMetaScreen,
                         onContinueWatchingClick = openContinueWatching,
@@ -627,6 +630,7 @@ private fun MobileSettingsScreen(
     continueWatchingPreferencesUiState: ContinueWatchingPreferencesUiState,
     posterCardStyleUiState: PosterCardStyleUiState,
     onSwitchProfile: (() -> Unit)? = null,
+    onEditProfile: (() -> Unit)? = null,
     onHomescreenClick: () -> Unit = {},
     onMetaScreenClick: () -> Unit = {},
     onContinueWatchingClick: () -> Unit = {},
@@ -772,7 +776,7 @@ private fun MobileSettingsScreen(
                                 onCheckForUpdatesClick = onCheckForUpdatesClick,
                                 onTestUpdateBannerClick = onTestUpdateBannerClick,
                                 onAccountClick = onAccountClick,
-                                onSwitchProfileClick = onSwitchProfile,
+                                onSwitchProfileClick = { onPageChange(SettingsPage.Profile) },
                                 onWatchPartyClick = watchPartyRowClick,
                                 onTvRemoteClick = tvRemoteAvailable.takeIf { it }?.let { { onPageChange(SettingsPage.TvRemote) } },
                                 showSupportersContributorsPage = AppFeaturePolicy.supportersContributorsPageEnabled,
@@ -781,6 +785,11 @@ private fun MobileSettingsScreen(
                     }
                     SettingsPage.Account -> accountSettingsContent(
                         isTablet = false,
+                    )
+                    SettingsPage.Profile -> profileInsightsContent(
+                        isTablet = false,
+                        onSwitchProfile = onSwitchProfile,
+                        onEditProfile = onEditProfile,
                     )
                     SettingsPage.SupportersContributors -> {
                         if (AppFeaturePolicy.supportersContributorsPageEnabled) {
@@ -1091,6 +1100,7 @@ private fun TabletSettingsScreen(
     continueWatchingPreferencesUiState: ContinueWatchingPreferencesUiState,
     posterCardStyleUiState: PosterCardStyleUiState,
     onSwitchProfile: (() -> Unit)? = null,
+    onEditProfile: (() -> Unit)? = null,
     onSupportersContributorsClick: () -> Unit = {},
     onLicensesAttributionsClick: () -> Unit = {},
     onCheckForUpdatesClick: (() -> Unit)? = null,
@@ -1313,7 +1323,7 @@ private fun TabletSettingsScreen(
                                     onCheckForUpdatesClick = onCheckForUpdatesClick,
                                     onTestUpdateBannerClick = onTestUpdateBannerClick,
                                     onAccountClick = { openInlinePage(SettingsPage.Account) },
-                                    onSwitchProfileClick = onSwitchProfile,
+                                    onSwitchProfileClick = { openInlinePage(SettingsPage.Profile) },
                                     onWatchPartyClick = watchPartyRowClick,
                                     onTvRemoteClick = tvRemoteAvailable.takeIf { it }?.let { { openInlinePage(SettingsPage.TvRemote) } },
                                     showAccountSection = activeCategory == SettingsCategory.Account,
@@ -1326,6 +1336,11 @@ private fun TabletSettingsScreen(
                         }
                         SettingsPage.Account -> accountSettingsContent(
                             isTablet = true,
+                        )
+                        SettingsPage.Profile -> profileInsightsContent(
+                            isTablet = true,
+                            onSwitchProfile = onSwitchProfile,
+                            onEditProfile = onEditProfile,
                         )
                         SettingsPage.SupportersContributors -> {
                             if (AppFeaturePolicy.supportersContributorsPageEnabled) {
