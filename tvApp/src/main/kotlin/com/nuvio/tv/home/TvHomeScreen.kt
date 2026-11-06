@@ -1062,7 +1062,8 @@ private fun HeroInfoPanel(
     ) { info ->
         if (info == null) return@AnimatedContent
         Box(
-            contentAlignment = Alignment.BottomStart,
+            // Expanded, the text starts right below the navigation bar instead of the bottom.
+            contentAlignment = if (expanded) Alignment.TopStart else Alignment.BottomStart,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(start = TvDimens.rowPadding, end = HERO_TEXT_END_PADDING, top = HERO_EXPANDED_TOP_PADDING),
@@ -1076,7 +1077,7 @@ private fun HeroInfoPanel(
                     // Expanded, the buttons are added and the plot scrolls inside a capped height.
                     // Expanded, the column stays inside the hero (below the navigation bar): the plot
                     // takes only the height left and scrolls.
-                    .wrapContentHeight(Alignment.Bottom, unbounded = !expanded)
+                    .wrapContentHeight(if (expanded) Alignment.Top else Alignment.Bottom, unbounded = !expanded)
                     .heroOutline(color = outlineColor, alpha = { outlineAlpha.value })
                     // Expanded: up/down scroll the plot and never move the focus out of the hero.
                     .onPreviewKeyEvent { event ->
