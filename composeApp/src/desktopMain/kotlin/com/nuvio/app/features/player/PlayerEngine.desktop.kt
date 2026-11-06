@@ -133,6 +133,7 @@ actual fun PlatformPlayerSurface(
         var chaptersDurationMs = 0L
         while (isActive) {
             val snapshot = withContext(Dispatchers.IO) {
+                controller.refreshAudioEnhancement()
                 val durationMs = ((player.doubleProperty("duration") ?: 0.0) * 1000).toLong()
                 if (durationMs != chaptersDurationMs) {
                     chaptersDurationMs = durationMs
@@ -325,6 +326,33 @@ private class DesktopMpvController(private val player: MpvPlayer) : PlayerEngine
 
     override fun setAudioDelayMs(delayMs: Int) {
         player.setProperty("audio-delay", (delayMs.coerceIn(AUDIO_DELAY_MIN_MS, AUDIO_DELAY_MAX_MS) / 1000.0).toString())
+    }
+
+    @Volatile
+    private var audioEnhancement = AudioEnhancementSettings()
+    @Volatile
+    private var appliedAudioFilter = ""
+
+    override fun setAudioEnhancement(settings: AudioEnhancementSettings) {
+        audioEnhancement = settings
+        refreshAudioEnhancement()
+    }
+
+    /** Called on set and from the polling loop: rebuilds `af` when the decoded channel count changes. */
+    @Synchronized
+    fun refreshAudioEnhancement() {
+        val channels = player.getProperty("audio-params/channel-count")?.trim()?.toIntOrNull()
+        val filter = audioEnhancement.toMpvAudioFilter(channels)
+        if (filter == appliedAudioFilter) return
+        val result = player.setProperty("af", filter)
+        if (result >= 0) {
+            appliedAudioFilter = filter
+            Logger.i(AUDIO_ENHANCEMENT_LOG_TAG) { "mpv af set (channels=$channels): ${filter.ifEmpty { "<none>" }}" }
+        } else {
+            // Avoid retrying the same rejected chain every 250 ms.
+            appliedAudioFilter = filter
+            Logger.e(AUDIO_ENHANCEMENT_LOG_TAG) { "mpv rejected audio filter (error $result): $filter" }
+        }
     }
 
     override suspend fun getMediaInfo(): PlayerMediaInfo = withContext(Dispatchers.IO) {

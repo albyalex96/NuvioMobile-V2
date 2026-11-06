@@ -47,6 +47,10 @@ fun AudioTrackModal(
     streamAudioDelayMs: Int = 0,
     audioDelaySavedForDeviceLabel: String? = null,
     onAudioDelayChanged: ((Int) -> Unit)? = null,
+    dialogueBoostPercent: Int = 0,
+    compressionPercent: Int = 0,
+    onDialogueBoostChanged: ((Int) -> Unit)? = null,
+    onCompressionChanged: ((Int) -> Unit)? = null,
 ) {
     PlayerOverlayScaffold(
         visible = visible,
@@ -55,9 +59,15 @@ fun AudioTrackModal(
         contentPadding = PaddingValues(start = 44.dp, end = 44.dp, top = 28.dp, bottom = 64.dp),
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            val showEnhancement = onDialogueBoostChanged != null && onCompressionChanged != null
+            val enhancementWidth = 380.dp
+            val columnGap = 40.dp
+            // Wide screens (TV, landscape phones, desktop): enhancement sliders in a column on the right.
+            val enhancementSideBySide = showEnhancement && maxWidth >= 444.dp + columnGap + enhancementWidth
             val railWidth = minOf(maxWidth, 444.dp)
-            // Room left for the audio delay controls below the track list.
-            val delaySectionHeight = if (onAudioDelayChanged != null) 150.dp else 0.dp
+            // Room left for the audio delay controls (and stacked sliders) below the track list.
+            val delaySectionHeight = (if (onAudioDelayChanged != null) 150.dp else 0.dp) +
+                (if (showEnhancement && !enhancementSideBySide) 230.dp else 0.dp)
             val railMaxHeight = (maxHeight - 64.dp - delaySectionHeight).coerceAtLeast(120.dp).coerceAtMost(620.dp)
 
             Column(
@@ -108,6 +118,27 @@ fun AudioTrackModal(
                         modifier = Modifier.padding(top = 12.dp),
                     )
                 }
+                if (showEnhancement && !enhancementSideBySide) {
+                    AudioEnhancementControls(
+                        dialogueBoostPercent = dialogueBoostPercent,
+                        compressionPercent = compressionPercent,
+                        onDialogueBoostChanged = onDialogueBoostChanged!!,
+                        onCompressionChanged = onCompressionChanged!!,
+                        modifier = Modifier.padding(top = 16.dp),
+                    )
+                }
+            }
+            if (enhancementSideBySide) {
+                AudioEnhancementControls(
+                    dialogueBoostPercent = dialogueBoostPercent,
+                    compressionPercent = compressionPercent,
+                    onDialogueBoostChanged = onDialogueBoostChanged!!,
+                    onCompressionChanged = onCompressionChanged!!,
+                    modifier = Modifier
+                        .padding(start = railWidth + columnGap)
+                        .width(enhancementWidth)
+                        .align(Alignment.BottomStart),
+                )
             }
         }
     }

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="compose_player_dialogue_boost">Voci in primo piano</string>
+    <string name="compose_player_dialogue_boost_hint">Alza le voci rispetto a musica ed effetti. Rende al meglio con audio 5.1/7.1. Non attivo con il passthrough audio.</string>
+    <string name="compose_player_dynamic_compression">Compressione dinamica</string>
+    <string name="compose_player_dynamic_compression_hint">Modalità notte: scene silenziose più forti, esplosioni e musica alta più contenute.</string>
+    <string name="compose_player_audio_enhancement_off">Spento</string>
+    <string name="compose_player_audio_enhancement_decrease">Diminuisci %1$s</string>
+    <string name="compose_player_audio_enhancement_increase">Aumenta %1$s</string>
+    <string name="settings_playback_dialogue_boost">Voci in primo piano</string>
+    <string name="settings_playback_dialogue_boost_description">Alza le voci rispetto a musica ed effetti (canale centrale con 5.1/7.1, banda della voce con lo stereo). Regolabile anche dal pannello Audio del player.</string>
+    <string name="settings_playback_dynamic_compression">Compressione dinamica</string>
+    <string name="settings_playback_dynamic_compression_description">Modalità notte: riduce la differenza tra scene silenziose e rumorose. Indipendente dalle voci in primo piano.</string>
+</resources>

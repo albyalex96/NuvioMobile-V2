@@ -140,6 +140,7 @@ internal fun PlayerScreenRuntime.RenderPlayerRuntimeUi() {
     BindAutoSyncRuntimeEffects() // AutoSync hook
     BindLiveTvStillWatchingTimer()
     BindAudioDelay()
+    BindAudioEnhancement()
     BindPrivateViewingNotice()
 
     Box(
@@ -694,6 +695,10 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
             playerSettingsUiState.rememberAudioDelayPerDevice
         },
         onAudioDelayChanged = { delayMs -> setAudioDelay(delayMs) },
+        dialogueBoostPercent = playerSettingsUiState.dialogueBoostPercent,
+        compressionPercent = playerSettingsUiState.dynamicCompressionPercent,
+        onDialogueBoostChanged = if (audioEnhancementSupported) PlayerSettingsRepository::setDialogueBoostPercent else null,
+        onCompressionChanged = if (audioEnhancementSupported) PlayerSettingsRepository::setDynamicCompressionPercent else null,
         showSubtitleModal = showSubtitleModal,
         subtitleTracks = serverSubtitleTracks.ifEmpty { subtitleTracks },
         selectedSubtitleIndex = if (serverSubtitleTracks.isEmpty()) {

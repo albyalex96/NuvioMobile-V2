@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="compose_player_dialogue_boost">Dialogue Boost</string>
+    <string name="compose_player_dialogue_boost_hint">Raises the voices over music and effects. Works best on 5.1/7.1 audio. Not applied with audio passthrough.</string>
+    <string name="compose_player_dynamic_compression">Dynamic Range Compression</string>
+    <string name="compose_player_dynamic_compression_hint">Night mode: quiet scenes louder, explosions and loud music softer.</string>
+    <string name="compose_player_audio_enhancement_off">Off</string>
+    <string name="compose_player_audio_enhancement_decrease">Decrease %1$s</string>
+    <string name="compose_player_audio_enhancement_increase">Increase %1$s</string>
+    <string name="settings_playback_dialogue_boost">Dialogue boost</string>
+    <string name="settings_playback_dialogue_boost_description">Raises the voices over music and effects (centre channel on 5.1/7.1, voice band on stereo). Also adjustable from the player Audio panel.</string>
+    <string name="settings_playback_dynamic_compression">Dynamic range compression</string>
+    <string name="settings_playback_dynamic_compression_description">Night mode: reduces the gap between quiet and loud scenes. Independent from the dialogue boost.</string>
+</resources>

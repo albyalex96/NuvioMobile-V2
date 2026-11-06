@@ -102,6 +102,10 @@ import com.nuvio.app.features.streams.StreamAutoPlayMode
 import com.nuvio.app.features.streams.StreamAutoPlaySource
 import com.nuvio.app.features.streams.StreamProviderCatalog
 import com.nuvio.app.isIos
+import com.nuvio.app.features.player.AUDIO_ENHANCEMENT_MAX_PERCENT
+import com.nuvio.app.features.player.AUDIO_ENHANCEMENT_MIN_PERCENT
+import com.nuvio.app.features.player.AUDIO_ENHANCEMENT_STEP_PERCENT
+import com.nuvio.app.features.player.audioEnhancementSupported
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.StringResource
@@ -246,6 +250,7 @@ internal fun SettingsSliderRow(
     step: Int,
     isTablet: Boolean,
     enabled: Boolean = true,
+    description: String? = null,
     onValueChange: (Int) -> Unit,
 ) {
     val horizontalPadding = if (isTablet) 20.dp else 16.dp
@@ -280,6 +285,13 @@ internal fun SettingsSliderRow(
                 modifier = Modifier.weight(1f),
             )
             ValueBox(text = valueText(shownValue), modifier = Modifier.wrapContentWidth())
+        }
+        if (description != null) {
+            Text(
+                text = description,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
         Slider(
             value = sliderValue.coerceIn(rangeStart, rangeEnd),
@@ -632,6 +644,33 @@ private fun PlaybackSettingsSection(
                     isTablet = isTablet,
                     onCheckedChange = PlayerSettingsRepository::setRememberAudioDelayPerDevice,
                 )
+                if (audioEnhancementSupported) {
+                    val audioEnhancementOff = stringResource(Res.string.compose_player_audio_enhancement_off)
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSliderRow(
+                        title = stringResource(Res.string.settings_playback_dialogue_boost),
+                        description = stringResource(Res.string.settings_playback_dialogue_boost_description),
+                        value = autoPlayPlayerSettings.dialogueBoostPercent,
+                        valueText = { if (it == 0) audioEnhancementOff else "$it%" },
+                        valueRange = AUDIO_ENHANCEMENT_MIN_PERCENT..AUDIO_ENHANCEMENT_MAX_PERCENT,
+                        step = AUDIO_ENHANCEMENT_STEP_PERCENT,
+                        isTablet = isTablet,
+                        enabled = audioLanguageEnabled,
+                        onValueChange = PlayerSettingsRepository::setDialogueBoostPercent,
+                    )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSliderRow(
+                        title = stringResource(Res.string.settings_playback_dynamic_compression),
+                        description = stringResource(Res.string.settings_playback_dynamic_compression_description),
+                        value = autoPlayPlayerSettings.dynamicCompressionPercent,
+                        valueText = { if (it == 0) audioEnhancementOff else "$it%" },
+                        valueRange = AUDIO_ENHANCEMENT_MIN_PERCENT..AUDIO_ENHANCEMENT_MAX_PERCENT,
+                        step = AUDIO_ENHANCEMENT_STEP_PERCENT,
+                        isTablet = isTablet,
+                        enabled = audioLanguageEnabled,
+                        onValueChange = PlayerSettingsRepository::setDynamicCompressionPercent,
+                    )
+                }
                 SettingsGroupDivider(isTablet = isTablet)
                 SettingsNavigationRow(
                     title = stringResource(Res.string.settings_playback_preferred_subtitle_language),

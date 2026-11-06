@@ -99,6 +99,8 @@ actual object PlayerSettingsStorage {
     private const val stillWatchingPromptEnabledKey = "still_watching_prompt_enabled"
     private const val stillWatchingEpisodeCountKey = "still_watching_episode_count"
     private const val stillWatchingNightOnlyKey = "still_watching_night_only"
+    private const val dialogueBoostPercentKey = "dialogue_boost_percent"
+    private const val dynamicCompressionPercentKey = "dynamic_compression_percent"
     private const val rememberAudioDelayPerDeviceKey = "remember_audio_delay_per_device"
     // One JSON per device class (phone/tablet, TV).
     private const val seekThumbnailOptionsKey = "seek_thumbnail_options"
@@ -197,6 +199,8 @@ actual object PlayerSettingsStorage {
         stillWatchingEpisodeCountKey,
         stillWatchingNightOnlyKey,
         rememberAudioDelayPerDeviceKey,
+        dialogueBoostPercentKey,
+        dynamicCompressionPercentKey,
         *SeekThumbnailDevice.entries.map(::seekThumbnailOptionsKey).toTypedArray(),
         stillWatchingLiveTvEnabledKey,
         stillWatchingLiveTvMinutesKey,
@@ -1312,6 +1316,32 @@ actual object PlayerSettingsStorage {
             ?.apply()
     }
 
+    actual fun loadDialogueBoostPercent(): Int? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(dialogueBoostPercentKey)
+            if (sharedPreferences.contains(key)) sharedPreferences.getInt(key, 0) else null
+        }
+
+    actual fun saveDialogueBoostPercent(percent: Int) {
+        preferences
+            ?.edit()
+            ?.putInt(ProfileScopedKey.of(dialogueBoostPercentKey), percent)
+            ?.apply()
+    }
+
+    actual fun loadDynamicCompressionPercent(): Int? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(dynamicCompressionPercentKey)
+            if (sharedPreferences.contains(key)) sharedPreferences.getInt(key, 0) else null
+        }
+
+    actual fun saveDynamicCompressionPercent(percent: Int) {
+        preferences
+            ?.edit()
+            ?.putInt(ProfileScopedKey.of(dynamicCompressionPercentKey), percent)
+            ?.apply()
+    }
+
     actual fun loadSeekThumbnailOptions(device: SeekThumbnailDevice): String? =
         preferences?.getString(ProfileScopedKey.of(seekThumbnailOptionsKey(device)), null)
 
@@ -1613,6 +1643,8 @@ actual object PlayerSettingsStorage {
         loadStillWatchingEpisodeCount()?.let { put(stillWatchingEpisodeCountKey, encodeSyncInt(it)) }
         loadStillWatchingNightOnly()?.let { put(stillWatchingNightOnlyKey, encodeSyncBoolean(it)) }
         loadRememberAudioDelayPerDevice()?.let { put(rememberAudioDelayPerDeviceKey, encodeSyncBoolean(it)) }
+        loadDialogueBoostPercent()?.let { put(dialogueBoostPercentKey, encodeSyncInt(it)) }
+        loadDynamicCompressionPercent()?.let { put(dynamicCompressionPercentKey, encodeSyncInt(it)) }
         SeekThumbnailDevice.entries.forEach { device ->
             loadSeekThumbnailOptions(device)?.let { put(seekThumbnailOptionsKey(device), encodeSyncString(it)) }
         }
@@ -1723,6 +1755,8 @@ actual object PlayerSettingsStorage {
         payload.decodeSyncInt(stillWatchingEpisodeCountKey)?.let(::saveStillWatchingEpisodeCount)
         payload.decodeSyncBoolean(stillWatchingNightOnlyKey)?.let(::saveStillWatchingNightOnly)
         payload.decodeSyncBoolean(rememberAudioDelayPerDeviceKey)?.let(::saveRememberAudioDelayPerDevice)
+        payload.decodeSyncInt(dialogueBoostPercentKey)?.let(::saveDialogueBoostPercent)
+        payload.decodeSyncInt(dynamicCompressionPercentKey)?.let(::saveDynamicCompressionPercent)
         SeekThumbnailDevice.entries.forEach { device ->
             (payload.decodeSyncString(seekThumbnailOptionsKey(device)) ?: localSeekThumbnails[device])
                 ?.let { saveSeekThumbnailOptions(device, it) }

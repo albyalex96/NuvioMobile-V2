@@ -29,6 +29,10 @@ internal fun PlayerScreenModalHosts(
     streamAudioDelayMs: Int,
     audioDelaySavedForDeviceLabel: String?,
     onAudioDelayChanged: (Int) -> Unit,
+    dialogueBoostPercent: Int,
+    compressionPercent: Int,
+    onDialogueBoostChanged: ((Int) -> Unit)?,
+    onCompressionChanged: ((Int) -> Unit)?,
     showSubtitleModal: Boolean,
     subtitleTracks: List<SubtitleTrack>,
     selectedSubtitleIndex: Int,
@@ -130,6 +134,10 @@ internal fun PlayerScreenModalHosts(
         streamAudioDelayMs = streamAudioDelayMs,
         audioDelaySavedForDeviceLabel = audioDelaySavedForDeviceLabel,
         onAudioDelayChanged = onAudioDelayChanged,
+        dialogueBoostPercent = dialogueBoostPercent,
+        compressionPercent = compressionPercent,
+        onDialogueBoostChanged = onDialogueBoostChanged,
+        onCompressionChanged = onCompressionChanged,
     )
 
     SubtitleModal(

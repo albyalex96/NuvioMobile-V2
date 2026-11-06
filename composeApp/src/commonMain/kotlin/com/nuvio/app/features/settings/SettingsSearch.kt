@@ -82,6 +82,7 @@ import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.p2p.P2pSettingsRepository
 import com.nuvio.app.isDesktop
 import com.nuvio.app.isIos
+import com.nuvio.app.features.player.audioEnhancementSupported
 import com.nuvio.app.isWeb
 import com.nuvio.app.tv.LocalTvShell
 import com.nuvio.app.features.discord.DiscordRpcPlatform
@@ -1846,6 +1847,22 @@ private fun addAdditionalSearchEntries(
                 stringResource(Res.string.settings_playback_remember_audio_delay_per_device_description),
             ),
         )
+        if (audioEnhancementSupported) {
+            add(
+                PlaybackSearchRow(
+                    "dialogue-boost",
+                    stringResource(Res.string.settings_playback_dialogue_boost),
+                    stringResource(Res.string.settings_playback_dialogue_boost_description),
+                ),
+            )
+            add(
+                PlaybackSearchRow(
+                    "dynamic-compression",
+                    stringResource(Res.string.settings_playback_dynamic_compression),
+                    stringResource(Res.string.settings_playback_dynamic_compression_description),
+                ),
+            )
+        }
         if (!isIos) {
             add(PlaybackSearchRow("subtitle-strip-sdh", stringResource(Res.string.settings_playback_subtitle_strip_sdh), stringResource(Res.string.settings_playback_subtitle_strip_sdh_description)))
             add(PlaybackSearchRow("subtitle-use-forced", stringResource(Res.string.settings_playback_subtitle_use_forced), stringResource(Res.string.settings_playback_subtitle_use_forced_description)))

@@ -119,6 +119,8 @@ data class PlayerSettingsUiState(
     val stillWatchingEpisodeCount: Int = DEFAULT_STILL_WATCHING_EPISODE_COUNT,
     val stillWatchingNightOnly: Boolean = false,
     val rememberAudioDelayPerDevice: Boolean = true,
+    val dialogueBoostPercent: Int = 0,
+    val dynamicCompressionPercent: Int = 0,
     val seekThumbnailsEnabled: Boolean = true,
     val seekThumbnailsWifiOnly: Boolean = true,
     val seekThumbnailSize: SeekThumbnailSize = SeekThumbnailSize.Medium,
@@ -221,6 +223,8 @@ object PlayerSettingsRepository {
     private var stillWatchingByFormFactor = defaultStillWatchingSettings()
     private var playerClockByDevice = defaultPlayerClockSettings()
     private var rememberAudioDelayPerDevice = true
+    private var dialogueBoostPercent = 0
+    private var dynamicCompressionPercent = 0
     private var seekThumbnailsByDevice = defaultSeekThumbnailOptions()
     private var seekIntervalSeconds = DEFAULT_SEEK_INTERVAL_SECONDS
     private var useLibass = true
@@ -318,6 +322,8 @@ object PlayerSettingsRepository {
         stillWatchingByFormFactor = defaultStillWatchingSettings()
         playerClockByDevice = defaultPlayerClockSettings()
         rememberAudioDelayPerDevice = true
+        dialogueBoostPercent = 0
+        dynamicCompressionPercent = 0
         seekThumbnailsByDevice = defaultSeekThumbnailOptions()
         seekIntervalSeconds = DEFAULT_SEEK_INTERVAL_SECONDS
         useLibass = true
@@ -502,6 +508,8 @@ object PlayerSettingsRepository {
             PlayerClockSettings.decode(PlayerSettingsStorage.loadPlayerClockSettings(device)) ?: PlayerClockSettings()
         }
         rememberAudioDelayPerDevice = PlayerSettingsStorage.loadRememberAudioDelayPerDevice() ?: true
+        dialogueBoostPercent = normalizeAudioEnhancementPercent(PlayerSettingsStorage.loadDialogueBoostPercent() ?: 0)
+        dynamicCompressionPercent = normalizeAudioEnhancementPercent(PlayerSettingsStorage.loadDynamicCompressionPercent() ?: 0)
         seekThumbnailsByDevice = SeekThumbnailDevice.entries.associateWith { device ->
             SeekThumbnailOptions.decode(PlayerSettingsStorage.loadSeekThumbnailOptions(device)) ?: SeekThumbnailOptions()
         }
@@ -1127,6 +1135,26 @@ object PlayerSettingsRepository {
         PlayerSettingsStorage.saveRememberAudioDelayPerDevice(enabled)
     }
 
+    fun setDialogueBoostPercent(percent: Int) {
+        ensureLoaded()
+        val normalized = normalizeAudioEnhancementPercent(percent)
+        if (dialogueBoostPercent == normalized) return
+        dialogueBoostPercent = normalized
+        publish()
+        PlayerSettingsStorage.saveDialogueBoostPercent(normalized)
+        Logger.d(AUDIO_ENHANCEMENT_LOG_TAG) { "Dialogue boost set to $normalized%" }
+    }
+
+    fun setDynamicCompressionPercent(percent: Int) {
+        ensureLoaded()
+        val normalized = normalizeAudioEnhancementPercent(percent)
+        if (dynamicCompressionPercent == normalized) return
+        dynamicCompressionPercent = normalized
+        publish()
+        PlayerSettingsStorage.saveDynamicCompressionPercent(normalized)
+        Logger.d(AUDIO_ENHANCEMENT_LOG_TAG) { "Dynamic range compression set to $normalized%" }
+    }
+
     fun setSeekThumbnailsEnabled(enabled: Boolean) = updateSeekThumbnails { it.copy(enabled = enabled) }
 
     fun setSeekThumbnailsWifiOnly(enabled: Boolean) = updateSeekThumbnails { it.copy(wifiOnly = enabled) }
@@ -1467,6 +1495,8 @@ object PlayerSettingsRepository {
             stillWatchingEpisodeCount = thisDeviceStillWatching.episodeCount,
             stillWatchingNightOnly = thisDeviceStillWatching.nightOnly,
             rememberAudioDelayPerDevice = rememberAudioDelayPerDevice,
+            dialogueBoostPercent = dialogueBoostPercent,
+            dynamicCompressionPercent = dynamicCompressionPercent,
             seekThumbnailsEnabled = seekThumbnailsByDevice.getValue(currentSeekThumbnailDevice()).enabled,
             seekThumbnailsWifiOnly = seekThumbnailsByDevice.getValue(currentSeekThumbnailDevice()).wifiOnly,
             seekThumbnailSize = seekThumbnailsByDevice.getValue(currentSeekThumbnailDevice()).size,

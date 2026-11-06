@@ -271,6 +271,8 @@ private fun ExoPlayerSurface(
     // Not keyed by source: the runtime re-applies the total delay to every new controller.
     var audioDelayMs by remember { mutableStateOf(0) }
     val latestAudioDelayMs = rememberUpdatedState(audioDelayMs)
+    // Not keyed by source either: read by the audio thread of every ExoPlayer instance.
+    val audioEnhancementHolder = remember { AudioEnhancementHolder() }
     var selectedExternalSubtitleMimeType by remember(playerSourceKey) { mutableStateOf<String?>(null) }
     val latestSubtitleDelayMs = rememberUpdatedState(subtitleDelayMs)
     val latestExternalSubtitleMimeType = rememberUpdatedState(selectedExternalSubtitleMimeType)
@@ -406,6 +408,7 @@ private fun ExoPlayerSurface(
             videoBoundsFractionProvider = {
                 playerViewRef?.videoBoundsFraction(latestVideoAspectRatio.value)
             },
+            audioEnhancementHolder = audioEnhancementHolder,
         )
             .setExtensionRendererMode(effectiveDecoderPriority)
             .setEnableDecoderFallback(true)
@@ -1068,6 +1071,10 @@ private fun ExoPlayerSurface(
                     audioDelayMs = delayMs.coerceIn(AUDIO_DELAY_MIN_MS, AUDIO_DELAY_MAX_MS)
                     Logger.i(AUDIO_DELAY_LOG_TAG) { "ExoPlayer audio delay set to ${audioDelayMs}ms" }
                 }
+
+                override fun setAudioEnhancement(settings: AudioEnhancementSettings) {
+                    audioEnhancementHolder.settings = settings
+                }
             }),
         )
     }
@@ -1220,6 +1227,9 @@ private fun LibmpvPlayerSurface(
         val observer = object : MPV.EventObserver {
             override fun eventProperty(property: String) = Unit
             override fun eventProperty(property: String, value: Long) {
+                if (property == "audio-params/channel-count") {
+                    view.refreshAudioEnhancement()
+                }
                 if (property == "cache-buffering-state") {
                     dispatchSnapshot(updateKeepScreenOn = true)
                 }
@@ -1476,6 +1486,7 @@ private class NuvioLibmpvView(
             "demuxer-cache-time" to MPV.mpvFormat.MPV_FORMAT_DOUBLE,
             "speed" to MPV.mpvFormat.MPV_FORMAT_DOUBLE,
             "track-list" to MPV.mpvFormat.MPV_FORMAT_NODE,
+            "audio-params/channel-count" to MPV.mpvFormat.MPV_FORMAT_INT64,
         )
         props.forEach { (name, format) -> mpv.observeProperty(name, format) }
     }
@@ -1829,6 +1840,10 @@ private class NuvioLibmpvView(
                     }
                 }
             }
+
+            override fun setAudioEnhancement(settings: AudioEnhancementSettings) {
+                this@NuvioLibmpvView.setAudioEnhancement(settings)
+            }
         }
 
     /**
@@ -1882,6 +1897,37 @@ private class NuvioLibmpvView(
 
     private fun setPausedNow(paused: Boolean) {
         runCatching { mpv.setPropertyBoolean("pause", paused) }
+    }
+
+    private var audioEnhancement = AudioEnhancementSettings()
+    private var appliedAudioFilter = ""
+
+    fun setAudioEnhancement(settings: AudioEnhancementSettings) {
+        executeMpv {
+            audioEnhancement = settings
+            applyAudioEnhancementNow()
+        }
+    }
+
+    /** The decoded channel layout changed (new file or audio track): rebuild the filter chain. */
+    fun refreshAudioEnhancement() {
+        executeMpv { applyAudioEnhancementNow() }
+    }
+
+    private fun applyAudioEnhancementNow() {
+        val channels = runCatching { mpv.getPropertyInt("audio-params/channel-count") }.getOrNull()
+        val filter = audioEnhancement.toMpvAudioFilter(channels)
+        if (filter == appliedAudioFilter) return
+        runCatching { mpv.setPropertyString("af", filter) }
+            .onSuccess {
+                appliedAudioFilter = filter
+                Logger.i(AUDIO_ENHANCEMENT_LOG_TAG) {
+                    "libmpv af set (channels=$channels): ${filter.ifEmpty { "<none>" }}"
+                }
+            }
+            .onFailure { error ->
+                Logger.e(AUDIO_ENHANCEMENT_LOG_TAG, error) { "libmpv rejected audio filter: $filter" }
+            }
     }
 
     private fun executeMpv(block: () -> Unit) {
@@ -2427,7 +2473,23 @@ private class SubtitleOffsetRenderersFactory(
     private val shouldNormalizeCuePositionProvider: () -> Boolean,
     private val shouldStripSdhProvider: () -> Boolean,
     private val videoBoundsFractionProvider: () -> RectF?,
+    private val audioEnhancementHolder: AudioEnhancementHolder,
 ) : DefaultRenderersFactory(context) {
+    override fun buildAudioSink(
+        context: Context,
+        enableFloatOutput: Boolean,
+        enableAudioTrackPlaybackParams: Boolean,
+    ): androidx.media3.exoplayer.audio.AudioSink =
+        androidx.media3.exoplayer.audio.DefaultAudioSink.Builder(context)
+            .setEnableFloatOutput(enableFloatOutput)
+            .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
+            .setAudioProcessors(
+                arrayOf<androidx.media3.common.audio.AudioProcessor>(
+                    DialogueEnhancementAudioProcessor(audioEnhancementHolder),
+                ),
+            )
+            .build()
+
     override fun buildTextRenderers(
         context: Context,
         output: TextOutput,

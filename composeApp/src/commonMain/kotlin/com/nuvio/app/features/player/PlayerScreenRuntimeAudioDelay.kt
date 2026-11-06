@@ -54,3 +54,19 @@ internal fun PlayerScreenRuntime.setAudioDelay(delayMs: Int) {
         PlayerTrackPreferenceStorage.saveAudioDelayMs(route.key, persistableMs)
     }
 }
+
+/** Pushes the dialogue boost / compression sliders to the active engine. */
+@Composable
+internal fun PlayerScreenRuntime.BindAudioEnhancement() {
+    val settings = AudioEnhancementSettings(
+        dialogueBoostPercent = playerSettingsUiState.dialogueBoostPercent,
+        compressionPercent = playerSettingsUiState.dynamicCompressionPercent,
+    )
+    LaunchedEffect(playerController, settings) {
+        val controller = playerController ?: return@LaunchedEffect
+        controller.setAudioEnhancement(settings)
+        Logger.d(AUDIO_ENHANCEMENT_LOG_TAG) {
+            "Engine audio enhancement: dialogue=${settings.dialogueBoostPercent}% compression=${settings.compressionPercent}%"
+        }
+    }
+}

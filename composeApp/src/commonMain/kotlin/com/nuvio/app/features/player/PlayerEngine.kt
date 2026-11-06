@@ -32,6 +32,8 @@ interface PlayerEngineController {
     fun setSubtitleDelayMs(delayMs: Int) {}
     /** Total audio delay in ms (>0 = audio later), already clamped to the player range. */
     fun setAudioDelayMs(delayMs: Int) {}
+    /** Dialogue boost and dynamic range compression (both 0..100, 0 = off). */
+    fun setAudioEnhancement(settings: AudioEnhancementSettings) {}
     fun configureIosVideoOutput(settings: PlayerSettingsUiState) {}
     fun updateNowPlayingMetadata(info: PlayerNowPlayingInfo) {}
     fun clearNowPlayingInfo() {}

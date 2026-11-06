@@ -163,6 +163,10 @@ internal expect object PlayerSettingsStorage {
     fun saveStillWatchingNightOnly(enabled: Boolean)
     fun loadRememberAudioDelayPerDevice(): Boolean?
     fun saveRememberAudioDelayPerDevice(enabled: Boolean)
+    fun loadDialogueBoostPercent(): Int?
+    fun saveDialogueBoostPercent(percent: Int)
+    fun loadDynamicCompressionPercent(): Int?
+    fun saveDynamicCompressionPercent(percent: Int)
     fun loadSeekThumbnailOptions(device: SeekThumbnailDevice): String?
     fun saveSeekThumbnailOptions(device: SeekThumbnailDevice, value: String)
     fun loadStillWatchingLiveTvEnabled(): Boolean?
