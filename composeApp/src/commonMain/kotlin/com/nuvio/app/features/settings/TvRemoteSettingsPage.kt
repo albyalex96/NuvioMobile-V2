@@ -16,6 +16,7 @@ import androidx.compose.material.icons.rounded.Keyboard
 import androidx.compose.material.icons.rounded.LinkOff
 import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Terminal
 import androidx.compose.material.icons.rounded.Tv
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -101,16 +102,18 @@ import nuvio.composeapp.generated.resources.tv_remote_status_connecting
 import nuvio.composeapp.generated.resources.tv_remote_status_idle
 import nuvio.composeapp.generated.resources.tv_remote_status_revoked
 import nuvio.composeapp.generated.resources.tv_remote_status_unreachable
+import nuvio.composeapp.generated.resources.tv_logs_open_description
+import nuvio.composeapp.generated.resources.tv_logs_title
 import org.jetbrains.compose.resources.stringResource
 
 /**
  * Settings -> TV remote on the phone (Android full): paired TV and its status, TVs found on the
  * network, QR scanner and pairing with address + code.
  */
-internal fun LazyListScope.tvRemoteSettingsContent(isTablet: Boolean) {
+internal fun LazyListScope.tvRemoteSettingsContent(isTablet: Boolean, onTvLogsClick: () -> Unit) {
     val client = PhoneTvRemote.activeClient ?: return
     item(key = "tv_remote_content") {
-        TvRemoteSettingsContent(client = client, isTablet = isTablet)
+        TvRemoteSettingsContent(client = client, isTablet = isTablet, onTvLogsClick = onTvLogsClick)
     }
     item(key = "tv_remote_about") {
         SettingsSection(
@@ -136,7 +139,7 @@ internal fun LazyListScope.tvRemoteSettingsContent(isTablet: Boolean) {
 private data class CodeDialogRequest(val address: String, val tvName: String?)
 
 @Composable
-private fun TvRemoteSettingsContent(client: PhoneTvRemoteClient, isTablet: Boolean) {
+private fun TvRemoteSettingsContent(client: PhoneTvRemoteClient, isTablet: Boolean, onTvLogsClick: () -> Unit) {
     val state by client.state.collectAsStateWithLifecycle()
     LifecycleResumeEffect(client) {
         val releaseObserve = client.observe()
@@ -199,6 +202,14 @@ private fun TvRemoteSettingsContent(client: PhoneTvRemoteClient, isTablet: Boole
                             icon = Icons.Rounded.Cast,
                             isTablet = isTablet,
                             onClick = { showControls = true },
+                        )
+                        SettingsGroupDivider(isTablet = isTablet)
+                        SettingsNavigationRow(
+                            title = stringResource(Res.string.tv_logs_title),
+                            description = stringResource(Res.string.tv_logs_open_description),
+                            icon = Icons.Rounded.Terminal,
+                            isTablet = isTablet,
+                            onClick = onTvLogsClick,
                         )
                     } else if (state.connection == PhoneTvRemoteConnection.Unreachable) {
                         SettingsGroupDivider(isTablet = isTablet)

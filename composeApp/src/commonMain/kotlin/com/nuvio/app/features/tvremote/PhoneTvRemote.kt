@@ -133,6 +133,9 @@ interface PhoneTvRemoteClient {
     /** Sends a Telegram login step to the paired TV; returns the new TV state (null on failure). */
     suspend fun telegramAction(action: TvRemoteTelegramActionType, value: String? = null): TvRemoteTelegramState?
 
+    /** In-app logs of the paired TV after [afterId] (with an optional [action]); null on failure. */
+    suspend fun logs(afterId: Long, action: TvRemoteLogsAction? = null): TvRemoteLogsResponse?
+
     /** Full screen QR scanner; [onResult] receives the scanned text (null when closed). */
     @Composable
     fun QrScanner(onResult: (String?) -> Unit)

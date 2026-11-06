@@ -83,4 +83,11 @@
     <string name="tv_remote_scanner_permission_grant">Consenti fotocamera</string>
     <string name="tv_remote_scanner_open_settings">Apri impostazioni app</string>
     <string name="tv_remote_discovery_refresh">Cerca di nuovo</string>
+    <string name="tv_logs_title">Log della TV</string>
+    <string name="tv_logs_open_description">Leggi e condividi dal telefono i log dell'app della TV</string>
+    <string name="tv_logs_section_tv">TV</string>
+    <string name="tv_logs_status_loading">Caricamento dei log della TV…</string>
+    <string name="tv_logs_status_connected">Connesso: i log si aggiornano ogni pochi secondi</string>
+    <string name="tv_logs_status_unreachable">La TV non risponde: nuovo tentativo…</string>
+    <string name="tv_logs_recording_description">Modifica l'impostazione "Registra log" della TV. Se è disattivata, la TV non salva nuove righe di log</string>
 </resources>

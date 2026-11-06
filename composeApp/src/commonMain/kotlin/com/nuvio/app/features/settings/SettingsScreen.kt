@@ -709,6 +709,7 @@ private fun MobileSettingsScreen(
         }
 
         val appLogsViewer = if (page == SettingsPage.AppLogs) rememberAppLogsViewerState() else null
+        val tvLogsViewer = if (page == SettingsPage.TvLogs) rememberTvLogsViewer() else null
         val watchPartyRowClick = watchPartyRow(onWatchPartyClick)
         val tvLayoutSettings = LocalTvShell.current?.layoutSettings
         val tvPhoneRemoteSettings = LocalTvShell.current?.phoneRemoteSettings
@@ -964,8 +965,9 @@ private fun MobileSettingsScreen(
                             ),
                         )
                     } else {
-                        tvRemoteSettingsContent(isTablet = false)
+                        tvRemoteSettingsContent(isTablet = false, onTvLogsClick = { onPageChange(SettingsPage.TvLogs) })
                     }
+                    SettingsPage.TvLogs -> tvLogsSettingsContent(isTablet = false, viewer = tvLogsViewer)
                     SettingsPage.AiAssistant -> aiAssistantSettingsContent(isTablet = false)
                     SettingsPage.Cloudstream -> cloudStreamSettingsContent()
                     SettingsPage.TraktAuthentication -> trackingSettingsContent(
@@ -1227,6 +1229,7 @@ private fun TabletSettingsScreen(
                 }
             }
             val appLogsViewer = if (page == SettingsPage.AppLogs) rememberAppLogsViewerState() else null
+            val tvLogsViewer = if (page == SettingsPage.TvLogs) rememberTvLogsViewer() else null
             val watchPartyRowClick = watchPartyRow(onWatchPartyClick)
             val tvLayoutSettings = LocalTvShell.current?.layoutSettings
             val tvPhoneRemoteSettings = LocalTvShell.current?.phoneRemoteSettings
@@ -1507,8 +1510,9 @@ private fun TabletSettingsScreen(
                                 ),
                             )
                         } else {
-                            tvRemoteSettingsContent(isTablet = true)
+                            tvRemoteSettingsContent(isTablet = true, onTvLogsClick = { openInlinePage(SettingsPage.TvLogs) })
                         }
+                        SettingsPage.TvLogs -> tvLogsSettingsContent(isTablet = true, viewer = tvLogsViewer)
                         SettingsPage.AiAssistant -> aiAssistantSettingsContent(isTablet = true)
                         SettingsPage.Cloudstream -> cloudStreamSettingsContent()
                         SettingsPage.TraktAuthentication -> trackingSettingsContent(

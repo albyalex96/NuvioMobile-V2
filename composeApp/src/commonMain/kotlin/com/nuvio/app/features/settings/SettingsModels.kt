@@ -9,6 +9,7 @@ import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.ui.graphics.vector.ImageVector
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.tv_layout_settings_title
+import nuvio.composeapp.generated.resources.tv_logs_title
 import nuvio.composeapp.generated.resources.tv_remote_settings_title
 import nuvio.composeapp.generated.resources.live_tv_channels_title
 import nuvio.composeapp.generated.resources.compose_settings_category_about
@@ -148,6 +149,11 @@ internal enum class SettingsPage(
         titleRes = Res.string.tv_remote_settings_title,
         category = SettingsCategory.General,
         parentPage = Root,
+    ),
+    TvLogs(
+        titleRes = Res.string.tv_logs_title,
+        category = SettingsCategory.General,
+        parentPage = TvRemote,
     ),
     TvLayout(
         titleRes = Res.string.tv_layout_settings_title,

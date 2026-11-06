@@ -68,7 +68,6 @@ import com.nuvio.app.core.logging.AppLogPlatform
 import com.nuvio.app.core.logging.AppLogSource
 import com.nuvio.app.core.logging.AppLogStore
 import com.nuvio.app.core.logging.AppLogText
-import com.nuvio.app.core.logging.AppLoggerSettings
 import com.nuvio.app.core.logging.rememberAppLogFileSharer
 import com.nuvio.app.core.logging.writeAppLogExportFile
 import com.nuvio.app.core.ui.DialogButton
@@ -160,7 +159,7 @@ internal fun LazyListScope.appLogsSettingsContent(
     viewer: AppLogsViewerState,
 ) {
     item(key = "app_logs_recording") {
-        AppLogsRecordingSection(isTablet = isTablet)
+        AppLogsRecordingSection(isTablet = isTablet, source = viewer.source)
     }
     item(key = "app_logs_filters") {
         AppLogsFiltersSection(isTablet = isTablet, viewer = viewer)
@@ -219,7 +218,7 @@ private fun AppLogsConsole(
             border = BorderStroke(tokens.borders.hairline, tokens.colors.borderSubtle),
         ) {
             if (result.entries.isEmpty()) {
-                AppLogsEmptyState(isTablet = isTablet)
+                AppLogsEmptyState(isTablet = isTablet, source = viewer.source)
             } else {
                 LazyColumn(
                     state = listState,
@@ -244,11 +243,8 @@ private fun AppLogsConsole(
 }
 
 @Composable
-private fun AppLogsRecordingSection(isTablet: Boolean) {
-    val enabled by remember {
-        AppLoggerSettings.ensureLoaded()
-        AppLoggerSettings.enabled
-    }.collectAsStateWithLifecycle()
+private fun AppLogsRecordingSection(isTablet: Boolean, source: AppLogsSource) {
+    val enabled by remember(source) { source.recording }.collectAsStateWithLifecycle()
 
     SettingsSection(
         title = stringResource(Res.string.app_logs_section_recording),
@@ -257,10 +253,10 @@ private fun AppLogsRecordingSection(isTablet: Boolean) {
         SettingsGroup(isTablet = isTablet) {
             SettingsSwitchRow(
                 title = stringResource(Res.string.app_logs_enabled_title),
-                description = stringResource(Res.string.app_logs_enabled_description),
+                description = stringResource(source.recordingDescription),
                 checked = enabled,
                 isTablet = isTablet,
-                onCheckedChange = AppLoggerSettings::setEnabled,
+                onCheckedChange = source::setRecording,
             )
         }
     }
@@ -511,6 +507,7 @@ private fun AppLogsActionsSection(
     val nothingToExport = stringResource(Res.string.app_logs_nothing_to_export)
     val shareFailed = stringResource(Res.string.app_logs_share_failed)
     val importFailed = stringResource(Res.string.app_logs_import_failed)
+    val supportsSystemImport by remember(viewer.source) { viewer.source.supportsSystemImport }.collectAsStateWithLifecycle()
 
     SettingsSection(
         title = stringResource(Res.string.app_logs_section_actions),
@@ -558,7 +555,7 @@ private fun AppLogsActionsSection(
                     scope.launch {
                         val path = withContext(Dispatchers.Default) {
                             val now = AppLogStore.nowEpochMs()
-                            val fileName = "nuvio-log-${AppLogPlatform.formatTimestamp(now, EXPORT_FILE_TIMESTAMP_PATTERN)}.txt"
+                            val fileName = "${viewer.source.exportFilePrefix}-${AppLogPlatform.formatTimestamp(now, EXPORT_FILE_TIMESTAMP_PATTERN)}.txt"
                             writeAppLogExportFile(fileName, AppLogText.format(entries))
                         }
                         if (path == null) {
@@ -569,7 +566,7 @@ private fun AppLogsActionsSection(
                     }
                 },
             )
-            if (AppLogPlatform.supportsSystemLogImport) {
+            if (supportsSystemImport) {
                 SettingsGroupDivider(isTablet = isTablet)
                 SettingsNavigationRow(
                     title = stringResource(Res.string.app_logs_import_title),
@@ -578,13 +575,10 @@ private fun AppLogsActionsSection(
                     isTablet = isTablet,
                     onClick = {
                         scope.launch {
-                            val lines = withContext(Dispatchers.Default) {
-                                runCatching { AppLogPlatform.readSystemLog() }.getOrNull()
-                            }
-                            if (lines == null) {
+                            val added = viewer.source.importSystemLog()
+                            if (added == null) {
                                 NuvioToastController.show(importFailed)
                             } else {
-                                val added = AppLogStore.import(lines)
                                 NuvioToastController.show(getString(Res.string.app_logs_imported, added))
                             }
                         }
@@ -643,9 +637,9 @@ private fun AppLogsClearDialog(
 }
 
 @Composable
-private fun AppLogsEmptyState(isTablet: Boolean) {
+private fun AppLogsEmptyState(isTablet: Boolean, source: AppLogsSource) {
     val tokens = MaterialTheme.nuvio
-    val recording by AppLoggerSettings.enabled.collectAsStateWithLifecycle()
+    val recording by remember(source) { source.recording }.collectAsStateWithLifecycle()
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Text(
             text = stringResource(

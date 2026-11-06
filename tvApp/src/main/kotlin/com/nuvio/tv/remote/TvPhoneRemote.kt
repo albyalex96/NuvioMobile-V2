@@ -15,6 +15,10 @@ import com.nuvio.app.features.tvremote.TV_REMOTE_NSD_SERVICE_TYPE
 import com.nuvio.app.features.tvremote.TV_REMOTE_PAIR_CLIENT_ID
 import com.nuvio.app.features.tvremote.TV_REMOTE_PATH_COMMAND
 import com.nuvio.app.features.tvremote.TV_REMOTE_PATH_FORGET
+import com.nuvio.app.features.tvremote.TV_REMOTE_PATH_LOGS
+import com.nuvio.app.features.tvremote.TvRemoteLogsHost
+import com.nuvio.app.features.tvremote.TvRemoteLogsRequest
+import com.nuvio.app.features.tvremote.TvRemoteLogsResponse
 import com.nuvio.app.features.tvremote.TV_REMOTE_PATH_PAIR
 import com.nuvio.app.features.tvremote.TV_REMOTE_PATH_STATE
 import com.nuvio.app.features.tvremote.TV_REMOTE_PATH_TELEGRAM_ACTION
@@ -281,6 +285,7 @@ object TvPhoneRemote {
                         post(TV_REMOTE_PATH_FORGET) { handleSealed(TV_REMOTE_PATH_FORGET) }
                         post(TV_REMOTE_PATH_TELEGRAM_STATE) { handleSealed(TV_REMOTE_PATH_TELEGRAM_STATE) }
                         post(TV_REMOTE_PATH_TELEGRAM_ACTION) { handleSealed(TV_REMOTE_PATH_TELEGRAM_ACTION) }
+                        post(TV_REMOTE_PATH_LOGS) { handleSealed(TV_REMOTE_PATH_LOGS) }
                     }
                 }
                 engine.start(wait = false)
@@ -366,6 +371,20 @@ object TvPhoneRemote {
                 }
                 if (!duplicate) runTelegramAction(request)
                 respondSealed(key, envelope.clientId, path, TvRemoteTelegramState.serializer(), telegramState())
+            }
+            TV_REMOTE_PATH_LOGS -> {
+                val request = openOrNull(key, path, TvRemoteLogsRequest.serializer(), envelope) ?: return
+                markSeen(envelope.clientId)
+                val effective = if (request.action == null) request else {
+                    val duplicate = synchronized(lock) {
+                        if (handledRequests.containsKey(request.requestId)) true else {
+                            handledRequests[request.requestId] = System.currentTimeMillis()
+                            false
+                        }
+                    }
+                    if (duplicate) request.copy(action = null) else request
+                }
+                respondSealed(key, envelope.clientId, path, TvRemoteLogsResponse.serializer(), TvRemoteLogsHost.handle(effective))
             }
             else -> call.respond(HttpStatusCode.NotFound)
         }
@@ -504,6 +523,7 @@ object TvPhoneRemote {
             is TvRemoteForgetRequest -> request.timestampMs
             is TvRemoteTelegramStateRequest -> request.timestampMs
             is TvRemoteTelegramActionRequest -> request.timestampMs
+            is TvRemoteLogsRequest -> request.timestampMs
             else -> 0L
         }
         if (!isFresh(timestamp)) {

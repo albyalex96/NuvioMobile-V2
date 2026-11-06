@@ -34,6 +34,7 @@ private val enhancedSettingsPages: Set<SettingsPage> = setOf(
     SettingsPage.Telegram,
     SettingsPage.Top10,
     SettingsPage.TvLayout,
+    SettingsPage.TvLogs,
     SettingsPage.TvRemote,
     SettingsPage.WeTrakr,
 )

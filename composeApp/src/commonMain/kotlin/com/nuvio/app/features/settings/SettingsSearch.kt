@@ -118,6 +118,9 @@ import com.nuvio.app.features.tvremote.PhoneTvRemote
 import androidx.compose.material.icons.rounded.Cast
 import nuvio.composeapp.generated.resources.settings_licenses_attributions_zxing_body
 import nuvio.composeapp.generated.resources.settings_licenses_attributions_zxing_title
+import nuvio.composeapp.generated.resources.tv_logs_open_description
+import nuvio.composeapp.generated.resources.tv_logs_recording_description
+import nuvio.composeapp.generated.resources.tv_logs_title
 import org.jetbrains.compose.resources.stringResource
 
 internal sealed class SettingsSearchTarget {
@@ -1551,6 +1554,26 @@ internal fun settingsSearchEntries(
                 description = stringResource(Res.string.tv_remote_open_controls_description),
                 pageLabel = tvRemotePage,
                 section = tvSection,
+                category = generalCategory,
+                icon = Icons.Rounded.Cast,
+            )
+            addRow(
+                page = SettingsPage.TvLogs,
+                key = "tv-logs",
+                title = stringResource(Res.string.tv_logs_title),
+                description = stringResource(Res.string.tv_logs_open_description),
+                pageLabel = stringResource(Res.string.tv_logs_title),
+                section = tvSection,
+                category = generalCategory,
+                icon = Icons.Rounded.Cast,
+            )
+            addRow(
+                page = SettingsPage.TvLogs,
+                key = "tv-logs-recording",
+                title = stringResource(Res.string.app_logs_enabled_title),
+                description = stringResource(Res.string.tv_logs_recording_description),
+                pageLabel = stringResource(Res.string.tv_logs_title),
+                section = stringResource(Res.string.app_logs_section_recording),
                 category = generalCategory,
                 icon = Icons.Rounded.Cast,
             )

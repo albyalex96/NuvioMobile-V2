@@ -1,6 +1,7 @@
 package com.nuvio.app.features.tvremote
 
 import androidx.compose.runtime.Immutable
+import com.nuvio.app.core.logging.AppLogEntry
 import kotlinx.serialization.Serializable
 
 /*
@@ -30,6 +31,8 @@ const val TV_REMOTE_PATH_FORGET: String = "/v1/forget"
 /** Telegram login of the TV driven from the phone (number, code, 2FA password, QR approval). */
 const val TV_REMOTE_PATH_TELEGRAM_STATE: String = "/v1/telegram/state"
 const val TV_REMOTE_PATH_TELEGRAM_ACTION: String = "/v1/telegram/action"
+/** In-app logs of the TV, read (and managed) from the phone. */
+const val TV_REMOTE_PATH_LOGS: String = "/v1/logs"
 
 /** Longest a state request waits on the TV for a change. */
 const val TV_REMOTE_MAX_WAIT_MS: Long = 20_000L
@@ -261,6 +264,42 @@ data class TvRemoteTelegramActionRequest(
     val action: TvRemoteTelegramActionType,
     /** Phone number, code or password (sealed like every request body). */
     val value: String? = null,
+)
+
+/** Change asked by the phone together with a logs request. */
+@Serializable
+enum class TvRemoteLogsAction {
+    EnableRecording,
+    DisableRecording,
+    Clear,
+    /** Imports the TV system log (logcat) into its in-app log. */
+    ImportSystemLog,
+}
+
+@Serializable
+data class TvRemoteLogsRequest(
+    val timestampMs: Long,
+    val requestId: String,
+    /** Only entries with a larger id are returned (0 = from the oldest). */
+    val afterId: Long = 0L,
+    val limit: Int = 2_000,
+    val action: TvRemoteLogsAction? = null,
+)
+
+@Serializable
+data class TvRemoteLogsResponse(
+    /** Oldest first. */
+    val entries: List<AppLogEntry>,
+    /** Id of the newest stored entry (0 when empty): smaller than the phone one after a clear. */
+    val newestId: Long,
+    /** More entries after the returned ones: ask again at once. */
+    val hasMore: Boolean,
+    val recording: Boolean,
+    val supportsSystemImport: Boolean,
+    /** Lines added by [TvRemoteLogsAction.ImportSystemLog]; null when not asked or failed. */
+    val imported: Int? = null,
+    /** The stored entries were changed (clear, import): the phone must reload them all. */
+    val reset: Boolean = false,
 )
 
 /** What the TV player is showing: display metadata only. */

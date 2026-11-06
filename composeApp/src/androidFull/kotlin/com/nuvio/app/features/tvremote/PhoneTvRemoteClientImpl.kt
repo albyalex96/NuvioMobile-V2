@@ -773,6 +773,39 @@ internal class PhoneTvRemoteClientImpl(context: Context) : PhoneTvRemoteClient {
 
     // endregion
 
+    // region TV logs
+
+    override suspend fun logs(afterId: Long, action: TvRemoteLogsAction?): TvRemoteLogsResponse? =
+        withContext(Dispatchers.IO) {
+            val paired = _state.value.pairedTv ?: return@withContext null
+            val clientId = preferences.getString(CLIENT_ID, null) ?: return@withContext null
+            val key = loadClientKey() ?: return@withContext null
+            if (action != null) log.i { "TV logs action $action sent to the TV" }
+            runCatching {
+                post(
+                    host = paired.host,
+                    port = paired.port,
+                    path = TV_REMOTE_PATH_LOGS,
+                    key = key,
+                    clientId = clientId,
+                    requestSerializer = TvRemoteLogsRequest.serializer(),
+                    request = TvRemoteLogsRequest(
+                        timestampMs = System.currentTimeMillis(),
+                        requestId = TvRemoteCrypto.randomId(),
+                        afterId = afterId,
+                        action = action,
+                    ),
+                    responseSerializer = TvRemoteLogsResponse.serializer(),
+                    timeoutMs = TELEGRAM_TIMEOUT_MS,
+                )
+            }.onFailure { error ->
+                if (error is kotlinx.coroutines.CancellationException) throw error
+                log.w(error) { "TV logs request failed" }
+            }.getOrNull()
+        }
+
+    // endregion
+
     // region Scanner
 
     @Composable

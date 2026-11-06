@@ -12,10 +12,19 @@ import androidx.compose.runtime.snapshotFlow
 import com.nuvio.app.core.logging.AppLogEntry
 import com.nuvio.app.core.logging.AppLogFilter
 import com.nuvio.app.core.logging.AppLogLevel
+import com.nuvio.app.core.logging.AppLogPlatform
 import com.nuvio.app.core.logging.AppLogStore
+import com.nuvio.app.core.logging.AppLoggerSettings
 import com.nuvio.app.core.logging.logCategories
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.withContext
+import nuvio.composeapp.generated.resources.Res
+import nuvio.composeapp.generated.resources.app_logs_enabled_description
+import org.jetbrains.compose.resources.StringResource
 import kotlinx.coroutines.flow.flowOn
 
 /** What the viewer shows: the filtered entries (newest first) out of [totalCount] in the source list. */
@@ -31,7 +40,7 @@ internal data class AppLogsViewResult(
  * With [live] off the source list is frozen, so the entries don't move while reading.
  */
 @Stable
-internal class AppLogsViewerState {
+internal class AppLogsViewerState(val source: AppLogsSource) {
     var filter by mutableStateOf(AppLogFilter())
     var live by mutableStateOf(true)
     var result by mutableStateOf(AppLogsViewResult())
@@ -62,7 +71,7 @@ internal class AppLogsViewerState {
     }
 
     fun clear() {
-        AppLogStore.clear()
+        source.clear()
         expandedIds = emptySet()
         clearGeneration++
     }
@@ -75,13 +84,13 @@ private data class AppLogsViewerInputs(
 )
 
 @Composable
-internal fun rememberAppLogsViewerState(): AppLogsViewerState {
-    val state = remember { AppLogsViewerState() }
+internal fun rememberAppLogsViewerState(source: AppLogsSource = LocalAppLogsSource): AppLogsViewerState {
+    val state = remember(source) { AppLogsViewerState(source) }
     LaunchedEffect(state) {
         var frozen: List<AppLogEntry>? = null
         var seenClearGeneration = state.clearGeneration
         val inputs = snapshotFlow { AppLogsViewerInputs(state.filter, state.live, state.clearGeneration) }
-        combine(AppLogStore.entries, inputs) { entries, input ->
+        combine(source.entries, inputs) { entries, input ->
             if (input.clearGeneration != seenClearGeneration) {
                 seenClearGeneration = input.clearGeneration
                 frozen = if (input.live) null else emptyList()
@@ -104,4 +113,44 @@ internal fun rememberAppLogsViewerState(): AppLogsViewerState {
             .collect { state.result = it }
     }
     return state
+}
+
+/** Where the "App logs" viewer reads its entries: this device ([LocalAppLogsSource]) or the paired TV. */
+@Stable
+internal interface AppLogsSource {
+    val entries: Flow<List<AppLogEntry>>
+    val recording: StateFlow<Boolean>
+    val supportsSystemImport: StateFlow<Boolean>
+
+    /** Prefix of the exported file name. */
+    val exportFilePrefix: String
+    val recordingDescription: StringResource
+
+    fun setRecording(enabled: Boolean)
+    fun clear()
+
+    /** Imports the system log; returns the added lines, null on failure. */
+    suspend fun importSystemLog(): Int?
+}
+
+internal object LocalAppLogsSource : AppLogsSource {
+    override val entries: Flow<List<AppLogEntry>> get() = AppLogStore.entries
+    override val recording: StateFlow<Boolean>
+        get() {
+            AppLoggerSettings.ensureLoaded()
+            return AppLoggerSettings.enabled
+        }
+    override val supportsSystemImport: StateFlow<Boolean> = MutableStateFlow(AppLogPlatform.supportsSystemLogImport)
+    override val exportFilePrefix: String = "nuvio-log"
+    override val recordingDescription: StringResource = Res.string.app_logs_enabled_description
+
+    override fun setRecording(enabled: Boolean) = AppLoggerSettings.setEnabled(enabled)
+    override fun clear() = AppLogStore.clear()
+
+    override suspend fun importSystemLog(): Int? {
+        val lines = withContext(Dispatchers.Default) {
+            runCatching { AppLogPlatform.readSystemLog() }.getOrNull()
+        } ?: return null
+        return AppLogStore.import(lines)
+    }
 }
