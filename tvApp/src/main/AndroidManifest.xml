@@ -32,14 +32,14 @@
     <application
         android:name="com.nuvio.app.NuvioApplication"
         android:allowBackup="false"
-        android:banner="@drawable/tv_banner"
+        android:banner="@mipmap/tv_banner_image"
         android:enableOnBackInvokedCallback="false"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/tv_ic_launcher"
         android:label="@string/tv_app_name"
         android:largeHeap="true"
         android:localeConfig="@xml/locale_config"
         android:networkSecurityConfig="@xml/network_security_config"
-        android:roundIcon="@mipmap/ic_launcher_round"
+        android:roundIcon="@mipmap/tv_ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.Nuvio"
         android:usesCleartextTraffic="true">
@@ -49,7 +49,7 @@
 
         <activity
             android:name="com.nuvio.tv.TvActivity"
-            android:banner="@drawable/tv_banner"
+            android:banner="@mipmap/tv_banner_image"
             android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation|keyboard|keyboardHidden|navigation"
             android:exported="true"
             android:label="@string/tv_app_name"
