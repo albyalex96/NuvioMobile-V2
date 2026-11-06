@@ -2070,6 +2070,10 @@
   <string name="profile_background_member_note">Gli URL degli sfondi personalizzati si configurano dal pannello web di Nuvio.</string>
   <string name="profile_background_normal">Normale</string>
   <string name="profile_background_custom">Personalizzato</string>
+  <string name="profile_custom_background_url">URL sfondo personalizzato</string>
+  <string name="profile_custom_background_url_description">Incolla il link di un'immagine da usare come sfondo di questo profilo, oppure lascia vuoto per usare lo sfondo predefinito.</string>
+  <string name="profile_custom_background_url_placeholder">https://example.com/sfondo.jpg</string>
+  <string name="profile_background_url_invalid">Inserisci un URL di immagine valido (http:// o https://).</string>
   <string name="action_collapse">Comprimi</string>
   <string name="action_expand">Espandi</string>
   <string name="action_delete_confirm_message">Sei sicuro di volerlo eliminare?</string>
