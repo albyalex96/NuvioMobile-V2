@@ -1,5 +1,6 @@
 package com.nuvio.app
 
+import com.nuvio.app.core.logging.StartupSplash
 import com.nuvio.app.core.compat.appIo
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
@@ -614,6 +615,10 @@ internal fun MainAppContent(
     LaunchedEffect(appContentGeneration) {
         if (!ownsAppRuntime) return@LaunchedEffect
         StartupTrace.mark("MainAppContent first frame")
+        if (initialRoute != TabsRoute || initialTab != AppScreenTab.Home) {
+            // Opened on another screen (link, notification): nothing to wait for on the home.
+            StartupSplash.release("initial route")
+        }
         NetworkStatusRepository.ensureStarted()
         // The release notifications refresh calls addons and TMDB: it waits for the home to show its
         // first content (at most 5 s), so it does not compete with the catalogs and posters.
@@ -621,6 +626,7 @@ internal fun MainAppContent(
             snapshotFlow { initialHomeReady }.first { it }
         }
         initialHomeReady = true
+        StartupSplash.release("home wait over")
         kotlinx.coroutines.delay(HOME_SECONDARY_WORK_DELAY_MS)
         StartupTrace.mark("Release notifications refresh started")
         EpisodeReleaseNotificationsRepository.refreshAsync()
@@ -1864,6 +1870,7 @@ internal fun MainAppContent(
                                 },
                                 onInitialHomeContentRendered = {
                                     if (!initialHomeReady) StartupTrace.mark("Home first content rendered")
+                                    StartupSplash.release("home content")
                                     initialHomeReady = true
                                 },
                             )

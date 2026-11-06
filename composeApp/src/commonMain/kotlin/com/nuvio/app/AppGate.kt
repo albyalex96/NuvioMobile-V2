@@ -1,5 +1,6 @@
 package com.nuvio.app
 
+import com.nuvio.app.core.logging.StartupSplash
 import com.nuvio.app.core.logging.StartupTrace
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.MutableTransitionState
@@ -166,7 +167,15 @@ internal fun AppGate(
     }
 
     LaunchedEffect(gateScreen) {
-        if (ownsAppRuntime) StartupTrace.mark("Gate screen $gateScreen")
+        if (!ownsAppRuntime) return@LaunchedEffect
+        StartupTrace.mark("Gate screen $gateScreen")
+        // Screens that wait for the user: the startup splash must not cover them.
+        when (gateScreen) {
+            AppGateScreen.Auth.name,
+            AppGateScreen.ProfileSelection.name,
+            AppGateScreen.ProfileEdit.name,
+            -> StartupSplash.release("gate $gateScreen")
+        }
     }
     LaunchedEffect(gateScreen, onAppReady) {
         if (gateScreen != AppGateScreen.Main.name) {

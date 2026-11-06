@@ -1,5 +1,7 @@
 package com.nuvio.app
 
+import android.os.SystemClock
+import com.nuvio.app.core.logging.StartupSplash
 import android.content.Intent
 import android.content.res.Configuration
 import com.nuvio.app.features.autosync.AutoSyncPreferencesAndroid
@@ -95,7 +97,19 @@ open class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         StartupTrace.mark("MainActivity.onCreate")
-        installSplashScreen()
+        val splashScreen = installSplashScreen()
+        if (savedInstanceState == null && !StartupSplash.isReleased) {
+            // Cold start: the system splash (smooth, drawn outside the main thread) stays until
+            // the home shows its first content, instead of a Compose spinner that stutters while
+            // the main thread composes the shell. Time limit as a safety net.
+            val splashStart = SystemClock.uptimeMillis()
+            splashScreen.setKeepOnScreenCondition {
+                val keep = !StartupSplash.isReleased &&
+                    SystemClock.uptimeMillis() - splashStart < SPLASH_MAX_DURATION_MS
+                if (!keep) StartupSplash.release("time limit or released")
+                keep
+            }
+        }
         enableEdgeToEdge(
             navigationBarStyle = SystemBarStyle.dark(
                 scrim = 0xFF020404.toInt(),
@@ -254,5 +268,6 @@ open class MainActivity : AppCompatActivity() {
 
     private companion object {
         const val CAST_INIT_DELAY_MS = 1_500L
+        const val SPLASH_MAX_DURATION_MS = 5_000L
     }
 }
