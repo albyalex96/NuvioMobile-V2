@@ -1,6 +1,8 @@
 package com.nuvio.app
 
+import co.touchlab.kermit.Logger
 import android.os.SystemClock
+import com.nuvio.app.core.network.SupabaseProvider
 import com.nuvio.app.core.logging.StartupSplash
 import android.content.Intent
 import android.content.res.Configuration
@@ -204,6 +206,13 @@ open class MainActivity : AppCompatActivity() {
         PlatformLocalAccountDataCleaner.initialize(applicationContext)
         EpisodeReleaseNotificationPlatform.initialize(applicationContext)
         StartupTrace.mark("Storage init done")
+        // The Supabase client takes 300-450 ms to build: it is created in background now, so the
+        // main thread finds it ready instead of blocking the startup (its Android lifecycle hooks
+        // are posted to the main dispatcher by the library).
+        Thread({
+            runCatching { SupabaseProvider.client }
+                .onFailure { Logger.withTag("Startup").w(it) { "Supabase client prewarm failed" } }
+        }, "SupabasePrewarm").start()
         EpisodeReleaseNotificationPlatform.bindActivity(this)
         // Cast is not needed for the first frame: CastContext and the Play services check are
         // slow, so they start once the home is on screen (a saved session is resumed then).
