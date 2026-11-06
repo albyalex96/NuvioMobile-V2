@@ -489,7 +489,9 @@ private fun TvHomeContent(model: TvHomeModel) {
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         // NuvioTV keeps the rows in the bottom 52% of the screen (49% with landscape posters).
-        val collapsedHeroHeight = maxHeight * (1f - if (settings.landscapePosters) 0.49f else 0.52f)
+        // The hero starts below the navigation bar: that space comes out of the hero, not of the
+        // rows, which keep NuvioTV's height (the hero text grows upwards anyway).
+        val collapsedHeroHeight = maxHeight * (1f - if (settings.landscapePosters) 0.49f else 0.52f) - TvDimens.chromeTopInset
         val screenHeight = maxHeight
         // The expanded hero grows by the buttons row only; read in the layout phase, so the
         // animation does not recompose the home.
