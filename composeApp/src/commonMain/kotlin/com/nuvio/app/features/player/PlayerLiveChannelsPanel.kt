@@ -52,7 +52,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.nuvio.app.tv.tvFocusGroupOnAppear
+import com.nuvio.app.tv.tvLongPressKeys
 import com.nuvio.app.tv.tvNotFocusable
+import com.nuvio.app.features.livetv.LiveTvEpgGuideSheet
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -103,6 +105,8 @@ fun PlayerLiveChannelsPanel(
     val liveTvUiState by LiveTvRepository.uiState.collectAsStateWithLifecycle()
     val favoriteChannelIds = liveTvUiState.favoriteChannelIds
     val epgNowMillis = rememberLiveTvEpgNowMillis()
+    // TV: OK held on a channel card opens its program guide.
+    var guideChannel by remember { mutableStateOf<LiveTvChannel?>(null) }
     val colorScheme = MaterialTheme.colorScheme
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
@@ -287,6 +291,7 @@ fun PlayerLiveChannelsPanel(
                                             channel = channel,
                                             isCurrent = channel.streamUrl == currentStreamUrl,
                                             onClick = { onChannelSelected(channel) },
+                                            onLongClick = { guideChannel = channel },
                                             programs = liveTvUiState.epgPrograms[channel.id].orEmpty(),
                                             nowMillis = epgNowMillis,
                                         )
@@ -315,7 +320,23 @@ fun PlayerLiveChannelsPanel(
             }
         }
     }
+
+    guideChannel?.let { channel ->
+        LaunchedEffect(channel.id) { playerLiveChannelsLog.d { "OK held: program guide of ${channel.name}" } }
+        LiveTvEpgGuideSheet(
+            channel = channel,
+            programs = liveTvUiState.epgPrograms[channel.id].orEmpty(),
+            nowMillis = epgNowMillis,
+            onPlayClick = {
+                guideChannel = null
+                onChannelSelected(channel)
+            },
+            onDismiss = { guideChannel = null },
+        )
+    }
 }
+
+private val playerLiveChannelsLog = co.touchlab.kermit.Logger.withTag("PlayerLiveChannels")
 
 @Composable
 private fun PlayerLiveChannelSearchField(
@@ -537,6 +558,7 @@ private fun LiveChannelRow(
     channel: LiveTvChannel,
     isCurrent: Boolean,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
     programs: List<LiveTvEpgProgram> = emptyList(),
     nowMillis: Long = 0L,
 ) {
@@ -560,6 +582,8 @@ private fun LiveChannelRow(
                     Modifier
                 },
             )
+            // TV only (no-op elsewhere): OK held shows the program guide, a short OK plays.
+            .tvLongPressKeys(onClick = onClick, onLongClick = onLongClick?.takeIf { programs.isNotEmpty() })
             .clickable(onClick = onClick)
             .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically,
