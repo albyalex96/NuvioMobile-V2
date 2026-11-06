@@ -162,7 +162,7 @@ private const val HERO_FOCUS_KEY = "hero"
 private val HERO_DOTS_BAND = 12.dp
 private val HERO_ROWS_GAP = 14.dp
 /** The carousel dots sit this much lower than the centre of their band, in the gap above the rows. */
-private val HERO_DOTS_DOWN_SHIFT = 14.dp
+private val HERO_DOTS_DOWN_SHIFT = 20.dp
 
 /** Collapse/expand of the hero when the first row leaves or re-enters the screen. */
 private const val HERO_COLLAPSE_ANIMATION_MS = 350
@@ -175,6 +175,8 @@ private const val HERO_EXPAND_ANIMATION_MS = 350
 private const val HERO_EXPANDED_TEXT_WIDTH_FRACTION = 0.55f
 /** Play button (about 46 dp with its focus scale) plus the spacing around the buttons row. */
 private val HERO_EXPANDED_EXTRA_HEIGHT = 72.dp
+/** Room above the expanded hero text (the hero already starts below the navigation bar). */
+private val HERO_EXPANDED_TOP_PADDING = 24.dp
 /** The plot of the expanded hero scrolls inside this height (about 5 lines). */
 private val HERO_EXPANDED_PLOT_MAX_HEIGHT = 104.dp
 /** Share of the visible plot scrolled by one D-pad press in the expanded hero. */
@@ -486,7 +488,8 @@ private fun TvHomeContent(model: TvHomeModel) {
         val screenHeight = maxHeight
         // The expanded hero grows by the buttons row only; read in the layout phase, so the
         // animation does not recompose the home.
-        val expandedHeroHeight = minOf(collapsedHeroHeight + HERO_EXPANDED_EXTRA_HEIGHT, screenHeight - TvDimens.chromeTopInset)
+        // It takes the whole height below the navigation bar, so buttons and plot are never cut.
+        val expandedHeroHeight = maxOf(collapsedHeroHeight + HERO_EXPANDED_EXTRA_HEIGHT, screenHeight - TvDimens.chromeTopInset)
         val heroHeight = remember(collapsedHeroHeight, expandedHeroHeight) {
             { lerp(collapsedHeroHeight, expandedHeroHeight, heroExpandProgress.value) }
         }
@@ -1062,7 +1065,7 @@ private fun HeroInfoPanel(
             contentAlignment = Alignment.BottomStart,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(start = TvDimens.rowPadding, end = HERO_TEXT_END_PADDING, top = TvDimens.chromeTopInset),
+                .padding(start = TvDimens.rowPadding, end = HERO_TEXT_END_PADDING, top = HERO_EXPANDED_TOP_PADDING),
         ) {
             val plotScroll = rememberScrollState()
             Column(
