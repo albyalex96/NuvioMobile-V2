@@ -955,6 +955,7 @@ private class EpisodeInfo(
     val date: String?,
     val runtime: String?,
     val rating: String?,
+    val tmdbRating: String?,
     val progress: Float?,
     val watched: Boolean,
     val blurArtwork: Boolean,
@@ -975,6 +976,10 @@ private fun rememberEpisodeInfo(model: TvDetailsModel, episode: MetaVideo, setti
         runtime = episode.runtime?.takeIf { it > 0 }?.let { stringResource(R.string.tv_details_runtime_minutes, it) },
         // "Episode ratings" of the detail page settings (all / hidden / only watched episodes).
         rating = (episode.season?.let { season -> episode.episode?.let { model.episodeRatings[season to it] } } ?: episode.rating)
+            ?.takeIf { it > 0.0 && settings.episodeRatingsVisibility.showRating(watched) }
+            ?.let { "%.1f".format(it) },
+        // TMDB vote average of the episode ("Episode ratings" of the TMDB modules), same visibility rule.
+        tmdbRating = episode.tmdbRating
             ?.takeIf { it > 0.0 && settings.episodeRatingsVisibility.showRating(watched) }
             ?.let { "%.1f".format(it) },
         progress = model.episodeProgress(episode),
@@ -1251,7 +1256,7 @@ private fun EpisodeOverview(episode: MetaVideo, state: OverviewExpandState) {
 
 @Composable
 private fun EpisodeInfoRow(info: EpisodeInfo) {
-    if (info.runtime == null && info.rating == null && info.date == null) return
+    if (info.runtime == null && info.rating == null && info.tmdbRating == null && info.date == null) return
     val muted = MaterialTheme.nuvio.colors.textSecondary
     Row(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -1269,6 +1274,14 @@ private fun EpisodeInfoRow(info: EpisodeInfo) {
                 text = "IMDb $it",
                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
                 color = Color(0xFFF5C518),
+                maxLines = 1,
+            )
+        }
+        info.tmdbRating?.let {
+            Text(
+                text = "TMDB $it",
+                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
+                color = Color(0xFF01B4E4),
                 maxLines = 1,
             )
         }

@@ -24,6 +24,7 @@ actual object TmdbSettingsStorage {
     private const val useProductionsKey = "tmdb_use_productions"
     private const val useNetworksKey = "tmdb_use_networks"
     private const val useEpisodesKey = "tmdb_use_episodes"
+    private const val useEpisodeRatingsKey = "tmdb_use_episode_ratings"
     private const val useSeasonPostersKey = "tmdb_use_season_posters"
     private const val useMoreLikeThisKey = "tmdb_use_more_like_this"
     private const val useCollectionsKey = "tmdb_use_collections"
@@ -41,6 +42,7 @@ actual object TmdbSettingsStorage {
         useProductionsKey,
         useNetworksKey,
         useEpisodesKey,
+        useEpisodeRatingsKey,
         useSeasonPostersKey,
         useMoreLikeThisKey,
         useCollectionsKey,
@@ -126,6 +128,12 @@ actual object TmdbSettingsStorage {
         saveBoolean(useEpisodesKey, enabled)
     }
 
+    actual fun loadUseEpisodeRatings(): Boolean? = loadBoolean(useEpisodeRatingsKey)
+
+    actual fun saveUseEpisodeRatings(enabled: Boolean) {
+        saveBoolean(useEpisodeRatingsKey, enabled)
+    }
+
     actual fun loadUseSeasonPosters(): Boolean? = loadBoolean(useSeasonPostersKey)
 
     actual fun saveUseSeasonPosters(enabled: Boolean) {
@@ -178,6 +186,7 @@ actual object TmdbSettingsStorage {
         loadUseProductions()?.let { put(useProductionsKey, encodeSyncBoolean(it)) }
         loadUseNetworks()?.let { put(useNetworksKey, encodeSyncBoolean(it)) }
         loadUseEpisodes()?.let { put(useEpisodesKey, encodeSyncBoolean(it)) }
+        loadUseEpisodeRatings()?.let { put(useEpisodeRatingsKey, encodeSyncBoolean(it)) }
         loadUseSeasonPosters()?.let { put(useSeasonPostersKey, encodeSyncBoolean(it)) }
         loadUseMoreLikeThis()?.let { put(useMoreLikeThisKey, encodeSyncBoolean(it)) }
         loadUseCollections()?.let { put(useCollectionsKey, encodeSyncBoolean(it)) }
@@ -199,6 +208,7 @@ actual object TmdbSettingsStorage {
         payload.decodeSyncBoolean(useProductionsKey)?.let(::saveUseProductions)
         payload.decodeSyncBoolean(useNetworksKey)?.let(::saveUseNetworks)
         payload.decodeSyncBoolean(useEpisodesKey)?.let(::saveUseEpisodes)
+        payload.decodeSyncBoolean(useEpisodeRatingsKey)?.let(::saveUseEpisodeRatings)
         payload.decodeSyncBoolean(useSeasonPostersKey)?.let(::saveUseSeasonPosters)
         payload.decodeSyncBoolean(useMoreLikeThisKey)?.let(::saveUseMoreLikeThis)
         payload.decodeSyncBoolean(useCollectionsKey)?.let(::saveUseCollections)

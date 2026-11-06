@@ -430,6 +430,7 @@ fun MetaDetailsScreen(
         traktAuthUiState.mode,
         tmdbSettingsUiState.enabled,
         tmdbSettingsUiState.useMoreLikeThis,
+        tmdbSettingsUiState.useEpisodeRatings,
         tmdbSettingsUiState.language,
         mdbListSettings,
     ) {
