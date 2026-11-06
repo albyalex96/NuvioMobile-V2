@@ -163,6 +163,8 @@ private const val HERO_FOCUS_KEY = "hero"
 /** Space kept free under the hero text for the carousel dots. */
 private val HERO_DOTS_BAND = 12.dp
 private val HERO_ROWS_GAP = 14.dp
+/** Extra room between the home rows: the previous and next rows stay out of the focused one. */
+private val HOME_ROWS_EXTRA_GAP = 16.dp
 /** The carousel dots sit this much lower than the centre of their band, in the gap above the rows. */
 private val HERO_DOTS_DOWN_SHIFT = 20.dp
 
@@ -565,7 +567,7 @@ private fun TvHomeContent(model: TvHomeModel) {
                 LazyColumn(
                     state = rowsState,
                     contentPadding = rowsPadding,
-                    verticalArrangement = Arrangement.spacedBy(TvDimens.rowGap - TvDimens.rowVerticalPadding * 2),
+                    verticalArrangement = Arrangement.spacedBy(TvDimens.rowGap - TvDimens.rowVerticalPadding * 2 + HOME_ROWS_EXTRA_GAP),
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
