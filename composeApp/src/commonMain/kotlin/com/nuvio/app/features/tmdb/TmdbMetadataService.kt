@@ -784,6 +784,8 @@ object TmdbMetadataService {
             networks = enrichment.networks,
             country = enrichment.countries.takeIf { it.isNotEmpty() }?.joinToString(", "),
             language = enrichment.language,
+            budget = enrichment.budget,
+            revenue = enrichment.revenue,
             moreLikeThis = enrichment.moreLikeThis,
             moreLikeThisSource = MoreLikeThisSource.TMDB.takeIf { enrichment.moreLikeThis.isNotEmpty() },
             collectionName = enrichment.collectionName,
@@ -828,6 +830,8 @@ object TmdbMetadataService {
                 runtime = enrichment.runtimeMinutes?.formatRuntime() ?: updated.runtime,
                 country = enrichment.countries.takeIf { it.isNotEmpty() }?.joinToString(", ") ?: updated.country,
                 language = enrichment.language ?: updated.language,
+                budget = enrichment.budget ?: updated.budget,
+                revenue = enrichment.revenue ?: updated.revenue,
             )
         }
 
@@ -1071,6 +1075,8 @@ object TmdbMetadataService {
                 .mapNotNull { it.iso31661?.trim()?.takeIf(String::isNotBlank) }
                 .ifEmpty { details.originCountry.filter(String::isNotBlank) },
             language = details.originalLanguage?.trim()?.takeIf(String::isNotBlank),
+            budget = details.budget?.takeIf { it > 0L },
+            revenue = details.revenue?.takeIf { it > 0L },
             productionCompanies = details.productionCompanies.mapNotNull { it.toMetaCompany() },
             networks = details.networks.mapNotNull { it.toMetaCompany() },
             collectionName = details.belongsToCollection?.name?.trim()?.takeIf(String::isNotBlank),
@@ -1441,6 +1447,8 @@ internal data class TmdbEnrichment(
     val status: String?,
     val countries: List<String>,
     val language: String?,
+    val budget: Long? = null,
+    val revenue: Long? = null,
     val productionCompanies: List<MetaCompany>,
     val networks: List<MetaCompany>,
     val collectionName: String? = null,
@@ -1468,6 +1476,8 @@ internal data class TmdbEnrichment(
             status != null ||
             countries.isNotEmpty() ||
             language != null ||
+            budget != null ||
+            revenue != null ||
             productionCompanies.isNotEmpty() ||
             networks.isNotEmpty() ||
             collectionItems.isNotEmpty() ||
@@ -1878,6 +1888,9 @@ private data class TmdbDetailsResponse(
     val networks: List<TmdbCompany> = emptyList(),
     @SerialName("belongs_to_collection") val belongsToCollection: TmdbCollectionRef? = null,
     @SerialName("number_of_seasons") val numberOfSeasons: Int? = null,
+    // Movies only. TMDB sends 0 rather than omitting the field when the figure is unknown.
+    val budget: Long? = null,
+    val revenue: Long? = null,
 )
 
 @Serializable

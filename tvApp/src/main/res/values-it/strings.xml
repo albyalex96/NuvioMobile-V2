@@ -52,6 +52,8 @@
     <string name="tv_details_synopsis_read_more">Leggi altro</string>
     <string name="tv_details_synopsis_dismiss_hint">Premi indietro per chiudere</string>
     <string name="tv_details_status_ended">Conclusa</string>
+    <string name="tv_details_budget">Budget %1$s</string>
+    <string name="tv_details_revenue">Incassi %1$s</string>
     <string name="tv_details_status_continuing">In corso</string>
     <string name="tv_details_status_cancelled">Cancellata</string>
     <string name="tv_details_runtime_minutes">%1$d min</string>

@@ -99,6 +99,7 @@ import com.nuvio.app.core.ui.EpisodeCodeChip
 import com.nuvio.app.core.format.formatCountriesForDisplay
 import com.nuvio.app.core.format.formatLanguageForDisplay
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
+import com.nuvio.app.core.format.formatUsdAmountForDisplay
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.details.MetaPerson
 import com.nuvio.app.features.details.MetaVideo
@@ -487,6 +488,9 @@ private fun MetaInfoRows(model: TvDetailsModel) {
         meta.runtime?.takeIf { it.isNotBlank() },
         meta.country?.takeIf { it.isNotBlank() }?.let { formatCountriesForDisplay(it) },
         meta.language?.takeIf { it.isNotBlank() }?.let { formatLanguageForDisplay(it) },
+        // Movie budget and revenue from TMDB (whole US dollars).
+        formatUsdAmountForDisplay(meta.budget)?.let { stringResource(R.string.tv_details_budget, it) },
+        formatUsdAmountForDisplay(meta.revenue)?.let { stringResource(R.string.tv_details_revenue, it) },
     )
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (primaryItems.isNotEmpty()) {

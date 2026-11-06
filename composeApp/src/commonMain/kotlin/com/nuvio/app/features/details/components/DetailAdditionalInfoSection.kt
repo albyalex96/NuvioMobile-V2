@@ -20,6 +20,7 @@ import com.nuvio.app.core.format.formatCountriesForDisplay
 import com.nuvio.app.core.format.formatLanguageForDisplay
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
 import com.nuvio.app.core.i18n.localizedMediaStatusLabel
+import com.nuvio.app.core.format.formatUsdAmountForDisplay
 import com.nuvio.app.features.details.MetaDetails
 import com.nuvio.app.features.details.formatRuntimeForDisplay
 import nuvio.composeapp.generated.resources.*
@@ -51,6 +52,12 @@ fun DetailAdditionalInfoSection(
         meta.country?.let { add(stringResource(Res.string.details_origin_country) to formatCountriesForDisplay(it)) }
         meta.language?.let {
             add(stringResource(Res.string.details_original_language) to formatLanguageForDisplay(it))
+        }
+        formatUsdAmountForDisplay(meta.budget)?.let {
+            add(stringResource(Res.string.details_budget) to it)
+        }
+        formatUsdAmountForDisplay(meta.revenue)?.let {
+            add(stringResource(Res.string.details_revenue) to it)
         }
     }
     if (rows.isEmpty()) return

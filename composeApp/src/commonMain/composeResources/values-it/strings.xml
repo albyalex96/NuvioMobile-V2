@@ -1104,6 +1104,8 @@
   <string name="details_movie_details">Dettagli film</string>
   <string name="details_original_language">Lingua originale</string>
   <string name="details_origin_country">Paese d'origine</string>
+  <string name="details_budget">Budget</string>
+  <string name="details_revenue">Incassi</string>
   <string name="details_release_info">Info rilascio</string>
   <string name="details_runtime">Durata</string>
   <string name="details_season_view_posters">Locandine</string>
