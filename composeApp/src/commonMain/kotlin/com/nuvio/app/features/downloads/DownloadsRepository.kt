@@ -5,6 +5,7 @@ import co.touchlab.kermit.Logger
 import com.nuvio.app.core.i18n.localizedSeasonEpisodeCode
 import com.nuvio.app.features.downloads.hls.HlsDownloadSpec
 import com.nuvio.app.features.downloads.hls.HlsStreamAnalyzer
+import com.nuvio.app.features.player.SubtitleRequestExtras
 import com.nuvio.app.features.player.addonSubtitleRequests
 import com.nuvio.app.features.streams.StreamItem
 import com.nuvio.app.core.logging.StartupTrace
@@ -239,7 +240,11 @@ object DownloadsRepository {
             sourceUrl = sourceUrl,
             sourceHeaders = sanitizeRequestHeaders(stream.behaviorHints.proxyHeaders?.request),
             sourceResponseHeaders = sanitizeResponseHeaders(stream.behaviorHints.proxyHeaders?.response),
-            subtitleRequests = addonSubtitleRequests(contentType, videoId),
+            subtitleRequests = addonSubtitleRequests(
+                type = contentType,
+                videoId = videoId,
+                extras = SubtitleRequestExtras.from(stream.behaviorHints, sourceUrl),
+            ),
             sourceSubtitles = stream.externalSubtitles,
             localFileUri = null,
             storageTreeUri = storageTreeUri,

@@ -4,6 +4,7 @@ import com.nuvio.app.features.opensubtitles.OPENSUBTITLES_PROVIDER_NAME
 import com.nuvio.app.features.opensubtitles.OpenSubtitlesSubtitleSource
 import com.nuvio.app.features.subdl.SUBDL_PROVIDER_NAME
 import com.nuvio.app.features.subdl.SubDlSubtitleSource
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -35,7 +36,30 @@ object SubtitleRepository {
 
     private var activeFetchJob: Job? = null
 
-    fun fetchAddonSubtitles(type: String, videoId: String) {
+    fun fetchAddonSubtitles(
+        type: String,
+        videoId: String,
+        extras: SubtitleRequestExtras? = null,
+    ) {
+        activeFetchJob?.cancel()
+        _loadingProgress.value = null
+        activeFetchJob = scope.launch {
+            executeSubtitleFetch(type, videoId, extras)
+        }
+    }
+
+    /**
+     * Like [fetchAddonSubtitles], but first computes the OpenSubtitles video hash
+     * when the stream extras do not already contain one.
+     */
+    fun fetchAddonSubtitlesWithHashComputation(
+        type: String,
+        videoId: String,
+        extras: SubtitleRequestExtras?,
+        sourceUrl: String,
+        sourceHeaders: Map<String, String>,
+        onExtrasUpdated: (SubtitleRequestExtras) -> Unit,
+    ) {
         activeFetchJob?.cancel()
         _loadingProgress.value = null
         activeFetchJob = scope.launch {
@@ -43,53 +67,24 @@ object SubtitleRepository {
             _error.value = null
             _addonSubtitles.value = emptyList()
 
-            val requests = addonSubtitleRequests(type, videoId)
-            val includeOpenSubtitles = OpenSubtitlesSubtitleSource.isActiveFor(type, videoId)
-            val includeSubDl = SubDlSubtitleSource.isActiveFor(type, videoId)
-            if (requests.isEmpty() && !includeOpenSubtitles && !includeSubDl) {
-                _isLoading.value = false
-                return@launch
+            val enrichedExtras = try {
+                val hashResult = computeVideoHash(sourceUrl, sourceHeaders)
+                if (hashResult != null) {
+                    val (hash, fileSize) = hashResult
+                    val updated = (extras ?: SubtitleRequestExtras()).copy(
+                        videoHash = hash,
+                        videoSize = extras?.videoSize ?: fileSize,
+                    )
+                    onExtrasUpdated(updated)
+                    updated
+                } else extras
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                extras
             }
 
-            val total = requests.size + (if (includeOpenSubtitles) 1 else 0) + (if (includeSubDl) 1 else 0)
-            _loadingProgress.value = SubtitleLoadingProgress(total = total)
-            coroutineScope {
-                if (includeOpenSubtitles) {
-                    launch {
-                        val subtitles = OpenSubtitlesSubtitleSource.fetch(type, videoId)
-                        // Integration results always come after the addon ones, in source order.
-                        _addonSubtitles.update { (it + subtitles).sortedBy { subtitle -> subtitle.source.ordinal } }
-                        _loadingProgress.update { progress ->
-                            progress?.copy(completed = progress.completed + 1, addonName = OPENSUBTITLES_PROVIDER_NAME)
-                        }
-                    }
-                }
-                if (includeSubDl) {
-                    launch {
-                        val subtitles = SubDlSubtitleSource.fetch(type, videoId)
-                        _addonSubtitles.update { (it + subtitles).sortedBy { subtitle -> subtitle.source.ordinal } }
-                        _loadingProgress.update { progress ->
-                            progress?.copy(completed = progress.completed + 1, addonName = SUBDL_PROVIDER_NAME)
-                        }
-                    }
-                }
-                if (requests.isNotEmpty()) {
-                    loadAddonSubtitles(requests) { request, subtitles ->
-                        _addonSubtitles.update { current ->
-                            val (integrations, addons) = current.partition { it.source != AddonSubtitleSource.Addon }
-                            addons + subtitles + integrations
-                        }
-                        _loadingProgress.update { progress ->
-                            progress?.copy(completed = progress.completed + 1, addonName = request.addonName)
-                        }
-                    }
-                }
-            }
-
-            if (_addonSubtitles.value.isEmpty()) {
-                _error.value = getString(Res.string.compose_player_no_subtitles_found)
-            }
-            _isLoading.value = false
+            executeSubtitleLoad(type, videoId, enrichedExtras)
         }
     }
 
@@ -99,6 +94,71 @@ object SubtitleRepository {
         _addonSubtitles.value = emptyList()
         _isLoading.value = false
         _error.value = null
+    }
+
+    private suspend fun executeSubtitleFetch(
+        type: String,
+        videoId: String,
+        extras: SubtitleRequestExtras?,
+    ) {
+        _isLoading.value = true
+        _error.value = null
+        _addonSubtitles.value = emptyList()
+        executeSubtitleLoad(type, videoId, extras)
+    }
+
+    private suspend fun executeSubtitleLoad(
+        type: String,
+        videoId: String,
+        extras: SubtitleRequestExtras?,
+    ) {
+        val requests = addonSubtitleRequests(type, videoId, extras)
+        val includeOpenSubtitles = OpenSubtitlesSubtitleSource.isActiveFor(type, videoId)
+        val includeSubDl = SubDlSubtitleSource.isActiveFor(type, videoId)
+        if (requests.isEmpty() && !includeOpenSubtitles && !includeSubDl) {
+            _isLoading.value = false
+            return
+        }
+
+        val total = requests.size + (if (includeOpenSubtitles) 1 else 0) + (if (includeSubDl) 1 else 0)
+        _loadingProgress.value = SubtitleLoadingProgress(total = total)
+        coroutineScope {
+            if (includeOpenSubtitles) {
+                launch {
+                    val subtitles = OpenSubtitlesSubtitleSource.fetch(type, videoId)
+                    // Integration results always come after the addon ones, in source order.
+                    _addonSubtitles.update { (it + subtitles).sortedBy { subtitle -> subtitle.source.ordinal } }
+                    _loadingProgress.update { progress ->
+                        progress?.copy(completed = progress.completed + 1, addonName = OPENSUBTITLES_PROVIDER_NAME)
+                    }
+                }
+            }
+            if (includeSubDl) {
+                launch {
+                    val subtitles = SubDlSubtitleSource.fetch(type, videoId)
+                    _addonSubtitles.update { (it + subtitles).sortedBy { subtitle -> subtitle.source.ordinal } }
+                    _loadingProgress.update { progress ->
+                        progress?.copy(completed = progress.completed + 1, addonName = SUBDL_PROVIDER_NAME)
+                    }
+                }
+            }
+            if (requests.isNotEmpty()) {
+                loadAddonSubtitles(requests) { request, subtitles ->
+                    _addonSubtitles.update { current ->
+                        val (integrations, addons) = current.partition { it.source != AddonSubtitleSource.Addon }
+                        addons + subtitles + integrations
+                    }
+                    _loadingProgress.update { progress ->
+                        progress?.copy(completed = progress.completed + 1, addonName = request.addonName)
+                    }
+                }
+            }
+        }
+
+        if (_addonSubtitles.value.isEmpty()) {
+            _error.value = getString(Res.string.compose_player_no_subtitles_found)
+        }
+        _isLoading.value = false
     }
 }
 

@@ -50,6 +50,7 @@ data class PlayerLaunch(
     val stream: com.nuvio.app.features.streams.StreamItem? = null,
     /** "Watch privately" for this movie/episode only (see [PrivatePlaybackRequests]). */
     val privateViewing: Boolean = false,
+    val subtitleExtras: SubtitleRequestExtras? = null,
 )
 
 object PlayerLaunchStore {

@@ -16,6 +16,7 @@ import com.nuvio.app.features.p2p.P2pSettingsRepository
 import com.nuvio.app.features.p2p.P2pStreamingEngine
 import com.nuvio.app.features.servers.ServerPlayback
 import com.nuvio.app.features.servers.serverPlaybackMessage
+import com.nuvio.app.features.streams.StreamBehaviorHints
 import com.nuvio.app.features.streams.StreamItem
 import com.nuvio.app.features.streams.StreamLinkCacheRepository
 import com.nuvio.app.features.streams.YouTubeStreamResolver
@@ -191,6 +192,7 @@ internal fun PlayerScreenRuntime.saveP2pStreamForReuse(
         requestHeaders = emptyMap(),
         responseHeaders = emptyMap(),
         filename = stream.behaviorHints.filename,
+        videoHash = stream.behaviorHints.videoHash,
         videoSize = stream.behaviorHints.videoSize,
         infoHash = infoHash,
         fileIdx = stream.p2pFileIdx,
@@ -236,6 +238,7 @@ internal fun PlayerScreenRuntime.switchToP2pSourceStream(stream: StreamItem) {
     currentStreamBingeGroup = stream.behaviorHints.bingeGroup
     currentStreamFilename = stream.behaviorHints.filename
     currentStreamInfoHash = stream.infoHash
+    activeSubtitleExtras = SubtitleRequestExtras.from(stream.behaviorHints)
     activeInitialPositionMs = currentPositionMs
     activeInitialProgressFraction = null
     showSourcesPanel = false
@@ -275,6 +278,7 @@ internal fun PlayerScreenRuntime.switchToP2pEpisodeStream(
     activeTorrentFileIdx = stream.p2pFileIdx
     activeTorrentFilename = stream.behaviorHints.filename
     activeTorrentTrackers = stream.p2pTrackers
+    activeSubtitleExtras = SubtitleRequestExtras.from(stream.behaviorHints)
     applyEpisodeStreamMetadata(stream, episode, resume)
 }
 
@@ -339,6 +343,7 @@ internal fun PlayerScreenRuntime.switchToSource(
     currentStreamBingeGroup = stream.behaviorHints.bingeGroup
     currentStreamFilename = stream.behaviorHints.filename
     currentStreamInfoHash = stream.infoHash
+    activeSubtitleExtras = SubtitleRequestExtras.from(stream.behaviorHints, url)
     activeInitialPositionMs = currentPositionMs
     activeInitialProgressFraction = null
     showSourcesPanel = false
@@ -395,6 +400,7 @@ internal fun PlayerScreenRuntime.switchToEpisodeStream(
     activeSourceHeaders = sanitizePlaybackHeaders(stream.behaviorHints.proxyHeaders?.request)
     activeSourceResponseHeaders = sanitizePlaybackResponseHeaders(stream.behaviorHints.proxyHeaders?.response)
     activeStreamType = stream.streamType
+    activeSubtitleExtras = SubtitleRequestExtras.from(stream.behaviorHints, url)
     applyEpisodeStreamMetadata(stream, episode, resume)
 }
 
@@ -441,6 +447,7 @@ internal fun PlayerScreenRuntime.switchToDownloadedEpisode(downloadItem: Downloa
     currentStreamBingeGroup = null
     currentStreamFilename = null
     currentStreamInfoHash = null
+    activeSubtitleExtras = null
     activeSeasonNumber = episode.season
     activeEpisodeNumber = episode.episode
     activeEpisodeTitle = episode.title
@@ -713,6 +720,7 @@ private fun PlayerScreenRuntime.saveDirectStreamForReuse(
         requestHeaders = sanitizePlaybackHeaders(stream.behaviorHints.proxyHeaders?.request),
         responseHeaders = sanitizePlaybackResponseHeaders(stream.behaviorHints.proxyHeaders?.response),
         filename = stream.behaviorHints.filename,
+        videoHash = stream.behaviorHints.videoHash,
         videoSize = stream.behaviorHints.videoSize,
         bingeGroup = stream.behaviorHints.bingeGroup,
         audioDelayMs = stream.behaviorHints.audioDelayMs,

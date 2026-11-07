@@ -137,6 +137,7 @@ internal class PlayerScreenRuntime(
         ?.let(PlayerLaunchStore::get)
         ?.takeIf { it.privateViewing }
         ?.let { PrivatePlaybackRequests.contentKey(it.parentMetaId, it.videoId) }
+    var activeSubtitleExtras by mutableStateOf(args.subtitleExtras)
     var activeInitialPositionMs by mutableStateOf(initialPositionMs)
     var activeInitialProgressFraction by mutableStateOf(initialProgressFraction)
     var shouldPlay by mutableStateOf(true)
