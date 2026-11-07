@@ -5,6 +5,7 @@ import android.content.Intent
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.work.CoroutineWorker
+import co.touchlab.kermit.Logger
 import androidx.work.WorkerParameters
 import kotlin.math.abs
 
@@ -13,8 +14,14 @@ class EpisodeReleaseNotificationWorker(
     workerParameters: WorkerParameters,
 ) : CoroutineWorker(appContext, workerParameters) {
 
+    private val log = Logger.withTag("EpisodeReleaseNotifications")
+
     override suspend fun doWork(): Result {
+        // WorkManager can start the worker with the app closed, before MainActivity has run:
+        // without the context the platform reports notifications as not allowed and skips them.
+        EpisodeReleaseNotificationPlatform.initialize(applicationContext)
         if (!EpisodeReleaseNotificationPlatform.notificationsAuthorized()) {
+            log.w { "Episode release notification skipped: notifications not allowed" }
             return Result.success()
         }
 
@@ -44,6 +51,7 @@ class EpisodeReleaseNotificationWorker(
 
         NotificationManagerCompat.from(applicationContext)
             .notify(abs(requestId.hashCode()), notification)
+        log.i { "Episode release notification shown: $title" }
 
         return Result.success()
     }
