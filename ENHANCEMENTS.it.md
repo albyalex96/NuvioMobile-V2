@@ -107,6 +107,7 @@ Portata da [luqmanfadlli/NuvioMobile-Enhanced](https://github.com/luqmanfadlli/N
 - Cursori **Potenzia dialoghi**, **compressione della gamma dinamica** e **amplificazione volume** nel pannello audio (amplificazione fino a +10 dB, ricordata per ogni dispositivo di uscita audio).
 - **Downmix stereo automatico in Bluetooth** (ExoPlayer): l'audio surround viene decodificato con FFmpeg e ridotto a uno stereo 2.0 pulito, così i dialoghi restano udibili con auricolari e casse.
 - **Sottotitoli:** pipeline Nuvio libass ad atlante per ASS/SSA, stile dei sottotitoli applicato alle tracce ASS incorporate, pulsanti del ritardo sottotitoli che si ripetono tenendoli premuti e **sincronizzazione automatica** facoltativa per i sottotitoli degli addon, di OpenSubtitles e di SubDL (ASS/SSA abbinati tramite i dialoghi, ripiego su SRT/VTT).
+- **Impostazioni dei sottotitoli per tipo di dispositivo:** stile, aspetto, lingue e opzioni libass sono separati per telefono, tablet, TV e Windows (sincronizzati col profilo) e le Impostazioni mostrano solo quelli del dispositivo in uso.
 - **Riproduzione automatica per priorità dei provider:** l'auto-play sceglie il flusso seguendo l'ordine dei provider preferiti.
 - I progressi di visione vengono salvati quando si esce dall'app.
 - **Ritardo audio** (portato da NuvioTV): ±60 s a passi di 25 ms, ricordato **per uscita audio** (altoparlante, Bluetooth, HDMI…), con supporto all'hint `behaviorHints.audioDelayMs` di addon e plugin. Funziona con ExoPlayer e mpv.

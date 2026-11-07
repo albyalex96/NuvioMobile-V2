@@ -180,6 +180,8 @@ object PlayerSettingsRepository {
     private var subtitleStyle = SubtitleStyleState.DEFAULT
     private var subtitleFontSizesSp = defaultSubtitleFontSizes()
     private var subtitleSizeFormFactor = SubtitleSizeFormFactor.Mobile
+    /** Every subtitle setting of each device class; the fields above carry the one of this device. */
+    private var subtitleDeviceSettings: Map<SubtitleSizeFormFactor, SubtitleDeviceSettings> = emptyMap()
     private var streamReuseLastLinkEnabled = false
     private var streamReuseLastLinkCacheHours = 24
     private var androidPlaybackEngine = AndroidPlaybackEngine.Auto
@@ -280,6 +282,7 @@ object PlayerSettingsRepository {
         secondaryPreferredSubtitleLanguage = null
         subtitleStyle = SubtitleStyleState.DEFAULT
         subtitleFontSizesSp = defaultSubtitleFontSizes()
+        subtitleDeviceSettings = emptyMap()
         streamReuseLastLinkEnabled = false
         streamReuseLastLinkCacheHours = 24
         androidPlaybackEngine = AndroidPlaybackEngine.Auto
@@ -530,6 +533,7 @@ object PlayerSettingsRepository {
         useLibass = PlayerSettingsStorage.loadUseLibass() ?: true
         libassRenderType = PlayerSettingsStorage.loadLibassRenderType() ?: "CUES"
         libassRenderScale = PlayerSettingsStorage.loadLibassRenderScale() ?: "FULL"
+        loadSubtitleDeviceSettings()
         iosVideoOutputPreset = PlayerSettingsStorage.loadIosVideoOutputPreset()
             ?.let { runCatching { IosVideoOutputPreset.valueOf(it) }.getOrNull() }
             ?: IosVideoOutputPreset.NativeEdr
@@ -697,6 +701,7 @@ object PlayerSettingsRepository {
         preferredSubtitleLanguage = normalized
         publish()
         PlayerSettingsStorage.savePreferredSubtitleLanguage(normalized)
+        saveSubtitleDeviceSettings()
     }
 
     fun setSecondaryPreferredSubtitleLanguage(language: String?) {
@@ -706,6 +711,7 @@ object PlayerSettingsRepository {
         secondaryPreferredSubtitleLanguage = normalized
         publish()
         PlayerSettingsStorage.saveSecondaryPreferredSubtitleLanguage(normalized)
+        saveSubtitleDeviceSettings()
     }
 
     fun setSubtitleStyle(style: SubtitleStyleState) {
@@ -736,6 +742,48 @@ object PlayerSettingsRepository {
         PlayerSettingsStorage.saveSubtitleStripSdh(normalized.stripSdh)
         PlayerSettingsStorage.saveSubtitleUseForcedSubtitles(normalized.useForcedSubtitles)
         PlayerSettingsStorage.saveSubtitleShowOnlyPreferredLanguages(normalized.showOnlyPreferredLanguages)
+        saveSubtitleDeviceSettings()
+    }
+
+    /**
+     * Reads the subtitle settings of every device class. Classes saved before the per-device split
+     * start from the shared (flat) values loaded above, each with its own size.
+     */
+    private fun loadSubtitleDeviceSettings() {
+        val legacy = currentSubtitleDeviceSettings()
+        subtitleDeviceSettings = SubtitleSizeFormFactor.entries.associateWith { formFactor ->
+            SubtitleDeviceSettings.decode(PlayerSettingsStorage.loadSubtitleDeviceSettings(formFactor))
+                ?: legacy.copy(fontSizeSp = subtitleFontSizesSp.getValue(formFactor))
+        }
+        val own = subtitleDeviceSettings.getValue(subtitleSizeFormFactor)
+        subtitleStyle = own.toStyle()
+        preferredSubtitleLanguage = normalizeLanguageCode(own.preferredLanguage) ?: SubtitleLanguageOption.NONE
+        secondaryPreferredSubtitleLanguage = normalizeLanguageCode(own.secondaryLanguage)
+        useLibass = own.useLibass
+        libassRenderType = own.libassRenderType
+        libassRenderScale = own.libassRenderScale
+        subtitleFontSizesSp = SubtitleSizeFormFactor.entries.associateWith { formFactor ->
+            subtitleDeviceSettings.getValue(formFactor).fontSizeSp.coerceIn(subtitleFontSizeRangeSp)
+        }
+        Logger.d(SUBTITLE_SIZE_LOG_TAG) { "Subtitle settings of ${subtitleSizeFormFactor.storageSuffix} loaded" }
+    }
+
+    private fun currentSubtitleDeviceSettings(): SubtitleDeviceSettings = SubtitleDeviceSettings.from(
+        style = subtitleStyle,
+        preferredLanguage = preferredSubtitleLanguage,
+        secondaryLanguage = secondaryPreferredSubtitleLanguage,
+        useLibass = useLibass,
+        libassRenderType = libassRenderType,
+        libassRenderScale = libassRenderScale,
+    )
+
+    /** Saves this device class's subtitle settings; the other classes keep theirs. */
+    private fun saveSubtitleDeviceSettings() {
+        val settings = currentSubtitleDeviceSettings()
+        if (subtitleDeviceSettings[subtitleSizeFormFactor] == settings) return
+        subtitleDeviceSettings = subtitleDeviceSettings + (subtitleSizeFormFactor to settings)
+        PlayerSettingsStorage.saveSubtitleDeviceSettings(subtitleSizeFormFactor, settings.encode())
+        Logger.d(SUBTITLE_SIZE_LOG_TAG) { "Subtitle settings of ${subtitleSizeFormFactor.storageSuffix} saved" }
     }
 
     /** Size of one device class, editable from any device; this device's one also updates the style. */
@@ -750,6 +798,11 @@ object PlayerSettingsRepository {
         subtitleFontSizesSp = subtitleFontSizesSp + (formFactor to normalized)
         publish()
         PlayerSettingsStorage.saveSubtitleFontSizeSp(formFactor, normalized)
+        subtitleDeviceSettings[formFactor]?.let { settings ->
+            val updated = settings.copy(fontSizeSp = normalized)
+            subtitleDeviceSettings = subtitleDeviceSettings + (formFactor to updated)
+            PlayerSettingsStorage.saveSubtitleDeviceSettings(formFactor, updated.encode())
+        }
         Logger.d(SUBTITLE_SIZE_LOG_TAG) { "Subtitle size of ${formFactor.storageSuffix} set to $normalized sp" }
     }
 
@@ -1277,6 +1330,7 @@ object PlayerSettingsRepository {
         useLibass = enabled
         publish()
         PlayerSettingsStorage.saveUseLibass(enabled)
+        saveSubtitleDeviceSettings()
     }
 
     fun setLibassRenderType(renderType: String) {
@@ -1285,6 +1339,7 @@ object PlayerSettingsRepository {
         libassRenderType = renderType
         publish()
         PlayerSettingsStorage.saveLibassRenderType(renderType)
+        saveSubtitleDeviceSettings()
     }
 
     fun setLibassRenderScale(scale: String) {
@@ -1293,6 +1348,7 @@ object PlayerSettingsRepository {
         libassRenderScale = scale
         publish()
         PlayerSettingsStorage.saveLibassRenderScale(scale)
+        saveSubtitleDeviceSettings()
     }
 
     fun setIosVideoOutputPreset(preset: IosVideoOutputPreset) {
@@ -1581,7 +1637,7 @@ internal fun normalizeStillWatchingLiveTvMinutes(minutes: Int): Int {
     return (first + steps * STILL_WATCHING_LIVE_TV_MINUTES_STEP).coerceIn(STILL_WATCHING_LIVE_TV_MINUTES_RANGE)
 }
 
-private const val SUBTITLE_SIZE_LOG_TAG = "SubtitleSize"
+private const val SUBTITLE_SIZE_LOG_TAG = "SubtitleDeviceSettings"
 private const val STILL_WATCHING_LOG_TAG = "StillWatching"
 private const val PLAYER_CLOCK_LOG_TAG = "PlayerClock"
 

@@ -751,38 +751,19 @@ private fun PlaybackSettingsSection(
         ) {
             val subtitleRenderingEnabled = !autoPlayPlayerSettings.externalPlayerEnabled
             val subtitleStyle = autoPlayPlayerSettings.subtitleStyle
+            Text(
+                text = stringResource(
+                    Res.string.settings_playback_subtitles_per_device_hint,
+                    stringResource(subtitleDeviceNameRes(autoPlayPlayerSettings.subtitleSizeFormFactor)),
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             SubtitleAppearanceSettings(
                 style = subtitleStyle,
                 isTablet = isTablet,
                 enabled = subtitleRenderingEnabled,
                 onStyleChanged = PlayerSettingsRepository::setSubtitleStyle,
-                sizeContent = {
-                        // One size per device class (phone, tablet, TV), each synced with the profile;
-                        // this device's class comes first.
-                        val subtitleSizeFormFactors = SubtitleSizeFormFactor.entries.sortedBy {
-                            it != autoPlayPlayerSettings.subtitleSizeFormFactor
-                        }
-                        subtitleSizeFormFactors.forEachIndexed { index, formFactor ->
-                            if (index > 0) SettingsGroupDivider(isTablet = isTablet)
-                            val formFactorTitle = stringResource(subtitleSizeTitleRes(formFactor))
-                            SettingsSliderRow(
-                                title = if (formFactor == autoPlayPlayerSettings.subtitleSizeFormFactor) {
-                                    stringResource(Res.string.settings_playback_subtitle_size_this_device, formFactorTitle)
-                                } else {
-                                    formFactorTitle
-                                },
-                                value = autoPlayPlayerSettings.subtitleFontSizesSp[formFactor] ?: subtitleStyle.fontSizeSp,
-                                valueText = { size -> stringResource(Res.string.compose_player_font_size_value, size) },
-                                valueRange = subtitleFontSizeRangeSp,
-                                step = 2,
-                                isTablet = isTablet,
-                                enabled = subtitleRenderingEnabled,
-                                onValueChange = { value ->
-                                    PlayerSettingsRepository.setSubtitleFontSize(formFactor, value)
-                                },
-                            )
-                        }
-                },
             )
             val showLibassSettings = !isIos && androidPlaybackEngine != AndroidPlaybackEngine.Libmpv
             if (showLibassSettings) {
@@ -3113,6 +3094,13 @@ private fun formatStillWatchingLiveTvMinutes(minutes: Int): String {
         rest == 0 -> "$hours h"
         else -> "$hours h $rest min"
     }
+}
+
+internal fun subtitleDeviceNameRes(formFactor: SubtitleSizeFormFactor): StringResource = when (formFactor) {
+    SubtitleSizeFormFactor.Mobile -> Res.string.subtitle_device_mobile
+    SubtitleSizeFormFactor.Tablet -> Res.string.subtitle_device_tablet
+    SubtitleSizeFormFactor.Tv -> Res.string.subtitle_device_tv
+    SubtitleSizeFormFactor.Desktop -> Res.string.subtitle_device_desktop
 }
 
 internal fun subtitleSizeTitleRes(formFactor: SubtitleSizeFormFactor): StringResource = when (formFactor) {

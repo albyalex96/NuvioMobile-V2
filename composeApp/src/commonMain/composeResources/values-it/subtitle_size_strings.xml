@@ -5,5 +5,10 @@
     <string name="settings_playback_subtitle_size_tv">Dimensione sottotitoli (TV)</string>
     <string name="settings_playback_subtitle_size_desktop">Dimensione sottotitoli (desktop)</string>
     <string name="settings_playback_subtitle_size_this_device">%1$s · questo dispositivo</string>
-    <string name="settings_playback_subtitle_size_per_device_description">Ogni tipo di dispositivo ha la sua dimensione, sincronizzata col profilo</string>
+    <string name="settings_playback_subtitle_size_per_device_description">Ogni impostazione dei sottotitoli è separata per tipo di dispositivo, sincronizzata col profilo</string>
+    <string name="settings_playback_subtitles_per_device_hint">Le impostazioni dei sottotitoli sono separate per telefono, tablet, TV e Windows e si sincronizzano col profilo. Qui modifichi quelle di questo dispositivo: %1$s.</string>
+    <string name="subtitle_device_mobile">telefono</string>
+    <string name="subtitle_device_tablet">tablet</string>
+    <string name="subtitle_device_tv">TV</string>
+    <string name="subtitle_device_desktop">Windows</string>
 </resources>

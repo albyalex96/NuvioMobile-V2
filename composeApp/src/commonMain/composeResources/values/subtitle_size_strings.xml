@@ -5,5 +5,10 @@
     <string name="settings_playback_subtitle_size_tv">Subtitle Size (TV)</string>
     <string name="settings_playback_subtitle_size_desktop">Subtitle Size (Desktop)</string>
     <string name="settings_playback_subtitle_size_this_device">%1$s · this device</string>
-    <string name="settings_playback_subtitle_size_per_device_description">Each device type keeps its own size, synced with the profile</string>
+    <string name="settings_playback_subtitle_size_per_device_description">Every subtitle setting is kept separately for each device type, synced with the profile</string>
+    <string name="settings_playback_subtitles_per_device_hint">Subtitle settings are kept separately for phone, tablet, TV and Windows, synced with the profile. You are editing the ones of this device: %1$s.</string>
+    <string name="subtitle_device_mobile">phone</string>
+    <string name="subtitle_device_tablet">tablet</string>
+    <string name="subtitle_device_tv">TV</string>
+    <string name="subtitle_device_desktop">Windows</string>
 </resources>

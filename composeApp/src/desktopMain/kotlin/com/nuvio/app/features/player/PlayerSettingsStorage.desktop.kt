@@ -114,6 +114,9 @@ actual object PlayerSettingsStorage {
     private const val stillWatchingSettingsKey = "still_watching_settings"
     private fun stillWatchingSettingsKey(formFactor: SubtitleSizeFormFactor) =
         "${stillWatchingSettingsKey}_${formFactor.storageSuffix}"
+    private const val subtitleDeviceSettingsKey = "subtitle_device_settings"
+    private fun subtitleDeviceSettingsKey(formFactor: SubtitleSizeFormFactor) =
+        "${subtitleDeviceSettingsKey}_${formFactor.storageSuffix}"
     // One JSON per device class (phone/tablet, TV).
     private const val playerClockSettingsKey = "player_clock_settings"
     private fun playerClockSettingsKey(device: PlayerClockDevice) =
@@ -209,6 +212,7 @@ actual object PlayerSettingsStorage {
         stillWatchingLiveTvEnabledKey,
         stillWatchingLiveTvMinutesKey,
         *SubtitleSizeFormFactor.entries.map(::stillWatchingSettingsKey).toTypedArray(),
+        *SubtitleSizeFormFactor.entries.map(::subtitleDeviceSettingsKey).toTypedArray(),
         *PlayerClockDevice.entries.map(::playerClockSettingsKey).toTypedArray(),
         seekIntervalSecondsKey,
         useLibassKey,
@@ -1421,10 +1425,20 @@ actual object PlayerSettingsStorage {
     actual fun loadStillWatchingSettings(formFactor: SubtitleSizeFormFactor): String? =
         preferences?.getString(ProfileScopedKey.of(stillWatchingSettingsKey(formFactor)), null)
 
+    actual fun loadSubtitleDeviceSettings(formFactor: SubtitleSizeFormFactor): String? =
+        preferences?.getString(ProfileScopedKey.of(subtitleDeviceSettingsKey(formFactor)), null)
+
     actual fun saveStillWatchingSettings(formFactor: SubtitleSizeFormFactor, value: String) {
         preferences
             ?.edit()
             ?.putString(ProfileScopedKey.of(stillWatchingSettingsKey(formFactor)), value)
+            ?.apply()
+    }
+
+    actual fun saveSubtitleDeviceSettings(formFactor: SubtitleSizeFormFactor, value: String) {
+        preferences
+            ?.edit()
+            ?.putString(ProfileScopedKey.of(subtitleDeviceSettingsKey(formFactor)), value)
             ?.apply()
     }
 
@@ -1690,6 +1704,7 @@ actual object PlayerSettingsStorage {
         loadStillWatchingLiveTvMinutes()?.let { put(stillWatchingLiveTvMinutesKey, encodeSyncInt(it)) }
         SubtitleSizeFormFactor.entries.forEach { formFactor ->
             loadStillWatchingSettings(formFactor)?.let { put(stillWatchingSettingsKey(formFactor), encodeSyncString(it)) }
+            loadSubtitleDeviceSettings(formFactor)?.let { put(subtitleDeviceSettingsKey(formFactor), encodeSyncString(it)) }
         }
         PlayerClockDevice.entries.forEach { device ->
             loadPlayerClockSettings(device)?.let { put(playerClockSettingsKey(device), encodeSyncString(it)) }
@@ -1717,6 +1732,7 @@ actual object PlayerSettingsStorage {
     actual fun replaceFromSyncPayload(payload: JsonObject) {
         // Blobs pushed by older builds lack the per-device still-watching keys: keep the local ones then.
         val localStillWatching = SubtitleSizeFormFactor.entries.associateWith(::loadStillWatchingSettings)
+        val localSubtitleDevice = SubtitleSizeFormFactor.entries.associateWith(::loadSubtitleDeviceSettings)
         // Same for the player clock keys, unknown to builds older than the clock.
         val localPlayerClock = PlayerClockDevice.entries.associateWith(::loadPlayerClockSettings)
         // Same for the seek thumbnail keys, unknown to builds older than the previews.
@@ -1806,6 +1822,10 @@ actual object PlayerSettingsStorage {
         SubtitleSizeFormFactor.entries.forEach { formFactor ->
             (payload.decodeSyncString(stillWatchingSettingsKey(formFactor)) ?: localStillWatching[formFactor])
                 ?.let { saveStillWatchingSettings(formFactor, it) }
+        }
+        SubtitleSizeFormFactor.entries.forEach { formFactor ->
+            (payload.decodeSyncString(subtitleDeviceSettingsKey(formFactor)) ?: localSubtitleDevice[formFactor])
+                ?.let { saveSubtitleDeviceSettings(formFactor, it) }
         }
         PlayerClockDevice.entries.forEach { device ->
             (payload.decodeSyncString(playerClockSettingsKey(device)) ?: localPlayerClock[device])

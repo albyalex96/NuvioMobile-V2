@@ -181,6 +181,9 @@ internal expect object PlayerSettingsStorage {
     fun saveStillWatchingLiveTvMinutes(minutes: Int)
     fun loadStillWatchingSettings(formFactor: SubtitleSizeFormFactor): String?
     fun saveStillWatchingSettings(formFactor: SubtitleSizeFormFactor, value: String)
+    /** All subtitle settings of one device class, as [SubtitleDeviceSettings] JSON. */
+    fun loadSubtitleDeviceSettings(formFactor: SubtitleSizeFormFactor): String?
+    fun saveSubtitleDeviceSettings(formFactor: SubtitleSizeFormFactor, value: String)
     fun loadPlayerClockSettings(device: PlayerClockDevice): String?
     fun savePlayerClockSettings(device: PlayerClockDevice, value: String)
     fun loadSeekIntervalSeconds(): Int?
