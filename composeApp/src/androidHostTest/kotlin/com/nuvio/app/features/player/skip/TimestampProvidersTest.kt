@@ -8,6 +8,36 @@ class TimestampProvidersTest {
     private fun interval(type: String, provider: String, start: Double = 10.0, end: Double = 40.0) =
         SkipInterval(startTime = start, endTime = end, type = type, provider = provider)
 
+    private fun animeSkipTs(at: Double, name: String) = AnimeSkipTimestamp(at = at, type = AnimeSkipTimestampType(name = name))
+
+    @Test
+    fun animeSkipDropsOpenEndedIntroAndKeepsLateEnding() {
+        val onlyIntro = listOf(animeSkipTs(90.0, "Intro"))
+        assertTrue(onlyIntro.toAnimeSkipIntervals(baseDuration = 1440.0).isEmpty())
+
+        val withCredits = listOf(animeSkipTs(90.0, "Intro"), animeSkipTs(180.0, "Canon"), animeSkipTs(1300.0, "Credits"))
+        val intervals = withCredits.toAnimeSkipIntervals(baseDuration = 1440.0)
+        assertEquals(listOf("op", "ed"), intervals.map { it.type })
+        assertEquals(180.0, intervals.first().endTime)
+        assertEquals(Double.MAX_VALUE, intervals.last().endTime)
+
+        val earlyCredits = listOf(animeSkipTs(300.0, "Credits"))
+        assertTrue(earlyCredits.toAnimeSkipIntervals(baseDuration = 1440.0).isEmpty())
+    }
+
+    @Test
+    fun animeSkipPicksTheMostCompleteEntry() {
+        val introOnly = AnimeSkipEpisode(number = "5", timestamps = listOf(animeSkipTs(90.0, "Intro"), animeSkipTs(180.0, "Canon")))
+        val complete = AnimeSkipEpisode(
+            number = "5",
+            timestamps = listOf(
+                animeSkipTs(0.0, "Recap"), animeSkipTs(60.0, "Intro"), animeSkipTs(150.0, "Canon"), animeSkipTs(1300.0, "Credits"),
+            ),
+            baseDuration = 1440.0,
+        )
+        assertEquals(listOf("recap", "op", "ed"), listOf(introOnly, complete).bestAnimeSkipIntervals().map { it.type })
+    }
+
     @Test
     fun priorityOrderKeepsUnknownAndNewProvidersStable() {
         val items = listOf("introdb", "skipdb", "animeskip", "aniskip")

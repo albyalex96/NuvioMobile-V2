@@ -97,8 +97,9 @@ internal object TimestampProviders {
     val all: List<TimestampProvider> = listOf(
         IntroDbTimestampProvider,
         SkipDbTimestampProvider,
-        AnimeSkipTimestampProvider,
+        // AniSkip before Anime-Skip: its intro and ending data is equal or better on the same episodes.
         AniSkipTimestampProvider,
+        AnimeSkipTimestampProvider,
     )
 
     val ids: List<String>
