@@ -9,6 +9,9 @@ import com.nuvio.app.core.build.AppFeaturePolicy
 import com.nuvio.app.core.build.TrailerPlaybackMode
 import com.nuvio.app.features.details.MetaDetails
 import com.nuvio.app.features.details.MetaDetailsRepository
+import com.nuvio.app.features.details.MetaExternalRating
+import com.nuvio.app.features.mdblist.MdbListMetadataService
+import com.nuvio.app.features.mdblist.MdbListSettingsRepository
 import com.nuvio.app.features.details.selectHeroTrailer
 import com.nuvio.app.features.details.youtubePlaybackUrl
 import com.nuvio.app.features.home.MetaPreview
@@ -22,11 +25,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 
 private val log = Logger.withTag("PostPlayRecommendations")
 
 /** Recommendations kept for one title: the panel lets the user browse them. */
 private const val MAX_POST_PLAY_RECOMMENDATIONS = 12
+
+private const val MDBLIST_RATINGS_TIMEOUT_MS = 5_000L
 
 /** One suggested title of the post-play panel. */
 @Immutable
@@ -44,6 +50,8 @@ internal data class PostPlayRecommendation(
     val runtime: String? = null,
     val ageRating: String? = null,
     val trailer: TrailerPlaybackSource? = null,
+    /** MDBList ratings (IMDb, TMDB, Rotten Tomatoes...), when MDBList is active. */
+    val externalRatings: List<MetaExternalRating> = emptyList(),
 )
 
 @Immutable
@@ -320,15 +328,35 @@ internal class PostPlayRecommendationController(
                 log.w(error) { "Details of ${candidate.type}/${candidate.id} not loaded" }
                 null
             }
+            val ratings = loadRatings(candidate, meta)
             val trailer = if (trailerPlaybackSupported && meta != null) resolveTrailer(meta) else null
             val base = cache[index] ?: candidate.toRecommendation()
-            val updated = base.mergeDetails(meta).copy(trailer = trailer)
+            val updated = base.mergeDetails(meta).copy(trailer = trailer, externalRatings = ratings)
             cache[index] = updated
-            log.d { "Details ready for ${updated.title} (trailer=${trailer != null})" }
+            log.d { "Details ready for ${updated.title} (trailer=${trailer != null}, ratings=${ratings.size})" }
             if (uiState.index == index && uiState.recommendation?.id == updated.id) {
                 uiState = uiState.copy(recommendation = updated, isLoadingTrailer = false)
                 maybeStartCountdown()
             }
+        }
+    }
+
+    /** Same MDBList ratings as the meta screen; nothing when MDBList is off or does not answer. */
+    private suspend fun loadRatings(candidate: MetaPreview, meta: MetaDetails?): List<MetaExternalRating> {
+        MdbListSettingsRepository.ensureLoaded()
+        val settings = MdbListSettingsRepository.uiState.value
+        if (!settings.isActive) return emptyList()
+        val target = meta ?: MetaDetails(id = candidate.id, type = candidate.type, name = candidate.name)
+        return try {
+            withTimeoutOrNull(MDBLIST_RATINGS_TIMEOUT_MS) {
+                MdbListMetadataService.enrichMeta(meta = target, fallbackItemId = candidate.id, settings = settings)
+                    .externalRatings
+            }.orEmpty()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Throwable) {
+            log.w(error) { "MDBList ratings of ${candidate.type}/${candidate.id} not loaded" }
+            emptyList()
         }
     }
 

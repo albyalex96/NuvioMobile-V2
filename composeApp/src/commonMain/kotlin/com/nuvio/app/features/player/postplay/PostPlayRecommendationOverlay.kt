@@ -60,6 +60,7 @@ import coil3.compose.AsyncImage
 import com.nuvio.app.core.format.formatReleaseDateForDisplay
 import com.nuvio.app.core.ui.PlatformBackHandler
 import com.nuvio.app.features.details.components.HeroTrailerPlayerSurface
+import com.nuvio.app.features.details.components.RatingsRow
 import com.nuvio.app.tv.tvFocusOnAppear
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.player_post_play_because
@@ -195,6 +196,9 @@ internal fun PostPlayRecommendationOverlay(
                         overflow = TextOverflow.Ellipsis,
                     )
                     RecommendationTitle(recommendation = recommendation, compact = compact)
+                    if (recommendation.externalRatings.isNotEmpty()) {
+                        RatingsRow(ratings = recommendation.externalRatings, maxItems = 6)
+                    }
                     recommendation.metadataLine().takeIf { it.isNotBlank() }?.let { line ->
                         Text(text = line, color = SecondaryText, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
@@ -442,5 +446,6 @@ private fun PostPlayRecommendation.metadataLine(): String = buildList {
     runtime?.takeIf { it.isNotBlank() }?.let(::add)
     ageRating?.takeIf { it.isNotBlank() }?.let(::add)
     genres.take(3).takeIf { it.isNotEmpty() }?.joinToString(", ")?.let(::add)
-    imdbRating?.trim()?.takeIf { it.isNotBlank() }?.let { add("IMDb $it") }
+    // With MDBList the ratings row already shows IMDb.
+    if (externalRatings.isEmpty()) imdbRating?.trim()?.takeIf { it.isNotBlank() }?.let { add("IMDb $it") }
 }.joinToString(" • ")

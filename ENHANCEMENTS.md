@@ -50,7 +50,7 @@ A dedicated Android TV app, released as a separate APK (`Nuvio-Enhanced-Alby-TV-
 - **Remote control for Android TV playback** from the phone: pair with a code, the in-app QR scanner or automatic TV discovery on the network (manual address as a fallback).
 - Controls in a background notification, on the lock screen and with the volume keys, shown automatically when the TV is detected online.
 - **Telegram login on the TV** done from the paired phone.
-- **View and manage the TV logs** from the phone.
+- **View and manage the TV logs** from the phone (Settings → Advanced → Diagnostics → TV logs, shown when a TV is paired).
 - **Watch Party companion chat** on the phone.
 
 ## Windows desktop app
@@ -107,6 +107,7 @@ Ported from [luqmanfadlli/NuvioMobile-Enhanced](https://github.com/luqmanfadlli/
 - **Chapters** (ported from luqmanfadlli's fork): chapter marks on the seek bar, the current chapter title above it and a **Chapters** panel to jump to any chapter, on phone, tablet and the TV app. Read from MKV/MP4 files with ExoPlayer and directly from mpv (Android libmpv and iOS).
 - **Private Viewing** (ported from luqmanfadlli's fork): a switch in Playback → Player that stops saving watch progress, Continue Watching and watched status and stops scrobbling to connected trackers, for the in-app player and for external player results. Synced with the profile. The stream menu also has **Watch privately** to watch a single movie or episode privately (the following episodes are tracked as usual).
 - **Discord Rich Presence** (ported from luqmanfadlli's fork, Android phone and TV): Settings → Integrations → Discord shows what you are watching on your Discord profile (title, episode, poster, play/pause, elapsed/remaining time, optional IMDb button, optional Live TV channel). Log in with the Discord web login; the account and all the presence settings sync with the Nuvio profile, so the TV picks up the account logged in on the phone. Never shown with Private Viewing. Uses the account token like Kizzy, which may go against Discord's Terms of Service.
+- **Post-play recommendations** (ported from NuvioTV): near the end of a movie, or of a series with no next episode, a full-screen panel suggests similar titles from the "More like this" source (TMDB, Trakt or Simkl) with backdrop, logo, metadata, **MDBList ratings** and plot. Browse up to 12 titles, **Play** (movies start right away, series open their details), **Details**, **Back to player**, and an in-panel **trailer** that starts after a 5-second countdown (Android full and desktop). Movies follow credits and post-credits scenes when known, otherwise a configurable **Movie Recommendation Timing** (80–100%); series follow the next episode threshold. Works with the TV remote and on desktop. Toggle in Playback → Auto-play, synced with the profile.
 
 ## Streams
 

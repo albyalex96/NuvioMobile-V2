@@ -50,7 +50,7 @@ Un'app dedicata ad Android TV, distribuita come APK separato (`Nuvio-Enhanced-Al
 - **Telecomando per la riproduzione su Android TV** dal telefono: abbinamento con codice, scanner QR integrato o rilevamento automatico della TV in rete (indirizzo manuale come alternativa).
 - Controlli in una notifica in background, sulla schermata di blocco e con i tasti del volume, mostrati in automatico quando la TV risulta online.
 - **Accesso a Telegram sulla TV** fatto dal telefono abbinato.
-- **Visualizzazione e gestione dei log della TV** dal telefono.
+- **Visualizzazione e gestione dei log della TV** dal telefono (Impostazioni → Avanzate → Diagnostica → Log TV, visibile quando c'è una TV associata).
 - **Chat di Watch Party** sul telefono come companion.
 
 ## App desktop per Windows
@@ -107,6 +107,7 @@ Portata da [luqmanfadlli/NuvioMobile-Enhanced](https://github.com/luqmanfadlli/N
 - **Capitoli** (portati dalla fork di luqmanfadlli): segni dei capitoli sulla barra di avanzamento, titolo del capitolo corrente sopra la barra e pannello **Capitoli** per saltare a qualsiasi capitolo, su telefono, tablet e app TV. Letti dai file MKV/MP4 con ExoPlayer e direttamente da mpv (libmpv Android e iOS).
 - **Visione privata** (portata dalla fork di luqmanfadlli): interruttore in Riproduzione → Player che smette di salvare progressi, Continua a guardare e stato "visto" e di inviare lo scrobbling ai tracker collegati, sia nel player interno sia per i risultati dei player esterni. Sincronizzata col profilo. Nel menu del flusso c'è anche **Guarda in privato**, per vedere in privato un singolo film o episodio (gli episodi successivi vengono registrati normalmente).
 - **Rich Presence di Discord** (portata dalla fork di luqmanfadlli, telefono e TV Android): Impostazioni → Integrazioni → Discord mostra sul profilo Discord cosa stai guardando (titolo, episodio, locandina, riproduzione/pausa, tempo trascorso e rimanente, pulsante IMDb facoltativo, canale della Live TV facoltativo). Si accede con il login web di Discord; account e impostazioni della presence si sincronizzano col profilo Nuvio, quindi la TV usa l'account collegato sul telefono. Mai mostrata con la Visione privata. Usa il token dell'account come Kizzy, il che potrebbe violare i Termini di servizio di Discord.
+- **Consigli a fine visione** (portati da NuvioTV): verso la fine di un film, o di una serie senza un episodio successivo, un pannello a schermo intero propone titoli simili presi dalla fonte di "Altri simili" (TMDB, Trakt o Simkl), con sfondo, logo, informazioni, **voti MDBList** e trama. Si possono scorrere fino a 12 titoli, con **Riproduci** (i film partono subito, le serie aprono la scheda), **Dettagli**, **Torna al player** e un **trailer** nel pannello che parte dopo un conto alla rovescia di 5 secondi (Android full e desktop). Nei film il pannello segue i titoli di coda e le scene dopo i titoli quando sono noti, altrimenti la soglia configurabile **Quando mostrare i consigli nei film** (80–100%); nelle serie segue la soglia del prossimo episodio. Funziona con il telecomando della TV e su desktop. Interruttore in Riproduzione → Riproduzione automatica, sincronizzato con il profilo.
 
 ## Flussi
 
