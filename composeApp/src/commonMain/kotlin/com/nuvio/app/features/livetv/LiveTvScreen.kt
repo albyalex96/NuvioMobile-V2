@@ -216,11 +216,24 @@ fun LiveTvScreen(
     }
 
     // Guide: channels with programmes in the window, favourites first. Opens scrolled to "now".
-    val guideChannels = remember(visibleChannels, uiState.epgPrograms, guideWindowStart, uiState.favoriteChannelIds) {
-        visibleChannels
-            .filter { liveTvGuideHasPrograms(uiState.epgPrograms[it.id], guideWindowStart) }
-            .sortedByDescending { it.id in uiState.favoriteChannelIds }
+    // Computed off the main thread: with thousands of channels and days of EPG this blocked the
+    // opening of the section. Only while the Guide is shown.
+    val guideChannelsResult by produceState<List<LiveTvChannel>?>(
+        initialValue = null,
+        visibleChannels,
+        uiState.epgPrograms,
+        guideWindowStart,
+        uiState.favoriteChannelIds,
+        section == LiveTvSection.Guide,
+    ) {
+        if (section != LiveTvSection.Guide) return@produceState
+        value = withContext(Dispatchers.Default) {
+            visibleChannels
+                .filter { liveTvGuideHasPrograms(uiState.epgPrograms[it.id], guideWindowStart) }
+                .sortedByDescending { it.id in uiState.favoriteChannelIds }
+        }
     }
+    val guideChannels = guideChannelsResult.orEmpty()
     val density = LocalDensity.current
     val guideNowOffsetPx = remember(epgNowMillis, guideWindowStart, density) {
         val minutesBeforeNow = ((epgNowMillis - guideWindowStart) / 60_000L - 15L).coerceAtLeast(0L)
@@ -231,7 +244,8 @@ fun LiveTvScreen(
         withTimeoutOrNull(3_000L) {
             snapshotFlow { guideScrollState.maxPx }.first { it > 0f }
         }
-        guideScrollState.animateTo(guideNowOffsetPx.toFloat())
+        // Instant jump on opening: an animated scroll here ran while the first rows were built.
+        guideScrollState.snapTo(guideNowOffsetPx.toFloat())
     }
 
     // Sports: refreshed while the section is open (every minute with live matches, otherwise every 5).
@@ -487,7 +501,7 @@ fun LiveTvScreen(
                             },
                         )
 
-                        uiState.isEpgLoading -> liveTvLoadingItem()
+                        uiState.isEpgLoading || guideChannelsResult == null -> liveTvLoadingItem()
 
                         else -> item(key = "guide-empty") {
                             HomeEmptyStateCard(

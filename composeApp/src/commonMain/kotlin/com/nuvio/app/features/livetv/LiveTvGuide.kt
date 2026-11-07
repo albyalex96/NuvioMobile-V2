@@ -48,6 +48,10 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import kotlin.time.Instant
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
@@ -120,6 +124,10 @@ internal class LiveTvGuideScrollState {
             maxPx = newMax
             offsetPx = offsetPx.coerceIn(0f, newMax)
         }
+    }
+
+    fun snapTo(targetPx: Float) {
+        offsetPx = targetPx.coerceIn(0f, maxPx)
     }
 
     suspend fun animateTo(targetPx: Float) {
@@ -259,13 +267,23 @@ internal fun LazyListScope.liveTvGuideRows(
     }
 }
 
-/** A programme of the window with its precomputed position (in px) and texts. */
+/** A programme of the window with its precomputed position (in px). */
 private class GuideBlock(
     val program: LiveTvEpgProgram,
     val startPx: Float,
     val widthPx: Float,
-    val timeText: String,
-)
+    private val zone: TimeZone,
+) {
+    /** Formatted only when the block is drawn for the first time (most never are). */
+    val timeText: String by lazy {
+        "${formatGuideTime(program.startMillis, zone)} – ${formatGuideTime(program.endMillis, zone)}"
+    }
+}
+
+private fun formatGuideTime(epochMillis: Long, zone: TimeZone): String {
+    val time = Instant.fromEpochMilliseconds(epochMillis).toLocalDateTime(zone)
+    return "${time.hour.toString().padStart(2, '0')}:${time.minute.toString().padStart(2, '0')}"
+}
 
 @Composable
 private fun LiveTvGuideRow(
@@ -286,6 +304,7 @@ private fun LiveTvGuideRow(
     val windowEnd = windowStart + LIVE_TV_GUIDE_WINDOW_MILLIS
     // XMLTV guides often hold days of programmes: keep only the 12 h window, once per row.
     val blocks = remember(programs, windowStart, pxPerMinute) {
+        val zone = TimeZone.currentSystemDefault()
         programs.mapNotNull { program ->
             val start = maxOf(program.startMillis, windowStart)
             val end = minOf(program.endMillis, windowEnd)
@@ -294,11 +313,12 @@ private fun LiveTvGuideRow(
                 program = program,
                 startPx = (start - windowStart) / 60_000f * pxPerMinute,
                 widthPx = (end - start) / 60_000f * pxPerMinute,
-                timeText = "${formatLiveTvEpgTime(program.startMillis)} – ${formatLiveTvEpgTime(program.endMillis)}",
+                zone = zone,
             )
         }
     }
 
+    val airingBlock = remember(blocks, nowMillis) { blocks.firstOrNull { it.program.isAiringAt(nowMillis) } }
     val colors = tokens.colors
     val titleStyle = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium)
     val airingTitleStyle = titleStyle.copy(fontWeight = FontWeight.SemiBold)
@@ -375,7 +395,6 @@ private fun LiveTvGuideRow(
                     val gap = LiveTvGuideBlockGap.toPx()
                     val radius = CornerRadius(LiveTvGuideBlockRadius.toPx())
                     val padH = LiveTvGuideBlockPaddingH.toPx()
-                    val pulseValue = pulse.value
                     for (block in blocks) {
                         val left = block.startPx - offset
                         val width = block.widthPx - gap
@@ -413,11 +432,8 @@ private fun LiveTvGuideRow(
                         if (maxTextWidth < 12) continue
                         var titleLeft = textLeft
                         if (airing) {
-                            val dotRadius = 3.dp.toPx()
-                            val center = Offset(textLeft + dotRadius, size.height * 0.36f)
-                            drawCircle(LiveTvLiveRed.copy(alpha = (1f - pulseValue) * 0.55f), dotRadius * (1f + pulseValue * 1.4f), center)
-                            drawCircle(LiveTvLiveRed, dotRadius, center)
-                            titleLeft += dotRadius * 2 + 5.dp.toPx()
+                            // The pulsing dot itself is drawn by the overlay layer below.
+                            titleLeft += GuideDotRadius.toPx() * 2 + 5.dp.toPx()
                         }
                         val titleWidth = (textRight - titleLeft).toInt()
                         if (titleWidth < 12) continue
@@ -450,13 +466,36 @@ private fun LiveTvGuideRow(
                     }
                     drawGuideNowLine(
                         x = (nowMillis - windowStart) / 60_000f * pxPerMinute - offset,
-                        pulse = pulseValue,
+                        pulse = 0f,
                         withHead = false,
                     )
                 },
-        )
+        ) {
+            // Separate layer for the pulsing "on air" dot: the animation redraws only this
+            // layer every frame, not the blocks and texts of the row.
+            if (airingBlock != null) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .graphicsLayer()
+                        .drawBehind {
+                            val left = airingBlock.startPx - scrollState.offsetPx
+                            val width = airingBlock.widthPx - LiveTvGuideBlockGap.toPx()
+                            if (left + width < 0f || left > size.width) return@drawBehind
+                            if (width - LiveTvGuideBlockPaddingH.toPx() * 2 < 12f) return@drawBehind
+                            val dotRadius = GuideDotRadius.toPx()
+                            val center = Offset(left + LiveTvGuideBlockPaddingH.toPx() + dotRadius, size.height * 0.36f)
+                            val pulseValue = pulse.value
+                            drawCircle(LiveTvLiveRed.copy(alpha = (1f - pulseValue) * 0.55f), dotRadius * (1f + pulseValue * 1.4f), center)
+                            drawCircle(LiveTvLiveRed, dotRadius, center)
+                        },
+                )
+            }
+        }
     }
 }
+
+private val GuideDotRadius = 3.dp
 
 private fun measureGuideText(
     measurer: TextMeasurer,
