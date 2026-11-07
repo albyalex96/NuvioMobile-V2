@@ -285,6 +285,8 @@ private fun ExoPlayerSurface(
     var fallbackStartPositionMs by remember(playerSourceKey) { mutableStateOf<Long?>(null) }
     // ExoPlayer does not expose container chapters: they are read from the file (see below).
     var playerChapters by remember(playerSourceKey) { mutableStateOf<List<PlayerChapter>>(emptyList()) }
+    var playbackResumeGeneration by remember(playerSourceKey) { mutableStateOf(0) }
+    val stallSession = remember(playerSourceKey) { PlaybackReopenSession(initialPositionMs) }
     val effectiveDecoderPriority = decoderPriorityOverride ?: playerSettings.decoderPriority
 
     var resolvedMediaItem by remember(playerSourceKey, externalSubtitles) {
@@ -345,7 +347,20 @@ private fun ExoPlayerSurface(
         val adaptive = mimeType == MimeTypes.APPLICATION_M3U8 ||
             mimeType == MimeTypes.APPLICATION_MPD ||
             mimeType == MimeTypes.APPLICATION_SS
-        if (!playerSettings.vodCacheEnabled || useYoutubeChunkedPlayback || adaptive) {
+        // A torrent response that closes early would be stored as the whole file.
+        // The next open past that length then fails before the stream can resume.
+        val loopbackSource = isLoopbackPlaybackSource(sourceUrl)
+        if (loopbackSource && playerSettings.vodCacheEnabled && !useYoutubeChunkedPlayback && !adaptive) {
+            Logger.i(TAG) { "Skipping VOD cache for loopback playback" }
+        }
+        if (
+            !useVodCacheForSource(
+                vodCacheEnabled = playerSettings.vodCacheEnabled,
+                youtubeChunked = useYoutubeChunkedPlayback,
+                adaptive = adaptive,
+                loopback = loopbackSource,
+            )
+        ) {
             upstream
         } else {
             VodCache.wrap(
@@ -464,8 +479,10 @@ private fun ExoPlayerSurface(
             ),
         )
 
+        // Audio focus is handled by PlayerAudioFocus, so a denied request (e.g. during a call)
+        // doesn't stop playback.
         val playerBuilder = ExoPlayer.Builder(context)
-            .setAudioAttributes(playbackAudioAttributes, true)
+            .setAudioAttributes(playbackAudioAttributes, false)
             .setTrackSelector(trackSelector)
             .setLoadControl(loadControl)
 
@@ -575,10 +592,22 @@ private fun ExoPlayerSurface(
         onDispose { nowPlayingController.release() }
     }
 
-    LaunchedEffect(exoPlayer, resolvedMediaItem, initialPositionRequestKey) {
+    val audioFocus = remember(context, exoPlayer) {
+        PlayerAudioFocus(
+            context = context,
+            playWhenReady = { exoPlayer.playWhenReady },
+            pause = exoPlayer::pause,
+            resume = exoPlayer::play,
+        )
+    }
+
+    DisposableEffect(audioFocus) {
+        onDispose { audioFocus.abandon() }
+    }
+
+    LaunchedEffect(exoPlayer, resolvedMediaItem, initialPositionRequestKey, playbackResumeGeneration) {
         val mediaItem = resolvedMediaItem
-        val requestedStartPositionMs = fallbackStartPositionMs
-            ?: initialPositionMs?.takeIf { it > 0L }
+        val requestedStartPositionMs = stallSession.prepareStartPositionMs(fallbackStartPositionMs)
         playbackDiagnostics.attempt += 1
         playbackDiagnostics.prepareStartedAtMs = SystemClock.elapsedRealtime()
         Logger.i(PLAYER_DIAGNOSTIC_TAG) { "prepare begin attempt=${playbackDiagnostics.attempt} " +
@@ -586,7 +615,7 @@ private fun ExoPlayerSurface(
                 "mime=${mediaItem.localConfiguration?.mimeType ?: "auto"} " +
                 "startPositionMs=${requestedStartPositionMs ?: 0L}" }
         exoPlayer.setPlaybackMediaItem(mediaItem, requestedStartPositionMs)
-        if (fallbackStartPositionMs == null) {
+        if (!stallSession.isReopening(fallbackStartPositionMs)) {
             initialPositionRequestKey?.let { key ->
                 latestOnInitialPositionHandled.value(
                     key,
@@ -678,12 +707,30 @@ private fun ExoPlayerSurface(
                         "message=${diagnosticPlayerMessage(error.message)} " +
                         "causeChain=${diagnosticThrowableChain(error)}" }
 
+                val positionMs = exoPlayer.currentPosition.coerceAtLeast(0L)
+                val durationMs = exoPlayer.duration.coerceAtLeast(0L)
+                if (
+                    stallSession.onFailure(
+                        failure = error.toPlaybackSourceFailure(),
+                        positionMs = positionMs,
+                        durationMs = durationMs,
+                    )
+                ) {
+                    val resumeMs = stallSession.prepareStartPositionMs()
+                    Logger.w(TAG) { "Playback stalled at ${resumeMs}ms. Reopening at that position." }
+                    Logger.i(PLAYER_DIAGNOSTIC_TAG) { "stall resume positionMs=$resumeMs durationMs=$durationMs" }
+                    preserveAudioSelectionForReload("stall resume")
+                    playbackResumeGeneration = stallSession.resumeGeneration
+                    latestOnError.value(null)
+                    return
+                }
+
                 val isSourceError = error.errorCode == PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW ||
                         error.errorCode == PlaybackException.ERROR_CODE_IO_UNSPECIFIED ||
                         error.cause?.toString()?.contains("UnrecognizedInputFormatException") == true
 
-                if (isSourceError && !probeAttempted) {
-                    probeAttempted = true
+                if (isSourceError && !stallSession.probeAttempted) {
+                    stallSession.markMimeProbe()
                     coroutineScope.launch {
                         val probedMime = withContext(Dispatchers.IO) {
                             probeMimeType(sourceUrl, sanitizedSourceHeaders)
@@ -722,11 +769,16 @@ private fun ExoPlayerSurface(
                         "terminalError=${exoPlayer.playerError?.errorCodeName ?: "none"}" }
                 if (playbackState == Player.STATE_READY) {
                     fallbackStartPositionMs = null
+                    stallSession.onReady()
                     latestOnError.value(null)
                     exoPlayer.logCurrentTracks("STATE_READY")
                 }
                 syncPlayerViewKeepScreenOn()
                 dispatchExoPlayerSnapshot()
+            }
+
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                if (playWhenReady) audioFocus.request()
             }
 
             override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -1186,8 +1238,14 @@ private fun LibmpvPlayerSurface(
         onDispose { nowPlayingController?.release() }
     }
 
+    val mpvPaused = remember { AtomicBoolean(true) }
     val audioFocus = remember(context) {
-        PlayerAudioFocus(context) { playerViewRef?.setPaused(true) }
+        PlayerAudioFocus(
+            context = context,
+            playWhenReady = { !mpvPaused.get() },
+            pause = { playerViewRef?.setPaused(true) },
+            resume = { playerViewRef?.setPaused(false) },
+        )
     }
 
     DisposableEffect(audioFocus) {
@@ -1248,8 +1306,9 @@ private fun LibmpvPlayerSurface(
                     Logger.w(PLAYER_DIAGNOSTIC_TAG) { "mpv_property=eof-reached value=true attempt=${playbackDiagnostics.attempt} " +
                             "elapsedMs=${diagnosticElapsedSince(playbackDiagnostics.prepareStartedAtMs)}" }
                 }
-                if (property == "pause" && !value) {
-                    coroutineScope.launch(Dispatchers.Main.immediate) { audioFocus.request() }
+                if (property == "pause") {
+                    mpvPaused.set(value)
+                    if (!value) coroutineScope.launch(Dispatchers.Main.immediate) { audioFocus.request() }
                 }
                 if (property == "eof-reached" || property == "pause" || property == "paused-for-cache" || property == "seeking") {
                     dispatchSnapshot(updateKeepScreenOn = true)
@@ -1294,16 +1353,28 @@ private fun LibmpvPlayerSurface(
                         }
                     }
                     MPV.mpvEvent.MPV_EVENT_END_FILE -> {
+                        val endReason = data.nodeString("reason")
+                        val fileError = data.nodeString("file_error")
+                        val endFileJson = data.toJson()
                         coroutineScope.launch(Dispatchers.Main.immediate) {
                             val snapshot = view.snapshot()
                             Logger.w(PLAYER_DIAGNOSTIC_TAG) { "mpv_event=END_FILE attempt=${playbackDiagnostics.attempt} " +
                                     "elapsedMs=${diagnosticElapsedSince(playbackDiagnostics.prepareStartedAtMs)} " +
                                     "positionMs=${snapshot.positionMs} bufferedMs=${snapshot.bufferedPositionMs} " +
                                     "durationMs=${snapshot.durationMs} eof=${snapshot.isEnded} " +
-                                    "data=${diagnosticPlayerMessage(data.toJson())}" }
+                                    "data=${diagnosticPlayerMessage(endFileJson)}" }
                             latestOnSnapshot.value(snapshot)
                             nowPlayingController?.syncPlayback(snapshot)
                             view.keepScreenOn = snapshot.isPlaying || snapshot.isLoading
+                            if (endReason.equals("error", ignoreCase = true)) {
+                                Logger.e(PLAYER_DIAGNOSTIC_TAG) {
+                                    "mpv_error attempt=${playbackDiagnostics.attempt} " +
+                                        "fileError=${diagnosticPlayerMessage(fileError)}"
+                                }
+                                latestOnError.value(
+                                    getString(Res.string.player_unable_to_play_stream),
+                                )
+                            }
                         }
                     }
                 }
