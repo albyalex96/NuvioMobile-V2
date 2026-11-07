@@ -2,6 +2,7 @@ package com.nuvio.app.features.player
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -156,3 +157,32 @@ class VideoFrameBackdrop : Backdrop, LiquidGlassBackdropHost {
 
 @Composable
 internal expect fun rememberVideoFrameBackdrop(enabled: Boolean): VideoFrameBackdrop?
+
+/** False when "Glass backgrounds on controls" is off: player buttons and pills draw no backing. */
+internal val LocalPlayerControlGlassEnabled = staticCompositionLocalOf { true }
+
+/** False hides the skip back/forward buttons next to play/pause (double-tap seeking still works). */
+internal val LocalPlayerShowSkipButtons = staticCompositionLocalOf { true }
+
+/** [ambientLiquidGlass] for a player control, or nothing at all when the control backings are off. */
+@Composable
+internal fun Modifier.playerControlGlass(
+    shape: Shape,
+    tint: Color,
+    fallback: Color,
+    blurRadius: Dp,
+    refractionHeight: Dp,
+    refractionAmount: Dp,
+    backdropOpacity: Float = 1f,
+): Modifier {
+    if (!LocalPlayerControlGlassEnabled.current) return this
+    return ambientLiquidGlass(
+        shape = shape,
+        tint = tint,
+        fallback = fallback,
+        blurRadius = blurRadius,
+        refractionHeight = refractionHeight,
+        refractionAmount = refractionAmount,
+        backdropOpacity = backdropOpacity,
+    )
+}

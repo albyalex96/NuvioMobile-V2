@@ -2595,6 +2595,10 @@
     <string name="settings_nav_bar_icon_color">Custom icon color</string>
     <string name="settings_nav_bar_icon_color_description">Color of the unselected icons and labels in the floating bar.</string>
     <string name="settings_nav_bar_glass_reset">Reset glass to default</string>
+    <string name="settings_playback_control_glass">Glass backgrounds on controls</string>
+    <string name="settings_playback_control_glass_description">Show the translucent round and pill backgrounds behind player buttons and time pills. Turn off for plain icons and text.</string>
+    <string name="settings_playback_show_skip_buttons">Show skip buttons</string>
+    <string name="settings_playback_show_skip_buttons_description">Show the skip back and skip forward buttons next to play/pause. Double-tap seeking works either way.</string>
     <string name="settings_appearance_liquid_glass_effects">Liquid glass effects</string>
     <string name="settings_appearance_liquid_glass_effects_description">Liquid glass on sheets, player controls, stream cards and filters. Turn off for solid surfaces.</string>
     <string name="random_episode_title">Shuffle</string>

@@ -25,6 +25,8 @@ actual object PlayerSettingsStorage {
     private const val useLegacyPlayerLayoutKey = "use_legacy_player_layout"
     private const val showLoadingOverlayKey = "show_loading_overlay"
     private const val showPlayerLoadingStatusKey = "show_player_loading_status"
+    private const val playerControlGlassEnabledKey = "player_glass_effect_enabled"
+    private const val showSkipButtonsKey = "player_show_skip_buttons"
     private const val pauseOverlayEnabledKey = "pause_overlay_enabled"
     private const val showParentalGuideKey = "show_parental_guide"
     private const val resizeModeKey = "resize_mode"
@@ -277,6 +279,26 @@ actual object PlayerSettingsStorage {
             ?.edit()
             ?.putBoolean(ProfileScopedKey.of(showLoadingOverlayKey), enabled)
             ?.apply()
+    }
+
+    actual fun loadPlayerControlGlassEnabled(): Boolean? =
+        preferences?.let { prefs ->
+            val key = ProfileScopedKey.of(playerControlGlassEnabledKey)
+            if (prefs.contains(key)) prefs.getBoolean(key, true) else null
+        }
+
+    actual fun savePlayerControlGlassEnabled(enabled: Boolean) {
+        preferences?.edit()?.putBoolean(ProfileScopedKey.of(playerControlGlassEnabledKey), enabled)?.apply()
+    }
+
+    actual fun loadShowSkipButtons(): Boolean? =
+        preferences?.let { prefs ->
+            val key = ProfileScopedKey.of(showSkipButtonsKey)
+            if (prefs.contains(key)) prefs.getBoolean(key, true) else null
+        }
+
+    actual fun saveShowSkipButtons(enabled: Boolean) {
+        preferences?.edit()?.putBoolean(ProfileScopedKey.of(showSkipButtonsKey), enabled)?.apply()
     }
 
     actual fun loadShowPlayerLoadingStatus(): Boolean? =

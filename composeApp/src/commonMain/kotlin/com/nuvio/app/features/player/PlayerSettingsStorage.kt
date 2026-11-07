@@ -13,6 +13,10 @@ internal expect object PlayerSettingsStorage {
     fun loadShowLoadingOverlay(): Boolean?
     fun saveShowLoadingOverlay(enabled: Boolean)
     fun loadShowPlayerLoadingStatus(): Boolean?
+    fun loadPlayerControlGlassEnabled(): Boolean?
+    fun savePlayerControlGlassEnabled(enabled: Boolean)
+    fun loadShowSkipButtons(): Boolean?
+    fun saveShowSkipButtons(enabled: Boolean)
     fun saveShowPlayerLoadingStatus(enabled: Boolean)
     fun loadPauseOverlayEnabled(): Boolean?
     fun savePauseOverlayEnabled(enabled: Boolean)

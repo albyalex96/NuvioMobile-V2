@@ -103,6 +103,7 @@ Portata da [luqmanfadlli/NuvioMobile-Enhanced](https://github.com/luqmanfadlli/N
 - **Intervallo di salto personalizzato** (1–20 secondi) per i pulsanti a schermo, il doppio tocco (cumulativo), la notifica/media session e i comandi remoti di iOS, con icona dinamica.
 - **Prompt "Stai ancora guardando?"** (in stile Netflix): dopo un numero configurabile di episodi riprodotti in automatico, opzionalmente solo di notte (22:00–04:00), con un conto alla rovescia di 10 secondi prima della chiusura del player (o del ritorno alla pagina dettagli), con opzioni per dispositivo. Una versione separata a tempo per la **Live TV** (da 15 min a 6 h).
 - **Miniature di anteprima** durante il seek per file singoli e flussi HLS, con opzioni separate per telefono e TV.
+- **Controlli più puliti:** opzioni per togliere gli sfondi di vetro dietro ai pulsanti del player e ai tempi e per nascondere i pulsanti per tornare indietro e andare avanti (il doppio tocco per spostarsi funziona comunque).
 - **Controlli più ricchi:** logo del titolo, badge dello Stream Parser, nome della sorgente, orologio e orario di fine sopra la barra di avanzamento.
 - Cursori **Potenzia dialoghi**, **compressione della gamma dinamica** e **amplificazione volume** nel pannello audio (amplificazione fino a +10 dB, ricordata per ogni dispositivo di uscita audio).
 - **Downmix stereo automatico in Bluetooth** (ExoPlayer, telefono e tablet): l'audio surround viene decodificato con FFmpeg e ridotto a uno stereo 2.0 pulito, così i dialoghi restano udibili con auricolari e casse.

@@ -1895,6 +1895,8 @@ private fun addAdditionalSearchEntries(
     val playerSection = stringResource(Res.string.settings_playback_section_player)
     val playerRows = buildList {
         add(PlaybackSearchRow("loading-status", stringResource(Res.string.playback_show_loading_status), stringResource(Res.string.playback_show_loading_status_sub)))
+        add(PlaybackSearchRow("player-control-glass", stringResource(Res.string.settings_playback_control_glass), stringResource(Res.string.settings_playback_control_glass_description)))
+        add(PlaybackSearchRow("player-skip-buttons", stringResource(Res.string.settings_playback_show_skip_buttons), stringResource(Res.string.settings_playback_show_skip_buttons_description)))
         add(PlaybackSearchRow("parental-guide", stringResource(Res.string.settings_playback_parental_guide), stringResource(Res.string.settings_playback_parental_guide_description)))
         add(PlaybackSearchRow("private-viewing", stringResource(Res.string.settings_playback_private_viewing), stringResource(Res.string.settings_playback_private_viewing_description)))
         add(PlaybackSearchRow("player-preference", stringResource(Res.string.settings_playback_player_preference)))

@@ -54,6 +54,9 @@ data class PlayerSettingsUiState(
     val useLegacyPlayerLayout: Boolean = false,
     val showLoadingOverlay: Boolean = true,
     val showPlayerLoadingStatus: Boolean = true,
+    /** Round/pill glass backings behind player buttons and time pills. */
+    val playerControlGlassEnabled: Boolean = true,
+    val showSkipButtons: Boolean = true,
     val pauseOverlayEnabled: Boolean = true,
     val showParentalGuide: Boolean = true,
     val resizeMode: PlayerResizeMode = PlayerResizeMode.Fit,
@@ -163,6 +166,8 @@ object PlayerSettingsRepository {
     private var useLegacyPlayerLayout = false
     private var showLoadingOverlay = true
     private var showPlayerLoadingStatus = true
+    private var playerControlGlassEnabled = true
+    private var showSkipButtons = true
     private var pauseOverlayEnabled = true
     private var showParentalGuide = true
     private var resizeMode = PlayerResizeMode.Fit
@@ -266,6 +271,8 @@ object PlayerSettingsRepository {
         useLegacyPlayerLayout = false
         showLoadingOverlay = true
         showPlayerLoadingStatus = true
+        playerControlGlassEnabled = true
+        showSkipButtons = true
         pauseOverlayEnabled = true
         showParentalGuide = true
         resizeMode = PlayerResizeMode.Fit
@@ -361,6 +368,8 @@ object PlayerSettingsRepository {
         useLegacyPlayerLayout = PlayerSettingsStorage.loadUseLegacyPlayerLayout() ?: false
         showLoadingOverlay = PlayerSettingsStorage.loadShowLoadingOverlay() ?: true
         showPlayerLoadingStatus = PlayerSettingsStorage.loadShowPlayerLoadingStatus() ?: true
+        playerControlGlassEnabled = PlayerSettingsStorage.loadPlayerControlGlassEnabled() ?: true
+        showSkipButtons = PlayerSettingsStorage.loadShowSkipButtons() ?: true
         pauseOverlayEnabled = PlayerSettingsStorage.loadPauseOverlayEnabled() ?: true
         showParentalGuide = PlayerSettingsStorage.loadShowParentalGuide() ?: true
         resizeMode = PlayerSettingsStorage.loadResizeMode()
@@ -584,6 +593,22 @@ object PlayerSettingsRepository {
         showPlayerLoadingStatus = enabled
         publish()
         PlayerSettingsStorage.saveShowPlayerLoadingStatus(enabled)
+    }
+
+    fun setPlayerControlGlassEnabled(enabled: Boolean) {
+        ensureLoaded()
+        if (playerControlGlassEnabled == enabled) return
+        playerControlGlassEnabled = enabled
+        publish()
+        PlayerSettingsStorage.savePlayerControlGlassEnabled(enabled)
+    }
+
+    fun setShowSkipButtons(enabled: Boolean) {
+        ensureLoaded()
+        if (showSkipButtons == enabled) return
+        showSkipButtons = enabled
+        publish()
+        PlayerSettingsStorage.saveShowSkipButtons(enabled)
     }
 
     fun setPauseOverlayEnabled(enabled: Boolean) {
@@ -1522,6 +1547,8 @@ object PlayerSettingsRepository {
             useLegacyPlayerLayout = useLegacyPlayerLayout,
             showLoadingOverlay = showLoadingOverlay,
             showPlayerLoadingStatus = showPlayerLoadingStatus,
+            playerControlGlassEnabled = playerControlGlassEnabled,
+            showSkipButtons = showSkipButtons,
             pauseOverlayEnabled = pauseOverlayEnabled,
             showParentalGuide = showParentalGuide,
             resizeMode = resizeMode,

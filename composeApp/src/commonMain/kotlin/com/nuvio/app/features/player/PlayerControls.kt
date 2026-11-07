@@ -704,7 +704,7 @@ internal fun PlayerHeaderIconButton(
         modifier = Modifier
             .size(buttonSize)
             .clip(CircleShape)
-            .ambientLiquidGlass(
+            .playerControlGlass(
                 shape = CircleShape,
                 tint = Color.White.copy(alpha = 0.06f),
                 fallback = Color.Black.copy(alpha = 0.35f),
@@ -740,7 +740,8 @@ private fun CenterControls(
         horizontalArrangement = Arrangement.spacedBy(metrics.centerGap),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        SideControlButton(
+        val showSkipButtons = LocalPlayerShowSkipButtons.current
+        if (showSkipButtons) SideControlButton(
             seekIntervalSeconds = seekIntervalSeconds,
             forward = false,
             contentDescription = stringResource(Res.string.compose_player_seek_back_seconds, seekIntervalSeconds),
@@ -753,7 +754,7 @@ private fun CenterControls(
             metrics = metrics,
             onClick = onTogglePlayback,
         )
-        SideControlButton(
+        if (showSkipButtons) SideControlButton(
             seekIntervalSeconds = seekIntervalSeconds,
             forward = true,
             contentDescription = stringResource(Res.string.compose_player_seek_forward_seconds, seekIntervalSeconds),
@@ -774,7 +775,7 @@ private fun SideControlButton(
     Box(
         modifier = Modifier
             .clip(CircleShape)
-            .ambientLiquidGlass(
+            .playerControlGlass(
                 shape = CircleShape,
                 tint = Color.White.copy(alpha = 0.06f),
                 fallback = Color.Transparent,
@@ -811,7 +812,7 @@ internal fun PlayPauseControlButton(
     Box(
         modifier = Modifier
             .clip(CircleShape)
-            .ambientLiquidGlass(
+            .playerControlGlass(
                 shape = CircleShape,
                 tint = Color.White.copy(alpha = 0.06f),
                 fallback = Color.Transparent,
@@ -901,7 +902,7 @@ private fun ProgressControls(
                 color = Color.Transparent,
                 shape = RoundedCornerShape(24.dp),
                 modifier = Modifier
-                    .ambientLiquidGlass(
+                    .playerControlGlass(
                         shape = RoundedCornerShape(24.dp),
                         tint = Color.White.copy(alpha = 0.05f),
                         fallback = Color.Black.copy(alpha = 0.5f),
@@ -1117,7 +1118,7 @@ internal fun LockedPlayerOverlay(
                 modifier = Modifier
                     .size(78.dp)
                     .clip(CircleShape)
-                    .ambientLiquidGlass(
+                    .playerControlGlass(
                         shape = CircleShape,
                         tint = Color.White.copy(alpha = 0.06f),
                         fallback = Color.Black.copy(alpha = 0.52f),
@@ -1203,7 +1204,7 @@ private fun TimePill(
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(12.dp))
-            .ambientLiquidGlass(
+            .playerControlGlass(
                 shape = RoundedCornerShape(12.dp),
                 tint = Color.White.copy(alpha = 0.05f),
                 fallback = Color.Black.copy(alpha = 0.5f),

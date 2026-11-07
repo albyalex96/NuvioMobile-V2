@@ -166,6 +166,8 @@ internal fun PlayerScreenContent(args: PlayerScreenArgs) {
         runtime.BindPlayerRuntimeEffects()
         runtime.BindPostPlayRecommendationEffects()
         CompositionLocalProvider(
+            LocalPlayerControlGlassEnabled provides playerSettingsUiState.playerControlGlassEnabled,
+            LocalPlayerShowSkipButtons provides playerSettingsUiState.showSkipButtons,
             LocalLiquidGlassBackdrop provides rememberVideoFrameBackdrop(enabled = isLiquidGlassSupported()),
         ) {
             runtime.RenderPlayerRuntimeUi()
