@@ -17,6 +17,7 @@ internal actual object PlayerTrackPreferenceStorage {
     private const val subtitleIsForcedKey = "subtitle_is_forced"
     private const val subtitleDelayMsKey = "subtitle_delay_ms"
     private const val audioDelayMsKey = "audio_delay_route_ms"
+    private const val audioAmplificationDbKey = "audio_amplification_route_db"
 
     actual fun load(contentId: String): PersistedPlayerTrackPreference? {
         val id = contentId.normalizedStorageId() ?: return null
@@ -102,6 +103,28 @@ internal actual object PlayerTrackPreferenceStorage {
             defaults.removeObjectForKey(key)
         } else {
             defaults.setInteger(delayMs.coerceIn(AUDIO_DELAY_MIN_MS, AUDIO_DELAY_MAX_MS).toLong(), forKey = key)
+        }
+    }
+
+    actual fun loadAudioAmplificationDb(routeKey: String): Int? {
+        val id = routeKey.normalizedStorageId() ?: return null
+        val defaults = NSUserDefaults.standardUserDefaults
+        val key = scopedKey(audioAmplificationDbKey, id)
+        return if (defaults.objectForKey(key) != null) {
+            defaults.integerForKey(key).toInt()
+        } else {
+            null
+        }
+    }
+
+    actual fun saveAudioAmplificationDb(routeKey: String, gainDb: Int) {
+        val id = routeKey.normalizedStorageId() ?: return
+        val defaults = NSUserDefaults.standardUserDefaults
+        val key = scopedKey(audioAmplificationDbKey, id)
+        if (gainDb == 0) {
+            defaults.removeObjectForKey(key)
+        } else {
+            defaults.setInteger(gainDb.coerceIn(AUDIO_AMPLIFICATION_MIN_DB, AUDIO_AMPLIFICATION_MAX_DB).toLong(), forKey = key)
         }
     }
 

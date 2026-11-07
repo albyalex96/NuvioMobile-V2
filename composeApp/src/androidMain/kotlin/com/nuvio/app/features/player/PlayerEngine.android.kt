@@ -94,6 +94,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 
 private const val TAG = "NuvioPlayer"
+private const val BLUETOOTH_DOWNMIX_LOG_TAG = "BluetoothDownmix"
 private const val PLAYER_DIAGNOSTIC_TAG = "NuvioPlayerDiag"
 
 private class PlaybackDiagnostics {
@@ -398,6 +399,13 @@ private fun ExoPlayerSurface(
         playerSettings.targetBufferSizeMb,
     ) {
         applyExoPlayerNativeMemory(playerSettings.exoNativeMemoryEnabled)
+        // Bluetooth headphones and speakers are stereo: decode audio with FFmpeg and mix surround
+        // down to a clean 2.0, so dialogue keeps its level against music and effects.
+        val bluetoothOutput = AudioOutputRouteDetector.detect(context)?.isBluetooth == true
+        Logger.i(BLUETOOTH_DOWNMIX_LOG_TAG) {
+            if (bluetoothOutput) "Bluetooth output: FFmpeg audio decoder with stereo downmix"
+            else "No Bluetooth output: audio downmix off"
+        }
         val renderersFactory = SubtitleOffsetRenderersFactory(
             context = context,
             subtitleDelayUsProvider = { latestSubtitleDelayMs.value.toLong() * 1_000L },
@@ -409,6 +417,7 @@ private fun ExoPlayerSurface(
                 playerViewRef?.videoBoundsFraction(latestVideoAspectRatio.value)
             },
             audioEnhancementHolder = audioEnhancementHolder,
+            bluetoothStereoDownmix = bluetoothOutput,
         )
             .setExtensionRendererMode(effectiveDecoderPriority)
             .setEnableDecoderFallback(true)
@@ -2474,7 +2483,47 @@ private class SubtitleOffsetRenderersFactory(
     private val shouldStripSdhProvider: () -> Boolean,
     private val videoBoundsFractionProvider: () -> RectF?,
     private val audioEnhancementHolder: AudioEnhancementHolder,
+    private val bluetoothStereoDownmix: Boolean,
 ) : DefaultRenderersFactory(context) {
+    override fun buildAudioRenderers(
+        context: Context,
+        extensionRendererMode: Int,
+        mediaCodecSelector: androidx.media3.exoplayer.mediacodec.MediaCodecSelector,
+        enableDecoderFallback: Boolean,
+        audioSink: androidx.media3.exoplayer.audio.AudioSink,
+        eventHandler: android.os.Handler,
+        eventListener: androidx.media3.exoplayer.audio.AudioRendererEventListener,
+        out: ArrayList<Renderer>,
+    ) {
+        val startIndex = out.size
+        super.buildAudioRenderers(
+            context,
+            if (bluetoothStereoDownmix) EXTENSION_RENDERER_MODE_PREFER else extensionRendererMode,
+            mediaCodecSelector,
+            enableDecoderFallback,
+            audioSink,
+            eventHandler,
+            eventListener,
+            out,
+        )
+        val ffmpegRenderer = out.subList(startIndex, out.size)
+            .filterIsInstance<androidx.media3.decoder.ffmpeg.FfmpegAudioRenderer>()
+            .firstOrNull()
+        if (ffmpegRenderer == null) {
+            if (bluetoothStereoDownmix) {
+                Logger.w(BLUETOOTH_DOWNMIX_LOG_TAG) { "FFmpeg audio renderer unavailable: Bluetooth downmix skipped" }
+            }
+            return
+        }
+        if (bluetoothStereoDownmix) {
+            ffmpegRenderer.setAudioOutputChannels("stereo", 2)
+            ffmpegRenderer.setDownmixNormalizationEnabled(true)
+        } else {
+            ffmpegRenderer.setAudioOutputChannels(null, 0)
+            ffmpegRenderer.setDownmixNormalizationEnabled(false)
+        }
+    }
+
     override fun buildAudioSink(
         context: Context,
         enableFloatOutput: Boolean,

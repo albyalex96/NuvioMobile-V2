@@ -19,6 +19,7 @@ internal actual object PlayerTrackPreferenceStorage {
     private const val subtitleIsForcedKey = "subtitle_is_forced"
     private const val subtitleDelayMsKey = "subtitle_delay_ms"
     private const val audioDelayMsKey = "audio_delay_route_ms"
+    private const val audioAmplificationDbKey = "audio_amplification_route_db"
 
     private var preferences: SharedPreferences? = null
 
@@ -106,6 +107,26 @@ internal actual object PlayerTrackPreferenceStorage {
                 remove(key)
             } else {
                 putInt(key, delayMs.coerceIn(AUDIO_DELAY_MIN_MS, AUDIO_DELAY_MAX_MS))
+            }
+        }?.apply()
+    }
+
+    actual fun loadAudioAmplificationDb(routeKey: String): Int? {
+        val id = routeKey.normalizedStorageId() ?: return null
+        val key = scopedKey(audioAmplificationDbKey, id)
+        return preferences?.let { prefs ->
+            if (prefs.contains(key)) prefs.getInt(key, 0) else null
+        }
+    }
+
+    actual fun saveAudioAmplificationDb(routeKey: String, gainDb: Int) {
+        val id = routeKey.normalizedStorageId() ?: return
+        val key = scopedKey(audioAmplificationDbKey, id)
+        preferences?.edit()?.apply {
+            if (gainDb == 0) {
+                remove(key)
+            } else {
+                putInt(key, gainDb.coerceIn(AUDIO_AMPLIFICATION_MIN_DB, AUDIO_AMPLIFICATION_MAX_DB))
             }
         }?.apply()
     }

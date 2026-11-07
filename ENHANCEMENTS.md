@@ -104,7 +104,8 @@ Ported from [luqmanfadlli/NuvioMobile-Enhanced](https://github.com/luqmanfadlli/
 - **"Still watching?" prompt** (Netflix style): after a configurable number of consecutive auto-played episodes, optionally only at night (22:00–04:00), with a 10-second countdown before the player closes (or exits to the details page), with per-device options. A separate time-based version for **Live TV** (15 min – 6 h).
 - **Seek thumbnails** for single files and HLS streams, with separate options for phone and TV.
 - **Richer controls:** title logo, Stream Parser badges, source name, clock and end time above the timeline.
-- **Dialogue boost and dynamic range compression** sliders in the audio panel.
+- **Dialogue boost, dynamic range compression and volume boost** sliders in the audio panel (volume boost up to +10 dB, remembered per audio output device).
+- **Automatic stereo downmix on Bluetooth** (ExoPlayer): surround audio is decoded with FFmpeg and mixed down to a clean 2.0, so dialogue keeps its level on earbuds and speakers.
 - **Subtitles:** Nuvio libass atlas pipeline for ASS/SSA, subtitle style applied to embedded ASS tracks, hold-to-repeat subtitle delay buttons, and optional **auto-sync** for add-on, OpenSubtitles and SubDL subtitles (ASS/SSA matched by dialogue, SRT/VTT fallback).
 - **Provider priority auto-play:** auto-play picks the stream following your preferred provider order.
 - Watch progress is saved when leaving the app.

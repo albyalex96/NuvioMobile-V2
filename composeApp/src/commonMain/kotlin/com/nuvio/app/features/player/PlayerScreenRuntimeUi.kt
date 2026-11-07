@@ -698,6 +698,8 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
         onAudioDelayChanged = { delayMs -> setAudioDelay(delayMs) },
         onDialogueBoostChanged = if (audioEnhancementSupported) PlayerSettingsRepository::setDialogueBoostPercent else null,
         onCompressionChanged = if (audioEnhancementSupported) PlayerSettingsRepository::setDynamicCompressionPercent else null,
+        audioAmplificationDb = audioAmplificationDb,
+        onAmplificationChanged = if (audioEnhancementSupported) { db -> setAudioAmplification(db) } else null,
         showSubtitleModal = showSubtitleModal,
         subtitleTracks = serverSubtitleTracks.ifEmpty { subtitleTracks },
         selectedSubtitleIndex = if (serverSubtitleTracks.isEmpty()) {

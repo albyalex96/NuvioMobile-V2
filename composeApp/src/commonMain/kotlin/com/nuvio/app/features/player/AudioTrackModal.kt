@@ -53,6 +53,8 @@ fun AudioTrackModal(
     onAudioDelayChanged: ((Int) -> Unit)? = null,
     onDialogueBoostChanged: ((Int) -> Unit)? = null,
     onCompressionChanged: ((Int) -> Unit)? = null,
+    amplificationDb: Int = 0,
+    onAmplificationChanged: ((Int) -> Unit)? = null,
 ) {
     PlayerOverlayScaffold(
         visible = visible,
@@ -61,7 +63,8 @@ fun AudioTrackModal(
         contentPadding = PaddingValues(start = 44.dp, end = 44.dp, top = 28.dp, bottom = 64.dp),
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val showEnhancement = onDialogueBoostChanged != null && onCompressionChanged != null
+            val showEnhancement = onDialogueBoostChanged != null && onCompressionChanged != null &&
+                onAmplificationChanged != null
             // Read live from the repository so the sliders follow every change while the panel is open.
             val liveSettings by PlayerSettingsRepository.uiState.collectAsStateWithLifecycle()
             val columnGap = 32.dp
@@ -76,7 +79,7 @@ fun AudioTrackModal(
             val enhancementWidth = minOf(380.dp, maxWidth - railWidth - columnGap)
             // Room left for the audio delay controls (and stacked sliders) below the track list.
             val delaySectionHeight = (if (onAudioDelayChanged != null) 150.dp else 0.dp) +
-                (if (showEnhancement && !enhancementSideBySide) 230.dp else 0.dp)
+                (if (showEnhancement && !enhancementSideBySide) 340.dp else 0.dp)
             val railMaxHeight = (maxHeight - 64.dp - delaySectionHeight).coerceAtLeast(120.dp).coerceAtMost(620.dp)
 
             Column(
@@ -133,6 +136,8 @@ fun AudioTrackModal(
                         compressionPercent = liveSettings.dynamicCompressionPercent,
                         onDialogueBoostChanged = onDialogueBoostChanged!!,
                         onCompressionChanged = onCompressionChanged!!,
+                        amplificationDb = amplificationDb,
+                        onAmplificationChanged = onAmplificationChanged!!,
                         modifier = Modifier.padding(top = 16.dp),
                     )
                 }
@@ -143,6 +148,8 @@ fun AudioTrackModal(
                     compressionPercent = liveSettings.dynamicCompressionPercent,
                     onDialogueBoostChanged = onDialogueBoostChanged!!,
                     onCompressionChanged = onCompressionChanged!!,
+                    amplificationDb = amplificationDb,
+                    onAmplificationChanged = onAmplificationChanged!!,
                     modifier = Modifier
                         .padding(start = railWidth + columnGap)
                         .width(enhancementWidth)

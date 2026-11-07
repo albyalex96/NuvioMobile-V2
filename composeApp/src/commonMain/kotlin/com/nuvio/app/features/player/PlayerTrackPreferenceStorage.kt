@@ -29,4 +29,8 @@ internal expect object PlayerTrackPreferenceStorage {
     fun loadAudioDelayMs(routeKey: String): Int?
     /** Zero removes the entry. */
     fun saveAudioDelayMs(routeKey: String, delayMs: Int)
+    /** Per audio output amplification in dB; local to this device. */
+    fun loadAudioAmplificationDb(routeKey: String): Int?
+    /** Zero removes the entry. */
+    fun saveAudioAmplificationDb(routeKey: String, gainDb: Int)
 }

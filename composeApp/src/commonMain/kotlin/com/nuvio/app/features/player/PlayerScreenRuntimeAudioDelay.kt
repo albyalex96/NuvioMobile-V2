@@ -57,20 +57,40 @@ internal fun PlayerScreenRuntime.setAudioDelay(delayMs: Int) {
     }
 }
 
-/** Pushes the dialogue boost / compression sliders to the active engine. */
+/** Pushes the dialogue boost / compression / amplification sliders to the active engine. */
 @Composable
 internal fun PlayerScreenRuntime.BindAudioEnhancement() {
     // Observed directly: runtime.playerSettingsUiState is a plain field, not Compose state.
     val playerSettings by PlayerSettingsRepository.uiState.collectAsStateWithLifecycle()
+    val routeKey = audioOutputRoute?.key
+    LaunchedEffect(routeKey) {
+        // Amplification is remembered per audio output: phone speaker, headphones, TV...
+        if (routeKey == null) return@LaunchedEffect
+        val storedDb = normalizeAudioAmplificationDb(PlayerTrackPreferenceStorage.loadAudioAmplificationDb(routeKey) ?: 0)
+        audioAmplificationDb = storedDb
+        Logger.i(AUDIO_ENHANCEMENT_LOG_TAG) { "Applied amplification +${storedDb}dB for route=$routeKey" }
+    }
     val settings = AudioEnhancementSettings(
         dialogueBoostPercent = playerSettings.dialogueBoostPercent,
         compressionPercent = playerSettings.dynamicCompressionPercent,
+        amplificationDb = audioAmplificationDb,
     )
     LaunchedEffect(playerController, settings) {
         val controller = playerController ?: return@LaunchedEffect
         controller.setAudioEnhancement(settings)
         Logger.d(AUDIO_ENHANCEMENT_LOG_TAG) {
-            "Engine audio enhancement: dialogue=${settings.dialogueBoostPercent}% compression=${settings.compressionPercent}%"
+            "Engine audio enhancement: dialogue=${settings.dialogueBoostPercent}% " +
+                "compression=${settings.compressionPercent}% amplification=+${settings.amplificationDb}dB"
         }
     }
+}
+
+/** Audio panel change of the amplification, saved for the current audio output. */
+internal fun PlayerScreenRuntime.setAudioAmplification(db: Int) {
+    val normalized = normalizeAudioAmplificationDb(db)
+    if (normalized == audioAmplificationDb) return
+    audioAmplificationDb = normalized
+    val routeKey = audioOutputRoute?.key
+    if (routeKey != null) PlayerTrackPreferenceStorage.saveAudioAmplificationDb(routeKey, normalized)
+    Logger.d(AUDIO_ENHANCEMENT_LOG_TAG) { "Amplification set to +${normalized}dB (route=${routeKey ?: "none"})" }
 }

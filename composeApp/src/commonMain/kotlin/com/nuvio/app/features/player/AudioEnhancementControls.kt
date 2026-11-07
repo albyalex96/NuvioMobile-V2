@@ -30,6 +30,8 @@ import com.nuvio.app.core.ui.nuvio
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.compose_player_audio_enhancement_decrease
 import nuvio.composeapp.generated.resources.compose_player_audio_enhancement_increase
+import nuvio.composeapp.generated.resources.compose_player_audio_amplification
+import nuvio.composeapp.generated.resources.compose_player_audio_amplification_hint
 import nuvio.composeapp.generated.resources.compose_player_audio_enhancement_off
 import nuvio.composeapp.generated.resources.compose_player_dialogue_boost
 import nuvio.composeapp.generated.resources.compose_player_dialogue_boost_hint
@@ -38,13 +40,15 @@ import nuvio.composeapp.generated.resources.compose_player_dynamic_compression_h
 import org.jetbrains.compose.resources.stringResource
 import kotlin.math.roundToInt
 
-/** Dialogue boost + dynamic range compression sliders of the Audio panel. */
+/** Dialogue boost, dynamic range compression and amplification sliders of the Audio panel. */
 @Composable
 internal fun AudioEnhancementControls(
     dialogueBoostPercent: Int,
     compressionPercent: Int,
     onDialogueBoostChanged: (Int) -> Unit,
     onCompressionChanged: (Int) -> Unit,
+    amplificationDb: Int,
+    onAmplificationChanged: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -63,22 +67,54 @@ internal fun AudioEnhancementControls(
             percent = compressionPercent,
             onChanged = onCompressionChanged,
         )
+        AudioStepSlider(
+            title = stringResource(Res.string.compose_player_audio_amplification),
+            hint = stringResource(Res.string.compose_player_audio_amplification_hint),
+            value = amplificationDb,
+            min = AUDIO_AMPLIFICATION_MIN_DB,
+            max = AUDIO_AMPLIFICATION_MAX_DB,
+            step = AUDIO_AMPLIFICATION_STEP_DB,
+            valueText = { "+$it dB" },
+            onChanged = onAmplificationChanged,
+        )
     }
 }
 
-/**
- * Slider usable with the remote (− / + buttons, hold to repeat) and with touch or mouse
- * (tap or drag on the bar). The bar itself is not focusable, so D-pad focus stays on the buttons.
- */
 @Composable
 private fun AudioPercentSlider(
     title: String,
     hint: String,
     percent: Int,
     onChanged: (Int) -> Unit,
+) = AudioStepSlider(
+    title = title,
+    hint = hint,
+    value = percent,
+    min = AUDIO_ENHANCEMENT_MIN_PERCENT,
+    max = AUDIO_ENHANCEMENT_MAX_PERCENT,
+    step = AUDIO_ENHANCEMENT_STEP_PERCENT,
+    valueText = { "$it%" },
+    onChanged = onChanged,
+)
+
+/**
+ * Slider usable with the remote (− / + buttons, hold to repeat) and with touch or mouse
+ * (tap or drag on the bar). The bar itself is not focusable, so D-pad focus stays on the buttons.
+ */
+@Composable
+private fun AudioStepSlider(
+    title: String,
+    hint: String,
+    value: Int,
+    min: Int,
+    max: Int,
+    step: Int,
+    valueText: (Int) -> String,
+    onChanged: (Int) -> Unit,
 ) {
     val tokens = MaterialTheme.nuvio
-    val current = normalizeAudioEnhancementPercent(percent)
+    val clamp = { v: Int -> v.coerceIn(min, max) }
+    val current = clamp(value)
     val latestPercent by rememberUpdatedState(current)
     val latestOnChanged by rememberUpdatedState(onChanged)
     val offLabel = stringResource(Res.string.compose_player_audio_enhancement_off)
@@ -92,7 +128,7 @@ private fun AudioPercentSlider(
                 modifier = Modifier.weight(1f),
             )
             Text(
-                text = if (current == 0) offLabel else "$current%",
+                text = if (current == 0) offLabel else valueText(current),
                 color = Color.White.copy(alpha = 0.85f),
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -104,9 +140,9 @@ private fun AudioPercentSlider(
             HoldRepeatStepButton(
                 icon = Icons.Rounded.Remove,
                 contentDescription = stringResource(Res.string.compose_player_audio_enhancement_decrease, title),
-                enabled = current > AUDIO_ENHANCEMENT_MIN_PERCENT,
-                stepForRepeat = { AUDIO_ENHANCEMENT_STEP_PERCENT },
-                onStep = { step -> latestOnChanged(normalizeAudioEnhancementPercent(latestPercent - step)) },
+                enabled = current > min,
+                stepForRepeat = { step },
+                onStep = { delta -> latestOnChanged(clamp(latestPercent - delta)) },
                 size = 40.dp,
             )
             Box(
@@ -115,12 +151,12 @@ private fun AudioPercentSlider(
                     .height(28.dp)
                     .pointerInput(Unit) {
                         detectTapGestures { offset ->
-                            latestOnChanged(percentAt(offset.x, size.width.toFloat()))
+                            latestOnChanged(valueAt(offset.x, size.width.toFloat(), min, max, step))
                         }
                     }
                     .pointerInput(Unit) {
                         detectHorizontalDragGestures { change, _ ->
-                            latestOnChanged(percentAt(change.position.x, size.width.toFloat()))
+                            latestOnChanged(valueAt(change.position.x, size.width.toFloat(), min, max, step))
                         }
                     },
                 contentAlignment = Alignment.CenterStart,
@@ -135,7 +171,7 @@ private fun AudioPercentSlider(
                     Box(
                         modifier = Modifier
                             .fillMaxHeight()
-                            .fillMaxWidth(current / 100f)
+                            .fillMaxWidth(if (max > min) (current - min).toFloat() / (max - min) else 0f)
                             .background(tokens.colors.accent),
                     )
                 }
@@ -143,9 +179,9 @@ private fun AudioPercentSlider(
             HoldRepeatStepButton(
                 icon = Icons.Rounded.Add,
                 contentDescription = stringResource(Res.string.compose_player_audio_enhancement_increase, title),
-                enabled = current < AUDIO_ENHANCEMENT_MAX_PERCENT,
-                stepForRepeat = { AUDIO_ENHANCEMENT_STEP_PERCENT },
-                onStep = { step -> latestOnChanged(normalizeAudioEnhancementPercent(latestPercent + step)) },
+                enabled = current < max,
+                stepForRepeat = { step },
+                onStep = { delta -> latestOnChanged(clamp(latestPercent + delta)) },
                 size = 40.dp,
             )
         }
@@ -158,9 +194,9 @@ private fun AudioPercentSlider(
     }
 }
 
-private fun percentAt(x: Float, width: Float): Int {
-    if (width <= 0f) return 0
-    val raw = (x / width).coerceIn(0f, 1f) * 100f
-    val snapped = (raw / AUDIO_ENHANCEMENT_STEP_PERCENT).roundToInt() * AUDIO_ENHANCEMENT_STEP_PERCENT
-    return normalizeAudioEnhancementPercent(snapped)
+private fun valueAt(x: Float, width: Float, min: Int, max: Int, step: Int): Int {
+    if (width <= 0f) return min
+    val raw = min + (x / width).coerceIn(0f, 1f) * (max - min)
+    val snapped = min + ((raw - min) / step).roundToInt() * step
+    return snapped.coerceIn(min, max)
 }

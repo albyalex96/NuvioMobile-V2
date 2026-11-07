@@ -5,6 +5,8 @@
     <string name="compose_player_dynamic_compression">Dynamic Range Compression</string>
     <string name="compose_player_dynamic_compression_hint">Night mode: quiet scenes louder, explosions and loud music softer.</string>
     <string name="compose_player_audio_enhancement_off">Off</string>
+    <string name="compose_player_audio_amplification">Volume boost</string>
+    <string name="compose_player_audio_amplification_hint">Raises the volume above 100% (up to +10 dB). Saved for each audio output device.</string>
     <string name="compose_player_audio_enhancement_decrease">Decrease %1$s</string>
     <string name="compose_player_audio_enhancement_increase">Increase %1$s</string>
     <string name="settings_playback_dialogue_boost">Dialogue boost</string>

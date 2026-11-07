@@ -264,6 +264,7 @@ internal class PlayerScreenRuntime(
     // Per-device delay + current stream's behaviorHints.audioDelayMs + the user's tweak on that stream.
     var audioDelayParts by mutableStateOf(AudioDelayParts())
     var audioOutputRoute by mutableStateOf<AudioOutputRoute?>(null)
+    var audioAmplificationDb by mutableStateOf(0)
     var subtitleAutoSyncState by mutableStateOf(SubtitleAutoSyncUiState())
 
     var lastSyncedSettingsResizeMode: PlayerResizeMode? = null

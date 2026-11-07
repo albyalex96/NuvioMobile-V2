@@ -92,7 +92,8 @@ internal class DialogueEnhancementAudioProcessor(
         if (settings != lastSettings) {
             audioEnhancementLog.d {
                 "ExoPlayer audio enhancement: dialogue=${settings.dialogueBoostPercent}% " +
-                    "compression=${settings.compressionPercent}% (${channelCount}ch)"
+                    "compression=${settings.compressionPercent}% amplification=+${settings.amplificationDb}dB " +
+                    "(${channelCount}ch)"
             }
             if (highPass[0].isUnset) configureFilters()
             lastSettings = settings
@@ -123,6 +124,7 @@ internal class DialogueEnhancementAudioProcessor(
         val threshold = settings.compressionThresholdDb
         val ratio = settings.compressionRatio
         val makeup = 10f.pow(settings.compressionMakeupDb / 20f)
+        val amplification = settings.amplificationGain
         val attack = coefficient(10.0)
         val release = coefficient(200.0)
 
@@ -166,6 +168,7 @@ internal class DialogueEnhancementAudioProcessor(
                 }
                 gain *= makeup
             }
+            gain *= amplification
             for (c in 0 until channelCount) {
                 val sample = softLimit(frame[c] * gain)
                 if (isFloat) {

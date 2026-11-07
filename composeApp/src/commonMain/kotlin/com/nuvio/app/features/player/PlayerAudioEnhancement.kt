@@ -5,6 +5,14 @@ internal const val AUDIO_ENHANCEMENT_MIN_PERCENT = 0
 internal const val AUDIO_ENHANCEMENT_MAX_PERCENT = 100
 internal const val AUDIO_ENHANCEMENT_STEP_PERCENT = 10
 
+/** Volume amplification above 100%: +10 dB is about 316% of the original level. */
+internal const val AUDIO_AMPLIFICATION_MIN_DB = 0
+internal const val AUDIO_AMPLIFICATION_MAX_DB = 10
+internal const val AUDIO_AMPLIFICATION_STEP_DB = 1
+
+internal fun normalizeAudioAmplificationDb(db: Int): Int =
+    db.coerceIn(AUDIO_AMPLIFICATION_MIN_DB, AUDIO_AMPLIFICATION_MAX_DB)
+
 /** Dialogue boost / compression are implemented for ExoPlayer, libmpv and desktop mpv only. */
 internal val audioEnhancementSupported: Boolean
     get() = !com.nuvio.app.isIos && !com.nuvio.app.isWeb
@@ -19,12 +27,19 @@ internal fun normalizeAudioEnhancementPercent(percent: Int): Int =
  *   centre-panned voice band on stereo) over music and effects.
  * - [compressionPercent]: 0 = off. Dynamic range compression ("night mode"): quiet parts louder,
  *   loud peaks tamed. Independent from the dialogue boost.
+ * - [amplificationDb]: 0 = off. Volume gain above 100% (up to +10 dB), applied last and kept
+ *   from clipping by the limiter.
  */
 data class AudioEnhancementSettings(
     val dialogueBoostPercent: Int = 0,
     val compressionPercent: Int = 0,
+    val amplificationDb: Int = 0,
 ) {
-    val isActive: Boolean get() = dialogueBoostPercent > 0 || compressionPercent > 0
+    val isActive: Boolean get() = dialogueBoostPercent > 0 || compressionPercent > 0 || amplificationDb > 0
+
+    /** Linear gain of the volume amplification. */
+    val amplificationGain: Float
+        get() = dbToLinear(normalizeAudioAmplificationDb(amplificationDb).toFloat()).toFloat()
 
     /** Gain (linear) applied to the extracted dialogue: up to +12 dB at 100%. */
     val dialogueGainDb: Float get() = 12f * normalizeAudioEnhancementPercent(dialogueBoostPercent) / 100f
@@ -80,6 +95,9 @@ internal fun AudioEnhancementSettings.toMpvAudioFilter(sourceChannels: Int?): St
         val makeup = dbToLinear(compressionMakeupDb).coerceIn(1.0, 64.0)
         filters += "lavfi=[acompressor=threshold=${fmt(thresholdLinear)}:ratio=${fmt(compressionRatio.toDouble())}:" +
             "attack=10:release=200:makeup=${fmt(makeup)}]"
+    }
+    if (amplificationDb > 0) {
+        filters += "lavfi=[volume=${normalizeAudioAmplificationDb(amplificationDb)}dB]"
     }
     filters += "lavfi=[alimiter=limit=0.97:level=disabled]"
     return filters.joinToString(",")
