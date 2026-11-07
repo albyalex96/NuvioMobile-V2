@@ -41,6 +41,7 @@ actual object PlayerSettingsStorage {
     private const val secondaryPreferredSubtitleLanguageKey = "secondary_preferred_subtitle_language"
     private const val subtitleTextColorKey = "subtitle_text_color"
     private const val subtitleBackgroundColorKey = "subtitle_background_color"
+    private const val subtitleAppearanceKey = "subtitle_appearance"
     private const val subtitleOutlineColorKey = "subtitle_outline_color"
     private const val subtitleOutlineEnabledKey = "subtitle_outline_enabled"
     private const val subtitleOutlineWidthKey = "subtitle_outline_width"
@@ -159,6 +160,7 @@ actual object PlayerSettingsStorage {
         secondaryPreferredSubtitleLanguageKey,
         subtitleTextColorKey,
         subtitleBackgroundColorKey,
+        subtitleAppearanceKey,
         subtitleOutlineColorKey,
         subtitleOutlineEnabledKey,
         subtitleOutlineWidthKey,
@@ -534,10 +536,20 @@ actual object PlayerSettingsStorage {
     actual fun loadSubtitleBackgroundColor(): String? =
         preferences?.getString(ProfileScopedKey.of(subtitleBackgroundColorKey), null)
 
+    actual fun loadSubtitleAppearance(): String? =
+        preferences?.getString(ProfileScopedKey.of(subtitleAppearanceKey), null)
+
     actual fun saveSubtitleBackgroundColor(colorHex: String) {
         preferences
             ?.edit()
             ?.putString(ProfileScopedKey.of(subtitleBackgroundColorKey), colorHex)
+            ?.apply()
+    }
+
+    actual fun saveSubtitleAppearance(value: String) {
+        preferences
+            ?.edit()
+            ?.putString(ProfileScopedKey.of(subtitleAppearanceKey), value)
             ?.apply()
     }
 
@@ -1644,6 +1656,7 @@ actual object PlayerSettingsStorage {
         loadSecondaryPreferredSubtitleLanguage()?.let { put(secondaryPreferredSubtitleLanguageKey, encodeSyncString(it)) }
         loadSubtitleTextColor()?.let { put(subtitleTextColorKey, encodeSyncString(it)) }
         loadSubtitleBackgroundColor()?.let { put(subtitleBackgroundColorKey, encodeSyncString(it)) }
+        loadSubtitleAppearance()?.let { put(subtitleAppearanceKey, encodeSyncString(it)) }
         loadSubtitleOutlineColor()?.let { put(subtitleOutlineColorKey, encodeSyncString(it)) }
         loadSubtitleOutlineEnabled()?.let { put(subtitleOutlineEnabledKey, encodeSyncBoolean(it)) }
         loadSubtitleOutlineWidth()?.let { put(subtitleOutlineWidthKey, encodeSyncInt(it)) }
@@ -1759,6 +1772,7 @@ actual object PlayerSettingsStorage {
         payload.decodeSyncString(secondaryPreferredSubtitleLanguageKey)?.let(::saveSecondaryPreferredSubtitleLanguage)
         payload.decodeSyncString(subtitleTextColorKey)?.let(::saveSubtitleTextColor)
         payload.decodeSyncString(subtitleBackgroundColorKey)?.let(::saveSubtitleBackgroundColor)
+        payload.decodeSyncString(subtitleAppearanceKey)?.let(::saveSubtitleAppearance)
         payload.decodeSyncString(subtitleOutlineColorKey)?.let(::saveSubtitleOutlineColor)
         payload.decodeSyncBoolean(subtitleOutlineEnabledKey)?.let(::saveSubtitleOutlineEnabled)
         payload.decodeSyncInt(subtitleOutlineWidthKey)?.let(::saveSubtitleOutlineWidth)
