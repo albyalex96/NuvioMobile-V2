@@ -11,6 +11,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -179,7 +180,8 @@ internal fun Modifier.liveTvPressScale(onClick: () -> Unit, enabled: Boolean = t
         }
         .clickable(
             interactionSource = interaction,
-            indication = null,
+            // Default indication: on the TV app it is the focus ring of TvThemeOverlay.
+            indication = LocalIndication.current,
             enabled = enabled,
             onClick = onClick,
         )

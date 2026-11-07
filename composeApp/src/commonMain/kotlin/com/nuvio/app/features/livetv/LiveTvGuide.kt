@@ -48,6 +48,18 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.foundation.focusable
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
+import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.graphicsLayer
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -110,6 +122,14 @@ internal class LiveTvGuideScrollState {
         private set
     var maxPx by mutableFloatStateOf(0f)
         private set
+    var viewportPx by mutableFloatStateOf(0f)
+        private set
+
+    /**
+     * D-pad: time of the selected programme, shared by all rows so that Up/Down keep the same
+     * time slot (the programme airing at that time in the next channel is selected).
+     */
+    var focusTimeMillis by mutableLongStateOf(0L)
 
     val scrollable = ScrollableState { delta ->
         val old = offsetPx
@@ -119,11 +139,22 @@ internal class LiveTvGuideScrollState {
 
     /** Called with the visible timeline width; writing the same value invalidates nothing. */
     fun updateViewport(timelinePx: Float, viewportPx: Float) {
+        if (viewportPx != this.viewportPx) this.viewportPx = viewportPx
         val newMax = (timelinePx - viewportPx).coerceAtLeast(0f)
         if (newMax != maxPx) {
             maxPx = newMax
             offsetPx = offsetPx.coerceIn(0f, newMax)
         }
+    }
+
+    /** Scrolls the least needed to show [startPx, endPx] (with a margin), for the D-pad. */
+    suspend fun reveal(startPx: Float, endPx: Float, marginPx: Float) {
+        val target = when {
+            startPx - marginPx < offsetPx -> startPx - marginPx
+            endPx + marginPx > offsetPx + viewportPx -> minOf(startPx - marginPx, endPx + marginPx - viewportPx)
+            else -> return
+        }
+        animateTo(target)
     }
 
     fun snapTo(targetPx: Float) {
@@ -319,6 +350,22 @@ private fun LiveTvGuideRow(
     }
 
     val airingBlock = remember(blocks, nowMillis) { blocks.firstOrNull { it.program.isAiringAt(nowMillis) } }
+    var rowFocused by remember { mutableStateOf(false) }
+    val focusScope = rememberCoroutineScope()
+    val focusColor = tokens.colors.focusRing
+    // Programme selected with the D-pad: the one covering the shared focus time, else the nearest.
+    fun selectedBlock(): GuideBlock? {
+        if (blocks.isEmpty()) return null
+        val time = scrollState.focusTimeMillis.takeIf { it > 0L } ?: nowMillis
+        return blocks.firstOrNull { time >= it.program.startMillis && time < it.program.endMillis }
+            ?: blocks.minBy { minOf(kotlin.math.abs(it.program.startMillis - time), kotlin.math.abs(it.program.endMillis - time)) }
+    }
+    fun focusBlock(block: GuideBlock) {
+        // Middle of the visible part, so moving on to the next row lands on the same slot.
+        scrollState.focusTimeMillis = maxOf(block.program.startMillis, windowStart) +
+            (minOf(block.program.endMillis, windowEnd) - maxOf(block.program.startMillis, windowStart)) / 2
+        focusScope.launch { scrollState.reveal(block.startPx, block.startPx + block.widthPx, pxPerMinute * 20f) }
+    }
     val colors = tokens.colors
     val titleStyle = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium)
     val airingTitleStyle = titleStyle.copy(fontWeight = FontWeight.SemiBold)
@@ -383,6 +430,37 @@ private fun LiveTvGuideRow(
                 .clipToBounds()
                 .onSizeChanged { scrollState.updateViewport(timelinePx, it.width.toFloat()) }
                 .scrollable(scrollState.scrollable, Orientation.Horizontal)
+                // TV / keyboard: the row takes the focus; Left/Right move between programmes,
+                // OK opens the selected one. Left on the first programme goes to the channel.
+                .onFocusChanged { state ->
+                    rowFocused = state.isFocused
+                    if (state.isFocused) selectedBlock()?.let(::focusBlock)
+                }
+                .onKeyEvent { event ->
+                    when (event.key) {
+                        Key.DirectionRight, Key.DirectionLeft -> {
+                            if (event.type != KeyEventType.KeyDown) return@onKeyEvent true
+                            val current = selectedBlock() ?: return@onKeyEvent false
+                            val index = blocks.indexOf(current)
+                            val next = if (event.key == Key.DirectionRight) blocks.getOrNull(index + 1) else blocks.getOrNull(index - 1)
+                            if (next == null) {
+                                // Right at the end stays; Left at the start leaves the timeline.
+                                event.key == Key.DirectionRight
+                            } else {
+                                focusBlock(next)
+                                true
+                            }
+                        }
+
+                        Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
+                            if (event.type == KeyEventType.KeyUp) selectedBlock()?.let { onProgramClick(it.program) }
+                            true
+                        }
+
+                        else -> false
+                    }
+                }
+                .focusable()
                 .pointerInput(blocks) {
                     detectTapGestures { position ->
                         val x = position.x + scrollState.offsetPx
@@ -424,6 +502,22 @@ private fun LiveTvGuideRow(
                                     size = Size(width, 3.dp.toPx()),
                                 )
                             }
+                        }
+                        if (rowFocused && block === selectedBlock()) {
+                            val stroke = 2.5.dp.toPx()
+                            drawRoundRect(
+                                color = focusColor.copy(alpha = 0.16f),
+                                topLeft = Offset(left, 0f),
+                                size = Size(width, size.height),
+                                cornerRadius = radius,
+                            )
+                            drawRoundRect(
+                                color = focusColor,
+                                topLeft = Offset(left + stroke / 2f, stroke / 2f),
+                                size = Size(width - stroke, size.height - stroke),
+                                cornerRadius = radius,
+                                style = Stroke(width = stroke),
+                            )
                         }
                         // Fixed text width per block: the measurer cache hits while scrolling.
                         val textLeft = left + padH
