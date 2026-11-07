@@ -1,5 +1,13 @@
 package com.nuvio.app.features.player
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Shape
+import com.nuvio.app.core.ui.glass.ambientLiquidGlass
+import com.nuvio.app.core.ui.glass.isAmbientLiquidGlassActive
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -71,9 +79,14 @@ internal fun PlayerToolbar(
     castActive: Boolean = false,
     leadingContent: (@Composable () -> Unit)? = null,
 ) {
+    val capsule = playerToolbarGlassActive()
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.weight(1f))
         leadingContent?.invoke()
+        Row(
+            modifier = if (capsule) Modifier.playerToolbarGlass(PlayerGlassCapsule).padding(horizontal = 4.dp) else Modifier,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
         if (onCastClick != null) {
             PlayerAction(
                 description = stringResource(Res.string.cast_action),
@@ -97,9 +110,12 @@ internal fun PlayerToolbar(
             icon = if (isLocked) Icons.Rounded.LockOpen else Icons.Rounded.Lock,
             onClick = onLockToggle,
         )
+        }
+        if (capsule) Spacer(Modifier.width(8.dp))
         NuvioBackButton(
             tvFocusable = true,
             onClick = onBack,
+            modifier = if (capsule) Modifier.playerToolbarGlass(CircleShape) else Modifier,
             containerColor = Color.Transparent,
             contentColor = Color.White,
             buttonSize = 48.dp,
@@ -212,7 +228,13 @@ internal fun PlayerControlActions(
     val hasOverflow = actions.size > 5
     var expanded by remember(hasOverflow) { mutableStateOf(false) }
     val scrollState = rememberScrollState()
-    val startOffset = if (onNextEpisodeClick != null) (-13).dp else (-12).dp
+    val capsule = playerToolbarGlassActive()
+    // Without the capsule the first icon is pulled to the timeline edge; inside it, it keeps its padding.
+    val startOffset = when {
+        capsule -> 0.dp
+        onNextEpisodeClick != null -> (-13).dp
+        else -> (-12).dp
+    }
     LaunchedEffect(expanded, scrollState.maxValue) {
         if (expanded) scrollState.animateScrollTo(scrollState.maxValue) else scrollState.scrollTo(0)
     }
@@ -223,7 +245,11 @@ internal fun PlayerControlActions(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Row(
-                modifier = Modifier.weight(1f).offset(x = startOffset).horizontalScroll(scrollState),
+                modifier = Modifier
+                    .weight(1f, fill = !capsule)
+                    .offset(x = startOffset)
+                    .then(if (capsule) Modifier.playerToolbarGlass(PlayerGlassCapsule).padding(horizontal = 4.dp) else Modifier)
+                    .horizontalScroll(scrollState),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 actions.take(if (expanded) actions.size else 5).forEach { action ->
@@ -300,3 +326,22 @@ private data class PlayerControlAction(
     val painter: Painter? = null,
     val iconSize: Dp = 24.dp,
 )
+
+internal val PlayerGlassCapsule = RoundedCornerShape(percent = 50)
+
+/** True when the toolbar actions get their glass capsule: liquid glass on and control backings on. */
+@Composable
+private fun playerToolbarGlassActive(): Boolean =
+    LocalPlayerControlGlassEnabled.current && isAmbientLiquidGlassActive()
+
+@Composable
+private fun Modifier.playerToolbarGlass(shape: Shape): Modifier =
+    clip(shape).ambientLiquidGlass(
+        shape = shape,
+        tint = Color.White.copy(alpha = 0.06f),
+        fallback = Color.Transparent,
+        blurRadius = 12.dp,
+        refractionHeight = 8.dp,
+        refractionAmount = 12.dp,
+        backdropOpacity = 0.35f,
+    ).border(0.75.dp, Color.White.copy(alpha = 0.22f), shape)

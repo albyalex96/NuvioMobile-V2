@@ -103,6 +103,7 @@ Ported from [luqmanfadlli/NuvioMobile-Enhanced](https://github.com/luqmanfadlli/
 - **Custom seek interval** (1–20 seconds) for on-screen buttons, double tap (cumulative), notification/media session and iOS remote commands, with a dynamic icon.
 - **"Still watching?" prompt** (Netflix style): after a configurable number of consecutive auto-played episodes, optionally only at night (22:00–04:00), with a 10-second countdown before the player closes (or exits to the details page), with per-device options. A separate time-based version for **Live TV** (15 min – 6 h).
 - **Seek thumbnails** for single files and HLS streams, with separate options for phone and TV.
+- **Glass toolbars:** with liquid glass on, the player toolbar buttons (subtitles, audio, speed, next episode…) sit in a glass capsule and the close button in a glass circle; they follow the "glass backgrounds on controls" option.
 - **Cleaner controls:** options to remove the glass backgrounds behind player buttons and time pills, and to hide the skip back/forward buttons (double-tap seeking still works).
 - **Richer controls:** title logo, Stream Parser badges, source name, clock and end time above the timeline.
 - **Dialogue boost, dynamic range compression and volume boost** sliders in the audio panel (volume boost up to +10 dB, remembered per audio output device).
