@@ -304,6 +304,7 @@
   <string name="downloads_status_failed">Fallito</string>
   <string name="downloads_status_paused">In pausa • %1$s</string>
   <string name="episodes_cd_watched">Visto</string>
+    <string name="episodes_unavailable">Non disponibile</string>
   <string name="episodes_season">Stagione %1$d</string>
   <string name="episodes_specials">Speciali</string>
   <string name="floating_prompt_continue_where_left_off">Riprendi da dove avevi interrotto</string>
