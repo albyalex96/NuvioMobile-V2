@@ -40,6 +40,10 @@ import com.nuvio.app.features.settings.tabletNavBarStyle
 import com.nuvio.app.features.settings.ThemeSettingsRepository
 import com.nuvio.app.features.tvremote.TvRemoteNowPlayingCard
 import dev.chrisbanes.haze.hazeSource
+import com.nuvio.app.core.ui.LocalNavBarGlassBackdrop
+import com.nuvio.app.core.ui.glass.isLiquidGlassSupported
+import com.nuvio.app.core.ui.glass.nuvioBackdropSource
+import com.nuvio.app.core.ui.glass.rememberNuvioBackdrop
 import dev.chrisbanes.haze.rememberHazeState
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.compose_nav_home
@@ -84,6 +88,10 @@ internal fun MainTabsDestination(
         val tabsRouteActive = rootRouteActive
         val navBarScrollState = rememberNuvioNavBarScrollState()
         val navBarHazeState = rememberHazeState()
+        val navBarGlassBackdrop = rememberNuvioBackdrop()
+        val navBarGlassStyle by ThemeSettingsRepository.navBarGlass.collectAsStateWithLifecycle()
+        val liquidGlassEffectsEnabled by ThemeSettingsRepository.liquidGlassEffectsEnabled.collectAsStateWithLifecycle()
+        val navBarLiquidGlass = liquidGlassEffectsEnabled && isLiquidGlassSupported() && navBarGlassStyle.usesBackdrop
         val navBarStyleSetting by remember { ThemeSettingsRepository.navBarStyle }.collectAsStateWithLifecycle()
         val navBarGlowEnabled by ThemeSettingsRepository.navBarGlowEnabled.collectAsStateWithLifecycle()
         val floatingNavigationItems = buildList {
@@ -197,6 +205,13 @@ internal fun MainTabsDestination(
                         modifier = Modifier
                             .fillMaxSize()
                             .then(if (isTabletLayout || navBarStyleSetting != NavBarStyle.CLASSIC) Modifier.hazeSource(state = navBarHazeState) else Modifier)
+                            .then(
+                                if (navBarLiquidGlass && (isTabletLayout || navBarStyleSetting != NavBarStyle.CLASSIC)) {
+                                    Modifier.nuvioBackdropSource(navBarGlassBackdrop)
+                                } else {
+                                    Modifier
+                                },
+                            )
                             .then(if (navBarStyleSetting == NavBarStyle.ADAPTIVE) Modifier.nestedScroll(navBarScrollState.nestedScrollConnection) else Modifier)
                             .padding(innerPadding),
                     )
@@ -209,6 +224,7 @@ internal fun MainTabsDestination(
                         NavBarStyle.COMPACT -> navBarScrollState.collapse()
                         else -> {}
                     }
+                    CompositionLocalProvider(LocalNavBarGlassBackdrop provides navBarGlassBackdrop.takeIf { navBarLiquidGlass }) {
                     FloatingNavigationBar(
                         modifier = Modifier.align(Alignment.TopCenter).widthIn(max = 520.dp),
                         scrollState = navBarScrollState,
@@ -221,6 +237,7 @@ internal fun MainTabsDestination(
                         items = floatingNavigationItems,
                         glowEnabled = navBarGlowEnabled,
                     )
+                    }
                 }
 
                 if (isTabletLayout || useNativeBottomTabs || navBarStyleSetting != NavBarStyle.CLASSIC) {
@@ -246,6 +263,7 @@ internal fun MainTabsDestination(
                         NavBarStyle.COMPACT -> navBarScrollState.collapse()
                         else -> {}
                     }
+                    CompositionLocalProvider(LocalNavBarGlassBackdrop provides navBarGlassBackdrop.takeIf { navBarLiquidGlass }) {
                     FloatingNavigationBar(
                         modifier = Modifier.align(Alignment.BottomCenter),
                         scrollState = navBarScrollState,
@@ -253,6 +271,7 @@ internal fun MainTabsDestination(
                         items = floatingNavigationItems,
                         glowEnabled = navBarGlowEnabled,
                     )
+                    }
                 }
             }
         }

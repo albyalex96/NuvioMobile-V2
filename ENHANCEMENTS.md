@@ -145,6 +145,7 @@ Ported from [luqmanfadlli/NuvioMobile-Enhanced](https://github.com/luqmanfadlli/
 ## Appearance and interface
 
 - **Full AMOLED mode:** extra toggle that also turns surfaces and cards pure black.
+- **Liquid glass navigation bar:** with liquid glass on, the floating bar can be Liquid, Frosted, Clear or Solid, with adjustable blur, refraction and tint, toggles for vibrancy, edge highlight, shadow, chromatic aberration and a liquid lens under the selected tab, plus a custom color for the unselected icons (Navigation bar sheet, with reset). If the app closes right after the glass is turned on, it is switched off automatically at the next start.
 - **Liquid glass effects:** optional toggle (off by default, not on TV) that turns sheets, player controls and panels, the skip button, stream cards and stream filters into liquid glass, refracting the video or the content behind them. With the cinematic background, the streams screen and the details page (phone) refract the artwork too.
 - **Date format** presets (system, DD/MM/YYYY, MM/DD/YYYY, YYYY-MM-DD, DD MMM YYYY…) applied to every date in the app.
 - **Episode code format:** S1 E2, S01E02, S1E2, 01x02, 1x2.

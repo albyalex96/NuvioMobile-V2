@@ -7,6 +7,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import dev.chrisbanes.haze.HazeState
+import androidx.compose.runtime.staticCompositionLocalOf
+import com.nuvio.app.core.ui.glass.NuvioBackdrop
 import org.jetbrains.compose.resources.DrawableResource
 
 internal class FloatingNavigationItem(
@@ -19,6 +21,12 @@ internal class FloatingNavigationItem(
 )
 
 internal expect val floatingNavigationGlowSupported: Boolean
+
+/**
+ * Source of the floating bar's liquid glass: the screen content behind the bar records itself into
+ * it (only while the glass is active), the bar refracts it. Null keeps the classic Haze surface.
+ */
+internal val LocalNavBarGlassBackdrop = staticCompositionLocalOf<NuvioBackdrop?> { null }
 
 @Composable
 internal expect fun FloatingNavigationBar(

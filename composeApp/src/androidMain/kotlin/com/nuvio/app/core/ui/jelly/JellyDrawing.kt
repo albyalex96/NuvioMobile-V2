@@ -28,8 +28,11 @@ internal fun DrawScope.drawJellyGlow(frame: JellyFrame, color: Color) {
     )
 }
 
-internal fun DrawScope.jellyPillPath(frame: JellyFrame, count: Int): Path {
-    val inset = 4.dp.toPx()
+internal fun DrawScope.jellyPillPath(frame: JellyFrame, count: Int): Path =
+    jellyPillPath(frame, count, size, density)
+
+internal fun jellyPillPath(frame: JellyFrame, count: Int, size: Size, density: Float): Path {
+    val inset = 4f * density
     val tabWidth = (size.width - 2 * inset) / count
     val itemHeight = size.height - 2 * inset
     val centerX = inset + (frame.position + 0.5f) * tabWidth

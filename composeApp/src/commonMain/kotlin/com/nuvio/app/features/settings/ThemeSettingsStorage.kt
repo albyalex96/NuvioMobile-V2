@@ -28,6 +28,9 @@ internal expect object ThemeSettingsStorage {
     fun saveDateFormat(formatKey: String)
     fun loadEpisodeCodeFormat(): String?
     fun saveEpisodeCodeFormat(formatKey: String)
+    /** Device-local raw value (profile scoped, never synced); null removes it. */
+    fun loadLocalString(name: String): String?
+    fun saveLocalString(name: String, value: String?)
     fun loadLiquidGlassEffectsEnabled(): Boolean?
     fun saveLiquidGlassEffectsEnabled(enabled: Boolean)
     fun exportToSyncPayload(): JsonObject

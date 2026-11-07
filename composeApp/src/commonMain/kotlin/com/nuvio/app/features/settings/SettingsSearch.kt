@@ -1784,6 +1784,32 @@ private fun addAdditionalSearchEntries(
             section = stringResource(Res.string.settings_appearance_nav_bar_style),
             icon = Icons.Rounded.Palette,
         )
+        if (!TvAppRuntime.isTvApp && isLiquidGlassAvailable()) {
+            val navBarSection = stringResource(Res.string.settings_appearance_nav_bar_style)
+            listOf(
+                Triple("nav-bar-glass-material", Res.string.settings_nav_bar_glass_material, Res.string.settings_nav_bar_glass_material_description),
+                Triple("nav-bar-glass-blur", Res.string.settings_nav_bar_glass_blur, null),
+                Triple("nav-bar-glass-refraction", Res.string.settings_nav_bar_glass_refraction, null),
+                Triple("nav-bar-glass-tint", Res.string.settings_nav_bar_glass_tint, null),
+                Triple("nav-bar-glass-vibrancy", Res.string.settings_nav_bar_glass_vibrancy, Res.string.settings_nav_bar_glass_vibrancy_description),
+                Triple("nav-bar-glass-highlight", Res.string.settings_nav_bar_glass_highlight, Res.string.settings_nav_bar_glass_highlight_description),
+                Triple("nav-bar-glass-shadow", Res.string.settings_nav_bar_glass_shadow, Res.string.settings_nav_bar_glass_shadow_description),
+                Triple("nav-bar-glass-dispersion", Res.string.settings_nav_bar_glass_dispersion, Res.string.settings_nav_bar_glass_dispersion_description),
+                Triple("nav-bar-glass-selection-lens", Res.string.settings_nav_bar_glass_selection_lens, Res.string.settings_nav_bar_glass_selection_lens_description),
+                Triple("nav-bar-icon-color", Res.string.settings_nav_bar_icon_color, Res.string.settings_nav_bar_icon_color_description),
+                Triple("nav-bar-glass-reset", Res.string.settings_nav_bar_glass_reset, null),
+            ).forEach { (key, title, description) ->
+                row(
+                    page = SettingsPage.Appearance,
+                    key = key,
+                    title = stringResource(title),
+                    description = description?.let { stringResource(it) }.orEmpty(),
+                    pageLabel = layoutPage,
+                    section = navBarSection,
+                    icon = Icons.Rounded.Palette,
+                )
+            }
+        }
         if (TvAppRuntime.isTvApp) {
             row(
                 page = SettingsPage.Appearance,

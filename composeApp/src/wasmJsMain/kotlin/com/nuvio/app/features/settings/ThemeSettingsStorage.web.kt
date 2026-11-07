@@ -108,6 +108,17 @@ actual object ThemeSettingsStorage {
         NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = ProfileScopedKey.of(topNavBarEnabledKey))
     }
 
+    actual fun loadLocalString(name: String): String? =
+        NSUserDefaults.standardUserDefaults.stringForKey(ProfileScopedKey.of(name))
+
+    actual fun saveLocalString(name: String, value: String?) {
+        if (value == null) {
+            NSUserDefaults.standardUserDefaults.removeObjectForKey(ProfileScopedKey.of(name))
+        } else {
+            NSUserDefaults.standardUserDefaults.setObject(value, forKey = ProfileScopedKey.of(name))
+        }
+    }
+
     actual fun loadLiquidGlassEffectsEnabled(): Boolean? {
         val defaults = NSUserDefaults.standardUserDefaults
         val key = ProfileScopedKey.of(liquidGlassEffectsKey)

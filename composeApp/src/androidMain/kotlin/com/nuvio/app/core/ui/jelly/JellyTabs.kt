@@ -52,10 +52,11 @@ internal fun JellyTabRow(
     active: Boolean,
     compactSize: Boolean,
     modifier: Modifier,
+    inactiveColor: Color? = null,
 ) {
     val tokens = MaterialTheme.nuvio
     val palette = MaterialTheme.themePalette
-    val color = if (active) tokens.colors.accent else tokens.colors.textMuted
+    val color = if (active) tokens.colors.accent else inactiveColor ?: tokens.colors.textMuted
     val iconSize = if (compactSize) 24.dp else 28.dp
     val labelHeight = if (compactSize) 14.dp else 16.dp
     val iconModifier = Modifier.size(iconSize)

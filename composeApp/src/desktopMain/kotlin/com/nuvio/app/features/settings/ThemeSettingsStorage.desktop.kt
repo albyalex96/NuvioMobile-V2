@@ -120,6 +120,15 @@ actual object ThemeSettingsStorage {
             ?.apply()
     }
 
+    actual fun loadLocalString(name: String): String? =
+        preferences?.getString(ProfileScopedKey.of(name), null)
+
+    actual fun saveLocalString(name: String, value: String?) {
+        val editor = preferences?.edit() ?: return
+        if (value == null) editor.remove(ProfileScopedKey.of(name)) else editor.putString(ProfileScopedKey.of(name), value)
+        editor.apply()
+    }
+
     actual fun loadLiquidGlassEffectsEnabled(): Boolean? =
         preferences?.let { prefs ->
             val key = ProfileScopedKey.of(liquidGlassEffectsKey)

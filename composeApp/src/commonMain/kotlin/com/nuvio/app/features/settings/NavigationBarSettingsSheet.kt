@@ -33,6 +33,20 @@ import com.nuvio.app.core.ui.NuvioPrimaryButton
 import com.nuvio.app.core.ui.dismissNuvioBottomSheet
 import com.nuvio.app.core.ui.floatingNavigationGlowSupported
 import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.FilterChip
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import com.nuvio.app.core.ui.glass.LiquidGlassMaterial
+import com.nuvio.app.core.ui.glass.isLiquidGlassAvailable
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
 
@@ -103,6 +117,9 @@ internal fun NavigationBarSettingsSheet(
                             )
                         }
                     }
+                }
+                if (isLiquidGlassAvailable() && selectedStyle != NavBarStyle.CLASSIC) {
+                    navBarGlassOptions(isTablet)
                 }
             }
             item {
@@ -201,4 +218,183 @@ private fun NavBarOptionRow(title: String, selected: Boolean, onClick: () -> Uni
             }
         },
     )
+}
+
+/** Liquid glass of the floating bar: material, numbers, flags and the unselected icon color. */
+private fun LazyListScope.navBarGlassOptions(isTablet: Boolean) {
+    item(key = "nav_bar_glass") {
+        val effectsEnabled by ThemeSettingsRepository.liquidGlassEffectsEnabled.collectAsStateWithLifecycle()
+        val style by ThemeSettingsRepository.navBarGlass.collectAsStateWithLifecycle()
+        val effects by ThemeSettingsRepository.navBarGlassEffects.collectAsStateWithLifecycle()
+        val iconColor by ThemeSettingsRepository.navBarIconColor.collectAsStateWithLifecycle()
+        Column {
+            NuvioBottomSheetDivider()
+            Text(
+                text = stringResource(Res.string.settings_nav_bar_glass),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.nuvio.colors.textMuted,
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+            )
+            SettingsSwitchRow(
+                title = stringResource(Res.string.settings_appearance_liquid_glass_effects),
+                description = stringResource(Res.string.settings_appearance_liquid_glass_effects_description),
+                checked = effectsEnabled,
+                isTablet = isTablet,
+                onCheckedChange = ThemeSettingsRepository::setLiquidGlassEffectsEnabled,
+            )
+            AnimatedVisibility(effectsEnabled) {
+                Column {
+                    SettingsChipRow(
+                        title = stringResource(Res.string.settings_nav_bar_glass_material),
+                        description = stringResource(Res.string.settings_nav_bar_glass_material_description),
+                        isTablet = isTablet,
+                    ) {
+                        LiquidGlassMaterial.entries.forEach { material ->
+                            FilterChip(
+                                selected = style.material == material,
+                                onClick = { ThemeSettingsRepository.setNavBarGlass(style.copy(material = material)) },
+                                label = { Text(stringResource(material.labelRes())) },
+                            )
+                        }
+                    }
+                    AnimatedVisibility(style.usesBackdrop) {
+                        Column {
+                            if (style.usesBlur) {
+                                SettingsSliderRow(
+                                    title = stringResource(Res.string.settings_nav_bar_glass_blur),
+                                    value = effects.blurRadiusDp.roundToInt(),
+                                    valueText = { stringResource(Res.string.settings_nav_bar_glass_value_dp, it) },
+                                    valueRange = 0..32,
+                                    step = 1,
+                                    isTablet = isTablet,
+                                    onValueChange = {
+                                        ThemeSettingsRepository.setNavBarGlassEffects(effects.copy(blurRadiusDp = it.toFloat()))
+                                    },
+                                )
+                            }
+                            if (style.usesLens) {
+                                SettingsSliderRow(
+                                    title = stringResource(Res.string.settings_nav_bar_glass_refraction),
+                                    value = effects.refractionHeightDp.roundToInt(),
+                                    valueText = { stringResource(Res.string.settings_nav_bar_glass_value_dp, it) },
+                                    valueRange = 0..48,
+                                    step = 1,
+                                    isTablet = isTablet,
+                                    onValueChange = {
+                                        ThemeSettingsRepository.setNavBarGlassEffects(
+                                            effects.copy(refractionHeightDp = it.toFloat(), refractionAmountDp = it.toFloat()),
+                                        )
+                                    },
+                                )
+                            }
+                            SettingsSliderRow(
+                                title = stringResource(Res.string.settings_nav_bar_glass_tint),
+                                value = (effects.tintOpacity * 100).roundToInt(),
+                                valueText = { stringResource(Res.string.settings_nav_bar_glass_value_percent, it) },
+                                valueRange = 0..100,
+                                step = 5,
+                                isTablet = isTablet,
+                                onValueChange = {
+                                    ThemeSettingsRepository.setNavBarGlassEffects(effects.copy(tintOpacity = it / 100f))
+                                },
+                            )
+                            SettingsSwitchRow(
+                                title = stringResource(Res.string.settings_nav_bar_glass_vibrancy),
+                                description = stringResource(Res.string.settings_nav_bar_glass_vibrancy_description),
+                                checked = style.vibrancy,
+                                isTablet = isTablet,
+                                onCheckedChange = { ThemeSettingsRepository.setNavBarGlass(style.copy(vibrancy = it)) },
+                            )
+                            SettingsSwitchRow(
+                                title = stringResource(Res.string.settings_nav_bar_glass_shadow),
+                                description = stringResource(Res.string.settings_nav_bar_glass_shadow_description),
+                                checked = style.shadow,
+                                isTablet = isTablet,
+                                onCheckedChange = { ThemeSettingsRepository.setNavBarGlass(style.copy(shadow = it)) },
+                            )
+                            if (style.usesLens) {
+                                SettingsSwitchRow(
+                                    title = stringResource(Res.string.settings_nav_bar_glass_dispersion),
+                                    description = stringResource(Res.string.settings_nav_bar_glass_dispersion_description),
+                                    checked = effects.chromaticAberration,
+                                    isTablet = isTablet,
+                                    onCheckedChange = {
+                                        ThemeSettingsRepository.setNavBarGlassEffects(effects.copy(chromaticAberration = it))
+                                    },
+                                )
+                            }
+                            SettingsSwitchRow(
+                                title = stringResource(Res.string.settings_nav_bar_glass_selection_lens),
+                                description = stringResource(Res.string.settings_nav_bar_glass_selection_lens_description),
+                                checked = style.selectionLens,
+                                isTablet = isTablet,
+                                onCheckedChange = { ThemeSettingsRepository.setNavBarGlass(style.copy(selectionLens = it)) },
+                            )
+                        }
+                    }
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.settings_nav_bar_glass_highlight),
+                        description = stringResource(Res.string.settings_nav_bar_glass_highlight_description),
+                        checked = style.edgeHighlight,
+                        isTablet = isTablet,
+                        onCheckedChange = { ThemeSettingsRepository.setNavBarGlass(style.copy(edgeHighlight = it)) },
+                    )
+                }
+            }
+            NuvioBottomSheetDivider()
+            SettingsSwitchRow(
+                title = stringResource(Res.string.settings_nav_bar_icon_color),
+                description = stringResource(Res.string.settings_nav_bar_icon_color_description),
+                checked = iconColor != null,
+                isTablet = isTablet,
+                onCheckedChange = { enabled ->
+                    ThemeSettingsRepository.setNavBarIconColor(if (enabled) NavBarIconColorPresets.first() else null)
+                },
+            )
+            AnimatedVisibility(iconColor != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    NavBarIconColorPresets.forEach { argb ->
+                        val selected = iconColor == argb
+                        Box(
+                            Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(Color(argb))
+                                .border(
+                                    width = if (selected) 2.dp else 1.dp,
+                                    color = if (selected) MaterialTheme.colorScheme.primary else Color.White.copy(alpha = 0.2f),
+                                    shape = CircleShape,
+                                )
+                                .semantics { this.selected = selected }
+                                .clickable { ThemeSettingsRepository.setNavBarIconColor(argb) },
+                        )
+                    }
+                }
+            }
+            NuvioBottomSheetActionRow(
+                title = stringResource(Res.string.settings_nav_bar_glass_reset),
+                onClick = ThemeSettingsRepository::resetNavBarGlass,
+            )
+        }
+    }
+}
+
+private val NavBarIconColorPresets = listOf(
+    0xFFFFFFFF.toInt(),
+    0xFFB0B0B8.toInt(),
+    0xFF8AB4F8.toInt(),
+    0xFF81C995.toInt(),
+    0xFFFDD663.toInt(),
+    0xFFF28B82.toInt(),
+)
+
+private fun LiquidGlassMaterial.labelRes() = when (this) {
+    LiquidGlassMaterial.LIQUID -> Res.string.settings_nav_bar_glass_material_liquid
+    LiquidGlassMaterial.FROSTED -> Res.string.settings_nav_bar_glass_material_frosted
+    LiquidGlassMaterial.CLEAR -> Res.string.settings_nav_bar_glass_material_clear
+    LiquidGlassMaterial.SOLID -> Res.string.settings_nav_bar_glass_material_solid
 }

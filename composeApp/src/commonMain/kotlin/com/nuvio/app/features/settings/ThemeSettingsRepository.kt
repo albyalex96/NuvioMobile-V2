@@ -3,7 +3,12 @@ package com.nuvio.app.features.settings
 import co.touchlab.kermit.Logger
 import com.nuvio.app.core.format.DateFormatPreset
 import com.nuvio.app.core.format.EpisodeCodeFormat
+import com.nuvio.app.core.ui.glass.LiquidGlassEffectDefaults
+import com.nuvio.app.core.ui.glass.LiquidGlassEffectSettings
 import com.nuvio.app.core.ui.glass.LiquidGlassSettings
+import com.nuvio.app.core.ui.glass.LiquidGlassStyle
+import com.nuvio.app.core.ui.glass.decodeLiquidGlassEffectSettings
+import com.nuvio.app.core.ui.glass.encodeLiquidGlassEffectSettings
 import com.nuvio.app.core.ui.AppTheme
 import com.nuvio.app.core.ui.CustomThemeColors
 import com.nuvio.app.core.ui.NativeTabBridge
@@ -20,10 +25,16 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 object ThemeSettingsRepository {
     private val log = Logger.withTag("LiquidGlass")
+    private const val NAV_BAR_GLASS_KEY = "enhanced_local_nav_bar_glass"
+    private const val LIQUID_GLASS_GUARD_KEY = "enhanced_local_liquid_glass_guard"
+    private const val LIQUID_GLASS_GUARD_MS = 10_000L
+    private const val NAV_BAR_GLASS_EFFECTS_KEY = "enhanced_local_nav_bar_glass_effects"
+    private const val NAV_BAR_ICON_COLOR_KEY = "enhanced_local_nav_bar_icon_color"
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val _selectedThemePreference = MutableStateFlow<AppTheme?>(null)
@@ -53,6 +64,16 @@ object ThemeSettingsRepository {
 
     private val _navBarGlowEnabled = MutableStateFlow(true)
     val navBarGlowEnabled: StateFlow<Boolean> = _navBarGlowEnabled.asStateFlow()
+
+    private val _navBarGlass = MutableStateFlow(LiquidGlassStyle.Default)
+    val navBarGlass: StateFlow<LiquidGlassStyle> = _navBarGlass.asStateFlow()
+
+    private val _navBarGlassEffects = MutableStateFlow(LiquidGlassEffectDefaults.floatingBar)
+    internal val navBarGlassEffects: StateFlow<LiquidGlassEffectSettings> = _navBarGlassEffects.asStateFlow()
+
+    /** ARGB color of the unselected nav bar icons and labels; null keeps the theme color. */
+    private val _navBarIconColor = MutableStateFlow<Int?>(null)
+    val navBarIconColor: StateFlow<Int?> = _navBarIconColor.asStateFlow()
 
     private val _liquidGlassEffectsEnabled = MutableStateFlow(false)
     val liquidGlassEffectsEnabled: StateFlow<Boolean> = _liquidGlassEffectsEnabled.asStateFlow()
@@ -110,6 +131,9 @@ object ThemeSettingsRepository {
         applyDateFormat(DateFormatPreset.SYSTEM)
         applyEpisodeCodeFormat(EpisodeCodeFormat.DEFAULT)
         applyLiquidGlassEffectsEnabled(false)
+        _navBarGlass.value = LiquidGlassStyle.Default
+        _navBarGlassEffects.value = LiquidGlassEffectDefaults.floatingBar
+        _navBarIconColor.value = null
     }
 
     private fun loadFromDisk() {
@@ -142,7 +166,25 @@ object ThemeSettingsRepository {
         _topNavBarStyle.value = TopNavBarStyle.fromKey(ThemeSettingsStorage.loadTopNavBarStyle())
         applyDateFormat(DateFormatPreset.fromKey(ThemeSettingsStorage.loadDateFormat()))
         applyEpisodeCodeFormat(EpisodeCodeFormat.fromKey(ThemeSettingsStorage.loadEpisodeCodeFormat()))
-        applyLiquidGlassEffectsEnabled(ThemeSettingsStorage.loadLiquidGlassEffectsEnabled() ?: false)
+        var glassEnabled = ThemeSettingsStorage.loadLiquidGlassEffectsEnabled() ?: false
+        if (glassEnabled && ThemeSettingsStorage.loadLocalString(LIQUID_GLASS_GUARD_KEY) != null) {
+            // The app died right after the glass was turned on (or right after a start with it on):
+            // turn it off so the app can open again.
+            log.w { "Liquid glass disabled: the previous session crashed shortly after enabling it" }
+            glassEnabled = false
+            ThemeSettingsStorage.saveLiquidGlassEffectsEnabled(false)
+            ThemeSettingsStorage.saveLocalString(LIQUID_GLASS_GUARD_KEY, null)
+        }
+        applyLiquidGlassEffectsEnabled(glassEnabled)
+        if (glassEnabled) armLiquidGlassGuard()
+        _navBarGlass.value = LiquidGlassStyle.decode(ThemeSettingsStorage.loadLocalString(NAV_BAR_GLASS_KEY))
+        _navBarGlassEffects.value = decodeLiquidGlassEffectSettings(
+            ThemeSettingsStorage.loadLocalString(NAV_BAR_GLASS_EFFECTS_KEY),
+            LiquidGlassEffectDefaults.floatingBar,
+            LiquidGlassEffectDefaults.floatingBarLimits,
+        )
+        _navBarIconColor.value = ThemeSettingsStorage.loadLocalString(NAV_BAR_ICON_COLOR_KEY)
+            ?.toLongOrNull(16)?.toInt()
     }
 
     fun setTheme(theme: AppTheme) {
@@ -218,9 +260,52 @@ object ThemeSettingsRepository {
     fun setLiquidGlassEffectsEnabled(enabled: Boolean) {
         ensureLoaded()
         if (_liquidGlassEffectsEnabled.value == enabled) return
+        if (enabled) armLiquidGlassGuard() else ThemeSettingsStorage.saveLocalString(LIQUID_GLASS_GUARD_KEY, null)
         applyLiquidGlassEffectsEnabled(enabled)
         ThemeSettingsStorage.saveLiquidGlassEffectsEnabled(enabled)
         log.i { "Liquid glass effects ${if (enabled) "enabled" else "disabled"}" }
+    }
+
+    fun setNavBarGlass(style: LiquidGlassStyle) {
+        ensureLoaded()
+        if (_navBarGlass.value == style) return
+        _navBarGlass.value = style
+        ThemeSettingsStorage.saveLocalString(NAV_BAR_GLASS_KEY, style.encode())
+        log.d { "Nav bar glass material=${style.material.key}" }
+    }
+
+    internal fun setNavBarGlassEffects(settings: LiquidGlassEffectSettings) {
+        ensureLoaded()
+        val safe = settings.sanitized(LiquidGlassEffectDefaults.floatingBar, LiquidGlassEffectDefaults.floatingBarLimits)
+        if (_navBarGlassEffects.value == safe) return
+        _navBarGlassEffects.value = safe
+        ThemeSettingsStorage.saveLocalString(
+            NAV_BAR_GLASS_EFFECTS_KEY,
+            encodeLiquidGlassEffectSettings(safe, LiquidGlassEffectDefaults.floatingBar, LiquidGlassEffectDefaults.floatingBarLimits),
+        )
+    }
+
+    fun setNavBarIconColor(argb: Int?) {
+        ensureLoaded()
+        if (_navBarIconColor.value == argb) return
+        _navBarIconColor.value = argb
+        ThemeSettingsStorage.saveLocalString(NAV_BAR_ICON_COLOR_KEY, argb?.toUInt()?.toString(16))
+    }
+
+    fun resetNavBarGlass() {
+        setNavBarGlass(LiquidGlassStyle.Default)
+        setNavBarGlassEffects(LiquidGlassEffectDefaults.floatingBar)
+        setNavBarIconColor(null)
+        log.i { "Nav bar glass reset to defaults" }
+    }
+
+    /** Marks the glass as "on probation" for a few seconds; a crash in that window turns it off. */
+    private fun armLiquidGlassGuard() {
+        ThemeSettingsStorage.saveLocalString(LIQUID_GLASS_GUARD_KEY, "1")
+        scope.launch {
+            delay(LIQUID_GLASS_GUARD_MS)
+            ThemeSettingsStorage.saveLocalString(LIQUID_GLASS_GUARD_KEY, null)
+        }
     }
 
     private fun applyLiquidGlassEffectsEnabled(enabled: Boolean) {

@@ -145,6 +145,7 @@ Portata da [luqmanfadlli/NuvioMobile-Enhanced](https://github.com/luqmanfadlli/N
 ## Aspetto e interfaccia
 
 - **Modalità AMOLED completa:** toggle aggiuntivo che rende nere anche superfici e card.
+- **Barra di navigazione Liquid Glass:** con il Liquid Glass attivo, la barra flottante può essere Liquida, Smerigliata, Trasparente o Solida, con sfocatura, rifrazione e tinta regolabili, interruttori per vividezza, bordo luminoso, ombra, aberrazione cromatica e lente liquida sotto la scheda selezionata, più un colore personalizzato per le icone non selezionate (pannello Barra di navigazione, con ripristino). Se l'app si chiude subito dopo aver attivato il vetro, al riavvio viene spento automaticamente.
 - **Effetti Liquid Glass:** toggle opzionale (spento di default, assente su TV) che trasforma in vetro liquido pannelli, controlli e pannelli del player, il pulsante per saltare, le schede e i filtri degli stream, rifrangendo il video o il contenuto sottostante. Con lo sfondo cinematico anche la schermata degli stream e la pagina dei dettagli (telefono) rifrangono l'artwork.
 - **Formato data** a scelta (sistema, GG/MM/AAAA, MM/GG/AAAA, AAAA-MM-GG, GG MMM AAAA…) applicato a tutte le date dell'app.
 - **Formato del codice episodio:** S1 E2, S01E02, S1E2, 01x02, 1x2.

@@ -19,6 +19,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.AbsoluteAlignment
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
@@ -36,6 +38,19 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.ui.glass.GlassBarSurface
+import com.nuvio.app.core.ui.glass.LiquidGlassFrostedBar
+import com.nuvio.app.core.ui.glass.LiquidGlassSelectionSurface
+import com.nuvio.app.core.ui.glass.SolidGlassBar
+import com.nuvio.app.core.ui.glass.forMaterial
+import com.nuvio.app.core.ui.glass.isLiquidGlassSupported
+import com.nuvio.app.features.settings.ThemeSettingsRepository
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.unit.Density
 import com.nuvio.app.core.ui.jelly.JellyMotion
 import com.nuvio.app.core.ui.jelly.JellyTabRow
 import com.nuvio.app.core.ui.jelly.JellyTabTargets
@@ -68,7 +83,21 @@ internal actual fun FloatingNavigationBar(
     )
     val tokens = MaterialTheme.nuvio
     val accentColor = tokens.colors.accent
-    val selectedSurface = accentColor.copy(alpha = NuvioTokens.Opacity.selected)
+    val glassStyle by ThemeSettingsRepository.navBarGlass.collectAsState()
+    val glassEffects by ThemeSettingsRepository.navBarGlassEffects.collectAsState()
+    val iconColorArgb by ThemeSettingsRepository.navBarIconColor.collectAsState()
+    val inactiveColor = iconColorArgb?.let { Color(it) }
+    val glassBackdrop = LocalNavBarGlassBackdrop.current
+    val glassOn = isLiquidGlassSupported()
+    // Not gated on isReady: that flips during layout and would swap the surface mid lookahead pass.
+    val liquidActive = glassOn && glassStyle.usesBackdrop && glassBackdrop != null
+    val solidActive = glassOn && !glassStyle.usesBackdrop
+    val lensActive = liquidActive && glassStyle.selectionLens
+    val selectedSurface = when {
+        lensActive -> accentColor.copy(alpha = accentColor.alpha * 0.12f)
+        liquidActive || solidActive -> SolidSelectionPillFill
+        else -> accentColor.copy(alpha = NuvioTokens.Opacity.selected)
+    }
     val labelFraction by animateFloatAsState(
         targetValue = scrollState?.labelVisibility ?: 1f,
         animationSpec = tween(NuvioTokens.Motion.sheetEnterMillis, easing = NuvioTokens.Motion.standard),
@@ -153,7 +182,39 @@ internal actual fun FloatingNavigationBar(
                                     drawJellyGlow(motion.frame, accentColor.copy(alpha = accentColor.alpha * glowStrength))
                                 },
                         ) {
-                            GlassBarSurface(hazeState, Modifier.matchParentSize(), glowStrength)
+                            when {
+                                liquidActive -> LiquidGlassFrostedBar(
+                                    backdrop = glassBackdrop!!,
+                                    modifier = Modifier.matchParentSize(),
+                                    glowStrength = glowStrength,
+                                    settings = glassEffects.forMaterial(glassStyle.material),
+                                    style = glassStyle,
+                                )
+                                solidActive -> SolidGlassBar(Modifier.matchParentSize(), glassStyle.edgeHighlight)
+                                else -> GlassBarSurface(hazeState, Modifier.matchParentSize(), glowStrength)
+                            }
+                        }
+                        if (lensActive && selectedIndex >= 0) {
+                            // A fixed pill one tab wide, moved and stretched by a graphics layer: a
+                            // shape that changes every frame inside the shared-element lookahead
+                            // pass makes Compose place an unmeasured node and crash.
+                            Box(Modifier.matchParentSize().padding(4.dp).clearAndSetSemantics {}) {
+                                LiquidGlassSelectionSurface(
+                                    backdrop = glassBackdrop!!,
+                                    pressProgress = { ((motion.frame.contentScale - 1f) / 0.2f).coerceIn(0f, 1f) },
+                                    shape = { RoundedCornerShape(50) },
+                                    modifier = Modifier
+                                        .align(AbsoluteAlignment.CenterLeft)
+                                        .fillMaxHeight()
+                                        .fillMaxWidth(1f / items.size),
+                                    layerBlock = {
+                                        val frame = motion.frame
+                                        translationX = frame.position * size.width
+                                        scaleX = frame.pillScaleX
+                                        scaleY = frame.pillScaleY
+                                    },
+                                )
+                            }
                         }
                         Box(
                             Modifier.matchParentSize().drawWithContent {
@@ -166,7 +227,7 @@ internal actual fun FloatingNavigationBar(
                                 }
                             },
                         ) {
-                            JellyTabRow(items, labelFraction, motion, active = false, compactSize = compactSize, modifier = Modifier.matchParentSize())
+                            JellyTabRow(items, labelFraction, motion, active = false, compactSize = compactSize, modifier = Modifier.matchParentSize(), inactiveColor = inactiveColor)
                         }
                         if (selectedIndex >= 0) {
                             Box(
@@ -179,6 +240,13 @@ internal actual fun FloatingNavigationBar(
                                             selectedSurface,
                                             accentColor.copy(alpha = accentColor.alpha * glowStrength),
                                         ) { drawContent() }
+                                        if (liquidActive || solidActive) {
+                                            drawPath(
+                                                path = jellyPillPath(motion.frame, items.size),
+                                                color = SolidSelectionPillEdge,
+                                                style = Stroke(1.dp.toPx()),
+                                            )
+                                        }
                                     },
                             ) {
                                 JellyTabRow(items, labelFraction, motion, active = true, compactSize = compactSize, modifier = Modifier.matchParentSize())
@@ -191,6 +259,9 @@ internal actual fun FloatingNavigationBar(
         }
     }
 }
+
+private val SolidSelectionPillFill = Color.Black.copy(alpha = 0.34f)
+private val SolidSelectionPillEdge = Color.White.copy(alpha = 0.28f)
 
 internal fun visualNavIndex(logicalIndex: Int, count: Int, isRtl: Boolean): Int =
     if (logicalIndex in 0 until count && isRtl) count - 1 - logicalIndex else logicalIndex

@@ -35,6 +35,12 @@ import com.nuvio.app.core.ui.NuvioClassicNavigationBar
 import com.nuvio.app.core.ui.NuvioNavBarScrollState
 import com.nuvio.app.core.ui.nuvio
 import dev.chrisbanes.haze.hazeSource
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nuvio.app.core.ui.LocalNavBarGlassBackdrop
+import com.nuvio.app.core.ui.glass.isLiquidGlassSupported
+import com.nuvio.app.core.ui.glass.nuvioBackdropSource
+import com.nuvio.app.core.ui.glass.rememberNuvioBackdrop
 import dev.chrisbanes.haze.rememberHazeState
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.stringResource
@@ -50,6 +56,11 @@ internal fun NavigationBarPreview(
 ) {
     val tokens = MaterialTheme.nuvio
     val hazeState = rememberHazeState()
+    val glassBackdrop = rememberNuvioBackdrop()
+    val glassStyle by ThemeSettingsRepository.navBarGlass.collectAsStateWithLifecycle()
+    val liquidGlassEffectsEnabled by ThemeSettingsRepository.liquidGlassEffectsEnabled.collectAsStateWithLifecycle()
+    val liquidGlass = topBarStyle == null &&
+        liquidGlassEffectsEnabled && isLiquidGlassSupported() && glassStyle.usesBackdrop
     val topBar = topBarStyle != null
     val barScrollState = remember(style, isTablet, topBarStyle) {
         NuvioNavBarScrollState().apply {
@@ -76,6 +87,7 @@ internal fun NavigationBarPreview(
             Column(
                 Modifier.matchParentSize()
                     .hazeSource(hazeState)
+                    .then(if (liquidGlass) Modifier.nuvioBackdropSource(glassBackdrop) else Modifier)
                     .then(if (!topBar && style == NavBarStyle.ADAPTIVE) Modifier.nestedScroll(barScrollState.nestedScrollConnection) else Modifier)
                     .verticalScroll(rememberScrollState())
                     .background(tokens.colors.surfaceCard)
@@ -114,6 +126,7 @@ internal fun NavigationBarPreview(
                 }
             } else {
                 val atTop = isTablet || topBar
+                CompositionLocalProvider(LocalNavBarGlassBackdrop provides glassBackdrop.takeIf { liquidGlass }) {
                 FloatingNavigationBar(
                     items = items,
                     modifier = Modifier.align(if (atTop) Alignment.TopCenter else Alignment.BottomCenter)
@@ -124,6 +137,7 @@ internal fun NavigationBarPreview(
                     compactSize = atTop,
                     glowEnabled = glowEnabled,
                 )
+                }
             }
         }
         if (topBar) {

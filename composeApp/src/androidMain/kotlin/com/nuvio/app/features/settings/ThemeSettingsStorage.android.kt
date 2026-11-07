@@ -193,6 +193,16 @@ actual object ThemeSettingsStorage {
     actual fun loadEpisodeCodeFormat(): String? =
         preferences?.getString(ProfileScopedKey.of(episodeCodeFormatKey), null)
 
+    actual fun loadLocalString(name: String): String? =
+        preferences?.getString(ProfileScopedKey.of(name), null)
+
+    actual fun saveLocalString(name: String, value: String?) {
+        val editor = preferences?.edit() ?: return
+        if (value == null) editor.remove(ProfileScopedKey.of(name)) else editor.putString(ProfileScopedKey.of(name), value)
+        // Synchronous: the liquid glass crash guard must be on disk before a possible crash.
+        editor.commit()
+    }
+
     actual fun loadLiquidGlassEffectsEnabled(): Boolean? =
         preferences?.let { prefs ->
             val key = ProfileScopedKey.of(localLiquidGlassEffectsKey)
