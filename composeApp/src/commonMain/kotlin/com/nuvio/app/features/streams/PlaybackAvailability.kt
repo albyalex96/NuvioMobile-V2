@@ -1,5 +1,6 @@
 package com.nuvio.app.features.streams
 
+import kotlinx.coroutines.launch
 import com.nuvio.app.core.logging.StartupTrace
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -71,7 +72,9 @@ internal fun rememberPlaybackAvailability(): PlaybackAvailability {
     }.collectAsStateWithLifecycle()
     val plugins = if (AppFeaturePolicy.pluginsEnabled) {
         val state by remember {
-            StartupTrace.measure("PluginRepository.initialize") { PluginRepository.initialize() }
+            // Off the main thread: on a TV box the stored scrapers take 0.1-4 s to load. The
+            // availability is recomputed when the plugin state arrives.
+            PluginStartupLoader.loadInBackground()
             PluginRepository.uiState
         }.collectAsStateWithLifecycle()
         state
@@ -89,5 +92,24 @@ internal fun rememberPlaybackAvailability(): PlaybackAvailability {
     }.collectAsStateWithLifecycle()
     return remember(addons, plugins, downloads, servers.revision) {
         PlaybackAvailability(addons.addons, plugins)
+    }
+}
+
+/** Loads the stored plugins once, on a background thread, for the startup path. */
+private object PluginStartupLoader {
+    private val started = kotlinx.coroutines.flow.MutableStateFlow(false)
+
+    fun loadInBackground() {
+        if (!started.compareAndSet(expect = false, update = true)) return
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default)
+            .launch {
+                runCatching {
+                    StartupTrace.measure("PluginRepository.initialize (background)") {
+                        PluginRepository.initialize()
+                    }
+                }.onFailure { error ->
+                    co.touchlab.kermit.Logger.withTag("Startup").e(error) { "Plugin background load failed" }
+                }
+            }
     }
 }

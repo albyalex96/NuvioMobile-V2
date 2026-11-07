@@ -83,7 +83,14 @@ actual object PluginRepository {
     private val persistenceLock = SynchronizedObject()
     private val persistedRevisionByProfile = mutableMapOf<Int, Long>()
 
-    actual fun initialize() {
+    /** [initialize] can run on a background thread at startup and on the main thread elsewhere. */
+    private val initializeLock = SynchronizedObject()
+
+    actual fun initialize() = synchronized(initializeLock) {
+        initializeLocked()
+    }
+
+    private fun initializeLocked() {
         val effectiveProfileId = resolveEffectiveProfileId(ProfileRepository.activeProfileId)
         val shouldRefreshStoredRepos = !initialized || currentProfileId != effectiveProfileId
         ensureStateLoadedForProfile(effectiveProfileId)
