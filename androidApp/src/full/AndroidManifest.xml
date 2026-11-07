@@ -16,6 +16,17 @@
             android:name="com.nuvio.app.features.tvremote.PhoneTvRemoteService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
+        <!-- TV remote: Quick Settings tile that opens the controls even with the app closed. -->
+        <service
+            android:name="com.nuvio.app.features.tvremote.PhoneTvRemoteTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_tile_tv_remote"
+            android:label="@string/tv_remote_tile_label"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
     </application>
 
 </manifest>

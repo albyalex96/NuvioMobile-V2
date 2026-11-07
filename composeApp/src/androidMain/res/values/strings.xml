@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Nuvio Enhanced</string>
+    <string name="tv_remote_tile_label">Nuvio TV remote</string>
 </resources>

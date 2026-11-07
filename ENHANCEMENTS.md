@@ -49,6 +49,7 @@ A dedicated Android TV app, released as a separate APK (`Nuvio-Enhanced-Alby-TV-
 
 - **Remote control for Android TV playback** from the phone: pair with a code, the in-app QR scanner or automatic TV discovery on the network (manual address as a fallback).
 - Controls in a background notification, on the lock screen and with the volume keys, shown automatically when the TV is detected online.
+- Quick Settings tile "Nuvio TV remote" to open (or close) the notification controls even with the app closed.
 - **Telegram login on the TV** done from the paired phone.
 - **View and manage the TV logs** from the phone (Settings → Advanced → Diagnostics → TV logs, shown when a TV is paired).
 - **Watch Party companion chat** on the phone.

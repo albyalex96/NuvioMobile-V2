@@ -113,6 +113,7 @@ class PhoneTvRemoteService : Service() {
             }
         }
         log.i { "Background controls started" }
+        PhoneTvRemoteTileService.requestRefresh(this)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -148,6 +149,7 @@ class PhoneTvRemoteService : Service() {
             session.release()
         }
         scope.cancel()
+        PhoneTvRemoteTileService.requestRefresh(this)
         super.onDestroy()
     }
 
@@ -513,15 +515,36 @@ class PhoneTvRemoteService : Service() {
             dismissedOnline = false
         }
 
-        internal fun start(context: Context) {
+        internal val isRunning: Boolean
+            get() = running
+
+        internal fun start(context: Context): Boolean {
             running = true
-            try {
+            return try {
                 ContextCompat.startForegroundService(context, Intent(context, PhoneTvRemoteService::class.java))
+                true
             } catch (error: Exception) {
                 // Android 12+ refuses foreground services started from background: retried
                 // the next time the app is opened.
                 running = false
                 Logger.withTag("PhoneTvRemote").w(error) { "Background controls not started" }
+                false
+            }
+        }
+
+        /** Quick Settings tile: an explicit user request, so a previous dismissal is forgotten. */
+        internal fun startFromTile(context: Context): Boolean {
+            dismissedSessionKey = null
+            dismissedOnline = false
+            return start(context)
+        }
+
+        /** Quick Settings tile: closes the controls as the notification "Close" button does. */
+        internal fun stopFromTile(context: Context) {
+            runCatching {
+                context.startService(Intent(context, PhoneTvRemoteService::class.java).setAction(ACTION_STOP))
+            }.onFailure { error ->
+                Logger.withTag("PhoneTvRemote").w(error) { "Background controls not closed from the tile" }
             }
         }
     }

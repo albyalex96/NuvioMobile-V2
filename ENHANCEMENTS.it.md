@@ -49,6 +49,7 @@ Un'app dedicata ad Android TV, distribuita come APK separato (`Nuvio-Enhanced-Al
 
 - **Telecomando per la riproduzione su Android TV** dal telefono: abbinamento con codice, scanner QR integrato o rilevamento automatico della TV in rete (indirizzo manuale come alternativa).
 - Controlli in una notifica in background, sulla schermata di blocco e con i tasti del volume, mostrati in automatico quando la TV risulta online.
+- Riquadro "Telecomando Nuvio" nelle impostazioni rapide per aprire (o chiudere) i controlli in notifica anche con l'app chiusa.
 - **Accesso a Telegram sulla TV** fatto dal telefono abbinato.
 - **Visualizzazione e gestione dei log della TV** dal telefono (Impostazioni → Avanzate → Diagnostica → Log TV, visibile quando c'è una TV associata).
 - **Chat di Watch Party** sul telefono come companion.
