@@ -6,7 +6,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -109,6 +108,9 @@ internal val liveTvSportsLeagues = listOf(
     LiveTvSportsLeague("eng.1", "Premier League", "soccer/eng.1"),
     LiveTvSportsLeague("esp.1", "LaLiga", "soccer/esp.1"),
     LiveTvSportsLeague("ita.1", "Serie A", "soccer/ita.1"),
+    LiveTvSportsLeague("ita.2", "Serie B", "soccer/ita.2"),
+    LiveTvSportsLeague("ita.coppa_italia", "Coppa Italia", "soccer/ita.coppa_italia"),
+    LiveTvSportsLeague("ita.super_cup", "Supercoppa Italiana", "soccer/ita.super_cup"),
     LiveTvSportsLeague("ger.1", "Bundesliga", "soccer/ger.1"),
     LiveTvSportsLeague("fra.1", "Ligue 1", "soccer/fra.1"),
     LiveTvSportsLeague("uefa.champions", "Champions League", "soccer/uefa.champions"),
@@ -458,18 +460,25 @@ private fun LiveTvSportsEventCard(
 ) {
     val tokens = MaterialTheme.nuvio
     val isLive = event.state == LiveTvSportsState.Live
+    val cardShape = tokens.shapes.compactCard
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(
+                if (isLive) {
+                    // Pulsing red outline while the match is on (draw phase only).
+                    Modifier.liveTvGlowBorder(
+                        alpha = rememberLiveTvBlinkAlpha(minAlpha = 0.25f, periodMillis = 1_200),
+                        shape = cardShape,
+                    )
+                } else {
+                    Modifier
+                },
+            ),
         onClick = { channels.firstOrNull()?.let(onChannelClick) },
         enabled = channels.isNotEmpty(),
         color = tokens.colors.surface,
-        shape = tokens.shapes.compactCard,
-        border = if (isLive) {
-            // Pulsing red outline while the match is on.
-            BorderStroke(1.5.dp, LiveTvLiveRed.copy(alpha = rememberLiveTvBlinkAlpha(minAlpha = 0.25f, periodMillis = 1_200)))
-        } else {
-            null
-        },
+        shape = cardShape,
     ) {
         Column(
             modifier = Modifier.padding(12.dp),

@@ -41,6 +41,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.runtime.State
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -188,7 +193,8 @@ internal fun LiveTvPulsingDot(
     modifier: Modifier = Modifier,
 ) {
     val transition = rememberInfiniteTransition(label = "liveTvPulse")
-    val progress by transition.animateFloat(
+    // Read only inside drawBehind: the animation redraws the dot without recomposing the caller.
+    val progressState = transition.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(1_300, easing = LinearEasing), RepeatMode.Restart),
@@ -198,6 +204,7 @@ internal fun LiveTvPulsingDot(
         modifier = modifier
             .size(size)
             .drawBehind {
+                val progress = progressState.value
                 val radius = this.size.minDimension / 2f
                 drawCircle(
                     color = color.copy(alpha = (1f - progress) * 0.55f),
@@ -208,17 +215,33 @@ internal fun LiveTvPulsingDot(
     )
 }
 
-/** Alpha that blinks between 1 and [minAlpha]: the classic "LIVE" blinking effect. */
+/**
+ * Alpha that blinks between 1 and [minAlpha]: the classic "LIVE" blinking effect. Returned as a
+ * State so callers read it in graphicsLayer/draw lambdas, never in composition (that would
+ * recompose the whole card on every frame).
+ */
 @Composable
-internal fun rememberLiveTvBlinkAlpha(minAlpha: Float = 0.35f, periodMillis: Int = 900): Float {
+internal fun rememberLiveTvBlinkAlpha(minAlpha: Float = 0.35f, periodMillis: Int = 900): State<Float> {
     val transition = rememberInfiniteTransition(label = "liveTvBlink")
-    val alpha by transition.animateFloat(
+    return transition.animateFloat(
         initialValue = 1f,
         targetValue = minAlpha,
         animationSpec = infiniteRepeatable(tween(periodMillis, easing = FastOutSlowInEasing), RepeatMode.Reverse),
         label = "liveTvBlinkAlpha",
     )
-    return alpha
+}
+
+/** Outline of [shape] whose alpha follows [alpha], drawn in the draw phase only. */
+internal fun Modifier.liveTvGlowBorder(
+    alpha: State<Float>,
+    shape: Shape,
+    color: Color = LiveTvLiveRed,
+    width: Dp = 1.5.dp,
+): Modifier = drawWithContent {
+    drawContent()
+    val strokePx = width.toPx()
+    val outline = shape.createOutline(size, layoutDirection, this)
+    drawOutline(outline = outline, color = color.copy(alpha = alpha.value), style = Stroke(width = strokePx))
 }
 
 /** Red "LIVE" pill with a blinking dot. */
@@ -236,7 +259,7 @@ internal fun LiveTvLiveBadge(modifier: Modifier = Modifier) {
         Box(
             modifier = Modifier
                 .size(6.dp)
-                .graphicsLayer { alpha = blink }
+                .graphicsLayer { alpha = blink.value }
                 .clip(CircleShape)
                 .background(Color.White),
         )

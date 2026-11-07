@@ -26,6 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -194,6 +195,10 @@ private fun LiveTvGuideRow(
     val tokens = MaterialTheme.nuvio
     val accent = tokens.colors.accent
     val windowEnd = windowStart + LIVE_TV_GUIDE_WINDOW_MILLIS
+    // XMLTV guides often hold days of programmes: keep only the 12 h window, once per row.
+    val windowPrograms = remember(programs, windowStart) {
+        programs.filter { it.endMillis > windowStart && it.startMillis < windowEnd }
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -255,7 +260,7 @@ private fun LiveTvGuideRow(
                     .width(LiveTvGuideTimelineWidth)
                     .fillMaxHeight(),
             ) {
-                programs.forEach { program ->
+                windowPrograms.forEach { program ->
                     val start = maxOf(program.startMillis, windowStart)
                     val end = minOf(program.endMillis, windowEnd)
                     if (end <= start) return@forEach
