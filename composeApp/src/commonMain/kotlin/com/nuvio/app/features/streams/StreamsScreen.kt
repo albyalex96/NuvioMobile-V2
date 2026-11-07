@@ -1,5 +1,9 @@
 package com.nuvio.app.features.streams
 
+import com.nuvio.app.core.ui.glass.LocalLiquidGlassBackdrop
+import com.nuvio.app.core.ui.glass.isLiquidGlassSupported
+import com.nuvio.app.core.ui.glass.nuvioBackdropSource
+import com.nuvio.app.core.ui.glass.rememberNuvioBackdrop
 import com.nuvio.app.features.cloudstream.CloudStreamBadge
 import com.nuvio.app.core.format.formatEpisodeCodeWithSelectedFormat
 import androidx.compose.animation.AnimatedVisibility
@@ -609,6 +613,10 @@ private fun MobileStreamsLayout(
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val streamsGlassBackdrop = rememberNuvioBackdrop()
+    val streamsGlassEnabled = backgroundMode == StreamBackgroundMode.Cinematic &&
+        heroArtwork != null &&
+        isLiquidGlassSupported()
     Box(modifier = modifier.fillMaxSize()) {
         if (backgroundMode == StreamBackgroundMode.Cinematic && heroArtwork != null) {
             AsyncImage(
@@ -616,18 +624,31 @@ private fun MobileStreamsLayout(
                 contentDescription = null,
                 modifier = Modifier
                     .fillMaxSize()
-                    .blur(22.dp),
+                    .then(
+                        if (streamsGlassEnabled) {
+                            Modifier.blur(12.dp).nuvioBackdropSource(streamsGlassBackdrop)
+                        } else {
+                            Modifier.blur(22.dp)
+                        },
+                    ),
                 contentScale = ContentScale.Crop,
             )
+            val dim = when {
+                streamsGlassEnabled -> if (isEpisode) 0.72f else 0.62f
+                else -> if (isEpisode) 0.9f else 0.82f
+            }
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = if (isEpisode) 0.9f else 0.82f)),
+                    .background(Color.Black.copy(alpha = dim)),
             )
         }
 
         val streamBlendColor = MaterialTheme.colorScheme.background
 
+        CompositionLocalProvider(
+            LocalLiquidGlassBackdrop provides if (streamsGlassEnabled) streamsGlassBackdrop else null,
+        ) {
         Column(modifier = Modifier.fillMaxSize()) {
             if (isEpisode && seasonNumber != null && episodeNumber != null) {
                 EpisodeHeroBlock(
@@ -695,6 +716,7 @@ private fun MobileStreamsLayout(
                     )
                 }
             }
+        }
         }
     }
 }

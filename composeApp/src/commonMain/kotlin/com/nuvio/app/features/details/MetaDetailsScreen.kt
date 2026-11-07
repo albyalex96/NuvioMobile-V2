@@ -1,5 +1,10 @@
 package com.nuvio.app.features.details
 
+import com.nuvio.app.core.ui.glass.LocalLiquidGlassBackdrop
+import com.nuvio.app.core.ui.glass.isLiquidGlassSupported
+import com.nuvio.app.core.ui.glass.nuvioBackdropSource
+import com.nuvio.app.core.ui.glass.rememberNuvioBackdrop
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.ExperimentalSharedTransitionApi
@@ -1212,6 +1217,13 @@ fun MetaDetailsScreen(
                         metaScreenSettingsUiState.items.any { it.key == key && it.enabled }
                     }
 
+                    val cinematicArtworkBackdrop = rememberNuvioBackdrop()
+                    val cinematicGlassEnabled = !useTabletLayout &&
+                        backgroundMode == MetaScreenBackgroundMode.Cinematic &&
+                        isLiquidGlassSupported()
+                    CompositionLocalProvider(
+                        LocalLiquidGlassBackdrop provides if (cinematicGlassEnabled) cinematicArtworkBackdrop else null,
+                    ) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         Box(Modifier.fillMaxSize().detailsContentReveal(metaScreenSettingsUiState.posterTransitionEnabled)) {
                             if (useTabletLayout) {
@@ -1238,13 +1250,19 @@ fun MetaDetailsScreen(
                                         contentDescription = null,
                                         modifier = Modifier
                                             .fillMaxSize()
-                                            .blur(30.dp),
+                                            .then(
+                                                if (cinematicGlassEnabled) {
+                                                    Modifier.blur(16.dp).nuvioBackdropSource(cinematicArtworkBackdrop)
+                                                } else {
+                                                    Modifier.blur(30.dp)
+                                                },
+                                            ),
                                         contentScale = ContentScale.Crop,
                                     )
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize()
-                                            .background(colorScheme.background.copy(alpha = 0.92f)),
+                                            .background(colorScheme.background.copy(alpha = if (cinematicGlassEnabled) 0.8f else 0.92f)),
                                     )
                                 }
                                 MetaScreenBackgroundMode.DominantColor -> if (deferredMetaWorkAllowed) {
@@ -1711,6 +1729,7 @@ fun MetaDetailsScreen(
                                 onDismiss = { showAiAssistantSheet = false },
                             )
                         }
+                    }
                     }
                 }
             }
