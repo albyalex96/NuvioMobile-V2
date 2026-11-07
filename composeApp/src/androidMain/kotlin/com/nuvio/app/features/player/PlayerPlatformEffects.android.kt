@@ -1,5 +1,7 @@
 package com.nuvio.app.features.player
 
+import com.nuvio.app.tv.TvAppRuntime
+import android.content.pm.PackageManager
 import android.app.Activity
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -256,4 +258,13 @@ internal actual fun OnPlayerScreenOff(onScreenOff: () -> Unit) {
 internal actual fun rememberProgressUploadKeepAlive(): () -> Unit {
     val context = LocalContext.current.applicationContext
     return remember(context) { { ProgressUploadKeepAliveService.start(context) } }
+}
+
+@Composable
+actual fun rememberEnterPictureInPicture(): (() -> Unit)? {
+    val activity = LocalContext.current.findActivity() ?: return null
+    if (TvAppRuntime.isTvApp) return null
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return null
+    if (!activity.packageManager.hasSystemFeature(PackageManager.FEATURE_PICTURE_IN_PICTURE)) return null
+    return remember(activity) { { PlayerPictureInPictureManager.enterOnRequest(activity) } }
 }

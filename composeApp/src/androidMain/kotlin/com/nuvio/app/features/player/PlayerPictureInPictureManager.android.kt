@@ -1,5 +1,6 @@
 package com.nuvio.app.features.player
 
+import co.touchlab.kermit.Logger
 import android.app.Activity
 import android.app.PictureInPictureParams
 import android.app.RemoteAction
@@ -25,6 +26,8 @@ import org.jetbrains.compose.resources.getString
 internal const val PIP_ACTION_TOGGLE_PLAY_PAUSE = "com.nuvio.app.action.PIP_TOGGLE_PLAY_PAUSE"
 
 internal object PlayerPictureInPictureManager {
+    private val log = Logger.withTag("Player/PiP")
+
     private data class SessionState(
         val isActive: Boolean = false,
         val isPlaying: Boolean = false,
@@ -115,6 +118,19 @@ internal object PlayerPictureInPictureManager {
         if (runCatching { activity.setPictureInPictureParams(buildParams(activity)) }.isSuccess) {
             lastAppliedSessionState = sessionState
         }
+    }
+
+    /** The player's PiP button: enters even while paused, as long as a player session is active. */
+    fun enterOnRequest(activity: Activity) {
+        if (!activity.canUsePictureInPicture() || !sessionState.isActive) {
+            log.w { "PiP button ignored: no active player session or PiP unavailable" }
+            return
+        }
+        if (activity.isInPictureInPictureMode) return
+        val entered = runCatching { activity.enterPictureInPictureMode(buildParams(activity)) }
+            .onFailure { log.e(it) { "PiP button: enterPictureInPictureMode failed" } }
+            .getOrDefault(false)
+        log.i { "PiP button: entered=$entered" }
     }
 
     private fun enterIfEligible(activity: Activity): Boolean {

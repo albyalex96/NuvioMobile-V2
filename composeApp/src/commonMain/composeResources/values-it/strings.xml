@@ -1415,6 +1415,7 @@
   <string name="settings_nav_bar_icon_color">Colore icone personalizzato</string>
   <string name="settings_nav_bar_icon_color_description">Colore delle icone e delle etichette non selezionate nella barra flottante.</string>
   <string name="settings_nav_bar_glass_reset">Ripristina il vetro predefinito</string>
+  <string name="compose_player_picture_in_picture">Picture-in-picture</string>
   <string name="settings_playback_control_glass">Sfondi di vetro sui controlli</string>
   <string name="settings_playback_control_glass_description">Mostra gli sfondi traslucidi rotondi e a pillola dietro ai pulsanti del player e ai tempi. Disattivalo per icone e testo semplici.</string>
   <string name="settings_playback_show_skip_buttons">Mostra pulsanti per saltare</string>

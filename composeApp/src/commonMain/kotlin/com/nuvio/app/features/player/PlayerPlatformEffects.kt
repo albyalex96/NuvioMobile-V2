@@ -41,6 +41,10 @@ expect fun ManagePlayerPictureInPicture(
 @Composable
 expect fun rememberIsInPictureInPicture(): Boolean
 
+/** Enters system picture-in-picture on request; null where the device or platform has none. */
+@Composable
+expect fun rememberEnterPictureInPicture(): (() -> Unit)?
+
 /** Calls [onScreenOff] when the device screen turns off (Android `ACTION_SCREEN_OFF`). */
 @Composable
 internal expect fun OnPlayerScreenOff(onScreenOff: () -> Unit)

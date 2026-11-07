@@ -90,3 +90,6 @@ private object DesktopMpvGestureController : PlayerGestureController {
         return currentVolume()
     }
 }
+
+@Composable
+actual fun rememberEnterPictureInPicture(): (() -> Unit)? = null

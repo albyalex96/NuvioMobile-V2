@@ -1,5 +1,6 @@
 package com.nuvio.app.features.player
 
+import androidx.compose.material.icons.rounded.PictureInPictureAlt
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -83,10 +84,18 @@ internal fun PlayerToolbar(
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Spacer(Modifier.weight(1f))
         leadingContent?.invoke()
+        val enterPictureInPicture = rememberEnterPictureInPicture()
         Row(
             modifier = if (capsule) Modifier.playerToolbarGlass(PlayerGlassCapsule).padding(horizontal = 4.dp) else Modifier,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+        if (enterPictureInPicture != null) {
+            PlayerAction(
+                description = stringResource(Res.string.compose_player_picture_in_picture),
+                icon = Icons.Rounded.PictureInPictureAlt,
+                onClick = enterPictureInPicture,
+            )
+        }
         if (onCastClick != null) {
             PlayerAction(
                 description = stringResource(Res.string.cast_action),

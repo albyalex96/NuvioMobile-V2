@@ -143,3 +143,6 @@ internal actual fun OnPlayerScreenOff(onScreenOff: () -> Unit) = Unit
 
 @Composable
 internal actual fun rememberProgressUploadKeepAlive(): () -> Unit = remember { {} }
+
+@Composable
+actual fun rememberEnterPictureInPicture(): (() -> Unit)? = null

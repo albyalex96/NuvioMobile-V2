@@ -59,3 +59,6 @@ internal actual fun rememberProgressUploadKeepAlive(): () -> Unit = remember { {
 internal actual fun rememberPlatformPlayerGestureController(): PlayerGestureController? =
     remember { null }
 
+
+@Composable
+actual fun rememberEnterPictureInPicture(): (() -> Unit)? = null
