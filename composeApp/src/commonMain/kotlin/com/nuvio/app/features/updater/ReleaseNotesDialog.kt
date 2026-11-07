@@ -6,6 +6,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -636,14 +638,23 @@ private fun ReleaseVersionSelector(
     ) {
         items(releases, key = { it.tag }) { release ->
             val selected = release.tag == selectedTag
+            val interactionSource = remember { MutableInteractionSource() }
+            // TV remote: the focused version gets a visible ring.
+            val focused by interactionSource.collectIsFocusedAsState()
+            val chipShape = RoundedCornerShape(NuvioTokens.Radius.full)
             Text(
                 text = release.tag,
                 modifier = Modifier
-                    .clip(RoundedCornerShape(NuvioTokens.Radius.full))
+                    .clip(chipShape)
                     .background(
                         if (selected) tokens.colors.accent else tokens.colors.textPrimary.copy(alpha = tokens.opacity.hover),
                     )
-                    .clickable { onSelect(release.tag) }
+                    .border(
+                        width = if (focused) 2.dp else 0.dp,
+                        color = if (focused) tokens.colors.textPrimary else Color.Transparent,
+                        shape = chipShape,
+                    )
+                    .clickable(interactionSource = interactionSource, indication = null) { onSelect(release.tag) }
                     .padding(horizontal = NuvioTokens.Space.s12, vertical = NuvioTokens.Space.s8),
                 style = MaterialTheme.typography.labelLarge,
                 color = if (selected) tokens.colors.onAccent else tokens.colors.textPrimary,
