@@ -47,7 +47,20 @@ internal data class PlayerScreenArgs(
     val launchId: Long? = null,
     val sourceFilename: String? = null,
     val onOpenPartyMedia: (PartyMedia) -> Unit = {},
+    // Leaves the player for a post-play recommendation; null when the host cannot do it.
+    val onOpenRecommendation: ((PostPlayTarget) -> Unit)? = null,
     val stream: com.nuvio.app.features.streams.StreamItem? = null,
+)
+
+/** A post-play recommendation chosen in the player: played right away or opened in its details. */
+data class PostPlayTarget(
+    val type: String,
+    val id: String,
+    val title: String,
+    val logo: String?,
+    val poster: String?,
+    val background: String?,
+    val playNow: Boolean,
 )
 
 /** The episode the player is playing; it changes with next episode or the episodes panel. */

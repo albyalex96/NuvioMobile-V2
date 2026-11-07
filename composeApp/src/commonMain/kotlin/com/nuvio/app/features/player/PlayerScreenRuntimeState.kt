@@ -234,6 +234,7 @@ internal class PlayerScreenRuntime(
     var castSessionId by mutableStateOf<String?>(null)
     var castDeviceName by mutableStateOf<String?>(null)
     var showCastPicker by mutableStateOf(false)
+    val postPlay = com.nuvio.app.features.player.postplay.PostPlayRecommendationController { scope }
     var castInitialSyncDone = false
     var castHandoffPlayWhenReady: Boolean? = null
     var castIssueNotifiedFor: String? = null

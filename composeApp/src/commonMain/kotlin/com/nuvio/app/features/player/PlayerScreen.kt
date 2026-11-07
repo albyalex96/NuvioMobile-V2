@@ -25,6 +25,7 @@ fun PlayerScreen(
     onOpenInExternalPlayer: ((ExternalPlayerPlaybackRequest) -> Unit)? = null,
     onOpenExternalUrl: ((String) -> Unit)? = null,
     onOpenPartyMedia: (PartyMedia) -> Unit = {},
+    onOpenRecommendation: ((PostPlayTarget) -> Unit)? = null,
     modifier: Modifier = Modifier,
     logo: String? = null,
     poster: String? = null,
@@ -92,6 +93,7 @@ fun PlayerScreen(
             launchId = launchId,
             sourceFilename = sourceFilename,
             onOpenPartyMedia = onOpenPartyMedia,
+            onOpenRecommendation = onOpenRecommendation,
             stream = stream,
         )
     )

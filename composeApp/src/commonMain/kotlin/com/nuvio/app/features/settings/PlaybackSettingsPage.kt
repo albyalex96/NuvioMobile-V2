@@ -1,5 +1,11 @@
 package com.nuvio.app.features.settings
 
+import nuvio.composeapp.generated.resources.settings_playback_post_play_movie_threshold_description
+import nuvio.composeapp.generated.resources.settings_playback_post_play_movie_threshold
+import nuvio.composeapp.generated.resources.settings_playback_post_play_recommendations_description
+import nuvio.composeapp.generated.resources.settings_playback_post_play_recommendations
+import com.nuvio.app.features.player.MAX_POST_PLAY_MOVIE_THRESHOLD_PERCENT
+import com.nuvio.app.features.player.MIN_POST_PLAY_MOVIE_THRESHOLD_PERCENT
 import com.nuvio.app.core.build.AppFeaturePolicy
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -1555,6 +1561,27 @@ private fun PlaybackSettingsSection(
                     isTablet = isTablet,
                     onCheckedChange = PlayerSettingsRepository::setPreloadNextEpisodeSources,
                 )
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.settings_playback_post_play_recommendations),
+                    description = stringResource(Res.string.settings_playback_post_play_recommendations_description),
+                    checked = autoPlayPlayerSettings.postPlayRecommendationsEnabled,
+                    isTablet = isTablet,
+                    onCheckedChange = PlayerSettingsRepository::setPostPlayRecommendationsEnabled,
+                )
+                if (autoPlayPlayerSettings.postPlayRecommendationsEnabled) {
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSliderRow(
+                        title = stringResource(Res.string.settings_playback_post_play_movie_threshold),
+                        description = stringResource(Res.string.settings_playback_post_play_movie_threshold_description),
+                        value = autoPlayPlayerSettings.postPlayMovieThresholdPercent,
+                        valueText = { percent -> "$percent%" },
+                        valueRange = MIN_POST_PLAY_MOVIE_THRESHOLD_PERCENT..MAX_POST_PLAY_MOVIE_THRESHOLD_PERCENT,
+                        step = 1,
+                        isTablet = isTablet,
+                        onValueChange = PlayerSettingsRepository::setPostPlayMovieThresholdPercent,
+                    )
+                }
                 SettingsGroupDivider(isTablet = isTablet)
                 // Phones, tablets and TVs keep separate still-watching options (all synced with the
                 // profile); each device shows and edits only its own class.

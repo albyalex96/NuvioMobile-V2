@@ -1,5 +1,7 @@
 package com.nuvio.app.features.details
 
+import com.nuvio.app.features.home.MetaPreview
+
 import co.touchlab.kermit.Logger
 import com.nuvio.app.features.addons.AddonManifest
 import com.nuvio.app.features.addons.AddonRepository
@@ -502,6 +504,25 @@ object MetaDetailsRepository {
             )
 
         return enrichedMeta
+    }
+
+    /**
+     * Titles suggested at the end of [meta] in the player (post-play recommendations): same source
+     * as "More like this" (TMDB, Trakt or Simkl), unreleased titles hidden like on the meta screen.
+     */
+    suspend fun fetchPostPlayCandidates(
+        meta: MetaDetails,
+        fallbackItemId: String,
+        fallbackItemType: String,
+    ): List<MetaPreview> {
+        val withSource = applyMoreLikeThisSource(
+            meta = meta,
+            fallbackItemId = fallbackItemId,
+            fallbackItemType = fallbackItemType,
+        ).withUnreleasedFilter()
+        return withSource.moreLikeThis
+            .filter { it.id != meta.id && it.id != fallbackItemId }
+            .distinctBy { it.type to it.id }
     }
 
     private suspend fun applyMoreLikeThisSource(

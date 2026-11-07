@@ -160,6 +160,7 @@ import com.nuvio.app.features.player.infusePlaybackCallbacks
 import com.nuvio.app.features.player.recordExternalPlaybackProgress
 import com.nuvio.app.features.player.ExternalPlayerPlatform
 import com.nuvio.app.features.player.PlayerLaunch
+import com.nuvio.app.features.player.PostPlayTarget
 import com.nuvio.app.features.player.PlayerLaunchStore
 import com.nuvio.app.features.player.PlayerSettingsRepository
 import com.nuvio.app.features.player.PrivatePlaybackRequests
@@ -228,6 +229,8 @@ import kotlinx.coroutines.withContext
 import nuvio.composeapp.generated.resources.*
 import org.jetbrains.compose.resources.getString
 import org.jetbrains.compose.resources.stringResource
+
+private val postPlayNavigationLog = co.touchlab.kermit.Logger.withTag("PostPlayRecommendations")
 
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -1222,6 +1225,36 @@ internal fun MainAppContent(
             )
         }
 
+        fun openPostPlayRecommendation(target: PostPlayTarget) {
+            // Leave the finished title: its player and the sources page below it.
+            if (navController.currentRoute is PlayerRoute) navController.popBackStack()
+            if (navController.currentRoute is StreamRoute) navController.popBackStack()
+            postPlayNavigationLog.i { "Post-play ${target.type}/${target.id}: ${if (target.playNow) "play" else "details"}" }
+            if (target.playNow) {
+                launchPlaybackWithDownloadPreference(
+                    type = target.type,
+                    videoId = target.id,
+                    parentMetaId = target.id,
+                    parentMetaType = target.type,
+                    title = target.title,
+                    logo = target.logo,
+                    poster = target.poster,
+                    background = target.background,
+                    seasonNumber = null,
+                    episodeNumber = null,
+                    episodeTitle = null,
+                    episodeThumbnail = null,
+                    pauseDescription = null,
+                    resumePositionMs = null,
+                    resumeProgressFraction = null,
+                    manualSelection = false,
+                    startFromBeginning = false,
+                )
+            } else {
+                navController.navigate(DetailRoute(type = target.type, id = target.id, title = target.title))
+            }
+        }
+
         val onPlay: ContentPlayAction =
             { type, videoId, parentMetaId, parentMetaType, title, logo, poster, background, seasonNumber, episodeNumber, episodeTitle, episodeThumbnail, pauseDescription, resumePositionMs ->
                 launchPlaybackWithDownloadPreference(
@@ -1961,6 +1994,7 @@ internal fun MainAppContent(
                         launchExternalPlayer = launchExternalPlayer,
                         openExternalStreamUrl = ::openExternalStreamUrl,
                         onOpenPartyMedia = ::openPartyMedia,
+                        onOpenRecommendation = ::openPostPlayRecommendation,
                     )
                 }
                 entry<CatalogRoute> { route ->

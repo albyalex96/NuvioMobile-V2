@@ -159,6 +159,7 @@ internal fun PlayerScreenContent(args: PlayerScreenArgs) {
             ),
         )
         runtime.BindPlayerRuntimeEffects()
+        runtime.BindPostPlayRecommendationEffects()
         runtime.RenderPlayerRuntimeUi()
     }
 }

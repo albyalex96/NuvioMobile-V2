@@ -51,7 +51,7 @@ private val shortcutLog = Logger.withTag("PlayerShortcuts")
 private fun PlayerScreenRuntime.isAnyPanelOpen(): Boolean =
     showSourcesPanel || showEpisodesPanel || showChaptersPanel || showLiveChannelsPanel ||
         showSubmitIntroModal || showAudioModal || showSubtitleModal || showVideoSettingsModal ||
-        showPartyPanel || showCastPicker
+        showPartyPanel || showCastPicker || postPlay.uiState.isVisible
 
 private fun PlayerScreenRuntime.changeVolume(delta: Float) {
     val controller = gestureController ?: return

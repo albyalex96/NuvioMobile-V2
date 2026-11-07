@@ -1,5 +1,9 @@
 package com.nuvio.app.features.settings
 
+import nuvio.composeapp.generated.resources.settings_playback_post_play_movie_threshold_description
+import nuvio.composeapp.generated.resources.settings_playback_post_play_movie_threshold
+import nuvio.composeapp.generated.resources.settings_playback_post_play_recommendations_description
+import nuvio.composeapp.generated.resources.settings_playback_post_play_recommendations
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.tween
@@ -1964,6 +1968,8 @@ private fun addAdditionalSearchEntries(
         PlaybackSearchRow("auto-play-next-fallback", stringResource(Res.string.settings_playback_auto_play_next_episode_fallback), stringResource(Res.string.settings_playback_auto_play_next_episode_fallback_description)),
         PlaybackSearchRow("reuse-binge", stringResource(Res.string.settings_playback_reuse_binge_group), stringResource(Res.string.settings_playback_reuse_binge_group_description)),
         PlaybackSearchRow("preload-next", stringResource(Res.string.settings_playback_preload_next_episode), stringResource(Res.string.settings_playback_preload_next_episode_description)),
+        PlaybackSearchRow("post-play-recommendations", stringResource(Res.string.settings_playback_post_play_recommendations), stringResource(Res.string.settings_playback_post_play_recommendations_description)),
+        PlaybackSearchRow("post-play-movie-threshold", stringResource(Res.string.settings_playback_post_play_movie_threshold), stringResource(Res.string.settings_playback_post_play_movie_threshold_description)),
         PlaybackSearchRow("still-watching", stringResource(Res.string.settings_playback_still_watching), stringResource(Res.string.settings_playback_still_watching_description)),
         PlaybackSearchRow("still-watching-night", stringResource(Res.string.settings_playback_still_watching_night_only), stringResource(Res.string.settings_playback_still_watching_night_only_description)),
         PlaybackSearchRow("still-watching-live-tv", stringResource(Res.string.settings_playback_still_watching_live_tv), stringResource(Res.string.settings_playback_still_watching_live_tv_description)),

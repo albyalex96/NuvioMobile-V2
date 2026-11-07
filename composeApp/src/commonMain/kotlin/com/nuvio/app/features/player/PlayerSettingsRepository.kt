@@ -114,6 +114,8 @@ data class PlayerSettingsUiState(
     val nextEpisodeThresholdPercent: Float = 99f,
     val nextEpisodeThresholdMinutesBeforeEnd: Float = 2f,
     val preloadNextEpisodeSources: Boolean = false,
+    val postPlayRecommendationsEnabled: Boolean = true,
+    val postPlayMovieThresholdPercent: Int = DEFAULT_POST_PLAY_MOVIE_THRESHOLD_PERCENT,
     val privateViewingEnabled: Boolean = false,
     val stillWatchingPromptEnabled: Boolean = false,
     val stillWatchingEpisodeCount: Int = DEFAULT_STILL_WATCHING_EPISODE_COUNT,
@@ -219,6 +221,8 @@ object PlayerSettingsRepository {
     private var nextEpisodeThresholdPercent = 99f
     private var nextEpisodeThresholdMinutesBeforeEnd = 2f
     private var preloadNextEpisodeSources = false
+    private var postPlayRecommendationsEnabled = true
+    private var postPlayMovieThresholdPercent = DEFAULT_POST_PLAY_MOVIE_THRESHOLD_PERCENT
     private var privateViewingEnabled = false
     private var stillWatchingByFormFactor = defaultStillWatchingSettings()
     private var playerClockByDevice = defaultPlayerClockSettings()
@@ -318,6 +322,8 @@ object PlayerSettingsRepository {
         nextEpisodeThresholdPercent = 99f
         nextEpisodeThresholdMinutesBeforeEnd = 2f
         preloadNextEpisodeSources = false
+        postPlayRecommendationsEnabled = true
+        postPlayMovieThresholdPercent = DEFAULT_POST_PLAY_MOVIE_THRESHOLD_PERCENT
         privateViewingEnabled = false
         stillWatchingByFormFactor = defaultStillWatchingSettings()
         playerClockByDevice = defaultPlayerClockSettings()
@@ -491,6 +497,11 @@ object PlayerSettingsRepository {
         nextEpisodeThresholdPercent = PlayerSettingsStorage.loadNextEpisodeThresholdPercent() ?: 99f
         nextEpisodeThresholdMinutesBeforeEnd = PlayerSettingsStorage.loadNextEpisodeThresholdMinutesBeforeEnd() ?: 2f
         preloadNextEpisodeSources = PlayerSettingsStorage.loadPreloadNextEpisodeSources() ?: false
+        postPlayRecommendationsEnabled = PlayerSettingsStorage.loadPostPlayRecommendationsEnabled() ?: true
+        postPlayMovieThresholdPercent = PlayerSettingsStorage.loadPostPlayMovieThresholdPercent()
+            ?.toInt()
+            ?.coerceIn(MIN_POST_PLAY_MOVIE_THRESHOLD_PERCENT, MAX_POST_PLAY_MOVIE_THRESHOLD_PERCENT)
+            ?: DEFAULT_POST_PLAY_MOVIE_THRESHOLD_PERCENT
         privateViewingEnabled = PlayerSettingsStorage.loadPrivateViewingEnabled() ?: false
         // Options saved before the per-device split live in the flat keys: every class starts from them.
         val legacyStillWatching = StillWatchingSettings(
@@ -1108,6 +1119,23 @@ object PlayerSettingsRepository {
         PlayerSettingsStorage.savePreloadNextEpisodeSources(enabled)
     }
 
+    fun setPostPlayRecommendationsEnabled(enabled: Boolean) {
+        ensureLoaded()
+        if (postPlayRecommendationsEnabled == enabled) return
+        postPlayRecommendationsEnabled = enabled
+        publish()
+        PlayerSettingsStorage.savePostPlayRecommendationsEnabled(enabled)
+    }
+
+    fun setPostPlayMovieThresholdPercent(percent: Int) {
+        ensureLoaded()
+        val clamped = percent.coerceIn(MIN_POST_PLAY_MOVIE_THRESHOLD_PERCENT, MAX_POST_PLAY_MOVIE_THRESHOLD_PERCENT)
+        if (postPlayMovieThresholdPercent == clamped) return
+        postPlayMovieThresholdPercent = clamped
+        publish()
+        PlayerSettingsStorage.savePostPlayMovieThresholdPercent(clamped.toFloat())
+    }
+
     fun setPrivateViewingEnabled(enabled: Boolean) {
         ensureLoaded()
         if (privateViewingEnabled == enabled) return
@@ -1490,6 +1518,8 @@ object PlayerSettingsRepository {
             nextEpisodeThresholdPercent = nextEpisodeThresholdPercent,
             nextEpisodeThresholdMinutesBeforeEnd = nextEpisodeThresholdMinutesBeforeEnd,
             preloadNextEpisodeSources = preloadNextEpisodeSources,
+            postPlayRecommendationsEnabled = postPlayRecommendationsEnabled,
+            postPlayMovieThresholdPercent = postPlayMovieThresholdPercent,
             privateViewingEnabled = privateViewingEnabled,
             stillWatchingPromptEnabled = thisDeviceStillWatching.promptEnabled,
             stillWatchingEpisodeCount = thisDeviceStillWatching.episodeCount,
@@ -1551,3 +1581,7 @@ private const val PLAYER_CLOCK_LOG_TAG = "PlayerClock"
 
 private fun defaultSubtitleFontSizes(): Map<SubtitleSizeFormFactor, Int> =
     SubtitleSizeFormFactor.entries.associateWith { SubtitleStyleState.DEFAULT.fontSizeSp }
+
+internal const val DEFAULT_POST_PLAY_MOVIE_THRESHOLD_PERCENT = 96
+internal const val MIN_POST_PLAY_MOVIE_THRESHOLD_PERCENT = 80
+internal const val MAX_POST_PLAY_MOVIE_THRESHOLD_PERCENT = 100

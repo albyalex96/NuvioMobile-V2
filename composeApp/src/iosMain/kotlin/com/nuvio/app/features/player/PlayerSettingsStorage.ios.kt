@@ -91,8 +91,10 @@ actual object PlayerSettingsStorage {
     private const val streamAutoPlayReuseBingeGroupKey = "stream_auto_play_reuse_binge_group"
     private const val nextEpisodeThresholdModeKey = "next_episode_threshold_mode"
     private const val nextEpisodeThresholdPercentKey = "next_episode_threshold_percent_v2"
+    private const val postPlayMovieThresholdPercentKey = "post_play_movie_threshold_percent"
     private const val nextEpisodeThresholdMinutesBeforeEndKey = "next_episode_threshold_minutes_before_end_v2"
     private const val preloadNextEpisodeSourcesKey = "preload_next_episode_sources"
+    private const val postPlayRecommendationsEnabledKey = "post_play_recommendations_enabled"
     private const val privateViewingEnabledKey = "private_viewing_enabled"
     private const val stillWatchingPromptEnabledKey = "still_watching_prompt_enabled"
     private const val stillWatchingEpisodeCountKey = "still_watching_episode_count"
@@ -192,8 +194,10 @@ actual object PlayerSettingsStorage {
         streamAutoPlayReuseBingeGroupKey,
         nextEpisodeThresholdModeKey,
         nextEpisodeThresholdPercentKey,
+        postPlayMovieThresholdPercentKey,
         nextEpisodeThresholdMinutesBeforeEndKey,
         preloadNextEpisodeSourcesKey,
+        postPlayRecommendationsEnabledKey,
         privateViewingEnabledKey,
         stillWatchingPromptEnabledKey,
         stillWatchingEpisodeCountKey,
@@ -1008,6 +1012,20 @@ actual object PlayerSettingsStorage {
         NSUserDefaults.standardUserDefaults.setFloat(percent, forKey = ProfileScopedKey.of(nextEpisodeThresholdPercentKey))
     }
 
+    actual fun loadPostPlayMovieThresholdPercent(): Float? {
+        val defaults = NSUserDefaults.standardUserDefaults
+        val key = ProfileScopedKey.of(postPlayMovieThresholdPercentKey)
+        return if (defaults.objectForKey(key) != null) {
+            defaults.floatForKey(key)
+        } else {
+            null
+        }
+    }
+
+    actual fun savePostPlayMovieThresholdPercent(percent: Float) {
+        NSUserDefaults.standardUserDefaults.setFloat(percent, forKey = ProfileScopedKey.of(postPlayMovieThresholdPercentKey))
+    }
+
     actual fun loadNextEpisodeThresholdMinutesBeforeEnd(): Float? {
         val defaults = NSUserDefaults.standardUserDefaults
         val key = ProfileScopedKey.of(nextEpisodeThresholdMinutesBeforeEndKey)
@@ -1026,6 +1044,12 @@ actual object PlayerSettingsStorage {
 
     actual fun savePreloadNextEpisodeSources(enabled: Boolean) {
         saveBoolean(preloadNextEpisodeSourcesKey, enabled)
+    }
+
+    actual fun loadPostPlayRecommendationsEnabled(): Boolean? = loadBoolean(postPlayRecommendationsEnabledKey)
+
+    actual fun savePostPlayRecommendationsEnabled(enabled: Boolean) {
+        saveBoolean(postPlayRecommendationsEnabledKey, enabled)
     }
 
     actual fun loadPrivateViewingEnabled(): Boolean? = loadBoolean(privateViewingEnabledKey)
@@ -1314,8 +1338,10 @@ actual object PlayerSettingsStorage {
         loadStreamAutoPlayReuseBingeGroup()?.let { put(streamAutoPlayReuseBingeGroupKey, encodeSyncBoolean(it)) }
         loadNextEpisodeThresholdMode()?.let { put(nextEpisodeThresholdModeKey, encodeSyncString(it)) }
         loadNextEpisodeThresholdPercent()?.let { put(nextEpisodeThresholdPercentKey, encodeSyncFloat(it)) }
+        loadPostPlayMovieThresholdPercent()?.let { put(postPlayMovieThresholdPercentKey, encodeSyncFloat(it)) }
         loadNextEpisodeThresholdMinutesBeforeEnd()?.let { put(nextEpisodeThresholdMinutesBeforeEndKey, encodeSyncFloat(it)) }
         loadPreloadNextEpisodeSources()?.let { put(preloadNextEpisodeSourcesKey, encodeSyncBoolean(it)) }
+        loadPostPlayRecommendationsEnabled()?.let { put(postPlayRecommendationsEnabledKey, encodeSyncBoolean(it)) }
         loadPrivateViewingEnabled()?.let { put(privateViewingEnabledKey, encodeSyncBoolean(it)) }
         loadStillWatchingPromptEnabled()?.let { put(stillWatchingPromptEnabledKey, encodeSyncBoolean(it)) }
         loadStillWatchingEpisodeCount()?.let { put(stillWatchingEpisodeCountKey, encodeSyncInt(it)) }
@@ -1424,8 +1450,10 @@ actual object PlayerSettingsStorage {
         payload.decodeSyncBoolean(streamAutoPlayReuseBingeGroupKey)?.let(::saveStreamAutoPlayReuseBingeGroup)
         payload.decodeSyncString(nextEpisodeThresholdModeKey)?.let(::saveNextEpisodeThresholdMode)
         payload.decodeSyncFloat(nextEpisodeThresholdPercentKey)?.let(::saveNextEpisodeThresholdPercent)
+        payload.decodeSyncFloat(postPlayMovieThresholdPercentKey)?.let(::savePostPlayMovieThresholdPercent)
         payload.decodeSyncFloat(nextEpisodeThresholdMinutesBeforeEndKey)?.let(::saveNextEpisodeThresholdMinutesBeforeEnd)
         payload.decodeSyncBoolean(preloadNextEpisodeSourcesKey)?.let(::savePreloadNextEpisodeSources)
+        payload.decodeSyncBoolean(postPlayRecommendationsEnabledKey)?.let(::savePostPlayRecommendationsEnabled)
         payload.decodeSyncBoolean(privateViewingEnabledKey)?.let(::savePrivateViewingEnabled)
         payload.decodeSyncBoolean(stillWatchingPromptEnabledKey)?.let(::saveStillWatchingPromptEnabled)
         payload.decodeSyncInt(stillWatchingEpisodeCountKey)?.let(::saveStillWatchingEpisodeCount)

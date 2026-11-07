@@ -15,6 +15,7 @@ import com.nuvio.app.features.player.PlayerEpisodeChange
 import com.nuvio.app.features.player.PlayerLaunch
 import com.nuvio.app.features.player.PlayerLaunchStore
 import com.nuvio.app.features.player.PlayerScreen
+import com.nuvio.app.features.player.PostPlayTarget
 import com.nuvio.app.features.streams.StreamLaunch
 import com.nuvio.app.features.streams.StreamLaunchStore
 import com.nuvio.app.features.watchprogress.ResumePromptRepository
@@ -36,6 +37,7 @@ internal fun PlayerDestination(
     launchExternalPlayer: (ExternalPlayerIntentResult.Success) -> Boolean,
     openExternalStreamUrl: (String) -> Boolean,
     onOpenPartyMedia: (PartyMedia) -> Unit,
+    onOpenRecommendation: (PostPlayTarget) -> Unit,
 ) {
     val onBack = rememberGuardedPopBackStack(navController, route)
     val launch = remember(route.launchId) { PlayerLaunchStore.get(route.launchId) }
@@ -151,6 +153,7 @@ internal fun PlayerDestination(
             openExternalStreamUrl(url)
         },
         onOpenPartyMedia = onOpenPartyMedia,
+        onOpenRecommendation = onOpenRecommendation,
         modifier = Modifier.fillMaxSize(),
     )
 }

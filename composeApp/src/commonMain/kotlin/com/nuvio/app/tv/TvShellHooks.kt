@@ -648,12 +648,12 @@ private fun PlayerScreenRuntime.tvOverlayOpen(): Boolean =
     showSourcesPanel || showEpisodesPanel || showLiveChannelsPanel || showChaptersPanel ||
         showSubmitIntroModal || showAudioModal || showSubtitleModal ||
         showVideoSettingsModal || showStillWatchingPrompt || showPartyPanel ||
-        pendingP2pSwitch != null || errorMessage != null
+        pendingP2pSwitch != null || errorMessage != null || postPlay.uiState.isVisible
 
 /** A prompt or panel that must be answered first is open: the dedicated remote buttons do nothing. */
 private fun PlayerScreenRuntime.tvShortcutsBlocked(): Boolean =
     showSubmitIntroModal || showStillWatchingPrompt || showPartyPanel ||
-        pendingP2pSwitch != null || errorMessage != null
+        pendingP2pSwitch != null || errorMessage != null || postPlay.uiState.isVisible
 
 /** Closes the menus and panels a remote button can replace with its own. */
 private fun PlayerScreenRuntime.closeTvMenus() {
