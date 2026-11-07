@@ -54,6 +54,7 @@ private const val ImdbDatasetsUrl = "https://developer.imdb.com/non-commercial-d
 private const val TraktUrl = "https://trakt.tv"
 private const val SimklUrl = "https://simkl.com"
 private const val PremiumizeUrl = "https://www.premiumize.me"
+private const val EspnUrl = "https://www.espn.com"
 private const val TorboxUrl = "https://torbox.app"
 private const val MdbListUrl = "https://mdblist.com"
 private const val IntroDbUrl = "https://introdb.app/"
@@ -502,6 +503,12 @@ private fun attributionItems(): List<AttributionItem> = listOf(
         bodyRes = Res.string.settings_licenses_attributions_simkl_body,
         logo = IntegrationLogo.Simkl,
         link = SimklUrl,
+    ),
+    AttributionItem(
+        titleRes = Res.string.settings_licenses_attributions_espn_title,
+        bodyRes = Res.string.settings_licenses_attributions_espn_body,
+        logo = null,
+        link = EspnUrl,
     ),
     AttributionItem(
         titleRes = Res.string.settings_licenses_attributions_premiumize_title,

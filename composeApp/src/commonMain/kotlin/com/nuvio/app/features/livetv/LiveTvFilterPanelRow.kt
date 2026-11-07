@@ -100,7 +100,7 @@ internal fun LiveTvFilterPanelRow(
 }
 
 @Composable
-private fun LiveTvPanelFilterChip(
+internal fun LiveTvPanelFilterChip(
     label: String,
     selected: Boolean,
     onClick: () -> Unit,

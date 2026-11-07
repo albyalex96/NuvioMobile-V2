@@ -1357,6 +1357,8 @@
   <string name="settings_licenses_attributions_imdb_body">Nuvio utilizza i dataset non commerciali di IMDb, incluso title.ratings.tsv.gz, per le valutazioni e il conteggio dei voti di IMDb. Informazioni per gentile concessione di IMDb (https://www.imdb.com). Utilizzato con il permesso. I dati di IMDb sono per uso personale e non commerciale secondo i termini di IMDb.</string>
   <string name="settings_licenses_attributions_trakt_title">Trakt</string>
   <string name="settings_licenses_attributions_trakt_body">Nuvio si connette a Trakt per l'autenticazione dell'account, la cronologia di visione, la sincronizzazione dei progressi, i dati della libreria, le valutazioni, le liste e i commenti. Nuvio non è affiliato né approvato da Trakt.</string>
+  <string name="settings_licenses_attributions_espn_title">ESPN</string>
+  <string name="settings_licenses_attributions_espn_body">Nuvio utilizza i dati pubblici dei risultati di ESPN per elencare gli eventi sportivi in diretta e in programma nella sezione Sport della Live TV. Nuvio non è affiliato né approvato da ESPN.</string>
   <string name="settings_licenses_attributions_premiumize_title">Premiumize</string>
   <string name="settings_licenses_attributions_premiumize_body">Nuvio si connette a Premiumize per l'autenticazione dell'account, l'accesso alla libreria cloud, i controlli della cache e le funzioni di riproduzione in cloud. Nuvio non è affiliato né approvato da Premiumize.</string>
   <string name="settings_licenses_attributions_torbox_title">TorBox</string>

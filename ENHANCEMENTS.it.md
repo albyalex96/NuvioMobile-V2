@@ -71,6 +71,10 @@ Portata da [luqmanfadlli/NuvioMobile-Enhanced](https://github.com/luqmanfadlli/N
 - Sorgenti: **playlist M3U** (URL o file locale), provider **Xtream** e **Stalker**.
 - **EPG XMLTV** (`.xml` / `.xml.gz`), rilevata in automatico da playlist e provider, abbinata tramite `tvg-id` o nome del canale; il programma in onda è mostrato nel player.
 - Scheda Live TV dedicata (telefono, tablet, TV e tab bar nativa iOS), preferiti, ricerca e categorie.
+- **Schede delle sezioni** in cima alla scheda Live TV (Canali, Guida, Sport, On Demand), con icone e animazioni:
+  - **Guida:** griglia della guida TV con tutti i canali sulla stessa linea del tempo, linea "adesso" che pulsa, riempimento di avanzamento sui programmi in onda e pulsante "Adesso" per tornare all'ora attuale. Toccando un programma in onda si apre il canale, altrimenti la guida del canale.
+  - **Sport:** partite in diretta e in programma (calcio, NBA, NFL, NHL, MLB, UFC) da ESPN, con badge LIVE lampeggiante, punteggi animati, conto alla rovescia nell'ultima ora, filtri per campionato e i **canali corrispondenti delle tue playlist** per guardare con un tocco.
+  - **On Demand:** film e serie dei provider **Xtream**, con categorie, ricerca, locandine e un pannello stagioni/episodi; i titoli si aprono nel player normale.
 - Integrazione nel player: pannello con l'elenco dei canali, zapping, logo e nome del canale in sovrimpressione. I canali live non creano mai progressi di visione né scrobbling.
 - **Gestione canali:** mostra/nascondi singoli canali e intere categorie, ricerca, seleziona/deseleziona tutto e **ordine personalizzato** con trascinamento (pulsanti Su/Giù sulla TV).
 - Playlist, sorgenti EPG, preferiti e preferenze dei canali sono sincronizzati col profilo (credenziali e file locali restano sul dispositivo).

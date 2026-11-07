@@ -32,6 +32,7 @@ import com.nuvio.app.features.library.LibraryItem
 import com.nuvio.app.features.library.LibraryScreen
 import com.nuvio.app.features.livetv.LiveTvChannel
 import com.nuvio.app.features.livetv.LiveTvScreen
+import com.nuvio.app.features.livetv.LiveTvVodPlayback
 import com.nuvio.app.features.library.LibrarySection
 import com.nuvio.app.features.library.LibrarySortOption
 import com.nuvio.app.features.profiles.NuvioProfile
@@ -105,6 +106,7 @@ internal data class AppTabActions(
     /** Long press on the play button of the expanded TV hero: menu with the secondary play options. */
     val onPosterPlayLongClick: ((MetaPreview) -> Unit)? = null,
     val onLiveTvChannelClick: (LiveTvChannel) -> Unit = {},
+    val onLiveTvVodClick: (LiveTvVodPlayback) -> Unit = {},
     val onSwitchProfile: (() -> Unit)? = null,
     val onEditProfile: (() -> Unit)? = null,
     val onSettingsPageClick: ((pageName: String, title: String) -> Unit)? = null,
@@ -194,6 +196,7 @@ internal fun AppTabHost(
                 LiveTvScreen(
                     scrollToTopRequests = requests.liveTvScrollToTopRequests,
                     onChannelClick = actions.onLiveTvChannelClick,
+                    onVodClick = actions.onLiveTvVodClick,
                 )
             }
 

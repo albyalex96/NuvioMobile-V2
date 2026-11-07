@@ -11,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -54,6 +55,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -82,7 +85,12 @@ import com.nuvio.app.tv.LocalTvShell
 import com.nuvio.app.tv.TvCenteredScrolling
 import com.nuvio.app.tv.tvNotFocusable
 import co.touchlab.kermit.Logger
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.launch
 import nuvio.composeapp.generated.resources.Res
@@ -105,6 +113,21 @@ import nuvio.composeapp.generated.resources.live_tv_no_playlist_message
 import nuvio.composeapp.generated.resources.live_tv_no_playlist_title
 import nuvio.composeapp.generated.resources.live_tv_search_placeholder
 import nuvio.composeapp.generated.resources.live_tv_title
+import nuvio.composeapp.generated.resources.live_tv_filter_all
+import nuvio.composeapp.generated.resources.live_tv_guide_empty_message
+import nuvio.composeapp.generated.resources.live_tv_guide_empty_title
+import nuvio.composeapp.generated.resources.live_tv_on_demand_empty_message
+import nuvio.composeapp.generated.resources.live_tv_on_demand_empty_title
+import nuvio.composeapp.generated.resources.live_tv_on_demand_load_failed
+import nuvio.composeapp.generated.resources.live_tv_on_demand_movies
+import nuvio.composeapp.generated.resources.live_tv_on_demand_search_placeholder
+import nuvio.composeapp.generated.resources.live_tv_on_demand_series
+import nuvio.composeapp.generated.resources.live_tv_on_demand_unavailable_message
+import nuvio.composeapp.generated.resources.live_tv_on_demand_unavailable_title
+import nuvio.composeapp.generated.resources.live_tv_sports_empty_message
+import nuvio.composeapp.generated.resources.live_tv_sports_empty_title
+import nuvio.composeapp.generated.resources.live_tv_sports_filter_live
+import nuvio.composeapp.generated.resources.live_tv_sports_load_failed
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -113,6 +136,7 @@ fun LiveTvScreen(
     modifier: Modifier = Modifier,
     scrollToTopRequests: Flow<Unit> = emptyFlow(),
     onChannelClick: (LiveTvChannel) -> Unit,
+    onVodClick: (LiveTvVodPlayback) -> Unit = {},
 ) {
     val uiState by remember {
         LiveTvRepository.ensureChannelsLoaded()
@@ -130,6 +154,16 @@ fun LiveTvScreen(
     var selectedCategoryName by rememberSaveable { mutableStateOf<String?>(null) }
     var guideChannelId by rememberSaveable { mutableStateOf<String?>(null) }
     val epgNowMillis = rememberLiveTvEpgNowMillis()
+    var section by rememberSaveable { mutableStateOf(LiveTvSection.Channels) }
+    val guideScrollState = rememberScrollState()
+    val guideWindowStart = remember(epgNowMillis / LIVE_TV_GUIDE_SLOT_MILLIS) { liveTvGuideWindowStart(epgNowMillis) }
+    var sportsFilter by rememberSaveable { mutableStateOf(LIVE_TV_SPORTS_FILTER_ALL) }
+    var vodKind by rememberSaveable { mutableStateOf(LiveTvVodKind.Movies) }
+    var vodCategoryId by rememberSaveable { mutableStateOf<String?>(null) }
+    var vodSearchQuery by rememberSaveable { mutableStateOf("") }
+    var seriesSheetItemId by rememberSaveable { mutableStateOf<String?>(null) }
+    val sportsState by LiveTvSportsRepository.uiState.collectAsStateWithLifecycle()
+    val onDemandState by LiveTvOnDemandRepository.uiState.collectAsStateWithLifecycle()
 
     val allChannelsLabel = stringResource(Res.string.live_tv_group_all_channels)
     val favoritesLabel = stringResource(Res.string.live_tv_filter_favorites)
@@ -179,13 +213,89 @@ fun LiveTvScreen(
         onChannelClick(channel)
     }
 
+    // Guide: channels with programmes in the window, favourites first. Opens scrolled to "now".
+    val guideChannels = remember(visibleChannels, uiState.epgPrograms, guideWindowStart, uiState.favoriteChannelIds) {
+        visibleChannels
+            .filter { liveTvGuideHasPrograms(uiState.epgPrograms[it.id], guideWindowStart) }
+            .sortedByDescending { it.id in uiState.favoriteChannelIds }
+    }
+    val density = LocalDensity.current
+    val guideNowOffsetPx = remember(epgNowMillis, guideWindowStart, density) {
+        val minutesBeforeNow = ((epgNowMillis - guideWindowStart) / 60_000L - 15L).coerceAtLeast(0L)
+        with(density) { (LiveTvGuideDpPerMinute * minutesBeforeNow.toFloat()).roundToPx() }
+    }
+    LaunchedEffect(section, guideWindowStart, guideChannels.isNotEmpty()) {
+        if (section != LiveTvSection.Guide || guideChannels.isEmpty()) return@LaunchedEffect
+        withTimeoutOrNull(3_000L) {
+            snapshotFlow { guideScrollState.maxValue }.first { it in 1 until Int.MAX_VALUE }
+        }
+        guideScrollState.animateScrollTo(guideNowOffsetPx)
+    }
+
+    // Sports: refreshed while the section is open (every minute with live matches, otherwise every 5).
+    LaunchedEffect(section) {
+        if (section != LiveTvSection.Sports) return@LaunchedEffect
+        while (true) {
+            LiveTvSportsRepository.refreshIfStale()
+            delay(30_000L)
+        }
+    }
+    val sportsMatches by produceState(
+        initialValue = emptyMap<String, List<LiveTvChannel>>(),
+        sportsState.events,
+        uiState.displayedChannels,
+        section == LiveTvSection.Sports,
+    ) {
+        if (section != LiveTvSection.Sports) return@produceState
+        value = withContext(Dispatchers.Default) {
+            val normalized = uiState.displayedChannels.map { it to normalizeSportsName(it.name) }
+            sportsState.events.associate { event ->
+                "${event.league.id}:${event.id}" to matchSportsChannels(event, normalized)
+            }
+        }
+    }
+    val sportsLeagues = remember(sportsState.events) {
+        val present = sportsState.events.map { it.league.id }.toSet()
+        liveTvSportsLeagues.filter { it.id in present }
+    }
+    val hasLiveSports = sportsState.events.any { it.state == LiveTvSportsState.Live }
+    val visibleSports = remember(sportsState.events, sportsFilter) {
+        sportsState.events.filter { event ->
+            when (sportsFilter) {
+                LIVE_TV_SPORTS_FILTER_ALL -> true
+                LIVE_TV_SPORTS_FILTER_LIVE -> event.state == LiveTvSportsState.Live
+                else -> event.league.id == sportsFilter
+            }
+        }
+    }
+    LaunchedEffect(sportsLeagues, hasLiveSports, sportsFilter) {
+        val valid = sportsFilter == LIVE_TV_SPORTS_FILTER_ALL ||
+            (sportsFilter == LIVE_TV_SPORTS_FILTER_LIVE && hasLiveSports) ||
+            sportsLeagues.any { it.id == sportsFilter }
+        if (!valid && sportsState.hasLoaded) sportsFilter = LIVE_TV_SPORTS_FILTER_ALL
+    }
+
+    // On Demand: Xtream VOD catalog, loaded the first time the section opens.
+    val hasVodProvider = uiState.xtreamSettings.isEnabled && uiState.xtreamSettings.isConfigured
+    LaunchedEffect(section, vodKind, hasVodProvider) {
+        if (section == LiveTvSection.OnDemand && hasVodProvider) LiveTvOnDemandRepository.ensureLoaded(vodKind)
+    }
+    val vodCatalog = onDemandState.catalog(vodKind)
+    val visibleVod = remember(vodCatalog.catalog.items, vodCategoryId, vodSearchQuery) {
+        filterLiveTvVodItems(vodCatalog.catalog.items, vodCategoryId, vodSearchQuery)
+    }
+
+    LaunchedEffect(section) {
+        Logger.i("LiveTv") { "Section: ${section.name}" }
+    }
+
     LaunchedEffect(scrollToTopRequests) {
         scrollToTopRequests.collect {
             listState.animateScrollToItem(0)
         }
     }
 
-    LaunchedEffect(searchQuery, filterMode, selectedCategoryName) {
+    LaunchedEffect(searchQuery, filterMode, selectedCategoryName, section, vodKind, vodCategoryId, vodSearchQuery, sportsFilter) {
         listState.scrollToItem(0)
     }
 
@@ -214,7 +324,6 @@ fun LiveTvScreen(
     val screenBackground = tokens.colors.background
     val listTopPadding = tokens.spacing.screenTop + statusBarTop + nuvioPlatformExtraTopPadding
 
-    val density = LocalDensity.current
     val controlsTopPadding by remember(listTopPadding) {
         derivedStateOf {
             val offset = listState.layoutInfo.visibleItemsInfo
@@ -226,7 +335,10 @@ fun LiveTvScreen(
     }
 
     TvCenteredScrolling {
-        Box(modifier = modifier.fillMaxSize()) {
+        BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+            val vodColumns = ((maxWidth - LiveTvScreenHorizontalPadding * 2) / LiveTvVodMinCellWidth)
+                .toInt()
+                .coerceIn(3, 8)
             NuvioScreen(
                 modifier = Modifier.fillMaxSize(),
                 horizontalPadding = LiveTvScreenHorizontalPadding,
@@ -241,14 +353,215 @@ fun LiveTvScreen(
                                 NuvioIconActionButton(
                                     icon = Icons.Rounded.Refresh,
                                     contentDescription = stringResource(Res.string.action_retry),
-                                    onClick = LiveTvRepository::refresh,
+                                    onClick = {
+                                        when (section) {
+                                            LiveTvSection.Channels -> LiveTvRepository.refresh()
+                                            LiveTvSection.Guide -> LiveTvRepository.refreshEpg()
+                                            LiveTvSection.Sports -> LiveTvSportsRepository.refresh()
+                                            LiveTvSection.OnDemand -> LiveTvOnDemandRepository.refresh(vodKind)
+                                        }
+                                    },
                                 )
                             }
                         },
                     )
                 }
 
-                when {
+                if (uiState.hasPlaylist) {
+                    item(key = "live-tv-sections") {
+                        LiveTvSectionTabs(
+                            selected = section,
+                            sportsLive = hasLiveSports,
+                            onSelected = { selected -> section = selected },
+                            modifier = Modifier.padding(bottom = 4.dp),
+                        )
+                    }
+                }
+
+                if (uiState.hasPlaylist && section != LiveTvSection.Channels) {
+                    val sectionControls: @Composable () -> Unit = {
+                        LiveTvSectionControlsSurface(
+                            topPadding = if (isTv) 0.dp else controlsTopPadding,
+                            background = screenBackground,
+                        ) {
+                            when (section) {
+                                LiveTvSection.Guide -> if (uiState.channels.isNotEmpty()) {
+                                    LiveTvSearchField(query = searchQuery, onQueryChange = { searchQuery = it })
+                                    LiveTvFilterPanelRow(
+                                        groups = categoryOptions
+                                            .filter { option -> option.mode == LiveTvChannelFilterMode.Category }
+                                            .map { option -> option.label },
+                                        selectedGroup = selectedCategoryName,
+                                        favoritesOnly = filterMode == LiveTvChannelFilterMode.Favorites,
+                                        allLabel = allChannelsLabel,
+                                        favoritesLabel = favoritesLabel,
+                                        categoryLabel = chooseCategoryLabel,
+                                        onAllSelected = {
+                                            filterMode = LiveTvChannelFilterMode.All
+                                            selectedCategoryName = null
+                                        },
+                                        onFavoritesSelected = {
+                                            filterMode = LiveTvChannelFilterMode.Favorites
+                                            selectedCategoryName = null
+                                        },
+                                        onGroupSelected = { category ->
+                                            filterMode = LiveTvChannelFilterMode.Category
+                                            selectedCategoryName = category
+                                        },
+                                    )
+                                    if (guideChannels.isNotEmpty()) {
+                                        LiveTvGuideTimeRuler(
+                                            scrollState = guideScrollState,
+                                            windowStart = guideWindowStart,
+                                            nowMillis = epgNowMillis,
+                                            onJumpToNow = {
+                                                coroutineScope.launch { guideScrollState.animateScrollTo(guideNowOffsetPx) }
+                                            },
+                                        )
+                                    }
+                                }
+
+                                LiveTvSection.Sports -> if (sportsState.events.isNotEmpty()) {
+                                    LiveTvSportsControls(
+                                        allLabel = stringResource(Res.string.live_tv_filter_all),
+                                        liveLabel = stringResource(Res.string.live_tv_sports_filter_live),
+                                        leagues = sportsLeagues,
+                                        hasLive = hasLiveSports,
+                                        selectedFilter = sportsFilter,
+                                        eventCount = visibleSports.size,
+                                        onFilterSelected = { sportsFilter = it },
+                                    )
+                                }
+
+                                LiveTvSection.OnDemand -> if (hasVodProvider) {
+                                    LiveTvSearchField(
+                                        query = vodSearchQuery,
+                                        onQueryChange = { vodSearchQuery = it },
+                                        placeholder = stringResource(Res.string.live_tv_on_demand_search_placeholder),
+                                    )
+                                    LiveTvOnDemandControls(
+                                        kind = vodKind,
+                                        moviesLabel = stringResource(Res.string.live_tv_on_demand_movies),
+                                        seriesLabel = stringResource(Res.string.live_tv_on_demand_series),
+                                        allLabel = stringResource(Res.string.live_tv_filter_all),
+                                        categories = vodCatalog.catalog.categories,
+                                        selectedCategoryId = vodCategoryId,
+                                        itemCount = visibleVod.size,
+                                        onKindSelected = { kind ->
+                                            if (kind != vodKind) {
+                                                vodKind = kind
+                                                vodCategoryId = null
+                                            }
+                                        },
+                                        onCategorySelected = { vodCategoryId = it },
+                                    )
+                                }
+
+                                LiveTvSection.Channels -> Unit
+                            }
+                        }
+                    }
+                    if (isTv) {
+                        item(key = ChannelControlsKey) { sectionControls() }
+                    } else {
+                        stickyHeader(key = ChannelControlsKey) { sectionControls() }
+                    }
+                }
+
+                if (uiState.hasPlaylist && section == LiveTvSection.Guide && uiState.channels.isNotEmpty()) {
+                    when {
+                        guideChannels.isNotEmpty() -> liveTvGuideRows(
+                            channels = guideChannels,
+                            epgPrograms = uiState.epgPrograms,
+                            scrollState = guideScrollState,
+                            windowStart = guideWindowStart,
+                            nowMillis = epgNowMillis,
+                            onChannelClick = playChannel,
+                            onProgramClick = { channel, program ->
+                                if (program.isAiringAt(epgNowMillis)) playChannel(channel) else guideChannelId = channel.id
+                            },
+                        )
+
+                        uiState.isEpgLoading -> liveTvLoadingItem()
+
+                        else -> item(key = "guide-empty") {
+                            HomeEmptyStateCard(
+                                title = stringResource(
+                                    if (visibleChannels.isEmpty()) Res.string.live_tv_no_matching_channels_title else Res.string.live_tv_guide_empty_title,
+                                ),
+                                message = stringResource(
+                                    if (visibleChannels.isEmpty()) Res.string.live_tv_no_matching_channels_message else Res.string.live_tv_guide_empty_message,
+                                ),
+                            )
+                        }
+                    }
+                } else if (uiState.hasPlaylist && section == LiveTvSection.Sports) {
+                    when {
+                        sportsState.events.isEmpty() && (sportsState.isLoading || !sportsState.hasLoaded) -> liveTvLoadingItem()
+
+                        sportsState.events.isEmpty() && sportsState.errorMessage != null -> item(key = "sports-error") {
+                            HomeEmptyStateCard(
+                                title = stringResource(Res.string.live_tv_sports_load_failed),
+                                message = sportsState.errorMessage.orEmpty(),
+                                actionLabel = stringResource(Res.string.action_retry),
+                                onActionClick = LiveTvSportsRepository::refresh,
+                            )
+                        }
+
+                        visibleSports.isEmpty() -> item(key = "sports-empty") {
+                            HomeEmptyStateCard(
+                                title = stringResource(Res.string.live_tv_sports_empty_title),
+                                message = stringResource(Res.string.live_tv_sports_empty_message),
+                            )
+                        }
+
+                        else -> liveTvSportsList(
+                            events = visibleSports,
+                            matchedChannels = sportsMatches,
+                            nowMillis = epgNowMillis,
+                            onChannelClick = playChannel,
+                        )
+                    }
+                } else if (uiState.hasPlaylist && section == LiveTvSection.OnDemand) {
+                    when {
+                        !hasVodProvider -> item(key = "vod-unavailable") {
+                            HomeEmptyStateCard(
+                                title = stringResource(Res.string.live_tv_on_demand_unavailable_title),
+                                message = stringResource(Res.string.live_tv_on_demand_unavailable_message),
+                            )
+                        }
+
+                        vodCatalog.catalog.items.isEmpty() && (vodCatalog.isLoading || !vodCatalog.hasLoaded) -> liveTvLoadingItem()
+
+                        vodCatalog.catalog.items.isEmpty() && vodCatalog.errorMessage != null -> item(key = "vod-error") {
+                            HomeEmptyStateCard(
+                                title = stringResource(Res.string.live_tv_on_demand_load_failed),
+                                message = vodCatalog.errorMessage.orEmpty(),
+                                actionLabel = stringResource(Res.string.action_retry),
+                                onActionClick = { LiveTvOnDemandRepository.refresh(vodKind) },
+                            )
+                        }
+
+                        visibleVod.isEmpty() -> item(key = "vod-empty") {
+                            HomeEmptyStateCard(
+                                title = stringResource(Res.string.live_tv_on_demand_empty_title),
+                                message = stringResource(Res.string.live_tv_on_demand_empty_message),
+                            )
+                        }
+
+                        else -> liveTvVodGrid(
+                            items = visibleVod,
+                            columns = vodColumns,
+                            gap = 12.dp,
+                            onItemClick = { item ->
+                                when (item.kind) {
+                                    LiveTvVodKind.Movies -> LiveTvOnDemandRepository.moviePlayback(item)?.let(onVodClick)
+                                    LiveTvVodKind.Series -> seriesSheetItemId = item.id
+                                }
+                            },
+                        )
+                    }
+                } else when {
                     uiState.isLoading && uiState.channels.isEmpty() -> {
                         item {
                             Box(
@@ -410,6 +723,53 @@ fun LiveTvScreen(
                     onDismiss = { guideChannelId = null },
                 )
             }
+
+            val seriesSheetItem = seriesSheetItemId?.let { id ->
+                onDemandState.series.catalog.items.firstOrNull { it.id == id }
+            }
+            if (seriesSheetItem != null) {
+                LiveTvSeriesSheet(
+                    series = seriesSheetItem,
+                    onEpisodeClick = { episode ->
+                        onVodClick(LiveTvOnDemandRepository.episodePlayback(seriesSheetItem, episode))
+                    },
+                    onDismiss = { seriesSheetItemId = null },
+                )
+            }
+        }
+    }
+}
+
+/** Sticky container for the controls of the Guide, Sports and On Demand sections. */
+@Composable
+private fun LiveTvSectionControlsSurface(
+    topPadding: Dp,
+    background: Color,
+    content: @Composable () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(background)
+            .padding(top = topPadding + 4.dp, bottom = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.nuvio.spacing.listGap),
+    ) {
+        content()
+    }
+}
+
+private fun LazyListScope.liveTvLoadingItem() {
+    item(key = "live-tv-loading") {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 64.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            CircularProgressIndicator(
+                color = MaterialTheme.nuvio.colors.accent,
+                strokeWidth = 2.dp,
+            )
         }
     }
 }
@@ -504,12 +864,13 @@ private fun LiveTvSearchField(
     query: String,
     onQueryChange: (String) -> Unit,
     modifier: Modifier = Modifier,
+    placeholder: String = stringResource(Res.string.live_tv_search_placeholder),
 ) {
     Box(modifier = modifier.fillMaxWidth()) {
         NuvioInputField(
             value = query,
             onValueChange = onQueryChange,
-            placeholder = stringResource(Res.string.live_tv_search_placeholder),
+            placeholder = placeholder,
             trailingContent = {
                 if (query.isBlank()) {
                     Icon(
