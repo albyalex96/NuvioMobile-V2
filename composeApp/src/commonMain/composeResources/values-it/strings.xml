@@ -2759,4 +2759,25 @@
   <string name="settings_anilist_sync_login_warning">Attenzione: con la sincronizzazione del login attiva, la chiave di accesso di AniList viene salvata nella sincronizzazione del tuo account Nuvio e condivisa con tutti i dispositivi di questo profilo. Attivala solo se ti fidi.</string>
   <string name="settings_licenses_attributions_anilist_title">AniList</string>
   <string name="settings_licenses_attributions_anilist_body">Nuvio si connette ad AniList per l'autenticazione dell'account e la sincronizzazione della lista anime. I dati degli anime sono forniti da AniList. Nuvio non è affiliato né approvato da AniList.</string>
+    <string name="subtitle_appearance">Aspetto</string>
+    <string name="subtitle_preview">Anteprima</string>
+    <string name="subtitle_preview_text">Ogni storia comincia con un po' di curiosità.</string>
+    <string name="subtitle_appearance_hint">Font, sfondo e ombra valgono per i sottotitoli di testo. I sottotitoli ASS e quelli a immagine mantengono il loro aspetto.</string>
+    <string name="subtitle_font">Font</string>
+    <string name="subtitle_font_default">Predefinito</string>
+    <string name="subtitle_font_sans">Sans serif</string>
+    <string name="subtitle_font_serif">Serif</string>
+    <string name="subtitle_font_mono">Monospazio</string>
+    <string name="subtitle_font_import">Importa font</string>
+    <string name="subtitle_font_import_hint">Scegli un file .ttf o .otf fino a 10 MB. I font importati restano su questo dispositivo.</string>
+    <string name="subtitle_font_import_error">Impossibile importare questo font. Scegli un file .ttf o .otf valido sotto i 10 MB.</string>
+    <string name="subtitle_font_missing">Font non disponibile su questo dispositivo. Viene usato il font predefinito.</string>
+    <string name="subtitle_font_remove">Rimuovi %1$s</string>
+    <string name="subtitle_background_opacity">Opacità dello sfondo</string>
+    <string name="subtitle_background_roundness">Arrotondamento degli angoli</string>
+    <string name="subtitle_shadow">Ombra</string>
+    <string name="subtitle_shadow_description">Stacca il testo dalle scene chiare.</string>
+    <string name="subtitle_shadow_opacity">Opacità dell'ombra</string>
+    <string name="subtitle_shadow_size">Dimensione dell'ombra</string>
+    <string name="subtitle_reset_appearance">Ripristina aspetto</string>
 </resources>
