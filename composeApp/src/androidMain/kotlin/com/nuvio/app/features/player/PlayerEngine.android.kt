@@ -423,7 +423,9 @@ private fun ExoPlayerSurface(
         applyExoPlayerNativeMemory(playerSettings.exoNativeMemoryEnabled)
         // Bluetooth headphones and speakers are stereo: decode audio with FFmpeg and mix surround
         // down to a clean 2.0, so dialogue keeps its level against music and effects.
-        val bluetoothOutput = AudioOutputRouteDetector.detect(context)?.isBluetooth == true
+        // Phones and tablets only: a TV on a Bluetooth soundbar keeps its surround audio.
+        val bluetoothOutput = !TvAppRuntime.isTvApp &&
+            AudioOutputRouteDetector.detect(context)?.isBluetooth == true
         Logger.i(BLUETOOTH_DOWNMIX_LOG_TAG) {
             if (bluetoothOutput) "Bluetooth output: FFmpeg audio decoder with stereo downmix"
             else "No Bluetooth output: audio downmix off"

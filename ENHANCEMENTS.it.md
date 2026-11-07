@@ -105,7 +105,7 @@ Portata da [luqmanfadlli/NuvioMobile-Enhanced](https://github.com/luqmanfadlli/N
 - **Miniature di anteprima** durante il seek per file singoli e flussi HLS, con opzioni separate per telefono e TV.
 - **Controlli più ricchi:** logo del titolo, badge dello Stream Parser, nome della sorgente, orologio e orario di fine sopra la barra di avanzamento.
 - Cursori **Potenzia dialoghi**, **compressione della gamma dinamica** e **amplificazione volume** nel pannello audio (amplificazione fino a +10 dB, ricordata per ogni dispositivo di uscita audio).
-- **Downmix stereo automatico in Bluetooth** (ExoPlayer): l'audio surround viene decodificato con FFmpeg e ridotto a uno stereo 2.0 pulito, così i dialoghi restano udibili con auricolari e casse.
+- **Downmix stereo automatico in Bluetooth** (ExoPlayer, telefono e tablet): l'audio surround viene decodificato con FFmpeg e ridotto a uno stereo 2.0 pulito, così i dialoghi restano udibili con auricolari e casse.
 - **Sottotitoli:** pipeline Nuvio libass ad atlante per ASS/SSA, stile dei sottotitoli applicato alle tracce ASS incorporate, pulsanti del ritardo sottotitoli che si ripetono tenendoli premuti e **sincronizzazione automatica** facoltativa per i sottotitoli degli addon, di OpenSubtitles e di SubDL (ASS/SSA abbinati tramite i dialoghi, ripiego su SRT/VTT).
 - **Impostazioni dei sottotitoli per tipo di dispositivo:** stile, aspetto, lingue e opzioni libass sono separati per telefono, tablet, TV e Windows (sincronizzati col profilo) e le Impostazioni mostrano solo quelli del dispositivo in uso.
 - **Riproduzione automatica per priorità dei provider:** l'auto-play sceglie il flusso seguendo l'ordine dei provider preferiti.
