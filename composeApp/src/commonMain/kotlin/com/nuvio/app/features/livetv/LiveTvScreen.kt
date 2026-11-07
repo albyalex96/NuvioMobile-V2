@@ -155,7 +155,9 @@ fun LiveTvScreen(
     var guideChannelId by rememberSaveable { mutableStateOf<String?>(null) }
     val epgNowMillis = rememberLiveTvEpgNowMillis()
     var section by rememberSaveable { mutableStateOf(LiveTvSection.Channels) }
-    val guideScrollState = rememberScrollState()
+    val guideScrollState = remember { LiveTvGuideScrollState() }
+    val guidePulse = rememberLiveTvGuidePulse()
+    val guideTextMeasurer = rememberLiveTvGuideTextMeasurer()
     val guideWindowStart = remember(epgNowMillis / LIVE_TV_GUIDE_SLOT_MILLIS) { liveTvGuideWindowStart(epgNowMillis) }
     var sportsFilter by rememberSaveable { mutableStateOf(LIVE_TV_SPORTS_FILTER_ALL) }
     var vodKind by rememberSaveable { mutableStateOf(LiveTvVodKind.Movies) }
@@ -227,9 +229,9 @@ fun LiveTvScreen(
     LaunchedEffect(section, guideWindowStart, guideChannels.isNotEmpty()) {
         if (section != LiveTvSection.Guide || guideChannels.isEmpty()) return@LaunchedEffect
         withTimeoutOrNull(3_000L) {
-            snapshotFlow { guideScrollState.maxValue }.first { it in 1 until Int.MAX_VALUE }
+            snapshotFlow { guideScrollState.maxPx }.first { it > 0f }
         }
-        guideScrollState.animateScrollTo(guideNowOffsetPx)
+        guideScrollState.animateTo(guideNowOffsetPx.toFloat())
     }
 
     // Sports: refreshed while the section is open (every minute with live matches, otherwise every 5).
@@ -414,8 +416,9 @@ fun LiveTvScreen(
                                             scrollState = guideScrollState,
                                             windowStart = guideWindowStart,
                                             nowMillis = epgNowMillis,
+                                            pulse = guidePulse,
                                             onJumpToNow = {
-                                                coroutineScope.launch { guideScrollState.animateScrollTo(guideNowOffsetPx) }
+                                                coroutineScope.launch { guideScrollState.animateTo(guideNowOffsetPx.toFloat()) }
                                             },
                                         )
                                     }
@@ -476,6 +479,8 @@ fun LiveTvScreen(
                             scrollState = guideScrollState,
                             windowStart = guideWindowStart,
                             nowMillis = epgNowMillis,
+                            pulse = guidePulse,
+                            textMeasurer = guideTextMeasurer,
                             onChannelClick = playChannel,
                             onProgramClick = { channel, program ->
                                 if (program.isAiringAt(epgNowMillis)) playChannel(channel) else guideChannelId = channel.id

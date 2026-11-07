@@ -1,19 +1,26 @@
 package com.nuvio.app.features.livetv
 
-import androidx.compose.foundation.ScrollState
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.ScrollableState
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -26,24 +33,40 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.nuvio.app.core.ui.nuvio
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.live_tv_epg_now
 import nuvio.composeapp.generated.resources.live_tv_guide_jump_now
@@ -55,6 +78,8 @@ internal val LiveTvGuideDpPerMinute = 4.dp
 internal val LiveTvGuideChannelColumnWidth = 96.dp
 private val LiveTvGuideRowHeight = 64.dp
 private val LiveTvGuideBlockGap = 3.dp
+private val LiveTvGuideBlockRadius = 10.dp
+private val LiveTvGuideBlockPaddingH = 8.dp
 
 internal fun liveTvGuideWindowStart(nowMillis: Long): Long =
     (nowMillis / LIVE_TV_GUIDE_SLOT_MILLIS) * LIVE_TV_GUIDE_SLOT_MILLIS - LIVE_TV_GUIDE_SLOT_MILLIS
@@ -68,14 +93,68 @@ internal fun liveTvGuideHasPrograms(programs: List<LiveTvEpgProgram>?, windowSta
     return programs?.any { it.endMillis > windowStart && it.startMillis < windowEnd } == true
 }
 
+/**
+ * Horizontal position of the guide timeline, shared by the ruler and every row.
+ *
+ * Performance: unlike a shared ScrollState used by many horizontalScroll modifiers, nothing here is
+ * written during layout (each horizontalScroll wrote maxValue, invalidating every visible row each
+ * time a new row appeared while scrolling vertically). The offset is read only in the draw phase.
+ */
+@Stable
+internal class LiveTvGuideScrollState {
+    var offsetPx by mutableFloatStateOf(0f)
+        private set
+    var maxPx by mutableFloatStateOf(0f)
+        private set
+
+    val scrollable = ScrollableState { delta ->
+        val old = offsetPx
+        offsetPx = (old - delta).coerceIn(0f, maxPx)
+        old - offsetPx
+    }
+
+    /** Called with the visible timeline width; writing the same value invalidates nothing. */
+    fun updateViewport(timelinePx: Float, viewportPx: Float) {
+        val newMax = (timelinePx - viewportPx).coerceAtLeast(0f)
+        if (newMax != maxPx) {
+            maxPx = newMax
+            offsetPx = offsetPx.coerceIn(0f, newMax)
+        }
+    }
+
+    suspend fun animateTo(targetPx: Float) {
+        val target = targetPx.coerceIn(0f, maxPx)
+        scrollable.animateScrollBy(offsetPx - target)
+    }
+}
+
+/** One pulse animation for the whole guide (instead of one infinite transition per row). */
+@Composable
+internal fun rememberLiveTvGuidePulse(): State<Float> =
+    rememberInfiniteTransition(label = "liveTvGuidePulse").animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(1_300, easing = LinearEasing), RepeatMode.Restart),
+        label = "liveTvGuidePulseValue",
+    )
+
 @Composable
 internal fun LiveTvGuideTimeRuler(
-    scrollState: ScrollState,
+    scrollState: LiveTvGuideScrollState,
     windowStart: Long,
     nowMillis: Long,
+    pulse: State<Float>,
     onJumpToNow: () -> Unit = {},
 ) {
     val tokens = MaterialTheme.nuvio
+    val measurer = rememberTextMeasurer(cacheSize = 32)
+    val labelStyle = MaterialTheme.typography.labelMedium.copy(color = tokens.colors.textMuted)
+    val labels = remember(windowStart) {
+        val slots = (LIVE_TV_GUIDE_WINDOW_MILLIS / LIVE_TV_GUIDE_SLOT_MILLIS).toInt()
+        List(slots) { index -> formatLiveTvEpgTime(windowStart + index * LIVE_TV_GUIDE_SLOT_MILLIS) }
+    }
+    val density = LocalDensity.current
+    val pxPerMinute = with(density) { LiveTvGuideDpPerMinute.toPx() }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -112,93 +191,119 @@ internal fun LiveTvGuideTimeRuler(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxHeight()
-                .horizontalScroll(scrollState),
-        ) {
-            Box(
-                modifier = Modifier
-                    .width(LiveTvGuideTimelineWidth)
-                    .fillMaxHeight(),
-            ) {
-                val slots = (LIVE_TV_GUIDE_WINDOW_MILLIS / LIVE_TV_GUIDE_SLOT_MILLIS).toInt()
-                repeat(slots) { index ->
-                    val slotStart = windowStart + index * LIVE_TV_GUIDE_SLOT_MILLIS
-                    Text(
-                        text = formatLiveTvEpgTime(slotStart),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = tokens.colors.textMuted,
-                        modifier = Modifier
-                            .offset(x = minutesToDp(slotStart - windowStart))
-                            .align(Alignment.CenterStart)
-                            .padding(start = 4.dp),
+                .clipToBounds()
+                .scrollable(scrollState.scrollable, Orientation.Horizontal)
+                .drawBehind {
+                    val offset = scrollState.offsetPx
+                    val slotPx = pxPerMinute * (LIVE_TV_GUIDE_SLOT_MILLIS / 60_000L)
+                    val first = (offset / slotPx).toInt().coerceAtLeast(0)
+                    val last = ((offset + size.width) / slotPx).toInt().coerceAtMost(labels.lastIndex)
+                    for (index in first..last) {
+                        val layout = measurer.measure(labels[index], labelStyle, maxLines = 1)
+                        drawText(
+                            textLayoutResult = layout,
+                            topLeft = Offset(
+                                x = index * slotPx - offset + 4.dp.toPx(),
+                                y = (size.height - layout.size.height) / 2f,
+                            ),
+                        )
+                    }
+                    drawGuideNowLine(
+                        x = (nowMillis - windowStart) / 60_000f * pxPerMinute - offset,
+                        pulse = pulse.value,
+                        withHead = true,
                     )
-                }
-                LiveTvGuideNowLine(windowStart = windowStart, nowMillis = nowMillis, showHead = true)
-            }
-        }
+                },
+        )
     }
 }
 
-@Composable
-private fun BoxScope.LiveTvGuideNowLine(windowStart: Long, nowMillis: Long, showHead: Boolean = false) {
-    if (nowMillis < windowStart || nowMillis > windowStart + LIVE_TV_GUIDE_WINDOW_MILLIS) return
-    val x = minutesToDp(nowMillis - windowStart)
-    Box(
-        modifier = Modifier
-            .offset(x = x)
-            .width(2.dp)
-            .fillMaxHeight()
-            .background(LiveTvLiveRed.copy(alpha = 0.85f)),
+private fun DrawScope.drawGuideNowLine(x: Float, pulse: Float, withHead: Boolean) {
+    if (x < -8f || x > size.width + 8f) return
+    drawRect(
+        color = LiveTvLiveRed.copy(alpha = 0.85f),
+        topLeft = Offset(x - 1.dp.toPx(), 0f),
+        size = Size(2.dp.toPx(), size.height),
     )
-    if (showHead) {
-        // Pulsing marker on the ruler: where "now" is on the timeline.
-        LiveTvPulsingDot(
-            size = 8.dp,
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .offset(x = x - 3.dp),
-        )
+    if (withHead) {
+        val radius = 4.dp.toPx()
+        val center = Offset(x, size.height - radius - 1.dp.toPx())
+        drawCircle(LiveTvLiveRed.copy(alpha = (1f - pulse) * 0.55f), radius * (1f + pulse * 1.4f), center)
+        drawCircle(LiveTvLiveRed, radius, center)
     }
 }
 
 internal fun LazyListScope.liveTvGuideRows(
     channels: List<LiveTvChannel>,
     epgPrograms: Map<String, List<LiveTvEpgProgram>>,
-    scrollState: ScrollState,
+    scrollState: LiveTvGuideScrollState,
     windowStart: Long,
     nowMillis: Long,
+    pulse: State<Float>,
+    textMeasurer: TextMeasurer,
     onChannelClick: (LiveTvChannel) -> Unit,
     onProgramClick: (LiveTvChannel, LiveTvEpgProgram) -> Unit,
 ) {
-    items(channels, key = { "guide:${it.id}" }) { channel ->
+    items(channels, key = { "guide:${it.id}" }, contentType = { "guide-row" }) { channel ->
         LiveTvGuideRow(
             channel = channel,
             programs = epgPrograms[channel.id].orEmpty(),
             scrollState = scrollState,
             windowStart = windowStart,
             nowMillis = nowMillis,
+            pulse = pulse,
+            textMeasurer = textMeasurer,
             onChannelClick = { onChannelClick(channel) },
             onProgramClick = { program -> onProgramClick(channel, program) },
         )
     }
 }
 
+/** A programme of the window with its precomputed position (in px) and texts. */
+private class GuideBlock(
+    val program: LiveTvEpgProgram,
+    val startPx: Float,
+    val widthPx: Float,
+    val timeText: String,
+)
+
 @Composable
 private fun LiveTvGuideRow(
     channel: LiveTvChannel,
     programs: List<LiveTvEpgProgram>,
-    scrollState: ScrollState,
+    scrollState: LiveTvGuideScrollState,
     windowStart: Long,
     nowMillis: Long,
+    pulse: State<Float>,
+    textMeasurer: TextMeasurer,
     onChannelClick: () -> Unit,
     onProgramClick: (LiveTvEpgProgram) -> Unit,
 ) {
     val tokens = MaterialTheme.nuvio
-    val accent = tokens.colors.accent
+    val density = LocalDensity.current
+    val pxPerMinute = with(density) { LiveTvGuideDpPerMinute.toPx() }
+    val timelinePx = with(density) { LiveTvGuideTimelineWidth.toPx() }
     val windowEnd = windowStart + LIVE_TV_GUIDE_WINDOW_MILLIS
     // XMLTV guides often hold days of programmes: keep only the 12 h window, once per row.
-    val windowPrograms = remember(programs, windowStart) {
-        programs.filter { it.endMillis > windowStart && it.startMillis < windowEnd }
+    val blocks = remember(programs, windowStart, pxPerMinute) {
+        programs.mapNotNull { program ->
+            val start = maxOf(program.startMillis, windowStart)
+            val end = minOf(program.endMillis, windowEnd)
+            if (end <= start) return@mapNotNull null
+            GuideBlock(
+                program = program,
+                startPx = (start - windowStart) / 60_000f * pxPerMinute,
+                widthPx = (end - start) / 60_000f * pxPerMinute,
+                timeText = "${formatLiveTvEpgTime(program.startMillis)} – ${formatLiveTvEpgTime(program.endMillis)}",
+            )
+        }
     }
+
+    val colors = tokens.colors
+    val titleStyle = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Medium)
+    val airingTitleStyle = titleStyle.copy(fontWeight = FontWeight.SemiBold)
+    val timeStyle = MaterialTheme.typography.labelSmall
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -219,7 +324,7 @@ private fun LiveTvGuideRow(
                 modifier = Modifier
                     .size(width = 52.dp, height = 32.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(tokens.colors.surfaceCard),
+                    .background(colors.surfaceCard),
                 contentAlignment = Alignment.Center,
             ) {
                 if (!channel.logoUrl.isNullOrBlank()) {
@@ -235,7 +340,7 @@ private fun LiveTvGuideRow(
                     Icon(
                         imageVector = Icons.Rounded.Tv,
                         contentDescription = null,
-                        tint = tokens.colors.textMuted,
+                        tint = colors.textMuted,
                         modifier = Modifier.size(18.dp),
                     )
                 }
@@ -243,96 +348,129 @@ private fun LiveTvGuideRow(
             Text(
                 text = channel.name,
                 style = MaterialTheme.typography.labelSmall,
-                color = tokens.colors.textSecondary,
+                color = colors.textSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.padding(top = 3.dp),
             )
         }
+        // The whole timeline of the row is one drawing: no composable per programme. Only the
+        // blocks inside the viewport are measured and drawn (texts are cached by the measurer).
         Box(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxHeight()
-                .horizontalScroll(scrollState),
-        ) {
-            Box(
-                modifier = Modifier
-                    .width(LiveTvGuideTimelineWidth)
-                    .fillMaxHeight(),
-            ) {
-                windowPrograms.forEach { program ->
-                    val start = maxOf(program.startMillis, windowStart)
-                    val end = minOf(program.endMillis, windowEnd)
-                    if (end <= start) return@forEach
-                    val width = minutesToDp(end - start) - LiveTvGuideBlockGap
-                    if (width <= 0.dp) return@forEach
-                    val airing = program.isAiringAt(nowMillis)
-                    val past = program.endMillis <= nowMillis
-                    val elapsed = if (airing) {
-                        ((nowMillis - program.startMillis).toFloat() /
-                            (program.endMillis - program.startMillis).coerceAtLeast(1L)).coerceIn(0f, 1f)
-                    } else {
-                        0f
-                    }
-                    Column(
-                        modifier = Modifier
-                            .offset(x = minutesToDp(start - windowStart))
-                            .width(width)
-                            .fillMaxHeight()
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(if (airing) tokens.colors.overlaySelected else tokens.colors.surface)
-                            .then(
-                                if (airing) {
-                                    // Elapsed part of the programme, filled like a progress bar.
-                                    Modifier.drawBehind {
-                                        drawRect(
-                                            color = accent.copy(alpha = 0.16f),
-                                            size = Size(size.width * elapsed, size.height),
-                                        )
-                                        drawRect(
-                                            color = accent,
-                                            topLeft = Offset(0f, size.height - 3.dp.toPx()),
-                                            size = Size(size.width * elapsed, 3.dp.toPx()),
-                                        )
-                                    }
-                                } else {
-                                    Modifier
-                                },
-                            )
-                            .then(if (past) Modifier.alpha(0.55f) else Modifier)
-                            .clickable { onProgramClick(program) }
-                            .padding(horizontal = 8.dp, vertical = 6.dp),
-                        verticalArrangement = Arrangement.Center,
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(5.dp),
-                        ) {
-                            if (airing) LiveTvPulsingDot(size = 6.dp)
-                            Text(
-                            text = program.title,
-                            style = MaterialTheme.typography.labelLarge,
-                            color = when {
-                                airing -> tokens.colors.accent
-                                past -> tokens.colors.textMuted
-                                else -> tokens.colors.textPrimary
-                            },
-                            fontWeight = if (airing) FontWeight.SemiBold else FontWeight.Medium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        }
-                        Text(
-                            text = liveTvEpgTimeRange(program),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = tokens.colors.textMuted.copy(alpha = if (past) 0.6f else 1f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Clip,
-                        )
+                .clipToBounds()
+                .onSizeChanged { scrollState.updateViewport(timelinePx, it.width.toFloat()) }
+                .scrollable(scrollState.scrollable, Orientation.Horizontal)
+                .pointerInput(blocks) {
+                    detectTapGestures { position ->
+                        val x = position.x + scrollState.offsetPx
+                        blocks.firstOrNull { x >= it.startPx && x < it.startPx + it.widthPx }
+                            ?.let { onProgramClick(it.program) }
                     }
                 }
-                LiveTvGuideNowLine(windowStart = windowStart, nowMillis = nowMillis)
-            }
-        }
+                .drawBehind {
+                    val offset = scrollState.offsetPx
+                    val gap = LiveTvGuideBlockGap.toPx()
+                    val radius = CornerRadius(LiveTvGuideBlockRadius.toPx())
+                    val padH = LiveTvGuideBlockPaddingH.toPx()
+                    val pulseValue = pulse.value
+                    for (block in blocks) {
+                        val left = block.startPx - offset
+                        val width = block.widthPx - gap
+                        if (left + width < 0f || left > size.width || width <= 0f) continue
+                        val airing = block.program.isAiringAt(nowMillis)
+                        val past = block.program.endMillis <= nowMillis
+                        drawRoundRect(
+                            color = if (airing) colors.overlaySelected else colors.surface,
+                            topLeft = Offset(left, 0f),
+                            size = Size(width, size.height),
+                            cornerRadius = radius,
+                            alpha = if (past) 0.55f else 1f,
+                        )
+                        if (airing) {
+                            val span = (block.program.endMillis - block.program.startMillis).coerceAtLeast(1L)
+                            val elapsed = ((nowMillis - block.program.startMillis).toFloat() / span).coerceIn(0f, 1f)
+                            clipRect(left, 0f, left + width * elapsed, size.height) {
+                                drawRoundRect(
+                                    color = colors.accent.copy(alpha = 0.16f),
+                                    topLeft = Offset(left, 0f),
+                                    size = Size(width, size.height),
+                                    cornerRadius = radius,
+                                )
+                                drawRect(
+                                    color = colors.accent,
+                                    topLeft = Offset(left, size.height - 3.dp.toPx()),
+                                    size = Size(width, 3.dp.toPx()),
+                                )
+                            }
+                        }
+                        // Fixed text width per block: the measurer cache hits while scrolling.
+                        val textLeft = left + padH
+                        val textRight = left + width - padH
+                        val maxTextWidth = (textRight - textLeft).toInt()
+                        if (maxTextWidth < 12) continue
+                        var titleLeft = textLeft
+                        if (airing) {
+                            val dotRadius = 3.dp.toPx()
+                            val center = Offset(textLeft + dotRadius, size.height * 0.36f)
+                            drawCircle(LiveTvLiveRed.copy(alpha = (1f - pulseValue) * 0.55f), dotRadius * (1f + pulseValue * 1.4f), center)
+                            drawCircle(LiveTvLiveRed, dotRadius, center)
+                            titleLeft += dotRadius * 2 + 5.dp.toPx()
+                        }
+                        val titleWidth = (textRight - titleLeft).toInt()
+                        if (titleWidth < 12) continue
+                        val title = measureGuideText(
+                            textMeasurer,
+                            block.program.title,
+                            if (airing) airingTitleStyle else titleStyle,
+                            titleWidth,
+                        )
+                        val time = measureGuideText(textMeasurer, block.timeText, timeStyle, titleWidth + (titleLeft - textLeft).toInt())
+                        val totalHeight = title.size.height + time.size.height
+                        val top = (size.height - totalHeight) / 2f
+                        val alpha = if (past) 0.6f else 1f
+                        drawText(
+                            textLayoutResult = title,
+                            color = when {
+                                airing -> colors.accent
+                                past -> colors.textMuted
+                                else -> colors.textPrimary
+                            },
+                            topLeft = Offset(titleLeft, top),
+                            alpha = alpha,
+                        )
+                        drawText(
+                            textLayoutResult = time,
+                            color = colors.textMuted,
+                            topLeft = Offset(textLeft, top + title.size.height),
+                            alpha = alpha,
+                        )
+                    }
+                    drawGuideNowLine(
+                        x = (nowMillis - windowStart) / 60_000f * pxPerMinute - offset,
+                        pulse = pulseValue,
+                        withHead = false,
+                    )
+                },
+        )
     }
 }
+
+private fun measureGuideText(
+    measurer: TextMeasurer,
+    text: String,
+    style: TextStyle,
+    maxWidth: Int,
+): TextLayoutResult = measurer.measure(
+    text = text,
+    style = style,
+    overflow = TextOverflow.Ellipsis,
+    maxLines = 1,
+    softWrap = false,
+    constraints = Constraints(maxWidth = maxWidth.coerceAtLeast(1)),
+)
+
+@Composable
+internal fun rememberLiveTvGuideTextMeasurer(): TextMeasurer = rememberTextMeasurer(cacheSize = 256)
