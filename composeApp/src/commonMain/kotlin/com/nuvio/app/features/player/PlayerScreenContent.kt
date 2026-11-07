@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -40,6 +42,9 @@ import nuvio.composeapp.generated.resources.parental_violence
 import nuvio.composeapp.generated.resources.compose_player_tba
 import org.jetbrains.compose.resources.stringResource
 import com.nuvio.app.tv.BindTvPlayerRemote
+import com.nuvio.app.core.ui.glass.LocalLiquidGlassBackdrop
+import com.nuvio.app.core.ui.glass.isLiquidGlassSupported
+import com.nuvio.app.core.ui.glass.isLiquidGlassSupported
 
 @Composable
 internal fun PlayerScreenContent(args: PlayerScreenArgs) {
@@ -160,6 +165,10 @@ internal fun PlayerScreenContent(args: PlayerScreenArgs) {
         )
         runtime.BindPlayerRuntimeEffects()
         runtime.BindPostPlayRecommendationEffects()
-        runtime.RenderPlayerRuntimeUi()
+        CompositionLocalProvider(
+            LocalLiquidGlassBackdrop provides rememberVideoFrameBackdrop(enabled = isLiquidGlassSupported()),
+        ) {
+            runtime.RenderPlayerRuntimeUi()
+        }
     }
 }

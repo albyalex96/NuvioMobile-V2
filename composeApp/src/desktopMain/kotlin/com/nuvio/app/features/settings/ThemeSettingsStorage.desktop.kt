@@ -23,6 +23,7 @@ actual object ThemeSettingsStorage {
     private const val NAV_BAR_STYLE_KEY = "nav_bar_style"
     private const val navBarGlowEnabledKey = "nav_bar_glow_enabled"
     private const val topNavBarEnabledKey = "top_nav_bar_enabled"
+    private const val liquidGlassEffectsKey = "enhanced_local_liquid_glass_effects"
     private const val topNavBarStyleKey = "top_nav_bar_style"
     private const val dateFormatKey = "date_format"
     private const val episodeCodeFormatKey = "episode_code_format"
@@ -116,6 +117,19 @@ actual object ThemeSettingsStorage {
         preferences
             ?.edit()
             ?.putBoolean(ProfileScopedKey.of(topNavBarEnabledKey), enabled)
+            ?.apply()
+    }
+
+    actual fun loadLiquidGlassEffectsEnabled(): Boolean? =
+        preferences?.let { prefs ->
+            val key = ProfileScopedKey.of(liquidGlassEffectsKey)
+            if (prefs.contains(key)) prefs.getBoolean(key, false) else null
+        }
+
+    actual fun saveLiquidGlassEffectsEnabled(enabled: Boolean) {
+        preferences
+            ?.edit()
+            ?.putBoolean(ProfileScopedKey.of(liquidGlassEffectsKey), enabled)
             ?.apply()
     }
 

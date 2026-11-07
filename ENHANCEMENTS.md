@@ -145,6 +145,7 @@ Ported from [luqmanfadlli/NuvioMobile-Enhanced](https://github.com/luqmanfadlli/
 ## Appearance and interface
 
 - **Full AMOLED mode:** extra toggle that also turns surfaces and cards pure black.
+- **Liquid glass effects:** optional toggle (off by default, not on TV) that turns sheets, player controls and panels, the skip button, stream cards and stream filters into liquid glass, refracting the video or the content behind them.
 - **Date format** presets (system, DD/MM/YYYY, MM/DD/YYYY, YYYY-MM-DD, DD MMM YYYY…) applied to every date in the app.
 - **Episode code format:** S1 E2, S01E02, S1E2, 01x02, 1x2.
 - **Expandable episode overviews** with an animated layout in both episode list styles.

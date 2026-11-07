@@ -1,7 +1,9 @@
 package com.nuvio.app.features.settings
 
+import co.touchlab.kermit.Logger
 import com.nuvio.app.core.format.DateFormatPreset
 import com.nuvio.app.core.format.EpisodeCodeFormat
+import com.nuvio.app.core.ui.glass.LiquidGlassSettings
 import com.nuvio.app.core.ui.AppTheme
 import com.nuvio.app.core.ui.CustomThemeColors
 import com.nuvio.app.core.ui.NativeTabBridge
@@ -21,6 +23,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 object ThemeSettingsRepository {
+    private val log = Logger.withTag("LiquidGlass")
+
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val _selectedThemePreference = MutableStateFlow<AppTheme?>(null)
     val selectedThemePreference: StateFlow<AppTheme?> = _selectedThemePreference.asStateFlow()
@@ -49,6 +53,9 @@ object ThemeSettingsRepository {
 
     private val _navBarGlowEnabled = MutableStateFlow(true)
     val navBarGlowEnabled: StateFlow<Boolean> = _navBarGlowEnabled.asStateFlow()
+
+    private val _liquidGlassEffectsEnabled = MutableStateFlow(false)
+    val liquidGlassEffectsEnabled: StateFlow<Boolean> = _liquidGlassEffectsEnabled.asStateFlow()
 
     private val _topNavBarEnabled = MutableStateFlow(false)
     val topNavBarEnabled: StateFlow<Boolean> = _topNavBarEnabled.asStateFlow()
@@ -102,6 +109,7 @@ object ThemeSettingsRepository {
         _topNavBarStyle.value = TopNavBarStyle.EXPANDED
         applyDateFormat(DateFormatPreset.SYSTEM)
         applyEpisodeCodeFormat(EpisodeCodeFormat.DEFAULT)
+        applyLiquidGlassEffectsEnabled(false)
     }
 
     private fun loadFromDisk() {
@@ -134,6 +142,7 @@ object ThemeSettingsRepository {
         _topNavBarStyle.value = TopNavBarStyle.fromKey(ThemeSettingsStorage.loadTopNavBarStyle())
         applyDateFormat(DateFormatPreset.fromKey(ThemeSettingsStorage.loadDateFormat()))
         applyEpisodeCodeFormat(EpisodeCodeFormat.fromKey(ThemeSettingsStorage.loadEpisodeCodeFormat()))
+        applyLiquidGlassEffectsEnabled(ThemeSettingsStorage.loadLiquidGlassEffectsEnabled() ?: false)
     }
 
     fun setTheme(theme: AppTheme) {
@@ -204,6 +213,19 @@ object ThemeSettingsRepository {
         if (_navBarGlowEnabled.value == enabled) return
         _navBarGlowEnabled.value = enabled
         ThemeSettingsStorage.saveNavBarGlowEnabled(enabled)
+    }
+
+    fun setLiquidGlassEffectsEnabled(enabled: Boolean) {
+        ensureLoaded()
+        if (_liquidGlassEffectsEnabled.value == enabled) return
+        applyLiquidGlassEffectsEnabled(enabled)
+        ThemeSettingsStorage.saveLiquidGlassEffectsEnabled(enabled)
+        log.i { "Liquid glass effects ${if (enabled) "enabled" else "disabled"}" }
+    }
+
+    private fun applyLiquidGlassEffectsEnabled(enabled: Boolean) {
+        _liquidGlassEffectsEnabled.value = enabled
+        LiquidGlassSettings.enabled = enabled
     }
 
     fun setTopNavBarEnabled(enabled: Boolean) {

@@ -33,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -62,6 +63,8 @@ import nuvio.composeapp.generated.resources.playback_unavailable
 import nuvio.composeapp.generated.resources.random_episode_title
 import nuvio.composeapp.generated.resources.shuffle_stop
 import org.jetbrains.compose.resources.stringResource
+import com.nuvio.app.core.ui.glass.ambientLiquidGlass
+import com.nuvio.app.core.ui.glass.isAmbientLiquidGlassActive
 
 /** What the main detail button does: picks its icon. */
 enum class DetailPlayButtonKind {
@@ -194,11 +197,26 @@ fun DetailActionButtons(
             }
 
             if (hasSecondaryActions) {
+                val moreGlassActive = !actionsExpanded && isAmbientLiquidGlassActive()
                 Surface(
-                    modifier = Modifier.size(iconButtonSize),
+                    modifier = Modifier
+                        .size(iconButtonSize)
+                        .then(
+                            if (moreGlassActive) {
+                                Modifier.ambientLiquidGlass(
+                                    shape = CircleShape,
+                                    tint = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    fallback = Color.Transparent,
+                                )
+                            } else {
+                                Modifier
+                            },
+                        ),
                     shape = CircleShape,
                     color = if (actionsExpanded) {
                         MaterialTheme.colorScheme.onBackground
+                    } else if (moreGlassActive) {
+                        Color.Transparent
                     } else {
                         MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.82f)
                     },
@@ -300,15 +318,30 @@ private fun DetailIconAction(
     size: Dp,
     onLongClick: (() -> Unit)? = null,
 ) {
+    val glassActive = !active && isAmbientLiquidGlassActive()
     Surface(
-        modifier = modifier.graphicsLayer {
-            alpha = progress
-            scaleX = 0.86f + (0.14f * progress)
-            scaleY = 0.86f + (0.14f * progress)
-        },
+        modifier = modifier
+            .graphicsLayer {
+                alpha = progress
+                scaleX = 0.86f + (0.14f * progress)
+                scaleY = 0.86f + (0.14f * progress)
+            }
+            .then(
+                if (glassActive) {
+                    Modifier.ambientLiquidGlass(
+                        shape = CircleShape,
+                        tint = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f),
+                        fallback = Color.Transparent,
+                    )
+                } else {
+                    Modifier
+                },
+            ),
         shape = CircleShape,
         color = if (active) {
             MaterialTheme.colorScheme.onBackground
+        } else if (glassActive) {
+            Color.Transparent
         } else {
             MaterialTheme.colorScheme.surfaceVariant
         },

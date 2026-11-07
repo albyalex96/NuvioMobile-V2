@@ -1,5 +1,8 @@
 package com.nuvio.app.features.settings
 
+import com.nuvio.app.core.ui.glass.isLiquidGlassAvailable
+import nuvio.composeapp.generated.resources.settings_appearance_liquid_glass_effects
+import nuvio.composeapp.generated.resources.settings_appearance_liquid_glass_effects_description
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -176,6 +179,17 @@ internal fun LazyListScope.appearanceSettingsContent(
                         checked = liquidGlassNativeTabBarEnabled,
                         isTablet = isTablet,
                         onCheckedChange = onLiquidGlassNativeTabBarToggle,
+                    )
+                }
+                if (isLiquidGlassAvailable() && !TvAppRuntime.isTvApp) {
+                    val liquidGlassEffectsEnabled by ThemeSettingsRepository.liquidGlassEffectsEnabled.collectAsStateWithLifecycle()
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.settings_appearance_liquid_glass_effects),
+                        description = stringResource(Res.string.settings_appearance_liquid_glass_effects_description),
+                        checked = liquidGlassEffectsEnabled,
+                        isTablet = isTablet,
+                        onCheckedChange = ThemeSettingsRepository::setLiquidGlassEffectsEnabled,
                     )
                 }
                 SettingsGroupDivider(isTablet = isTablet)

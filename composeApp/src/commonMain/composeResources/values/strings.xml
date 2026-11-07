@@ -592,6 +592,9 @@
     <string name="settings_licenses_attributions_aniskip_logo_title">AniSkip logo</string>
     <string name="settings_licenses_attributions_aniskip_logo_body">The AniSkip icon shown in the integrations comes from the AniSkip browser extension. Copyright (c) 2021 Lexes Jan Mantiquilla.</string>
     <string name="settings_licenses_attributions_aniskip_logo_license">Licensed under the MIT License.</string>
+    <string name="settings_licenses_attributions_backdrop_title">Backdrop 2.0.1</string>
+    <string name="settings_licenses_attributions_backdrop_body">Used for liquid glass effects. Created by Kyant.</string>
+    <string name="settings_licenses_attributions_backdrop_license">Licensed under the Apache License, Version 2.0.</string>
     <string name="settings_licenses_attributions_nuvio_title">Nuvio Mobile</string>
     <string name="settings_licenses_attributions_nuvio_body">Source code and license terms are available in the project repository.</string>
     <string name="settings_licenses_attributions_nuvio_license">Licensed under the GNU General Public License v3.0.</string>
@@ -2567,6 +2570,8 @@
     <string name="compose_player_show_remaining_time">Show remaining time</string>
     <string name="compose_player_brightness">Brightness</string>
     <string name="compose_player_volume">Volume</string>
+    <string name="settings_appearance_liquid_glass_effects">Liquid glass effects</string>
+    <string name="settings_appearance_liquid_glass_effects_description">Liquid glass on sheets, player controls, stream cards and filters. Turn off for solid surfaces.</string>
     <string name="random_episode_title">Shuffle</string>
     <string name="layout_random_episode_sub">Shuffle episodes from any series. Turning this off pauses shuffle.</string>
     <string name="random_episode_unwatched">Unwatched episodes</string>

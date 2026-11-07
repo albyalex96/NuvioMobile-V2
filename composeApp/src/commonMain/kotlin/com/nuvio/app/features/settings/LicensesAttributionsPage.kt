@@ -95,6 +95,7 @@ private const val ZxingLicenseUrl = "https://github.com/zxing/zxing/blob/master/
 /** ZXing creates (TV) and reads (phone, Android full) the TV remote pairing QR code. */
 internal fun tvRemoteLicenseVisible(): Boolean =
     com.nuvio.app.tv.TvAppRuntime.isTvApp || com.nuvio.app.features.tvremote.PhoneTvRemote.activeClient != null
+private const val BackdropLicenseUrl = "https://github.com/Kyant0/AndroidLiquidGlass/blob/kmp/LICENSE"
 
 private data class AttributionItem(
     val titleRes: StringResource,
@@ -286,6 +287,16 @@ private fun LicensesAttributionsBody(
                     bodyRes = Res.string.settings_licenses_attributions_haze_body,
                     licenseRes = Res.string.settings_licenses_attributions_haze_license,
                     link = HazeLicenseUrl,
+                ),
+                isTablet = isTablet,
+            )
+            PlainStackDivider()
+            LicenseRow(
+                item = LicenseItem(
+                    titleRes = Res.string.settings_licenses_attributions_backdrop_title,
+                    bodyRes = Res.string.settings_licenses_attributions_backdrop_body,
+                    licenseRes = Res.string.settings_licenses_attributions_backdrop_license,
+                    link = BackdropLicenseUrl,
                 ),
                 isTablet = isTablet,
             )

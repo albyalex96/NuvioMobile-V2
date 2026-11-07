@@ -1390,6 +1390,8 @@
   <string name="settings_licenses_attributions_hlsjs_license">Rilasciato sotto la licenza Apache License, Versione 2.0.</string>
   <string name="settings_appearance_liquid_glass">Liquid Glass</string>
   <string name="settings_appearance_liquid_glass_description">Usa la barra dei pannelli nativa dell'iPhone su iOS 26 e versioni successive.</string>
+  <string name="settings_appearance_liquid_glass_effects">Effetti Liquid Glass</string>
+  <string name="settings_appearance_liquid_glass_effects_description">Effetto vetro su pannelli, controlli del player, schede degli stream e filtri. Disattivalo per superfici solide.</string>
   <string name="layout_hide_unreleased">Nascondi contenuti non rilasciati</string>
   <string name="layout_hide_unreleased_sub">Nascondi i film e le serie TV che non sono ancora stati rilasciati.</string>
   <string name="settings_hide_secret">Nascondi valore</string>
@@ -2170,6 +2172,9 @@
   <string name="settings_licenses_attributions_haze_title">Haze 1.7.2</string>
   <string name="settings_licenses_attributions_haze_body">Usata per gli effetti di sfocatura dello sfondo. Creata da Chris Banes.</string>
   <string name="settings_licenses_attributions_haze_license">Distribuita con licenza Apache License, Version 2.0.</string>
+  <string name="settings_licenses_attributions_backdrop_title">Backdrop 2.0.1</string>
+  <string name="settings_licenses_attributions_backdrop_body">Usata per gli effetti Liquid Glass. Creata da Kyant.</string>
+  <string name="settings_licenses_attributions_backdrop_license">Distribuita con licenza Apache License, Version 2.0.</string>
   <string name="settings_licenses_attributions_aniskip_logo_title">Logo di AniSkip</string>
   <string name="settings_licenses_attributions_aniskip_logo_body">L'icona di AniSkip mostrata nelle integrazioni proviene dall'estensione per browser di AniSkip. Copyright (c) 2021 Lexes Jan Mantiquilla.</string>
   <string name="settings_licenses_attributions_aniskip_logo_license">Distribuita con licenza MIT.</string>

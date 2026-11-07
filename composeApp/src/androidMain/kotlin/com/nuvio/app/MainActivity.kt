@@ -1,5 +1,6 @@
 package com.nuvio.app
 
+import androidx.compose.runtime.remember
 import co.touchlab.kermit.Logger
 import android.os.SystemClock
 import com.nuvio.app.core.network.SupabaseProvider
@@ -20,6 +21,9 @@ import com.nuvio.app.core.diagnostics.SentryInitializer
 import com.nuvio.app.core.deeplink.handleAppUrl
 import com.nuvio.app.core.storage.PlatformLocalAccountDataCleaner
 import com.nuvio.app.core.sync.SyncClientIdentityStorage
+import com.nuvio.app.core.ui.NuvioSheetBackdrop
+import com.nuvio.app.core.ui.NuvioSheetBackdropHost
+import com.nuvio.app.core.ui.glass.rememberNuvioBackdrop
 import com.nuvio.app.features.addons.AddonHttpClientProvider
 import com.nuvio.app.features.addons.AddonStorage
 import com.nuvio.app.features.cast.CastPlatform
@@ -231,7 +235,11 @@ open class MainActivity : AppCompatActivity() {
         StartupTrace.mark("MainActivity setContent")
 
         setContent {
-            App()
+            val sheetBackdropSource = rememberNuvioBackdrop()
+            val sheetBackdrop = remember(sheetBackdropSource) { NuvioSheetBackdrop(sheetBackdropSource) }
+            NuvioSheetBackdropHost(sheetBackdrop = sheetBackdrop) {
+                App()
+            }
         }
     }
 

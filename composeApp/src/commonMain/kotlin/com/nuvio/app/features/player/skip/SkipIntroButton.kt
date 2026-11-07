@@ -48,6 +48,7 @@ import nuvio.composeapp.generated.resources.player_skip_recap
 import nuvio.composeapp.generated.resources.player_skip_movie_credits
 import nuvio.composeapp.generated.resources.player_skip_to_post_credits
 import org.jetbrains.compose.resources.stringResource
+import com.nuvio.app.core.ui.glass.ambientLiquidGlass
 
 @Composable
 fun SkipIntroButton(
@@ -119,7 +120,14 @@ fun SkipIntroButton(
             modifier = Modifier
                 .width(IntrinsicSize.Max)
                 .clip(shape)
-                .background(Color(0xFF1E1E1E).copy(alpha = 0.85f))
+                .ambientLiquidGlass(
+                    shape = shape,
+                    tint = Color(0xFF1E1E1E).copy(alpha = 0.6f),
+                    fallback = Color(0xFF1E1E1E).copy(alpha = 0.85f),
+                    blurRadius = 18.dp,
+                    refractionHeight = 10.dp,
+                    refractionAmount = 14.dp,
+                )
                 // TV: the prompt takes the focus when it appears (OK skips).
                 .tvFocusOnAppear(onlyWithoutOverlay = true)
                 .clickable(enabled = canSkip && isVisible) { onSkip() },

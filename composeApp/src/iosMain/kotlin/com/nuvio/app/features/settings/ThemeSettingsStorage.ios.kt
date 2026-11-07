@@ -20,6 +20,7 @@ actual object ThemeSettingsStorage {
     private const val navBarStyleKey = "nav_bar_style"
     private const val navBarGlowEnabledKey = "nav_bar_glow_enabled"
     private const val topNavBarEnabledKey = "top_nav_bar_enabled"
+    private const val liquidGlassEffectsKey = "enhanced_local_liquid_glass_effects"
     private const val topNavBarStyleKey = "top_nav_bar_style"
     private const val dateFormatKey = "date_format"
     private const val episodeCodeFormatKey = "episode_code_format"
@@ -105,6 +106,20 @@ actual object ThemeSettingsStorage {
 
     actual fun saveTopNavBarEnabled(enabled: Boolean) {
         NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = ProfileScopedKey.of(topNavBarEnabledKey))
+    }
+
+    actual fun loadLiquidGlassEffectsEnabled(): Boolean? {
+        val defaults = NSUserDefaults.standardUserDefaults
+        val key = ProfileScopedKey.of(liquidGlassEffectsKey)
+        return if (defaults.objectForKey(key) != null) {
+            defaults.boolForKey(key)
+        } else {
+            null
+        }
+    }
+
+    actual fun saveLiquidGlassEffectsEnabled(enabled: Boolean) {
+        NSUserDefaults.standardUserDefaults.setBool(enabled, forKey = ProfileScopedKey.of(liquidGlassEffectsKey))
     }
 
     actual fun loadTopNavBarStyle(): String? =

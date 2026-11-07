@@ -44,6 +44,8 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.nuvio.app.core.ui.SkeletonBlock
 import com.nuvio.app.features.debrid.DebridProviders
+import androidx.compose.ui.graphics.compositeOver
+import com.nuvio.app.core.ui.glass.ambientLiquidGlass
 
 internal val LocalStreamHighlight = staticCompositionLocalOf<(StreamItem) -> String?> { { null } }
 
@@ -92,12 +94,19 @@ internal fun StreamCard(
                 },
             )
             .clip(cardShape)
-            .background(
-                if (isCurrent) {
+            .ambientLiquidGlass(
+                shape = cardShape,
+                tint = if (isCurrent) {
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                } else {
+                    Color.White.copy(alpha = 0.05f)
+                }.compositeOver(Color.Black.copy(alpha = 0.55f)),
+                fallback = if (isCurrent) {
                     MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
                 } else {
                     Color.White.copy(alpha = 0.05f)
                 },
+                blurRadius = 18.dp,
             )
             .then(
                 if (isCurrent || outlined) {

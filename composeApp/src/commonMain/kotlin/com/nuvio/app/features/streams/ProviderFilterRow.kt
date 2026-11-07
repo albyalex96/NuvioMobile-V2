@@ -57,6 +57,7 @@ import nuvio.composeapp.generated.resources.collections_tab_all
 import nuvio.composeapp.generated.resources.streams_refresh
 import kotlinx.coroutines.delay
 import org.jetbrains.compose.resources.stringResource
+import com.nuvio.app.core.ui.glass.ambientLiquidGlass
 
 @Composable
 internal fun ProviderFilterRow(
@@ -220,8 +221,13 @@ private fun FilterChip(
                 scaleY = scale
             }
             .height(36.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(containerColor)
+            .ambientLiquidGlass(
+                shape = RoundedCornerShape(16.dp),
+                tint = containerColor,
+                fallback = containerColor,
+                blurRadius = 14.dp,
+                refractionHeight = 8.dp,
+            )
             .border(
                 width = if (showFocus) 2.dp else 0.dp,
                 // White: the theme focus color can match the filled "selected" chip.

@@ -28,6 +28,8 @@ internal expect object ThemeSettingsStorage {
     fun saveDateFormat(formatKey: String)
     fun loadEpisodeCodeFormat(): String?
     fun saveEpisodeCodeFormat(formatKey: String)
+    fun loadLiquidGlassEffectsEnabled(): Boolean?
+    fun saveLiquidGlassEffectsEnabled(enabled: Boolean)
     fun exportToSyncPayload(): JsonObject
     fun replaceFromSyncPayload(payload: JsonObject)
 }
