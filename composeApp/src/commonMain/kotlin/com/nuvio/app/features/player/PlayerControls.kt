@@ -688,6 +688,9 @@ private fun PlayerHeader(
     }
 }
 
+
+private const val PlayerControlGlassOpacity = 0.35f
+
 @Composable
 internal fun PlayerHeaderIconButton(
     icon: ImageVector,
@@ -703,9 +706,10 @@ internal fun PlayerHeaderIconButton(
             .clip(CircleShape)
             .ambientLiquidGlass(
                 shape = CircleShape,
-                tint = Color.Black.copy(alpha = 0.35f),
+                tint = Color.White.copy(alpha = 0.06f),
                 fallback = Color.Black.copy(alpha = 0.35f),
                 blurRadius = 12.dp,
+                backdropOpacity = PlayerControlGlassOpacity,
                 refractionHeight = 6.dp,
                 refractionAmount = 8.dp,
             )
@@ -772,9 +776,10 @@ private fun SideControlButton(
             .clip(CircleShape)
             .ambientLiquidGlass(
                 shape = CircleShape,
-                tint = Color.Black.copy(alpha = 0.18f),
+                tint = Color.White.copy(alpha = 0.06f),
                 fallback = Color.Transparent,
                 blurRadius = 14.dp,
+                backdropOpacity = PlayerControlGlassOpacity,
                 refractionHeight = 8.dp,
                 refractionAmount = 12.dp,
             )
@@ -808,9 +813,10 @@ internal fun PlayPauseControlButton(
             .clip(CircleShape)
             .ambientLiquidGlass(
                 shape = CircleShape,
-                tint = Color.Black.copy(alpha = 0.18f),
+                tint = Color.White.copy(alpha = 0.06f),
                 fallback = Color.Transparent,
                 blurRadius = 16.dp,
+                backdropOpacity = PlayerControlGlassOpacity,
                 refractionHeight = 10.dp,
                 refractionAmount = 14.dp,
             )
@@ -897,9 +903,10 @@ private fun ProgressControls(
                 modifier = Modifier
                     .ambientLiquidGlass(
                         shape = RoundedCornerShape(24.dp),
-                        tint = Color.Black.copy(alpha = 0.4f),
+                        tint = Color.White.copy(alpha = 0.05f),
                         fallback = Color.Black.copy(alpha = 0.5f),
                         blurRadius = 16.dp,
+                        backdropOpacity = PlayerControlGlassOpacity,
                         refractionHeight = 10.dp,
                         refractionAmount = 14.dp,
                     )
@@ -1112,9 +1119,10 @@ internal fun LockedPlayerOverlay(
                     .clip(CircleShape)
                     .ambientLiquidGlass(
                         shape = CircleShape,
-                        tint = Color.Black.copy(alpha = 0.4f),
+                        tint = Color.White.copy(alpha = 0.06f),
                         fallback = Color.Black.copy(alpha = 0.52f),
                         blurRadius = 16.dp,
+                        backdropOpacity = PlayerControlGlassOpacity,
                         refractionHeight = 10.dp,
                         refractionAmount = 14.dp,
                     )
@@ -1197,9 +1205,10 @@ private fun TimePill(
             .clip(RoundedCornerShape(12.dp))
             .ambientLiquidGlass(
                 shape = RoundedCornerShape(12.dp),
-                tint = Color.Black.copy(alpha = 0.4f),
+                tint = Color.White.copy(alpha = 0.05f),
                 fallback = Color.Black.copy(alpha = 0.5f),
                 blurRadius = 12.dp,
+                backdropOpacity = PlayerControlGlassOpacity,
                 refractionHeight = 4.dp,
                 refractionAmount = 6.dp,
             )
