@@ -2368,6 +2368,8 @@ private fun PlayerView.syncLibassOverlay(
 
     overlayContainer.removeAssOverlayChildren()
     val assSubtitleView = AssSubtitleSurfaceView(overlayContainer.context, assHandler)
+    // Skipped by the liquid glass frame capture: it is a transparent overlay, not the video.
+    assSubtitleView.tag = PlayerOverlaySurfaceTag
     // Wire video frame callback to drive subtitle rendering.
     // The primary path (VideoFrameMetadataListener) provides vsync-pinned timing.
     // When it doesn't fire (tunneled playback), AssPositionRenderer in the
