@@ -696,6 +696,7 @@ private fun MobileSettingsScreen(
                 SettingsSearchTarget.SwitchProfile -> onSwitchProfile?.invoke()
                 SettingsSearchTarget.CheckForUpdates -> onCheckForUpdatesClick?.invoke()
                 SettingsSearchTarget.InstalledReleaseNotes -> InstalledReleaseNotes.show()
+                SettingsSearchTarget.PreviousReleaseNotes -> com.nuvio.app.features.updater.PreviousReleaseNotes.show()
             }
         }
 
@@ -1207,6 +1208,7 @@ private fun TabletSettingsScreen(
                     SettingsSearchTarget.SwitchProfile -> onSwitchProfile?.invoke()
                     SettingsSearchTarget.CheckForUpdates -> onCheckForUpdatesClick?.invoke()
                     SettingsSearchTarget.InstalledReleaseNotes -> InstalledReleaseNotes.show()
+                    SettingsSearchTarget.PreviousReleaseNotes -> com.nuvio.app.features.updater.PreviousReleaseNotes.show()
                 }
             }
 

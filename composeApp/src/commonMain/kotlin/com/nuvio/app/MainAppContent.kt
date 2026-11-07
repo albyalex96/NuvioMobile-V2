@@ -1606,6 +1606,8 @@ internal fun MainAppContent(
         AppUpdaterHost(
             controller = appUpdaterController,
             modifier = Modifier.fillMaxSize(),
+            // Hidden while a video plays, shown again back on the other pages.
+            suppressBanner = currentRoute is PlayerRoute || visiblePlayerEntries > 0,
         ) {
             Box(
                 modifier = Modifier

@@ -77,6 +77,37 @@ internal object AppUpdaterRepository {
         parseReleaseNotes(response.body, tag)
     }
 
+    /** Every published (non-draft) release with a version tag, as release notes. */
+    suspend fun getPublishedReleaseNotes(): Result<List<ReleaseNotesSource>> = runCatching {
+        val response = httpRequestRaw(
+            method = "GET",
+            url = "https://api.github.com/repos/albyalex96/NuvioMobile-V2/releases?per_page=100",
+            headers = mapOf(
+                "Accept" to "application/vnd.github+json",
+                "User-Agent" to "NuvioMobile",
+            ),
+            body = "",
+        )
+        currentCoroutineContext().ensureActive()
+        if (response.status !in 200..299) {
+            error(getString(Res.string.updates_github_api_error, response.status))
+        }
+        parsePublishedReleaseNotes(response.body)
+    }
+
+    internal fun parsePublishedReleaseNotes(responseBody: String): List<ReleaseNotesSource> =
+        json.decodeFromString<List<GitHubReleaseDto>>(responseBody)
+            .filter { !it.draft }
+            .mapNotNull { release ->
+                val tag = release.tagName?.takeIf { VersionUtils.parse(it) != null } ?: return@mapNotNull null
+                ReleaseNotesSource(
+                    tag = tag,
+                    title = release.name?.takeIf(String::isNotBlank) ?: tag,
+                    notes = release.body.orEmpty(),
+                    releaseUrl = release.htmlUrl,
+                )
+            }
+
     internal fun parseReleaseNotes(responseBody: String, fallbackTag: String): ReleaseNotesSource {
         val release = json.decodeFromString<GitHubReleaseDto>(responseBody)
         val tag = release.tagName?.takeIf(String::isNotBlank) ?: fallbackTag

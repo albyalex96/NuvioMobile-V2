@@ -19,6 +19,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -85,6 +88,8 @@ import nuvio.composeapp.generated.resources.updates_changelog_section_performanc
 import nuvio.composeapp.generated.resources.updates_installed_changelog_failed
 import nuvio.composeapp.generated.resources.updates_installed_changelog_not_found
 import nuvio.composeapp.generated.resources.updates_no_release_notes
+import nuvio.composeapp.generated.resources.updates_previous_changelog_empty
+import nuvio.composeapp.generated.resources.updates_previous_changelog_label
 import nuvio.composeapp.generated.resources.updates_release_notes
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.pluralStringResource
@@ -515,4 +520,136 @@ private fun ReleaseNoteKind.label(): StringResource = when (this) {
     ReleaseNoteKind.Performance -> Res.string.updates_changelog_section_performance
     ReleaseNoteKind.Improvement -> Res.string.updates_changelog_section_improvements
     ReleaseNoteKind.Other -> Res.string.updates_changelog_section_other
+}
+
+private sealed interface PreviousNotesState {
+    data object Loading : PreviousNotesState
+    data class Loaded(val releases: List<ReleaseNotesSource>) : PreviousNotesState
+    data object Failed : PreviousNotesState
+}
+
+/**
+ * Changelogs of the versions published before the installed one, see [PreviousReleaseNotes]:
+ * a version selector on top, the changes of the selected version below, laid out like the
+ * changelog of the latest version.
+ */
+@Composable
+internal fun PreviousReleaseNotesDialog(onDismiss: () -> Unit) {
+    var attempt by remember { mutableIntStateOf(0) }
+    var state by remember { mutableStateOf<PreviousNotesState>(PreviousNotesState.Loading) }
+    var selectedTag by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(attempt) {
+        state = PreviousNotesState.Loading
+        state = PreviousReleaseNotes.load().fold(
+            onSuccess = { PreviousNotesState.Loaded(it) },
+            onFailure = { PreviousNotesState.Failed },
+        )
+    }
+    val label = stringResource(Res.string.updates_previous_changelog_label)
+    val uriHandler = LocalUriHandler.current
+    val current = state
+    val releases = (current as? PreviousNotesState.Loaded)?.releases.orEmpty()
+    val selected = releases.firstOrNull { it.tag == selectedTag } ?: releases.firstOrNull()
+    val parsed = remember(selected) {
+        selected?.let { ReleaseNotesParser.parse(it.notes, ReleaseNotesParser.repositoryUrl(it.releaseUrl)) }
+    }
+    DialogSurface(onDismissRequest = onDismiss) {
+        ReleaseNotesHero(
+            label = label,
+            tag = selected?.tag ?: "v${VersionUtils.normalize(InstalledReleaseNotes.installedVersion)}",
+            title = selected?.title,
+            changeCount = parsed?.entries?.size,
+            onDismiss = onDismiss,
+        )
+        if (current is PreviousNotesState.Loading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = NuvioTokens.Space.s24),
+                contentAlignment = Alignment.Center,
+            ) {
+                NuvioLoadingIndicator(size = NuvioTokens.Space.s32)
+            }
+        } else if (selected == null || parsed == null) {
+            val failed = current is PreviousNotesState.Failed
+            Text(
+                text = if (failed) {
+                    stringResource(Res.string.updates_installed_changelog_failed)
+                } else {
+                    stringResource(Res.string.updates_previous_changelog_empty)
+                },
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.nuvio.colors.textSecondary,
+            )
+            DialogButtons {
+                DialogButton(text = stringResource(Res.string.action_close), onClick = onDismiss)
+                if (failed) {
+                    DialogButton(
+                        text = stringResource(Res.string.action_retry),
+                        onClick = { attempt += 1 },
+                        style = DialogButtonStyle.Primary,
+                    )
+                }
+            }
+        } else {
+            ReleaseVersionSelector(
+                releases = releases,
+                selectedTag = selected.tag,
+                onSelect = { selectedTag = it },
+            )
+            ReleaseNotesBody(parsed = parsed, onOpen = uriHandler::openUri)
+            if (parsed.compareUrl != null || selected.releaseUrl != null) {
+                DialogButtons {
+                    parsed.compareUrl?.let { url ->
+                        DialogButton(
+                            text = stringResource(Res.string.updates_changelog_full),
+                            onClick = { uriHandler.openUri(url) },
+                            icon = Icons.Rounded.History,
+                        )
+                    }
+                    selected.releaseUrl?.let { url ->
+                        DialogButton(
+                            text = stringResource(Res.string.updates_changelog_open_release),
+                            onClick = { uriHandler.openUri(url) },
+                            style = DialogButtonStyle.Primary,
+                            icon = Icons.AutoMirrored.Rounded.OpenInNew,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Horizontal list of the published versions; the selected one is highlighted. */
+@Composable
+private fun ReleaseVersionSelector(
+    releases: List<ReleaseNotesSource>,
+    selectedTag: String,
+    onSelect: (String) -> Unit,
+) {
+    val tokens = MaterialTheme.nuvio
+    LazyRow(
+        state = rememberLazyListState(),
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(NuvioTokens.Space.s8),
+    ) {
+        items(releases, key = { it.tag }) { release ->
+            val selected = release.tag == selectedTag
+            Text(
+                text = release.tag,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(NuvioTokens.Radius.full))
+                    .background(
+                        if (selected) tokens.colors.accent else tokens.colors.textPrimary.copy(alpha = tokens.opacity.hover),
+                    )
+                    .clickable { onSelect(release.tag) }
+                    .padding(horizontal = NuvioTokens.Space.s12, vertical = NuvioTokens.Space.s8),
+                style = MaterialTheme.typography.labelLarge,
+                color = if (selected) tokens.colors.onAccent else tokens.colors.textPrimary,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                maxLines = 1,
+            )
+        }
+    }
 }

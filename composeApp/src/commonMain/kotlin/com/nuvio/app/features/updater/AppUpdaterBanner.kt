@@ -79,6 +79,8 @@ import org.jetbrains.compose.resources.stringResource
 fun AppUpdaterHost(
     controller: AppUpdaterController,
     modifier: Modifier = Modifier,
+    /** True while a video plays: the banner hides and comes back when playback is left. */
+    suppressBanner: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     if (!AppFeaturePolicy.inAppUpdaterEnabled || !AppUpdaterPlatform.isSupported) {
@@ -89,6 +91,7 @@ fun AppUpdaterHost(
     val state by controller.uiState.collectAsStateWithLifecycle()
     var showReleaseNotes by rememberSaveable { mutableStateOf(false) }
     val showInstalledReleaseNotes by InstalledReleaseNotes.visible.collectAsStateWithLifecycle()
+    val showPreviousReleaseNotes by PreviousReleaseNotes.visible.collectAsStateWithLifecycle()
 
     LaunchedEffect(controller) {
         controller.ensureAutoCheckStarted()
@@ -98,7 +101,7 @@ fun AppUpdaterHost(
     }
 
     val update = state.update
-    val showBanner = state.showDialog && update != null
+    val showBanner = state.showDialog && update != null && !suppressBanner
 
     Column(modifier = modifier) {
         AnimatedVisibility(
@@ -151,6 +154,10 @@ fun AppUpdaterHost(
 
     if (showInstalledReleaseNotes) {
         InstalledReleaseNotesDialog(onDismiss = InstalledReleaseNotes::dismiss)
+    }
+
+    if (showPreviousReleaseNotes) {
+        PreviousReleaseNotesDialog(onDismiss = PreviousReleaseNotes::dismiss)
     }
 
     if (state.showUnknownSourcesDialog) {

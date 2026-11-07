@@ -49,6 +49,10 @@ import nuvio.composeapp.generated.resources.compose_settings_root_check_updates_
 import nuvio.composeapp.generated.resources.compose_settings_root_check_updates_title
 import nuvio.composeapp.generated.resources.updates_installed_changelog_description
 import nuvio.composeapp.generated.resources.updates_installed_changelog_title
+import nuvio.composeapp.generated.resources.updates_previous_changelog_description
+import nuvio.composeapp.generated.resources.updates_previous_changelog_title
+import com.nuvio.app.features.updater.PreviousReleaseNotes
+import androidx.compose.material.icons.rounded.History
 import nuvio.composeapp.generated.resources.compose_settings_root_content_discovery_description
 import nuvio.composeapp.generated.resources.compose_settings_root_downloads_description
 import nuvio.composeapp.generated.resources.compose_settings_root_downloads_title
@@ -281,6 +285,17 @@ internal fun LazyListScope.settingsRootContent(
                                 icon = Icons.Rounded.NewReleases,
                                 isTablet = isTablet,
                                 onClick = InstalledReleaseNotes::show,
+                            )
+                            SettingsGroupDivider(isTablet = isTablet)
+                            SettingsNavigationRow(
+                                title = stringResource(Res.string.updates_previous_changelog_title),
+                                description = stringResource(
+                                    Res.string.updates_previous_changelog_description,
+                                    InstalledReleaseNotes.installedVersion,
+                                ),
+                                icon = Icons.Rounded.History,
+                                isTablet = isTablet,
+                                onClick = PreviousReleaseNotes::show,
                             )
                         }
                     }

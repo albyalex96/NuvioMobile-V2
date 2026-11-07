@@ -135,6 +135,7 @@ internal sealed class SettingsSearchTarget {
     object SwitchProfile : SettingsSearchTarget()
     object CheckForUpdates : SettingsSearchTarget()
     object InstalledReleaseNotes : SettingsSearchTarget()
+    object PreviousReleaseNotes : SettingsSearchTarget()
 }
 
 internal data class SettingsSearchEntry(
@@ -508,6 +509,19 @@ internal fun settingsSearchEntries(
                 category = aboutCategory,
                 icon = Icons.Rounded.NewReleases,
                 target = SettingsSearchTarget.InstalledReleaseNotes,
+            )
+            add(
+                key = "previous-release-notes",
+                title = stringResource(Res.string.updates_previous_changelog_title),
+                description = stringResource(
+                    Res.string.updates_previous_changelog_description,
+                    InstalledReleaseNotes.installedVersion,
+                ),
+                page = if (supportersContributorsPageEnabled) supportersPage else licensesPage,
+                section = stringResource(Res.string.compose_settings_root_about_section),
+                category = aboutCategory,
+                icon = Icons.Rounded.NewReleases,
+                target = SettingsSearchTarget.PreviousReleaseNotes,
             )
         }
     }

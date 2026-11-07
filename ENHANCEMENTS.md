@@ -172,6 +172,7 @@ Ported from [luqmanfadlli/NuvioMobile-Enhanced](https://github.com/luqmanfadlli/
 
 - Releases published at [albyalex96/NuvioMobile-V2](https://github.com/albyalex96/NuvioMobile-V2/releases) with automatic release notes, separate APKs for phone and TV and an MSI installer for Windows.
 - Redesigned changelog panel with the notes of the installed version, optional background auto-download of updates (testing).
+- **What's new in previous versions:** a version selector with the changelog of every earlier release, laid out like the one of the latest version. The update banner hides while a video plays and comes back on the other pages.
 - Centralized versioning in `version.json` with automatic version code.
 - Own app identity (`com.nuvioenhanced.alby`, "Nuvio Enhanced"): installs alongside the official app.
 - The updater downloads releases from this fork and picks the right APK (phone or TV) for the installed app.

@@ -2621,6 +2621,10 @@
   <string name="updates_changelog_installed_label">Versione installata</string>
   <string name="updates_installed_changelog_title">Novità di questa versione</string>
   <string name="updates_installed_changelog_description">Changelog della versione %1$s, installata su questo dispositivo</string>
+  <string name="updates_previous_changelog_title">Novità versioni precedenti</string>
+  <string name="updates_previous_changelog_description">Changelog delle versioni pubblicate prima della %1$s</string>
+  <string name="updates_previous_changelog_label">Versione precedente</string>
+  <string name="updates_previous_changelog_empty">Non ci sono versioni precedenti pubblicate.</string>
   <string name="updates_installed_changelog_not_found">Nessuna nota di rilascio pubblicata per la versione %1$s.</string>
   <string name="updates_installed_changelog_failed">Impossibile caricare le note di rilascio.</string>
   <string name="season_download_action">Scarica stagione</string>

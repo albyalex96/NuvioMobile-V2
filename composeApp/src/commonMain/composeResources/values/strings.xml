@@ -2642,6 +2642,10 @@
     <string name="updates_changelog_installed_label">Installed version</string>
     <string name="updates_installed_changelog_title">What's new in this version</string>
     <string name="updates_installed_changelog_description">Changelog of version %1$s, installed on this device</string>
+    <string name="updates_previous_changelog_title">What's new in previous versions</string>
+    <string name="updates_previous_changelog_description">Changelogs of the versions published before %1$s</string>
+    <string name="updates_previous_changelog_label">Previous version</string>
+    <string name="updates_previous_changelog_empty">No previous versions are published.</string>
     <string name="updates_installed_changelog_not_found">No release notes are published for version %1$s.</string>
     <string name="updates_installed_changelog_failed">Unable to load the release notes.</string>
     <string name="season_download_action">Download season</string>
