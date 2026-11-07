@@ -1574,9 +1574,9 @@ internal fun settingsSearchEntries(
                 key = "tv-logs",
                 title = stringResource(Res.string.tv_logs_title),
                 description = stringResource(Res.string.tv_logs_open_description),
-                pageLabel = stringResource(Res.string.tv_logs_title),
-                section = tvSection,
-                category = generalCategory,
+                pageLabel = advancedPage,
+                section = stringResource(Res.string.settings_advanced_section_diagnostics),
+                category = advancedCategory,
                 icon = Icons.Rounded.Cast,
             )
             addRow(
@@ -1586,7 +1586,7 @@ internal fun settingsSearchEntries(
                 description = stringResource(Res.string.tv_logs_recording_description),
                 pageLabel = stringResource(Res.string.tv_logs_title),
                 section = stringResource(Res.string.app_logs_section_recording),
-                category = generalCategory,
+                category = advancedCategory,
                 icon = Icons.Rounded.Cast,
             )
             addRow(

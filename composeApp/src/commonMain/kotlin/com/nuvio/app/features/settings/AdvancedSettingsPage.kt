@@ -24,6 +24,7 @@ import com.nuvio.app.core.ui.DialogSurface
 import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.profiles.ProfileRepository
+import com.nuvio.app.features.tvremote.PhoneTvRemote
 import com.nuvio.app.features.updater.AppUpdaterPlatform
 import com.nuvio.app.features.updater.UpdatePreferences
 import com.nuvio.app.features.watchprogress.ContinueWatchingEnrichmentCache
@@ -62,12 +63,15 @@ import nuvio.composeapp.generated.resources.sentry_sent_body
 import nuvio.composeapp.generated.resources.sentry_sent_title
 import nuvio.composeapp.generated.resources.sentry_turn_off
 import nuvio.composeapp.generated.resources.sentry_turn_on
+import nuvio.composeapp.generated.resources.tv_logs_open_description
+import nuvio.composeapp.generated.resources.tv_logs_title
 import org.jetbrains.compose.resources.stringResource
 
 internal fun LazyListScope.advancedSettingsContent(
     isTablet: Boolean,
     rememberLastProfileEnabled: Boolean,
     onAppLogsClick: () -> Unit,
+    onTvLogsClick: () -> Unit,
     onMediaProxyClick: () -> Unit,
 ) {
     item {
@@ -117,6 +121,7 @@ internal fun LazyListScope.advancedSettingsContent(
                     isTablet = isTablet,
                     onClick = onAppLogsClick,
                 )
+                TvLogsRow(isTablet = isTablet, onClick = onTvLogsClick)
                 if (SentrySettingsRepository.isSupported) {
                     SettingsGroupDivider(isTablet = isTablet)
                     SentryReportsRow(isTablet = isTablet)
@@ -180,6 +185,21 @@ internal fun LazyListScope.advancedSettingsContent(
             }
         }
     }
+}
+
+/** "TV logs" entry: shown only on phones with the TV remote and a paired TV. */
+@Composable
+private fun TvLogsRow(isTablet: Boolean, onClick: () -> Unit) {
+    val client = PhoneTvRemote.activeClient ?: return
+    val state by client.state.collectAsStateWithLifecycle()
+    if (state.pairedTv == null) return
+    SettingsGroupDivider(isTablet = isTablet)
+    SettingsNavigationRow(
+        title = stringResource(Res.string.tv_logs_title),
+        description = stringResource(Res.string.tv_logs_open_description),
+        isTablet = isTablet,
+        onClick = onClick,
+    )
 }
 
 @Composable

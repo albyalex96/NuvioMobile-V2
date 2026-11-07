@@ -158,8 +158,8 @@ internal enum class SettingsPage(
     ),
     TvLogs(
         titleRes = Res.string.tv_logs_title,
-        category = SettingsCategory.General,
-        parentPage = TvRemote,
+        category = SettingsCategory.Advanced,
+        parentPage = Advanced,
     ),
     TvLayout(
         titleRes = Res.string.tv_layout_settings_title,

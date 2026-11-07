@@ -855,6 +855,7 @@ private fun MobileSettingsScreen(
                         isTablet = false,
                         rememberLastProfileEnabled = rememberLastProfileEnabled,
                         onAppLogsClick = { onPageChange(SettingsPage.AppLogs) },
+                        onTvLogsClick = { onPageChange(SettingsPage.TvLogs) },
                         onMediaProxyClick = { onPageChange(SettingsPage.MediaProxy) },
                     )
                     SettingsPage.AppLogs -> appLogsSettingsContent(
@@ -974,7 +975,7 @@ private fun MobileSettingsScreen(
                             ),
                         )
                     } else {
-                        tvRemoteSettingsContent(isTablet = false, onTvLogsClick = { onPageChange(SettingsPage.TvLogs) })
+                        tvRemoteSettingsContent(isTablet = false)
                     }
                     SettingsPage.TvLogs -> tvLogsSettingsContent(isTablet = false, viewer = tvLogsViewer)
                     SettingsPage.AiAssistant -> aiAssistantSettingsContent(isTablet = false)
@@ -1406,6 +1407,7 @@ private fun TabletSettingsScreen(
                             isTablet = true,
                             rememberLastProfileEnabled = rememberLastProfileEnabled,
                             onAppLogsClick = { openInlinePage(SettingsPage.AppLogs) },
+                            onTvLogsClick = { openInlinePage(SettingsPage.TvLogs) },
                             onMediaProxyClick = { openInlinePage(SettingsPage.MediaProxy) },
                         )
                         SettingsPage.AppLogs -> appLogsSettingsContent(
@@ -1525,7 +1527,7 @@ private fun TabletSettingsScreen(
                                 ),
                             )
                         } else {
-                            tvRemoteSettingsContent(isTablet = true, onTvLogsClick = { openInlinePage(SettingsPage.TvLogs) })
+                            tvRemoteSettingsContent(isTablet = true)
                         }
                         SettingsPage.TvLogs -> tvLogsSettingsContent(isTablet = true, viewer = tvLogsViewer)
                         SettingsPage.AiAssistant -> aiAssistantSettingsContent(isTablet = true)
