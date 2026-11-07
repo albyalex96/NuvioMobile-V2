@@ -48,6 +48,8 @@ internal fun SubtitleFontPicker(selectedId: String, onSelect: (String) -> Unit, 
             onSelect(it.id)
         }
     }
+    // TV boxes usually have no file picker: fonts are imported on phones, tablets and Windows.
+    val canImport = !com.nuvio.app.tv.TvAppRuntime.isTvApp
     DialogSurface(onDismissRequest = onDismiss, title = stringResource(Res.string.subtitle_font)) {
         Column(
             Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
@@ -82,11 +84,13 @@ internal fun SubtitleFontPicker(selectedId: String, onSelect: (String) -> Unit, 
             if (selectedId !in BuiltInSubtitleFonts && fonts.none { it.id == selectedId }) {
                 Text(stringResource(Res.string.subtitle_font_missing), style = MaterialTheme.typography.bodySmall)
             }
-            Text(
-                stringResource(Res.string.subtitle_font_import_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            if (canImport) {
+                Text(
+                    stringResource(Res.string.subtitle_font_import_hint),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             if (importFailed) {
                 Text(
                     stringResource(Res.string.subtitle_font_import_error),
@@ -96,7 +100,9 @@ internal fun SubtitleFontPicker(selectedId: String, onSelect: (String) -> Unit, 
             }
         }
         DialogButtons {
-            DialogButton(text = stringResource(Res.string.subtitle_font_import), onClick = importFont)
+            if (canImport) {
+                DialogButton(text = stringResource(Res.string.subtitle_font_import), onClick = importFont)
+            }
             DialogButton(text = stringResource(Res.string.action_done), onClick = onDismiss)
         }
     }
