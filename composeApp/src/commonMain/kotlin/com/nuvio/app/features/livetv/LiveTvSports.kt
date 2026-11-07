@@ -58,6 +58,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -181,12 +182,12 @@ object LiveTvSportsRepository {
         _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
         job = scope.launch {
             val now = Clock.System.now()
-            val range = espnDateRange(now.toEpochMilliseconds())
+            val days = espnDays(now.toEpochMilliseconds())
             val results = withContext(Dispatchers.Default) {
                 liveTvSportsLeagues.map { league ->
                     async {
                         try {
-                            Result.success(fetchLeague(league, range))
+                            Result.success(fetchLeague(league, days))
                         } catch (error: CancellationException) {
                             throw error
                         } catch (error: Throwable) {
@@ -227,11 +228,29 @@ object LiveTvSportsRepository {
         }
     }
 
-    private suspend fun fetchLeague(league: LiveTvSportsLeague, dateRange: String): List<LiveTvSportsEvent> {
-        val url = "https://site.api.espn.com/apis/site/v2/sports/${league.path}/scoreboard?dates=$dateRange&limit=200"
-        val root = json.parseToJsonElement(httpGetTextWithHeaders(url, headers)) as? JsonObject ?: return emptyList()
-        return root.arr("events").mapNotNull { element -> parseEvent(element as? JsonObject ?: return@mapNotNull null, league) }
-    }
+    /**
+     * ESPN rejects date ranges ("dates=YYYYMMDD-YYYYMMDD" answers 400 for every league), so each
+     * day is requested on its own, in parallel. A league fails only if every day fails.
+     */
+    private suspend fun fetchLeague(league: LiveTvSportsLeague, days: List<String>): List<LiveTvSportsEvent> =
+        coroutineScope {
+            val results = days.map { day ->
+                async {
+                    runCatching {
+                        val url = "https://site.api.espn.com/apis/site/v2/sports/${league.path}/scoreboard?dates=$day"
+                        val root = json.parseToJsonElement(httpGetTextWithHeaders(url, headers)) as? JsonObject
+                        root?.arr("events").orEmpty().mapNotNull { element ->
+                            parseEvent(element as? JsonObject ?: return@mapNotNull null, league)
+                        }
+                    }.onFailure { error ->
+                        if (error is CancellationException) throw error
+                        log.d { "ESPN ${league.id} $day failed: ${error.message}" }
+                    }
+                }
+            }.awaitAll()
+            if (results.all { it.isFailure }) throw results.first().exceptionOrNull()!!
+            results.flatMap { it.getOrNull().orEmpty() }
+        }
 
     private fun parseEvent(event: JsonObject, league: LiveTvSportsLeague): LiveTvSportsEvent? {
         val id = event.str("id") ?: return null
@@ -302,12 +321,10 @@ private val liveTvSportsEventOrder = Comparator<LiveTvSportsEvent> { a, b ->
     }
 }
 
-private fun espnDateRange(nowMillis: Long): String {
-    fun ymd(millis: Long): String {
-        val date = Instant.fromEpochMilliseconds(millis).toLocalDateTime(TimeZone.UTC).date
-        return "${date.year}${date.monthNumber.toString().padStart(2, '0')}${date.dayOfMonth.toString().padStart(2, '0')}"
-    }
-    return "${ymd(nowMillis - 24 * HOUR_MILLIS)}-${ymd(nowMillis + 48 * HOUR_MILLIS)}"
+/** Yesterday to the day after tomorrow (UTC), one "YYYYMMDD" per day. */
+private fun espnDays(nowMillis: Long): List<String> = (-1..2).map { offset ->
+    val date = Instant.fromEpochMilliseconds(nowMillis + offset * 24 * HOUR_MILLIS).toLocalDateTime(TimeZone.UTC).date
+    "${date.year}${date.monthNumber.toString().padStart(2, '0')}${date.dayOfMonth.toString().padStart(2, '0')}"
 }
 
 private val espnDateRegex = Regex("""(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?""")
