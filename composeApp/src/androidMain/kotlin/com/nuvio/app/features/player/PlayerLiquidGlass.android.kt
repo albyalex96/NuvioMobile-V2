@@ -26,9 +26,12 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import kotlin.math.roundToInt
 
-// 480px wide keeps the glass crisp enough for a "light blur" look; ~30fps keeps it in step with the video.
-private const val VideoFrameCaptureWidth = 480
-private const val VideoFrameCaptureIntervalMs = 33L
+// Behind a blur a 320px-wide, ~15fps copy looks the same as a sharper one and costs far less.
+private const val VideoFrameCaptureWidth = 320
+private const val VideoFrameCaptureIntervalMs = 66L
+
+/** When the picture stops changing (paused video) the copy slows down to this interval. */
+private const val VideoFrameIdleIntervalMs = 300L
 private const val VideoFrameBufferCount = 3
 
 /** About half a second of all-black captures means PixelCopy can't read this video (DRM/tunneling/device). */
@@ -47,6 +50,10 @@ internal actual fun rememberVideoFrameBackdrop(enabled: Boolean): VideoFrameBack
         val buffers = arrayOfNulls<Bitmap>(VideoFrameBufferCount)
         var nextBuffer = 0
         var blackFrames = 0
+        var cachedSurface: SurfaceView? = null
+        var lastSignature = 0L
+        var unchangedFrames = 0
+        val location = IntArray(2)
         snapshotFlow { backdrop.consumers > 0 }
             .distinctUntilChanged()
             .collectLatest { active ->
@@ -55,7 +62,10 @@ internal actual fun rememberVideoFrameBackdrop(enabled: Boolean): VideoFrameBack
                     return@collectLatest
                 }
                 while (currentCoroutineContext().isActive) {
-                    val surfaceView = view.rootView.findVideoSurfaceView()
+                    // The view tree is only walked again when the cached video surface goes away.
+                    val surfaceView = cachedSurface?.takeIf { it.isAttachedToWindow && it.isUsableVideoSurface() }
+                        ?: view.rootView.findVideoSurfaceView().also { cachedSurface = it }
+                    var interval = VideoFrameCaptureIntervalMs
                     if (surfaceView != null) {
                         val width = VideoFrameCaptureWidth
                         val height = (width * surfaceView.height / surfaceView.width.toFloat())
@@ -66,14 +76,20 @@ internal actual fun rememberVideoFrameBackdrop(enabled: Boolean): VideoFrameBack
                                 buffers[nextBuffer] = it
                             }
                         val copied = surfaceView.copyFrameInto(bitmap, handler)
-                        if (copied && bitmap.isBlankCapture()) {
+                        val signature = if (copied) bitmap.sampleSignature() else 0L
+                        if (copied && signature == 0L) {
                             // Never paint a failed (black) capture into the glass; after a run of them fall
                             // back to the clear fallback style instead of showing a dark blob.
                             blackFrames += 1
                             if (blackFrames >= BlackFrameLimit) backdrop.clearFrame()
+                        } else if (copied && signature == lastSignature) {
+                            // Same picture as before (paused): nothing to repaint, check less often.
+                            unchangedFrames += 1
+                            if (unchangedFrames >= 3) interval = VideoFrameIdleIntervalMs
                         } else if (copied) {
                             blackFrames = 0
-                            val location = IntArray(2)
+                            unchangedFrames = 0
+                            lastSignature = signature
                             surfaceView.getLocationOnScreen(location)
                             backdrop.publishFrame(
                                 image = bitmap.asImageBitmap(),
@@ -87,7 +103,7 @@ internal actual fun rememberVideoFrameBackdrop(enabled: Boolean): VideoFrameBack
                             nextBuffer = (nextBuffer + 1) % buffers.size
                         }
                     }
-                    delay(VideoFrameCaptureIntervalMs)
+                    delay(interval)
                 }
             }
     }
@@ -109,14 +125,12 @@ private fun View.findVideoSurfaceView(): SurfaceView? {
     var best: SurfaceView? = null
     var bestArea = 0
     var fromPlayerView: SurfaceView? = null
-    fun SurfaceView.isUsable(): Boolean =
-        isShown && width > 0 && height > 0 && holder.surface?.isValid == true
     fun visit(candidate: View) {
         if (fromPlayerView != null) return
         if (candidate.visibility != View.VISIBLE) return
         if (candidate is PlayerView) {
             val videoSurface = candidate.videoSurfaceView as? SurfaceView
-            if (videoSurface != null && videoSurface.isUsable()) {
+            if (videoSurface != null && videoSurface.isUsableVideoSurface()) {
                 fromPlayerView = videoSurface
                 return
             }
@@ -124,7 +138,7 @@ private fun View.findVideoSurfaceView(): SurfaceView? {
         if (candidate is SurfaceView) {
             if (candidate.tag == PlayerOverlaySurfaceTag) return
             val area = candidate.width * candidate.height
-            if (area > bestArea && candidate.isUsable()) {
+            if (area > bestArea && candidate.isUsableVideoSurface()) {
                 best = candidate
                 bestArea = area
             }
@@ -138,20 +152,30 @@ private fun View.findVideoSurfaceView(): SurfaceView? {
     return fromPlayerView ?: best
 }
 
-/** True when every sampled pixel is pure black, i.e. the copy returned an empty/protected frame. */
-private fun Bitmap.isBlankCapture(): Boolean {
+private fun SurfaceView.isUsableVideoSurface(): Boolean =
+    isShown && width > 0 && height > 0 && holder.surface?.isValid == true
+
+/**
+ * Cheap fingerprint of a capture from an 8x8 grid of pixels: 0 when every sample is pure black (an
+ * empty/protected frame), and the same value for two copies of the same still picture.
+ */
+private fun Bitmap.sampleSignature(): Long {
     val stepX = (width / 8).coerceAtLeast(1)
     val stepY = (height / 8).coerceAtLeast(1)
+    var signature = 0L
+    var anyLit = false
     var y = stepY / 2
     while (y < height) {
         var x = stepX / 2
         while (x < width) {
-            if (getPixel(x, y) and 0x00FFFFFF != 0) return false
+            val rgb = getPixel(x, y) and 0x00FFFFFF
+            if (rgb != 0) anyLit = true
+            signature = signature * 31 + rgb
             x += stepX
         }
         y += stepY
     }
-    return true
+    return if (anyLit) (signature or 1L) else 0L
 }
 
 private suspend fun SurfaceView.copyFrameInto(bitmap: Bitmap, handler: Handler): Boolean {

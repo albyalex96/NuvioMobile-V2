@@ -105,6 +105,7 @@ Ported from [luqmanfadlli/NuvioMobile-Enhanced](https://github.com/luqmanfadlli/
 - **Seek thumbnails** for single files and HLS streams, with separate options for phone and TV.
 - **Picture-in-picture button** in the player top bar (Android phones with PiP support), besides the automatic PiP when leaving the app.
 - **Glass toolbars:** with liquid glass on, the player toolbar buttons (subtitles, audio, speed, next episode…) sit in a glass capsule and the close button in a glass circle; they follow the "glass backgrounds on controls" option.
+- **Lighter glass in the player:** the glass behind the player controls reads the video at a lower rate and resolution, and almost stops while the video is paused, so it uses less battery and keeps playback smooth.
 - **Cleaner controls:** options to remove the glass backgrounds behind player buttons and time pills, and to hide the skip back/forward buttons (double-tap seeking still works).
 - **Richer controls:** title logo, Stream Parser badges, source name, clock and end time above the timeline.
 - **Dialogue boost, dynamic range compression and volume boost** sliders in the audio panel (volume boost up to +10 dB, remembered per audio output device).

@@ -105,6 +105,7 @@ Portata da [luqmanfadlli/NuvioMobile-Enhanced](https://github.com/luqmanfadlli/N
 - **Miniature di anteprima** durante il seek per file singoli e flussi HLS, con opzioni separate per telefono e TV.
 - **Pulsante picture-in-picture** nella barra in alto del player (telefoni Android con supporto PiP), oltre al PiP automatico quando si esce dall'app.
 - **Barre di vetro:** con il Liquid Glass attivo, i pulsanti della barra del player (sottotitoli, audio, velocità, prossimo episodio…) stanno in una capsula di vetro e il pulsante di chiusura in un cerchio di vetro; seguono l'opzione "Sfondi di vetro sui controlli".
+- **Vetro più leggero nel player:** il vetro dietro i controlli del player legge il video meno spesso e a risoluzione più bassa, e quasi si ferma col video in pausa: consuma meno batteria e la riproduzione resta fluida.
 - **Controlli più puliti:** opzioni per togliere gli sfondi di vetro dietro ai pulsanti del player e ai tempi e per nascondere i pulsanti per tornare indietro e andare avanti (il doppio tocco per spostarsi funziona comunque).
 - **Controlli più ricchi:** logo del titolo, badge dello Stream Parser, nome della sorgente, orologio e orario di fine sopra la barra di avanzamento.
 - Cursori **Potenzia dialoghi**, **compressione della gamma dinamica** e **amplificazione volume** nel pannello audio (amplificazione fino a +10 dB, ricordata per ogni dispositivo di uscita audio).
