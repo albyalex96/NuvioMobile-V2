@@ -103,6 +103,17 @@ android {
             )
             signingConfig = signingConfigs.getByName("release")
         }
+        // Baseline Profile generation (:baselineprofile): release code without R8, so the recorded
+        // rules use the real class names (R8 rewrites them in release), signed with the debug key.
+        create("benchmark") {
+            initWith(getByName("release"))
+            isMinifyEnabled = false
+            isShrinkResources = false
+            isDebuggable = false
+            signingConfig = signingConfigs.getByName("debug")
+            applicationIdSuffix = ".benchmark"
+            matchingFallbacks += "release"
+        }
     }
 
     buildFeatures {

@@ -119,6 +119,17 @@ android {
                 debugSymbolLevel = "FULL"
             }
         }
+        // Baseline Profile generation (:baselineprofile): release code without R8, so the recorded
+        // rules use the real class names (R8 rewrites them in release), signed with the debug key.
+        create("benchmark") {
+            initWith(getByName("release"))
+            isMinifyEnabled = false
+            isShrinkResources = false
+            isDebuggable = false
+            signingConfig = signingConfigs.getByName("debug")
+            applicationIdSuffix = ".benchmark"
+            matchingFallbacks += "release"
+        }
     }
 
     compileOptions {
@@ -148,7 +159,7 @@ sentry {
     sentryAuthToken?.let(authToken::set)
     sentryOrg?.let(org::set)
     sentryProject?.let(projectName::set)
-    ignoredBuildTypes.set(setOf("debug"))
+    ignoredBuildTypes.set(setOf("debug", "benchmark"))
     autoInstallation {
         enabled.set(false)
     }

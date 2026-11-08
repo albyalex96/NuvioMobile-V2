@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- The generator launches and drives the TV app too (package visibility, Android 11+). -->
+    <queries>
+        <package android:name="com.nuvioenhanced.alby.benchmark" />
+        <package android:name="com.nuvioenhanced.alby.tv.benchmark" />
+    </queries>
+</manifest>
