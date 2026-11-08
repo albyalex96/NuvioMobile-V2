@@ -1,13 +1,14 @@
 package com.nuvio.tv.ui
 
-import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -16,7 +17,13 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.graphicsLayer
@@ -30,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.ui.nuvio
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 /** Duration of focus scale/border animations (NuvioTV `focusTween`). */
@@ -55,17 +63,21 @@ fun Modifier.tvFocusable(
     onFocusChange: ((Boolean) -> Unit)? = null,
 ): Modifier {
     val interactionSource = remember { MutableInteractionSource() }
-    val focused by interactionSource.collectIsFocusedAsState()
+    // Focus is read only in the layer and draw blocks (never during composition): moving the
+    // focus redraws the old and the new element instead of recomposing them on every D-pad press.
+    val focused = interactionSource.collectIsFocusedAsState()
     // Cards that keep their size on focus (NuvioTV home rows) skip the scale animation and its layer.
     val scales = focusedScale != 1f
-    val scale = if (scales) {
-        animateFloatAsState(
-            targetValue = if (focused) focusedScale else 1f,
-            animationSpec = tween(TV_FOCUS_ANIMATION_MS),
-            label = "tvFocusScale",
-        )
-    } else {
-        null
+    val scale = if (scales) remember { Animatable(1f) } else null
+    if (scale != null) {
+        LaunchedEffect(scale, focusedScale) {
+            snapshotFlow { focused.value }.collectLatest { isFocused ->
+                scale.animateTo(
+                    targetValue = if (isFocused) focusedScale else 1f,
+                    animationSpec = tween(TV_FOCUS_ANIMATION_MS),
+                )
+            }
+        }
     }
     val ringColor = MaterialTheme.nuvio.colors.focusRing
     val currentOnClick by rememberUpdatedState(onClick)
@@ -88,17 +100,30 @@ fun Modifier.tvFocusable(
         }
         .then(
             if (scale != null) {
+                val raised = focusedScale > 1f
                 Modifier.graphicsLayer {
                     scaleX = scale.value
                     scaleY = scale.value
+                    if (raised) {
+                        shadowElevation = if (focused.value) 18.dp.toPx() else 0f
+                        this.shape = shape
+                        clip = false
+                    }
                 }
             } else {
                 Modifier
             },
         )
-        // Cards that keep their size on focus (NuvioTV home rows) only get the ring.
-        .then(if (focused && focusedScale > 1f) Modifier.shadow(elevation = 18.dp, shape = shape, clip = false) else Modifier)
-        .then(if (focused && borderWidth > 0.dp) Modifier.border(width = borderWidth, color = ringColor, shape = shape) else Modifier)
+        .then(
+            if (borderWidth > 0.dp) {
+                Modifier.drawWithContent {
+                    drawContent()
+                    if (focused.value) drawFocusRing(shape, borderWidth.toPx(), ringColor)
+                }
+            } else {
+                Modifier
+            },
+        )
         .clip(shape)
         .onPreviewKeyEvent { event ->
             val longClick = currentOnLongClick ?: return@onPreviewKeyEvent false
@@ -138,4 +163,15 @@ fun Modifier.tvFocusable(
             enabled = enabled,
             onClick = onClick,
         )
+}
+
+/** Focus ring inside the bounds, like [Modifier.border] with the same width, color and shape. */
+private fun DrawScope.drawFocusRing(shape: Shape, widthPx: Float, color: Color) {
+    val inset = widthPx / 2f
+    val ringSize = Size(size.width - widthPx, size.height - widthPx)
+    if (ringSize.width <= 0f || ringSize.height <= 0f) return
+    val outline = shape.createOutline(ringSize, layoutDirection, this)
+    translate(inset, inset) {
+        drawOutline(outline = outline, color = color, style = Stroke(width = widthPx))
+    }
 }
