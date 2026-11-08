@@ -2823,4 +2823,15 @@
     <string name="subtitle_shadow_opacity">Opacità dell'ombra</string>
     <string name="subtitle_shadow_size">Dimensione dell'ombra</string>
     <string name="subtitle_reset_appearance">Ripristina aspetto</string>
+  <string name="settings_playback_toolbar_layout">Pulsanti del player</string>
+  <string name="settings_playback_toolbar_layout_description">Scegli quali pulsanti restano sulla barra, quali stanno dietro la freccia e in che ordine.</string>
+  <string name="settings_playback_toolbar_shown">Sempre visibili</string>
+  <string name="settings_playback_toolbar_hidden">Dietro la freccia</string>
+  <string name="settings_playback_toolbar_empty">Nessun pulsante qui.</string>
+  <string name="settings_playback_toolbar_move_up">Sposta su</string>
+  <string name="settings_playback_toolbar_move_down">Sposta giù</string>
+  <string name="settings_playback_toolbar_hide">Sposta dietro la freccia</string>
+  <string name="settings_playback_toolbar_show">Mostra sempre</string>
+  <string name="settings_playback_toolbar_note">I pulsanti che non servono per il video attuale, come Prossimo episodio in un film, vengono saltati.</string>
+  <string name="player_toolbar_button_resize">Ridimensiona</string>
 </resources>

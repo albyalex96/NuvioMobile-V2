@@ -370,6 +370,7 @@ private fun PlaybackSettingsSection(
     var showLibassRenderScaleDialog by remember { mutableStateOf(false) }
     var showDecoderPriorityDialog by remember { mutableStateOf(false) }
     var showHoldToSpeedValueDialog by remember { mutableStateOf(false) }
+    var showToolbarLayoutDialog by remember { mutableStateOf(false) }
     var showIosAudioOutputDialog by remember { mutableStateOf(false) }
     var showIosHardwareDecoderDialog by remember { mutableStateOf(false) }
     var showIosTargetPrimariesDialog by remember { mutableStateOf(false) }
@@ -435,6 +436,15 @@ private fun PlaybackSettingsSection(
                     isTablet = isTablet,
                     onCheckedChange = PlayerSettingsRepository::setUseLegacyPlayerLayout,
                 )
+                if (!autoPlayPlayerSettings.useLegacyPlayerLayout) {
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsNavigationRow(
+                        title = stringResource(Res.string.settings_playback_toolbar_layout),
+                        description = stringResource(Res.string.settings_playback_toolbar_layout_description),
+                        isTablet = isTablet,
+                        onClick = { showToolbarLayoutDialog = true },
+                    )
+                }
                 SettingsGroupDivider(isTablet = isTablet)
                 // Phones/tablets and TVs keep separate clock options (both synced with the profile);
                 // each device shows and edits only its own class.
@@ -2012,6 +2022,14 @@ private fun PlaybackSettingsSection(
                 showLibmpvVideoOutputDialog = false
             },
             onDismiss = { showLibmpvVideoOutputDialog = false },
+        )
+    }
+
+    if (showToolbarLayoutDialog) {
+        PlayerToolbarSettingsDialog(
+            layout = autoPlayPlayerSettings.toolbarLayout,
+            onLayoutChange = PlayerSettingsRepository::setToolbarLayout,
+            onDismiss = { showToolbarLayoutDialog = false },
         )
     }
 

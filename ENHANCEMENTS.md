@@ -107,6 +107,7 @@ Ported from [luqmanfadlli/NuvioMobile-Enhanced](https://github.com/luqmanfadlli/
 - **Glass toolbars:** with liquid glass on, the player toolbar buttons (subtitles, audio, speed, next episode…) sit in a glass capsule and the close button in a glass circle; they follow the "glass backgrounds on controls" option.
 - **Lighter glass in the player:** the glass behind the player controls reads the video at a lower rate and resolution, and almost stops while the video is paused, so it uses less battery and keeps playback smooth.
 - **Cleaner controls:** options to remove the glass backgrounds behind player buttons and time pills, and to hide the skip back/forward buttons (double-tap seeking still works).
+- **Custom player buttons:** in Playback settings, "Player buttons" lets you choose which buttons stay on the player bar, which sit behind the arrow, and their order (with reset). Buttons that do not apply to the current video are skipped.
 - **Richer controls:** title logo, Stream Parser badges, source name, clock and end time above the timeline.
 - **Dialogue boost, dynamic range compression and volume boost** sliders in the audio panel (volume boost up to +10 dB, remembered per audio output device).
 - **Automatic stereo downmix on Bluetooth** (ExoPlayer, phone and tablet): surround audio is decoded with FFmpeg and mixed down to a clean 2.0, so dialogue keeps its level on earbuds and speakers.

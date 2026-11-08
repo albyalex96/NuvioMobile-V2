@@ -1,5 +1,6 @@
 package com.nuvio.app.features.player
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.material.icons.rounded.PictureInPictureAlt
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
@@ -158,90 +159,96 @@ internal fun PlayerControlActions(
     onSubmitIntroClick: (() -> Unit)?,
     onInteraction: () -> Unit,
 ) {
-    val actions = listOfNotNull(
+    val availableActions = buildMap<PlayerToolbarButton, PlayerControlAction> {
         onNextEpisodeClick?.let {
-            PlayerControlAction(
+            put(PlayerToolbarButton.NEXT_EPISODE, PlayerControlAction(
                 stringResource(Res.string.player_next_episode), it,
                 icon = Icons.Rounded.SkipNext, iconSize = 40.dp,
-            )
-        },
-        PlayerControlAction(
+            ))
+        }
+        put(PlayerToolbarButton.SUBTITLES, PlayerControlAction(
             stringResource(Res.string.compose_player_subtitles), onSubtitleClick,
             painter = appIconPainter(AppIconResource.PlayerSubtitles),
-        ),
-        PlayerControlAction(
+        ))
+        put(PlayerToolbarButton.AUDIO, PlayerControlAction(
             stringResource(Res.string.compose_player_audio), onAudioClick,
             painter = appIconPainter(AppIconResource.PlayerAudioFilled),
-        ),
+        ))
         onSourcesClick?.let {
-            PlayerControlAction(
+            put(PlayerToolbarButton.SOURCES, PlayerControlAction(
                 stringResource(Res.string.compose_player_sources), it,
                 painter = appIconPainter(AppIconResource.PlayerSource),
-            )
-        },
+            ))
+        }
         onEpisodesClick?.let {
-            PlayerControlAction(
+            put(PlayerToolbarButton.EPISODES, PlayerControlAction(
                 stringResource(Res.string.compose_player_episodes), it,
                 painter = appIconPainter(AppIconResource.PlayerEpisodes),
-            )
-        },
+            ))
+        }
         onChaptersClick?.let {
-            PlayerControlAction(
+            put(PlayerToolbarButton.CHAPTERS, PlayerControlAction(
                 stringResource(Res.string.player_chapters), it,
                 icon = Icons.AutoMirrored.Rounded.ListAlt,
-            )
-        },
+            ))
+        }
         onLiveChannelsClick?.let {
-            PlayerControlAction(
+            put(PlayerToolbarButton.LIVE_CHANNELS, PlayerControlAction(
                 stringResource(Res.string.compose_player_channels), it,
                 icon = Icons.Rounded.Tv,
-            )
-        },
+            ))
+        }
         onSwitchEngineClick?.let {
-            PlayerControlAction(
+            put(PlayerToolbarButton.SWITCH_ENGINE, PlayerControlAction(
                 stringResource(Res.string.cd_switch_player_engine), it,
                 icon = Icons.Rounded.SwapHoriz,
-            )
-        },
-        PlayerControlAction(
+            ))
+        }
+        put(PlayerToolbarButton.SPEED, PlayerControlAction(
             "${stringResource(Res.string.compose_player_speed)} ${formatPlaybackSpeedLabel(playbackSnapshot.playbackSpeed)}",
             onSpeedClick, icon = Icons.Rounded.Speed,
-        ),
-        PlayerControlAction(
+        ))
+        put(PlayerToolbarButton.RESIZE, PlayerControlAction(
             stringResource(resizeMode.labelRes), onResizeModeClick,
             painter = appIconPainter(AppIconResource.PlayerAspectRatio),
-        ),
+        ))
         onOpenInExternalPlayer?.let {
-            PlayerControlAction(
+            put(PlayerToolbarButton.EXTERNAL_PLAYER, PlayerControlAction(
                 stringResource(Res.string.streams_open_external_player), it,
                 icon = Icons.AutoMirrored.Rounded.OpenInNew,
-            )
-        },
-        PlayerControlAction(
+            ))
+        }
+        put(PlayerToolbarButton.STREAM_INFO, PlayerControlAction(
             stringResource(Res.string.cd_stream_info), onStreamInfoClick,
             icon = Icons.Rounded.Info,
-        ),
+        ))
         onVideoSettingsClick?.let {
-            PlayerControlAction(
+            put(PlayerToolbarButton.VIDEO_SETTINGS, PlayerControlAction(
                 stringResource(Res.string.player_action_video_settings), it,
                 icon = Icons.Rounded.Build,
-            )
-        },
+            ))
+        }
         onSubmitIntroClick?.let {
-            PlayerControlAction(
+            put(PlayerToolbarButton.SUBMIT_INTRO, PlayerControlAction(
                 stringResource(Res.string.submit_intro_action), it,
                 icon = Icons.Rounded.Flag,
-            )
-        },
-    )
-    val hasOverflow = actions.size > 5
+            ))
+        }
+    }
+    val playerSettings by PlayerSettingsRepository.uiState.collectAsStateWithLifecycle()
+    val toolbarLayout = playerSettings.toolbarLayout
+    // Shown buttons first, then the ones behind the arrow; buttons that don't apply to this video are skipped.
+    val primaryActions = toolbarLayout.visibleButtons.mapNotNull(availableActions::get)
+    val secondaryActions = toolbarLayout.hiddenButtons.mapNotNull(availableActions::get)
+    val actions = primaryActions + secondaryActions
+    val hasOverflow = secondaryActions.isNotEmpty()
     var expanded by remember(hasOverflow) { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     val capsule = playerToolbarGlassActive()
     // Without the capsule the first icon is pulled to the timeline edge; inside it, it keeps its padding.
     val startOffset = when {
         capsule -> 0.dp
-        onNextEpisodeClick != null -> (-13).dp
+        primaryActions.firstOrNull() != null && primaryActions.first() === availableActions[PlayerToolbarButton.NEXT_EPISODE] -> (-13).dp
         else -> (-12).dp
     }
     LaunchedEffect(expanded, scrollState.maxValue) {
@@ -261,7 +268,7 @@ internal fun PlayerControlActions(
                     .horizontalScroll(scrollState),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                actions.take(if (expanded) actions.size else 5).forEach { action ->
+                (if (expanded) actions else primaryActions).forEach { action ->
                     PlayerAction(
                         description = action.description,
                         onClick = {

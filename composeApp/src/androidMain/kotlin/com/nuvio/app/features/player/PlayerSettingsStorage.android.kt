@@ -32,6 +32,7 @@ actual object PlayerSettingsStorage {
     private const val resizeModeKey = "resize_mode"
     private const val holdToSpeedEnabledKey = "hold_to_speed_enabled"
     private const val holdToSpeedValueKey = "hold_to_speed_value"
+    private const val toolbarLayoutKey = "player_toolbar_layout"
     private const val touchGesturesEnabledKey = "touch_gestures_enabled"
     private const val externalPlayerEnabledKey = "external_player_enabled"
     private const val externalPlayerForwardSubtitlesKey = "external_player_forward_subtitles"
@@ -404,6 +405,13 @@ actual object PlayerSettingsStorage {
             ?.edit()
             ?.putFloat(ProfileScopedKey.of(holdToSpeedValueKey), speed)
             ?.apply()
+    }
+
+    actual fun loadToolbarLayout(): String? =
+        preferences?.getString(ProfileScopedKey.of(toolbarLayoutKey), null)
+
+    actual fun saveToolbarLayout(layout: String) {
+        preferences?.edit()?.putString(ProfileScopedKey.of(toolbarLayoutKey), layout)?.apply()
     }
 
     actual fun loadTouchGesturesEnabled(): Boolean? =
