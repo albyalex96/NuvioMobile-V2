@@ -102,24 +102,30 @@ class BaselineProfileGenerator {
 
     private fun MacrobenchmarkScope.browseHome() {
         repeat(SCROLL_STEPS) {
-            if (isTv) {
-                device.pressDPadDown()
-            } else {
-                // A plain swipe: the home recomposes while loading, so a looked-up scrollable
-                // node can go stale (StaleObjectException).
-                device.swipe(
-                    device.displayWidth / 2,
-                    device.displayHeight * 3 / 4,
-                    device.displayWidth / 2,
-                    device.displayHeight / 4,
-                    20,
-                )
-            }
+            // The TV app also runs on phones (the generator usually does): the D-pad moves the
+            // focus on a TV, the swipe scrolls on a touch screen. Both are harmless elsewhere.
+            if (isTv) device.pressDPadDown()
+            // A plain swipe: the home recomposes while loading, so a looked-up scrollable node
+            // can go stale (StaleObjectException).
+            device.swipe(
+                device.displayWidth / 2,
+                device.displayHeight * 3 / 4,
+                device.displayWidth / 2,
+                device.displayHeight / 4,
+                20,
+            )
             device.waitForIdle(STEP_SETTLE_MS)
         }
         if (isTv) {
             repeat(SCROLL_STEPS) {
                 device.pressDPadRight()
+                device.swipe(
+                    device.displayWidth * 3 / 4,
+                    device.displayHeight / 2,
+                    device.displayWidth / 4,
+                    device.displayHeight / 2,
+                    20,
+                )
                 device.waitForIdle(STEP_SETTLE_MS)
             }
         }
