@@ -1,7 +1,10 @@
 package com.nuvio.app.features.player
 
-/** Buttons of the bottom player bar; the order here is the default order. */
-enum class PlayerToolbarButton(val storageId: String) {
+/**
+ * Player buttons; the order here is the default order. [topBar] buttons sit in the top-right group
+ * (next to lock and close) and can only be shown or hidden there; the others are the bottom bar.
+ */
+enum class PlayerToolbarButton(val storageId: String, val topBar: Boolean = false) {
     NEXT_EPISODE("next_episode"),
     SUBTITLES("subtitles"),
     AUDIO("audio"),
@@ -16,6 +19,9 @@ enum class PlayerToolbarButton(val storageId: String) {
     STREAM_INFO("stream_info"),
     VIDEO_SETTINGS("video_settings"),
     SUBMIT_INTRO("submit_intro"),
+    PICTURE_IN_PICTURE("picture_in_picture", topBar = true),
+    CAST("cast", topBar = true),
+    WATCH_PARTY("watch_party", topBar = true),
     ;
 
     companion object {
@@ -30,11 +36,17 @@ data class PlayerToolbarEntry(
 )
 
 data class PlayerToolbarLayout(val entries: List<PlayerToolbarEntry>) {
+    /** Bottom bar buttons always on the bar. */
     val visibleButtons: List<PlayerToolbarButton>
-        get() = entries.filter { it.visible }.map { it.button }
+        get() = entries.filter { it.visible && !it.button.topBar }.map { it.button }
 
+    /** Bottom bar buttons behind the arrow. */
     val hiddenButtons: List<PlayerToolbarButton>
-        get() = entries.filterNot { it.visible }.map { it.button }
+        get() = entries.filter { !it.visible && !it.button.topBar }.map { it.button }
+
+    /** Top bar buttons that are shown, in order. */
+    val topBarButtons: List<PlayerToolbarButton>
+        get() = entries.filter { it.visible && it.button.topBar }.map { it.button }
 
     fun withVisibility(button: PlayerToolbarButton, visible: Boolean): PlayerToolbarLayout =
         PlayerToolbarLayout(entries.map { if (it.button == button) it.copy(visible = visible) else it })
@@ -54,7 +66,7 @@ data class PlayerToolbarLayout(val entries: List<PlayerToolbarEntry>) {
         /** Same as the bar before it was customizable: the first five buttons shown, the rest behind the arrow. */
         val Default = PlayerToolbarLayout(
             PlayerToolbarButton.entries.mapIndexed { index, button ->
-                PlayerToolbarEntry(button, visible = index < 5)
+                PlayerToolbarEntry(button, visible = button.topBar || index < 5)
             },
         )
 

@@ -53,6 +53,9 @@ internal val PlayerToolbarButton.labelRes: StringResource
         PlayerToolbarButton.STREAM_INFO -> Res.string.cd_stream_info
         PlayerToolbarButton.VIDEO_SETTINGS -> Res.string.player_action_video_settings
         PlayerToolbarButton.SUBMIT_INTRO -> Res.string.submit_intro_action
+        PlayerToolbarButton.PICTURE_IN_PICTURE -> Res.string.compose_player_picture_in_picture
+        PlayerToolbarButton.CAST -> Res.string.cast_action
+        PlayerToolbarButton.WATCH_PARTY -> Res.string.party_title
     }
 
 @Composable
@@ -74,13 +77,22 @@ internal fun PlayerToolbarSettingsDialog(
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             ToolbarGroup(
+                title = stringResource(Res.string.settings_playback_toolbar_top_bar),
+                topBar = true,
+                visible = null,
+                layout = layout,
+                onLayoutChange = onLayoutChange,
+            )
+            ToolbarGroup(
                 title = stringResource(Res.string.settings_playback_toolbar_shown),
+                topBar = false,
                 visible = true,
                 layout = layout,
                 onLayoutChange = onLayoutChange,
             )
             ToolbarGroup(
                 title = stringResource(Res.string.settings_playback_toolbar_hidden),
+                topBar = false,
                 visible = false,
                 layout = layout,
                 onLayoutChange = onLayoutChange,
@@ -103,7 +115,9 @@ internal fun PlayerToolbarSettingsDialog(
 @Composable
 private fun ToolbarGroup(
     title: String,
-    visible: Boolean,
+    topBar: Boolean,
+    /** Bottom bar: which half (on the bar / behind the arrow). Top bar: null, shown and hidden together. */
+    visible: Boolean?,
     layout: PlayerToolbarLayout,
     onLayoutChange: (PlayerToolbarLayout) -> Unit,
 ) {
@@ -114,7 +128,10 @@ private fun ToolbarGroup(
         color = tokens.colors.textSecondary,
         modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),
     )
-    val groupIndices = layout.entries.indices.filter { layout.entries[it].visible == visible }
+    val groupIndices = layout.entries.indices.filter { index ->
+        val entry = layout.entries[index]
+        entry.button.topBar == topBar && (visible == null || entry.visible == visible)
+    }
     if (groupIndices.isEmpty()) {
         Text(
             text = stringResource(Res.string.settings_playback_toolbar_empty),
@@ -137,7 +154,7 @@ private fun ToolbarGroup(
             Text(
                 text = stringResource(entry.button.labelRes),
                 style = MaterialTheme.typography.bodyLarge,
-                color = tokens.colors.textPrimary,
+                color = if (entry.visible) tokens.colors.textPrimary else tokens.colors.textSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
@@ -155,14 +172,20 @@ private fun ToolbarGroup(
                 onClick = { onLayoutChange(layout.moved(entryIndex, groupIndices[position + 1])) },
             )
             ToolbarRowAction(
-                icon = if (visible) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                icon = if (entry.visible) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
                 description = stringResource(
-                    if (visible) Res.string.settings_playback_toolbar_hide else Res.string.settings_playback_toolbar_show,
+                    when {
+                        topBar && entry.visible -> Res.string.settings_playback_toolbar_top_hide
+                        topBar -> Res.string.settings_playback_toolbar_top_show
+                        entry.visible -> Res.string.settings_playback_toolbar_hide
+                        else -> Res.string.settings_playback_toolbar_show
+                    },
                 ),
                 enabled = true,
                 onClick = {
-                    val toggled = layout.withVisibility(entry.button, !visible)
-                    onLayoutChange(toggled.moved(entryIndex, toggled.entries.lastIndex))
+                    val toggled = layout.withVisibility(entry.button, !entry.visible)
+                    // Top bar buttons keep their place; bottom ones go to the end of the other half.
+                    onLayoutChange(if (topBar) toggled else toggled.moved(entryIndex, toggled.entries.lastIndex))
                 },
             )
         }

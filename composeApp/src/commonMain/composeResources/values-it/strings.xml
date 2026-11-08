@@ -2825,6 +2825,9 @@
     <string name="subtitle_reset_appearance">Ripristina aspetto</string>
   <string name="settings_playback_toolbar_layout">Pulsanti del player</string>
   <string name="settings_playback_toolbar_layout_description">Scegli quali pulsanti restano sulla barra, quali stanno dietro la freccia e in che ordine.</string>
+  <string name="settings_playback_toolbar_top_bar">Barra in alto</string>
+  <string name="settings_playback_toolbar_top_hide">Nascondi dalla barra in alto</string>
+  <string name="settings_playback_toolbar_top_show">Mostra nella barra in alto</string>
   <string name="settings_playback_toolbar_shown">Sempre visibili</string>
   <string name="settings_playback_toolbar_hidden">Dietro la freccia</string>
   <string name="settings_playback_toolbar_empty">Nessun pulsante qui.</string>

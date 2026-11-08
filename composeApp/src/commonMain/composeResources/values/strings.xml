@@ -2846,6 +2846,9 @@
     <string name="subtitle_reset_appearance">Reset appearance</string>
     <string name="settings_playback_toolbar_layout">Player buttons</string>
     <string name="settings_playback_toolbar_layout_description">Choose which buttons stay on the bar, which sit behind the arrow, and their order.</string>
+    <string name="settings_playback_toolbar_top_bar">Top bar</string>
+    <string name="settings_playback_toolbar_top_hide">Hide from the top bar</string>
+    <string name="settings_playback_toolbar_top_show">Show in the top bar</string>
     <string name="settings_playback_toolbar_shown">Always shown</string>
     <string name="settings_playback_toolbar_hidden">Behind the arrow</string>
     <string name="settings_playback_toolbar_empty">No buttons here.</string>

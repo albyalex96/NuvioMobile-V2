@@ -90,28 +90,35 @@ internal fun PlayerToolbar(
             modifier = if (capsule) Modifier.playerToolbarGlass(PlayerGlassCapsule).padding(horizontal = 4.dp) else Modifier,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-        if (enterPictureInPicture != null) {
-            PlayerAction(
-                description = stringResource(Res.string.compose_player_picture_in_picture),
-                icon = Icons.Rounded.PictureInPictureAlt,
-                onClick = enterPictureInPicture,
-            )
-        }
-        if (onCastClick != null) {
-            PlayerAction(
-                description = stringResource(Res.string.cast_action),
-                icon = if (castActive) Icons.Rounded.CastConnected else Icons.Rounded.Cast,
-                onClick = onCastClick,
-                tint = if (castActive) MaterialTheme.colorScheme.primary else Color.White,
-            )
-        }
-        if (onPartyClick != null) {
-            PlayerAction(
-                description = stringResource(Res.string.party_title),
-                icon = Icons.Rounded.Groups,
-                onClick = onPartyClick,
-                tint = if (partyActive) MaterialTheme.colorScheme.primary else Color.White,
-            )
+        // Order and visibility come from the "Player buttons" setting; unavailable ones are skipped.
+        val toolbarLayout = PlayerSettingsRepository.uiState.collectAsStateWithLifecycle().value.toolbarLayout
+        toolbarLayout.topBarButtons.forEach { button ->
+            when (button) {
+                PlayerToolbarButton.PICTURE_IN_PICTURE -> if (enterPictureInPicture != null) {
+                    PlayerAction(
+                        description = stringResource(Res.string.compose_player_picture_in_picture),
+                        icon = Icons.Rounded.PictureInPictureAlt,
+                        onClick = enterPictureInPicture,
+                    )
+                }
+                PlayerToolbarButton.CAST -> if (onCastClick != null) {
+                    PlayerAction(
+                        description = stringResource(Res.string.cast_action),
+                        icon = if (castActive) Icons.Rounded.CastConnected else Icons.Rounded.Cast,
+                        onClick = onCastClick,
+                        tint = if (castActive) MaterialTheme.colorScheme.primary else Color.White,
+                    )
+                }
+                PlayerToolbarButton.WATCH_PARTY -> if (onPartyClick != null) {
+                    PlayerAction(
+                        description = stringResource(Res.string.party_title),
+                        icon = Icons.Rounded.Groups,
+                        onClick = onPartyClick,
+                        tint = if (partyActive) MaterialTheme.colorScheme.primary else Color.White,
+                    )
+                }
+                else -> Unit
+            }
         }
         PlayerAction(
             description = stringResource(
