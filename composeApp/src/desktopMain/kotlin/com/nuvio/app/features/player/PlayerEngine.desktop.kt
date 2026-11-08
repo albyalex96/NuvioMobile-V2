@@ -15,6 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asComposeImageBitmap
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
@@ -171,11 +172,19 @@ actual fun PlatformPlayerSurface(
         }
     }
 
+    DisposableEffect(player) {
+        DesktopVideoFrameSource.player = player
+        onDispose {
+            if (DesktopVideoFrameSource.player === player) DesktopVideoFrameSource.player = null
+        }
+    }
+
     Box(modifier = modifier.background(Color.Black)) {
         Canvas(
             modifier = Modifier
                 .fillMaxSize()
-                .onSizeChanged { size -> player.setTargetSize(size.width, size.height) },
+                .onSizeChanged { size -> player.setTargetSize(size.width, size.height) }
+                .onGloballyPositioned(DesktopVideoFrameSource::updateBounds),
         ) {
             @Suppress("UNUSED_EXPRESSION")
             frameTick // read to redraw on each new frame
