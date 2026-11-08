@@ -2,6 +2,7 @@ package com.nuvio.app.core.ui
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.LocalRippleConfiguration
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RippleConfiguration
 import androidx.compose.material3.Typography
@@ -252,7 +253,11 @@ fun NuvioTheme(
             colorScheme = colorScheme,
             typography = NuvioTypography,
         ) {
-            SkeletonAnimationProvider(content = content)
+            // Default text/icon color of the theme: without it, a Text or Icon with no color outside
+            // a Surface falls back to Material's black, unreadable on the dark backgrounds (TV pages).
+            CompositionLocalProvider(LocalContentColor provides colorScheme.onBackground) {
+                SkeletonAnimationProvider(content = content)
+            }
         }
     }
 }
