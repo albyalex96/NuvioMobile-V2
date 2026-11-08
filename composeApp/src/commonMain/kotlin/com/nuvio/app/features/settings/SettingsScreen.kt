@@ -905,6 +905,7 @@ private fun MobileSettingsScreen(
                     )
                     SettingsPage.Top10 -> top10SettingsContent(isTablet = false)
                     SettingsPage.Sports -> sportsSettingsContent(isTablet = false)
+                    SettingsPage.LiveTvRecordings -> liveTvRecordingsSettingsContent(isTablet = false)
                     SettingsPage.Addons -> addonsSettingsContent()
                     SettingsPage.MediaServers -> mediaServersSettingsContent(
                         isTablet = false,
@@ -948,6 +949,7 @@ private fun MobileSettingsScreen(
                         isTablet = false,
                         uiState = liveTvUiState,
                         onChannelsClick = { onPageChange(SettingsPage.LiveTvChannels) },
+                        onRecordingsClick = { onPageChange(SettingsPage.LiveTvRecordings) },
                     )
                     SettingsPage.LiveTvChannels -> liveTvChannelsSettingsContent(
                         isTablet = false,
@@ -1460,6 +1462,7 @@ private fun TabletSettingsScreen(
                         )
                         SettingsPage.Top10 -> top10SettingsContent(isTablet = true)
                         SettingsPage.Sports -> sportsSettingsContent(isTablet = true)
+                        SettingsPage.LiveTvRecordings -> liveTvRecordingsSettingsContent(isTablet = true)
                         SettingsPage.Addons -> addonsSettingsContent()
                         SettingsPage.MediaServers -> mediaServersSettingsContent(
                             isTablet = true,
@@ -1503,6 +1506,7 @@ private fun TabletSettingsScreen(
                             isTablet = true,
                             uiState = liveTvUiState,
                             onChannelsClick = { onPageChange(SettingsPage.LiveTvChannels) },
+                            onRecordingsClick = { onPageChange(SettingsPage.LiveTvRecordings) },
                         )
                         SettingsPage.LiveTvChannels -> liveTvChannelsSettingsContent(
                             isTablet = true,

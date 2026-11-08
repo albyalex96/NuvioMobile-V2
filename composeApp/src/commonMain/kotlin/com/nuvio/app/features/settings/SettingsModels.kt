@@ -11,6 +11,7 @@ import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.tv_layout_settings_title
 import nuvio.composeapp.generated.resources.tv_logs_title
 import nuvio.composeapp.generated.resources.settings_sports_title
+import nuvio.composeapp.generated.resources.live_tv_recordings_settings_title
 import nuvio.composeapp.generated.resources.tv_remote_settings_title
 import nuvio.composeapp.generated.resources.live_tv_channels_title
 import nuvio.composeapp.generated.resources.compose_settings_category_about
@@ -239,6 +240,11 @@ internal enum class SettingsPage(
     ),
     LiveTvChannels(
         titleRes = Res.string.live_tv_channels_title,
+        category = SettingsCategory.General,
+        parentPage = LiveTv,
+    ),
+    LiveTvRecordings(
+        titleRes = Res.string.live_tv_recordings_settings_title,
         category = SettingsCategory.General,
         parentPage = LiveTv,
     ),

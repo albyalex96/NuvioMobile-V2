@@ -26,6 +26,7 @@ private val enhancedSettingsPages: Set<SettingsPage> = setOf(
     SettingsPage.Kitsu,
     SettingsPage.LiveTv,
     SettingsPage.LiveTvChannels,
+    SettingsPage.LiveTvRecordings,
     SettingsPage.MediaProxy,
     SettingsPage.MyAnimeList,
     SettingsPage.OpenSubtitles,

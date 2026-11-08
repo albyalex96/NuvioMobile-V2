@@ -130,6 +130,9 @@ import nuvio.composeapp.generated.resources.live_tv_sports_filter_live
 import nuvio.composeapp.generated.resources.live_tv_sports_filter_reminders
 import nuvio.composeapp.generated.resources.live_tv_sports_load_failed
 import nuvio.composeapp.generated.resources.live_tv_sports_no_leagues
+import com.nuvio.app.core.ui.NuvioToastController
+import org.jetbrains.compose.resources.getString
+import nuvio.composeapp.generated.resources.live_tv_record_scheduled_toast
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -157,13 +160,18 @@ fun LiveTvScreen(
     var guideChannelId by rememberSaveable { mutableStateOf<String?>(null) }
     val epgNowMillis = rememberLiveTvEpgNowMillis()
     var section by rememberSaveable { mutableStateOf(LiveTvSection.Channels) }
+    val recordings by remember {
+        LiveTvRecordingsRepository.ensureLoaded()
+        LiveTvRecordingsRepository.recordings
+    }.collectAsStateWithLifecycle()
+    var manualRecordingChannelId by rememberSaveable { mutableStateOf<String?>(null) }
+    var gameRecordingKey by rememberSaveable { mutableStateOf<String?>(null) }
     // A reminder notification opens the Sports section.
-    val openSportsRequested by LiveTvSportsRepository.openSportsRequested.collectAsStateWithLifecycle()
-    LaunchedEffect(openSportsRequested) {
-        if (openSportsRequested) {
-            LiveTvSportsRepository.consumeOpenSportsRequest()
-            section = LiveTvSection.Sports
-        }
+    val requestedSection by LiveTvSectionRequests.requested.collectAsStateWithLifecycle()
+    LaunchedEffect(requestedSection) {
+        val target = requestedSection?.let { name -> LiveTvSection.entries.firstOrNull { it.name == name } }
+        if (requestedSection != null) LiveTvSectionRequests.consume()
+        if (target != null) section = target
     }
     val guideScrollState = remember { LiveTvGuideScrollState() }
     val guidePulse = rememberLiveTvGuidePulse()
@@ -401,6 +409,7 @@ fun LiveTvScreen(
                                             LiveTvSection.Guide -> LiveTvRepository.refreshEpg()
                                             LiveTvSection.Sports -> LiveTvSportsRepository.refresh()
                                             LiveTvSection.OnDemand -> LiveTvOnDemandRepository.refresh(vodKind)
+                                            LiveTvSection.Recordings -> Unit
                                         }
                                     },
                                 )
@@ -505,7 +514,7 @@ fun LiveTvScreen(
                                     )
                                 }
 
-                                LiveTvSection.Channels -> Unit
+                                LiveTvSection.Channels, LiveTvSection.Recordings -> Unit
                             }
                         }
                     }
@@ -578,8 +587,45 @@ fun LiveTvScreen(
                             onChannelClick = playChannel,
                             reminderKeys = reminderKeys,
                             onReminderToggle = LiveTvSportsRemindersRepository::toggle,
+                            onRecordGame = if (LiveTvRecordingsRepository.isSupported) {
+                                { event ->
+                                    val channels = sportsMatches[liveTvSportsEventKey(event)].orEmpty()
+                                    if (channels.size == 1) {
+                                        coroutineScope.launch {
+                                            LiveTvRecordingsRepository.scheduleGame(channels.first(), event)?.let {
+                                                NuvioToastController.show(getString(Res.string.live_tv_record_scheduled_toast, it.title))
+                                            }
+                                        }
+                                    } else {
+                                        gameRecordingKey = liveTvSportsEventKey(event)
+                                    }
+                                }
+                            } else {
+                                null
+                            },
                         )
                     }
+                } else if (uiState.hasPlaylist && section == LiveTvSection.Recordings) {
+                    liveTvRecordingsList(
+                        recordings = recordings,
+                        nowMillis = epgNowMillis,
+                        showExactAlarmWarning = !LiveTvRecordingPlatform.canScheduleExactAlarms(),
+                        onAllowExactAlarms = LiveTvRecordingPlatform::openExactAlarmSettings,
+                        onPlay = { recording ->
+                            recording.fileUri?.let { uri ->
+                                onVodClick(
+                                    LiveTvVodPlayback(
+                                        id = recording.id,
+                                        title = recording.title,
+                                        streamUrl = uri,
+                                        headers = emptyMap(),
+                                        streamType = null,
+                                        posterUrl = recording.channelLogoUrl,
+                                    ),
+                                )
+                            }
+                        },
+                    )
                 } else if (uiState.hasPlaylist && section == LiveTvSection.OnDemand) {
                     when {
                         !hasVodProvider -> item(key = "vod-unavailable") {
@@ -779,6 +825,43 @@ fun LiveTvScreen(
                         playChannel(guideChannel)
                     },
                     onDismiss = { guideChannelId = null },
+                    onRecordClick = if (LiveTvRecordingsRepository.isSupported) {
+                        {
+                            guideChannelId = null
+                            manualRecordingChannelId = guideChannel.id
+                        }
+                    } else {
+                        null
+                    },
+                    onRecordProgram = if (LiveTvRecordingsRepository.isSupported) {
+                        { program -> coroutineScope.launch { toggleLiveTvProgramRecording(guideChannel, program) } }
+                    } else {
+                        null
+                    },
+                    isProgramRecorded = { program ->
+                        recordings.any {
+                            it.channelId == guideChannel.id && it.title == program.title &&
+                                (it.status == LiveTvRecordingStatus.Scheduled || it.status == LiveTvRecordingStatus.Recording) &&
+                                it.endMillis >= program.endMillis
+                        }
+                    },
+                )
+            }
+
+            val manualRecordingChannel = manualRecordingChannelId?.let { id -> uiState.channels.firstOrNull { it.id == id } }
+            if (manualRecordingChannel != null) {
+                LiveTvManualRecordingDialog(
+                    channel = manualRecordingChannel,
+                    onDismiss = { manualRecordingChannelId = null },
+                )
+            }
+
+            val gameRecording = gameRecordingKey?.let { key -> sportsState.events.firstOrNull { liveTvSportsEventKey(it) == key } }
+            if (gameRecording != null) {
+                LiveTvGameRecordingDialog(
+                    event = gameRecording,
+                    channels = sportsMatches[liveTvSportsEventKey(gameRecording)].orEmpty(),
+                    onDismiss = { gameRecordingKey = null },
                 )
             }
 

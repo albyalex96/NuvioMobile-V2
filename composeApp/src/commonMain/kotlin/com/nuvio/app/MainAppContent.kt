@@ -146,7 +146,7 @@ import com.nuvio.app.features.library.toLibraryItem
 import com.nuvio.app.features.library.toMetaPreview
 import com.nuvio.app.features.livetv.LiveTvChannel
 import com.nuvio.app.features.livetv.LiveTvRepository
-import com.nuvio.app.features.livetv.LiveTvSportsRepository
+import com.nuvio.app.features.livetv.LiveTvSectionRequests
 import com.nuvio.app.features.livetv.LiveTvVodPlayback
 import com.nuvio.app.features.membership.MemberAccessRepository
 import com.nuvio.app.features.notifications.EpisodeReleaseNotificationsRepository
@@ -871,9 +871,13 @@ internal fun MainAppContent(
                         AppDeepLinkRepository.markConsumed(deepLink)
                     }
 
-                    AppDeepLink.Sports -> {
+                    AppDeepLink.Sports, AppDeepLink.Recordings -> {
                         appGateController?.appReady?.first { it }
-                        LiveTvSportsRepository.requestOpenSports()
+                        if (deepLink == AppDeepLink.Sports) {
+                            LiveTvSectionRequests.requestSports()
+                        } else {
+                            LiveTvSectionRequests.requestRecordings()
+                        }
                         activateTab(AppScreenTab.LiveTv)
                         AppDeepLinkRepository.markConsumed(deepLink)
                     }

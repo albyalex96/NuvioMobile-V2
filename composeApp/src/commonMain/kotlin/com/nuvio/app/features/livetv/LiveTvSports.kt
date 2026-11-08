@@ -24,6 +24,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.FiberManualRecord
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.NotificationsNone
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -68,6 +69,7 @@ import nuvio.composeapp.generated.resources.live_tv_sports_finished
 import nuvio.composeapp.generated.resources.live_tv_sports_starts_in
 import nuvio.composeapp.generated.resources.live_tv_sports_today
 import nuvio.composeapp.generated.resources.live_tv_sports_no_channels
+import nuvio.composeapp.generated.resources.live_tv_record_game
 import nuvio.composeapp.generated.resources.live_tv_sports_reminder_add
 import nuvio.composeapp.generated.resources.live_tv_sports_reminder_remove
 import org.jetbrains.compose.resources.stringResource
@@ -121,18 +123,6 @@ object LiveTvSportsRepository {
     val uiState: StateFlow<LiveTvSportsUiState> = _uiState.asStateFlow()
     private var job: Job? = null
 
-    private val _openSportsRequested = MutableStateFlow(false)
-
-    /** True when something outside asks for Live TV → Sports (a reminder notification), until consumed. */
-    val openSportsRequested: StateFlow<Boolean> = _openSportsRequested.asStateFlow()
-
-    fun requestOpenSports() {
-        _openSportsRequested.value = true
-    }
-
-    fun consumeOpenSportsRequest() {
-        _openSportsRequested.value = false
-    }
 
     /** At most this many leagues are asked at once, so a long list of leagues doesn't flood the network. */
     private const val PARALLEL_LEAGUES = 8
@@ -362,6 +352,8 @@ internal fun LazyListScope.liveTvSportsList(
     /** Keys of the games with a reminder; null when reminders are off (no bell). */
     reminderKeys: Set<String>? = null,
     onReminderToggle: (LiveTvSportsEvent) -> Unit = {},
+    /** Records the game on one of its matching channels; null hides the button. */
+    onRecordGame: ((LiveTvSportsEvent) -> Unit)? = null,
 ) {
     items(events, key = { "sports:${it.league.id}:${it.id}" }) { event ->
         LiveTvSportsEventCard(
@@ -373,6 +365,9 @@ internal fun LazyListScope.liveTvSportsList(
                 ?.takeIf { event.state != LiveTvSportsState.Finished }
                 ?.let { liveTvSportsEventKey(event) in it },
             onReminderToggle = { onReminderToggle(event) },
+            onRecordGame = onRecordGame
+                ?.takeIf { event.state != LiveTvSportsState.Finished && !matchedChannels["${event.league.id}:${event.id}"].isNullOrEmpty() }
+                ?.let { record -> { record(event) } },
         )
     }
 }
@@ -385,6 +380,7 @@ private fun LiveTvSportsEventCard(
     onChannelClick: (LiveTvChannel) -> Unit,
     reminderSet: Boolean?,
     onReminderToggle: () -> Unit,
+    onRecordGame: (() -> Unit)? = null,
 ) {
     val tokens = MaterialTheme.nuvio
     val isLive = event.state == LiveTvSportsState.Live
@@ -430,6 +426,19 @@ private fun LiveTvSportsEventCard(
                     overflow = TextOverflow.Ellipsis,
                 )
                 LiveTvSportsStatus(event = event, nowMillis = nowMillis)
+                if (onRecordGame != null) {
+                    Icon(
+                        imageVector = Icons.Rounded.FiberManualRecord,
+                        contentDescription = stringResource(Res.string.live_tv_record_game),
+                        tint = LiveTvLiveRed,
+                        modifier = Modifier
+                            .padding(start = 8.dp)
+                            .clip(RoundedCornerShape(50))
+                            .clickable(onClick = onRecordGame)
+                            .padding(6.dp)
+                            .size(16.dp),
+                    )
+                }
                 if (reminderSet != null) {
                     Icon(
                         imageVector = if (reminderSet) Icons.Rounded.NotificationsActive else Icons.Rounded.NotificationsNone,

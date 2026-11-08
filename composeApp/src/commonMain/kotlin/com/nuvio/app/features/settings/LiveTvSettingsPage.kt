@@ -1,5 +1,10 @@
 package com.nuvio.app.features.settings
 
+import androidx.compose.material.icons.rounded.FiberManualRecord
+import com.nuvio.app.features.livetv.LiveTvRecordingsRepository
+import nuvio.composeapp.generated.resources.live_tv_recordings_settings_description
+import nuvio.composeapp.generated.resources.live_tv_recordings_settings_title
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -98,6 +103,7 @@ internal fun LazyListScope.liveTvSettingsContent(
     isTablet: Boolean,
     uiState: LiveTvUiState,
     onChannelsClick: () -> Unit,
+    onRecordingsClick: (() -> Unit)? = null,
 ) {
     if (uiState.hasPlaylist) {
         item {
@@ -113,6 +119,16 @@ internal fun LazyListScope.liveTvSettingsContent(
                         isTablet = isTablet,
                         onClick = onChannelsClick,
                     )
+                    if (onRecordingsClick != null && LiveTvRecordingsRepository.isSupported) {
+                        SettingsGroupDivider(isTablet = isTablet)
+                        SettingsNavigationRow(
+                            title = stringResource(Res.string.live_tv_recordings_settings_title),
+                            description = stringResource(Res.string.live_tv_recordings_settings_description),
+                            icon = Icons.Rounded.FiberManualRecord,
+                            isTablet = isTablet,
+                            onClick = onRecordingsClick,
+                        )
+                    }
                 }
             }
         }

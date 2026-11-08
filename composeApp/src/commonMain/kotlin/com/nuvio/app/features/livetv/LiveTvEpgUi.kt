@@ -19,6 +19,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import nuvio.composeapp.generated.resources.live_tv_record_button
+import nuvio.composeapp.generated.resources.live_tv_record_program
+import nuvio.composeapp.generated.resources.live_tv_recordings_action_cancel
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material.icons.rounded.FiberManualRecord
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Tv
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -183,6 +188,11 @@ fun LiveTvEpgGuideSheet(
     nowMillis: Long,
     onPlayClick: () -> Unit,
     onDismiss: () -> Unit,
+    /** Manual recording of the channel; null hides the button (recordings not supported). */
+    onRecordClick: (() -> Unit)? = null,
+    /** Records (or cancels the recording of) one program; null hides the record buttons. */
+    onRecordProgram: ((LiveTvEpgProgram) -> Unit)? = null,
+    isProgramRecorded: (LiveTvEpgProgram) -> Boolean = { false },
 ) {
     val tokens = MaterialTheme.nuvio
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -247,6 +257,20 @@ fun LiveTvEpgGuideSheet(
                     overflow = TextOverflow.Ellipsis,
                 )
             }
+            if (onRecordClick != null) {
+                Surface(
+                    onClick = onRecordClick,
+                    color = tokens.colors.overlaySelected,
+                    shape = tokens.shapes.chip,
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.FiberManualRecord,
+                        contentDescription = stringResource(Res.string.live_tv_record_button),
+                        tint = LiveTvLiveRed,
+                        modifier = Modifier.padding(10.dp).size(20.dp),
+                    )
+                }
+            }
             Surface(
                 onClick = onPlayClick,
                 color = tokens.colors.overlaySelected,
@@ -299,6 +323,8 @@ fun LiveTvEpgGuideSheet(
                     LiveTvEpgProgramRow(
                         program = program,
                         nowMillis = nowMillis,
+                        isRecorded = isProgramRecorded(program),
+                        onRecordClick = onRecordProgram?.let { record -> { record(program) } },
                     )
                 }
             }
@@ -310,6 +336,8 @@ fun LiveTvEpgGuideSheet(
 private fun LiveTvEpgProgramRow(
     program: LiveTvEpgProgram,
     nowMillis: Long,
+    isRecorded: Boolean = false,
+    onRecordClick: (() -> Unit)? = null,
 ) {
     val tokens = MaterialTheme.nuvio
     val isLive = program.isAiringAt(nowMillis)
@@ -364,6 +392,21 @@ private fun LiveTvEpgProgramRow(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false),
+                    )
+                }
+                if (onRecordClick != null) {
+                    Spacer(modifier = Modifier.weight(1f))
+                    Icon(
+                        imageVector = Icons.Rounded.FiberManualRecord,
+                        contentDescription = stringResource(
+                            if (isRecorded) Res.string.live_tv_recordings_action_cancel else Res.string.live_tv_record_program,
+                        ),
+                        tint = if (isRecorded) LiveTvLiveRed else tokens.colors.textMuted,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .clickable(onClick = onRecordClick)
+                            .padding(6.dp)
+                            .size(18.dp),
                     )
                 }
             }

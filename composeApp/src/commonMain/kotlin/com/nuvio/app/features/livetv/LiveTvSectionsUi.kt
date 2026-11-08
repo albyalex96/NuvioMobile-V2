@@ -30,6 +30,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CalendarViewWeek
 import androidx.compose.material.icons.rounded.LiveTv
+import androidx.compose.material.icons.rounded.FiberManualRecord
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.SportsSoccer
 import androidx.compose.material3.Icon
@@ -59,6 +60,7 @@ import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.live_tv_section_channels
 import nuvio.composeapp.generated.resources.live_tv_section_guide
 import nuvio.composeapp.generated.resources.live_tv_section_on_demand
+import nuvio.composeapp.generated.resources.live_tv_section_recordings
 import nuvio.composeapp.generated.resources.live_tv_section_sports
 import nuvio.composeapp.generated.resources.live_tv_sports_live_badge
 import org.jetbrains.compose.resources.StringResource
@@ -67,11 +69,24 @@ import org.jetbrains.compose.resources.stringResource
 /** Red used for every "live" marker in the Live TV sections (badge, pulsing dots, glow). */
 internal val LiveTvLiveRed = Color(0xFFE53935)
 
+/** A Live TV section asked from outside (a notification), opened once by the Live TV screen. */
+object LiveTvSectionRequests {
+    private val _requested = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    internal val requested: kotlinx.coroutines.flow.StateFlow<String?> = _requested
+
+    fun requestSports() { _requested.value = "Sports" }
+
+    fun requestRecordings() { _requested.value = "Recordings" }
+
+    internal fun consume() { _requested.value = null }
+}
+
 internal enum class LiveTvSection(val label: StringResource, val icon: ImageVector) {
     Channels(Res.string.live_tv_section_channels, Icons.Rounded.LiveTv),
     Guide(Res.string.live_tv_section_guide, Icons.Rounded.CalendarViewWeek),
     Sports(Res.string.live_tv_section_sports, Icons.Rounded.SportsSoccer),
     OnDemand(Res.string.live_tv_section_on_demand, Icons.Rounded.Movie),
+    Recordings(Res.string.live_tv_section_recordings, Icons.Rounded.FiberManualRecord),
 }
 
 /**
@@ -92,7 +107,7 @@ internal fun LiveTvSectionTabs(
         horizontalArrangement = Arrangement.spacedBy(NuvioTokens.Space.s8),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        LiveTvSection.entries.forEach { section ->
+        LiveTvSection.entries.filter { it != LiveTvSection.Recordings || LiveTvRecordingsRepository.isSupported }.forEach { section ->
             LiveTvSectionTab(
                 section = section,
                 selected = section == selected,

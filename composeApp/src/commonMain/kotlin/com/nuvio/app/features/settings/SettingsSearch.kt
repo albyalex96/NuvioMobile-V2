@@ -50,6 +50,7 @@ import androidx.compose.material.icons.rounded.LiveTv
 import androidx.compose.material.icons.rounded.EmojiEvents
 import com.nuvio.app.features.livetv.LiveTvSport
 import com.nuvio.app.features.livetv.LiveTvSportsRemindersRepository
+import com.nuvio.app.features.livetv.LiveTvRecordingsRepository
 import com.nuvio.app.features.livetv.liveTvSportsLeagues
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Palette
@@ -2180,6 +2181,31 @@ private fun addAdditionalSearchEntries(
         val leagueNames = liveTvSportsLeagues.filter { it.sport == sport }.joinToString(", ") { it.label }
         if (leagueNames.isNotEmpty()) {
             row(SettingsPage.Sports, "sports-${sport.name}", stringResource(sport.labelRes), leagueNames, sportsPage, sportsLeaguesSection, icon = sport.icon)
+        }
+    }
+
+    // Integrations: Live TV → Recordings (Android only)
+    if (LiveTvRecordingsRepository.isSupported) {
+        val recordingsPage = stringResource(Res.string.live_tv_recordings_settings_title)
+        addPage(
+            SettingsPage.LiveTvRecordings,
+            "live-tv-recordings",
+            recordingsPage,
+            stringResource(Res.string.live_tv_recordings_settings_description),
+            generalCategory,
+            Icons.Rounded.LiveTv,
+        )
+        row(SettingsPage.LiveTv, "live-tv-recordings-row", recordingsPage, stringResource(Res.string.live_tv_recordings_settings_description), liveTvPage, stringResource(Res.string.live_tv_settings_section_channels), icon = Icons.Rounded.LiveTv)
+        val storageSection = stringResource(Res.string.live_tv_recordings_settings_section_storage)
+        val scheduleSection = stringResource(Res.string.live_tv_recordings_settings_section_schedule)
+        listOf(
+            PlaybackSearchRow("live-tv-recordings-folder", stringResource(Res.string.live_tv_recordings_folder_title), stringResource(Res.string.live_tv_recordings_folder_app), storageSection),
+            PlaybackSearchRow("live-tv-recordings-folder-reset", stringResource(Res.string.live_tv_recordings_folder_reset_title), stringResource(Res.string.live_tv_recordings_folder_reset_description), storageSection),
+            PlaybackSearchRow("live-tv-recordings-exact-alarms", stringResource(Res.string.live_tv_recordings_exact_alarm_title), stringResource(Res.string.live_tv_recordings_exact_alarm_on), scheduleSection),
+            PlaybackSearchRow("live-tv-recordings-margin-before", stringResource(Res.string.live_tv_recordings_margin_before_title), stringResource(Res.string.live_tv_recordings_margin_before_description), scheduleSection),
+            PlaybackSearchRow("live-tv-recordings-margin-after", stringResource(Res.string.live_tv_recordings_margin_after_title), stringResource(Res.string.live_tv_recordings_margin_after_description), scheduleSection),
+        ).forEach { item ->
+            row(SettingsPage.LiveTvRecordings, item.key, item.title, item.description, recordingsPage, item.sectionOverride.orEmpty(), icon = Icons.Rounded.LiveTv)
         }
     }
 
