@@ -1,5 +1,11 @@
 package com.nuvio.app.features.settings
 
+import com.nuvio.app.core.sync.decodeSyncString
+import com.nuvio.app.core.sync.decodeSyncBoolean
+import com.nuvio.app.core.sync.encodeSyncString
+import com.nuvio.app.core.sync.encodeSyncBoolean
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.JsonObject
 import co.touchlab.kermit.Logger
 import com.nuvio.app.core.format.DateFormatPreset
 import com.nuvio.app.core.format.EpisodeCodeFormat
@@ -34,6 +40,17 @@ object ThemeSettingsRepository {
     private const val ROUND_PROFILE_BUTTONS_KEY = "enhanced_local_round_profile_buttons"
     private const val NAV_BAR_GLASS_EFFECTS_KEY = "enhanced_local_nav_bar_glass_effects"
     private const val NAV_BAR_ICON_COLOR_KEY = "enhanced_local_nav_bar_icon_color"
+    private const val SYNC_ENHANCED_MARKER_KEY = "enhanced_theme_options"
+    private const val SYNC_LIQUID_GLASS_EFFECTS_KEY = "enhanced_liquid_glass_effects"
+
+    /** Device settings that also travel with the profile sync (stored as local strings). */
+    private val syncedLocalKeys = listOf(
+        NAV_BAR_GLASS_KEY,
+        NAV_BAR_GLASS_EFFECTS_KEY,
+        NAV_BAR_ICON_COLOR_KEY,
+        SEE_THROUGH_DETAIL_CONTROLS_KEY,
+        ROUND_PROFILE_BUTTONS_KEY,
+    )
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val _selectedThemePreference = MutableStateFlow<AppTheme?>(null)
@@ -304,6 +321,29 @@ object ThemeSettingsRepository {
         if (_roundProfileButtons.value == enabled) return
         _roundProfileButtons.value = enabled
         ThemeSettingsStorage.saveLocalString(ROUND_PROFILE_BUTTONS_KEY, if (enabled) null else "0")
+    }
+
+    /** Adds the Enhanced theme options (liquid glass, nav bar glass, buttons) to the theme sync payload. */
+    internal fun withEnhancedSyncOptions(payload: JsonObject): JsonObject = buildJsonObject {
+        payload.forEach { (key, value) -> put(key, value) }
+        put(SYNC_ENHANCED_MARKER_KEY, encodeSyncBoolean(true))
+        ThemeSettingsStorage.loadLiquidGlassEffectsEnabled()?.let { put(SYNC_LIQUID_GLASS_EFFECTS_KEY, encodeSyncBoolean(it)) }
+        syncedLocalKeys.forEach { key ->
+            ThemeSettingsStorage.loadLocalString(key)?.let { put(key, encodeSyncString(it)) }
+        }
+    }
+
+    /** Applies the Enhanced theme options from a synced payload; payloads from older versions are skipped. */
+    internal fun applyEnhancedSyncOptions(payload: JsonObject) {
+        if (payload.decodeSyncBoolean(SYNC_ENHANCED_MARKER_KEY) != true) {
+            log.d { "Theme sync: no Enhanced options in the remote payload, keeping the local ones" }
+            return
+        }
+        ThemeSettingsStorage.saveLiquidGlassEffectsEnabled(payload.decodeSyncBoolean(SYNC_LIQUID_GLASS_EFFECTS_KEY) ?: false)
+        syncedLocalKeys.forEach { key ->
+            ThemeSettingsStorage.saveLocalString(key, payload.decodeSyncString(key))
+        }
+        log.i { "Theme sync: Enhanced options applied from the remote profile" }
     }
 
     fun resetNavBarGlass() {

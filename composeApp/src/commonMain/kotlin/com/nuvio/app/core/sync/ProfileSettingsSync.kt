@@ -221,6 +221,12 @@ object ProfileSettingsSync {
             ThemeSettingsRepository.amoledSurfacesEnabled.map { "amoled_surfaces" },
             ThemeSettingsRepository.liquidGlassNativeTabBarEnabled.map { "liquid_glass_tab_bar" },
             ThemeSettingsRepository.navBarGlowEnabled.map { "nav_bar_glow_enabled" },
+            ThemeSettingsRepository.liquidGlassEffectsEnabled.map { "liquid_glass_effects_$it" },
+            ThemeSettingsRepository.navBarGlass.map { "nav_bar_glass_$it" },
+            ThemeSettingsRepository.navBarGlassEffects.map { "nav_bar_glass_effects_$it" },
+            ThemeSettingsRepository.navBarIconColor.map { "nav_bar_icon_color_$it" },
+            ThemeSettingsRepository.seeThroughDetailControls.map { "see_through_controls_$it" },
+            ThemeSettingsRepository.roundProfileButtons.map { "round_profile_buttons_$it" },
             ThemeSettingsRepository.navBarStyle.map { "nav_bar_style" },
             ThemeSettingsRepository.topNavBarEnabled.map { "top_nav_bar_enabled" },
             ThemeSettingsRepository.topNavBarStyle.map { "top_nav_bar_style" },
@@ -297,7 +303,7 @@ object ProfileSettingsSync {
         ensureRepositoriesLoaded()
         return MobileProfileSettingsBlob(
             features = MobileProfileSettingsFeatures(
-                themeSettings = ThemeSettingsStorage.exportToSyncPayload(),
+                themeSettings = ThemeSettingsRepository.withEnhancedSyncOptions(ThemeSettingsStorage.exportToSyncPayload()),
                 posterCardStyleSettingsPayload = PosterCardStyleStorage.loadPayload().orEmpty().trim(),
                 customPosterUrlPattern = CustomPosterUrlStorage.loadPattern().orEmpty().trim(),
                 customPosterEnabledScreens = CustomPosterUrlStorage.loadEnabledScreens()
@@ -355,6 +361,7 @@ object ProfileSettingsSync {
 
     private fun applyRemoteBlob(blob: MobileProfileSettingsBlob) {
         ThemeSettingsStorage.replaceFromSyncPayload(blob.features.themeSettings)
+        ThemeSettingsRepository.applyEnhancedSyncOptions(blob.features.themeSettings)
         ThemeSettingsRepository.onProfileChanged()
 
         PosterCardStyleStorage.savePayload(blob.features.posterCardStyleSettingsPayload)

@@ -147,6 +147,9 @@ actual object PlayerSettingsStorage {
     private val syncKeys = listOf(
         showLoadingOverlayKey,
         showPlayerLoadingStatusKey,
+        playerControlGlassEnabledKey,
+        showSkipButtonsKey,
+        toolbarLayoutKey,
         pauseOverlayEnabledKey,
         showParentalGuideKey,
         resizeModeKey,
@@ -1323,6 +1326,9 @@ actual object PlayerSettingsStorage {
     actual fun exportToSyncPayload(): JsonObject = buildJsonObject {
         loadShowLoadingOverlay()?.let { put(showLoadingOverlayKey, encodeSyncBoolean(it)) }
         loadShowPlayerLoadingStatus()?.let { put(showPlayerLoadingStatusKey, encodeSyncBoolean(it)) }
+        loadPlayerControlGlassEnabled()?.let { put(playerControlGlassEnabledKey, encodeSyncBoolean(it)) }
+        loadShowSkipButtons()?.let { put(showSkipButtonsKey, encodeSyncBoolean(it)) }
+        loadToolbarLayout()?.let { put(toolbarLayoutKey, encodeSyncString(it)) }
         loadPauseOverlayEnabled()?.let { put(pauseOverlayEnabledKey, encodeSyncBoolean(it)) }
         loadShowParentalGuide()?.let { put(showParentalGuideKey, encodeSyncBoolean(it)) }
         loadResizeMode()?.let { put(resizeModeKey, encodeSyncString(it)) }
@@ -1438,6 +1444,9 @@ actual object PlayerSettingsStorage {
 
         payload.decodeSyncBoolean(showLoadingOverlayKey)?.let(::saveShowLoadingOverlay)
         payload.decodeSyncBoolean(showPlayerLoadingStatusKey)?.let(::saveShowPlayerLoadingStatus)
+        payload.decodeSyncBoolean(playerControlGlassEnabledKey)?.let(::savePlayerControlGlassEnabled)
+        payload.decodeSyncBoolean(showSkipButtonsKey)?.let(::saveShowSkipButtons)
+        payload.decodeSyncString(toolbarLayoutKey)?.let(::saveToolbarLayout)
         payload.decodeSyncBoolean(pauseOverlayEnabledKey)?.let(::savePauseOverlayEnabled)
         payload.decodeSyncBoolean(showParentalGuideKey)?.let(::saveShowParentalGuide)
         payload.decodeSyncString(resizeModeKey)?.let(::saveResizeMode)
