@@ -12,8 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowDownward
 import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
+import com.nuvio.app.core.ui.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -251,10 +250,6 @@ internal fun StreamProviderPriorityTimeoutSlider(
             },
             valueRange = 0f..maxIndex,
             steps = calculateSteps(0f, maxIndex, 1f),
-            colors = SliderDefaults.colors(
-                thumbColor = MaterialTheme.colorScheme.primary,
-                activeTrackColor = MaterialTheme.colorScheme.primary,
-            ),
             modifier = Modifier.fillMaxWidth(),
         )
     }

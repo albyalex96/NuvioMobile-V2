@@ -33,8 +33,7 @@ import com.nuvio.app.core.ui.DialogOption
 import com.nuvio.app.core.ui.DialogSurface
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
+import com.nuvio.app.core.ui.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -320,10 +319,6 @@ internal fun SettingsSliderRow(
             enabled = enabled,
             valueRange = valueRange.first.toFloat()..valueRange.last.toFloat(),
             steps = calculateSteps(valueRange.first.toFloat(), valueRange.last.toFloat(), step.toFloat()),
-            colors = SliderDefaults.colors(
-                thumbColor = MaterialTheme.colorScheme.primary,
-                activeTrackColor = MaterialTheme.colorScheme.primary,
-            ),
             modifier = Modifier.fillMaxWidth(),
         )
     }
@@ -1024,10 +1019,6 @@ private fun PlaybackSettingsSection(
                             },
                             valueRange = 0f..maxIndex,
                             steps = calculateSteps(0f, maxIndex, 1f),
-                            colors = SliderDefaults.colors(
-                                thumbColor = MaterialTheme.colorScheme.primary,
-                                activeTrackColor = MaterialTheme.colorScheme.primary,
-                            ),
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
@@ -1585,10 +1576,6 @@ private fun PlaybackSettingsSection(
                             },
                             valueRange = minCount..maxCount,
                             steps = calculateSteps(minCount, maxCount, 1f),
-                            colors = SliderDefaults.colors(
-                                thumbColor = MaterialTheme.colorScheme.primary,
-                                activeTrackColor = MaterialTheme.colorScheme.primary,
-                            ),
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
@@ -1663,10 +1650,6 @@ private fun PlaybackSettingsSection(
                             },
                             valueRange = minMinutes..maxMinutes,
                             steps = calculateSteps(minMinutes, maxMinutes, stepMinutes),
-                            colors = SliderDefaults.colors(
-                                thumbColor = MaterialTheme.colorScheme.primary,
-                                activeTrackColor = MaterialTheme.colorScheme.primary,
-                            ),
                             modifier = Modifier.fillMaxWidth(),
                         )
                     }
@@ -1736,10 +1719,6 @@ private fun PlaybackSettingsSection(
                                 },
                                 valueRange = 97f..100f,
                                 steps = calculateSteps(97f, 100f, 0.5f),
-                                colors = SliderDefaults.colors(
-                                    thumbColor = MaterialTheme.colorScheme.primary,
-                                    activeTrackColor = MaterialTheme.colorScheme.primary,
-                                ),
                                 modifier = Modifier.fillMaxWidth(),
                             )
                         }
@@ -1789,10 +1768,6 @@ private fun PlaybackSettingsSection(
                                 },
                                 valueRange = 0f..3.5f,
                                 steps = calculateSteps(0f, 3.5f, 0.5f),
-                                colors = SliderDefaults.colors(
-                                    thumbColor = MaterialTheme.colorScheme.primary,
-                                    activeTrackColor = MaterialTheme.colorScheme.primary,
-                                ),
                                 modifier = Modifier.fillMaxWidth(),
                             )
                         }

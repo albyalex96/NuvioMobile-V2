@@ -33,8 +33,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Button
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
+import com.nuvio.app.core.ui.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -530,10 +529,6 @@ private fun CardDepthFineTuneSheet(
                     CardDepthStyleRepository.setEdgeCoverage(draftCoverage.roundToInt())
                 },
                 valueRange = 0f..100f,
-                colors = SliderDefaults.colors(
-                    thumbColor = MaterialTheme.colorScheme.primary,
-                    activeTrackColor = MaterialTheme.colorScheme.primary,
-                ),
                 modifier = Modifier.fillMaxWidth(),
             )
         }
