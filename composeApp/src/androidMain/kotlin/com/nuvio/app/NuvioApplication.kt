@@ -9,7 +9,13 @@ import coil3.gif.AnimatedImageDecoder
 import coil3.gif.GifDecoder
 import coil3.network.cachecontrol.CacheControlCacheStrategy
 import coil3.network.ktor3.KtorNetworkFetcherFactory
+import coil3.disk.DiskCache
+import coil3.map.Mapper
 import coil3.memory.MemoryCache
+import coil3.request.maxBitmapSize
+import coil3.size.Dimension
+import coil3.size.Size
+import okio.Path.Companion.toOkioPath
 import coil3.request.CachePolicy
 import coil3.request.allowHardware
 import coil3.request.allowRgb565
@@ -64,6 +70,7 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
             .apply { if (tv) configureForTv(context) }
             .components {
                 add(CustomPosterFallbackInterceptor())
+                if (tv) add(TmdbOriginalSizeMapper)
                 add(SvgDecoder.Factory())
                 add(
                     KtorNetworkFetcherFactory(
@@ -115,9 +122,36 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
             totalRamMb <= 3072 -> 0.20
             else -> 0.25
         }
-        Logger.withTag("ImageLoader").i { "TV image settings: RAM ${totalRamMb} MB, memory cache ${(cachePercent * 100).toInt()}%" }
+        // Boxes under ~2.3 GB (Fire TV sticks): at most 40 MB of decoded pictures, about three
+        // Home screens of posters plus a backdrop, so the pictures leave room for the rest.
+        val smallBox = totalRamMb < SMALL_BOX_RAM_MB
+        val memoryCacheBytes = MemoryCache.Builder().maxSizePercent(context, cachePercent).build().maxSize
+            .let { budget -> if (smallBox) minOf(budget, SMALL_BOX_PICTURE_CACHE_BYTES) else budget }
+        // Nothing is drawn larger than the screen: its longer side bounds every decode.
+        val metrics = context.resources.displayMetrics
+        val maxSide = maxOf(metrics.widthPixels, metrics.heightPixels).let { side ->
+            if (side <= 0) FALLBACK_MAX_BITMAP_SIDE else side.coerceAtLeast(MIN_MAX_BITMAP_SIDE)
+        }
+        // More room for posters on disk when the box has plenty of free storage.
+        val freeStorage = runCatching { context.cacheDir.usableSpace }.getOrDefault(0L)
+        val diskCacheBytes = when {
+            freeStorage > 10L * 1024 * MB -> 1024L * MB
+            totalRamMb >= 3_300 -> 300L * MB
+            else -> 200L * MB
+        }
+        Logger.withTag("ImageLoader").i {
+            "TV image settings: RAM ${totalRamMb} MB, memory cache ${memoryCacheBytes / MB} MB" +
+                "${if (smallBox) " (small box)" else ""}, max picture side ${maxSide}px, disk cache ${diskCacheBytes / MB} MB"
+        }
         return this
-            .memoryCache { MemoryCache.Builder().maxSizePercent(context, cachePercent).build() }
+            .memoryCache { MemoryCache.Builder().maxSizeBytes(memoryCacheBytes).build() }
+            .diskCache {
+                DiskCache.Builder()
+                    .directory(context.cacheDir.resolve("image_cache").toOkioPath())
+                    .maxSizeBytes(diskCacheBytes)
+                    .build()
+            }
+            .maxBitmapSize(Size(maxSide, maxSide))
             .precision(Precision.INEXACT)
             .allowHardware(false)
             .allowRgb565(true)
@@ -126,3 +160,27 @@ class NuvioApplication : Application(), SingletonImageLoader.Factory {
     private fun isTvPackage(context: android.content.Context): Boolean =
         TvAppRuntime.isTvApp || context.packageName.let { it.endsWith(".tv") || ".tv." in it }
 }
+
+private const val MB = 1024L * 1024
+private const val SMALL_BOX_RAM_MB = 2_355L
+private const val SMALL_BOX_PICTURE_CACHE_BYTES = 40L * MB
+private const val FALLBACK_MAX_BITMAP_SIDE = 1920
+private const val MIN_MAX_BITMAP_SIDE = 1280
+
+/**
+ * TMDB pictures asked at original size (some catalogs serve multi-MB `/t/p/original/` URLs, slow
+ * to download and decode) are fetched at the TMDB size closest to the card instead. Only
+ * poster-sized targets (up to 780 px) change; screen-sized backdrops keep the original.
+ */
+private val TmdbOriginalSizeMapper = Mapper<String, String> { data, options ->
+    val width = (options.size.width as? Dimension.Pixels)?.px
+    if (!data.startsWith(TMDB_ORIGINAL_PREFIX) || width == null || width !in 1..780) return@Mapper null
+    val bucket = when {
+        width <= 342 -> "w342"
+        width <= 500 -> "w500"
+        else -> "w780"
+    }
+    data.replace("/t/p/original/", "/t/p/$bucket/")
+}
+
+private const val TMDB_ORIGINAL_PREFIX = "https://image.tmdb.org/t/p/original/"
