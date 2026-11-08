@@ -77,6 +77,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.sp
 import co.touchlab.kermit.Logger
 import coil3.compose.AsyncImage
@@ -195,6 +196,8 @@ private const val MIN_EXPAND_DELAY_MS = 150L
 
 // Hero text block of the NuvioTV modern home (`HeroTitleContent`).
 private const val HERO_TEXT_WIDTH_FRACTION = 0.42f
+/** Scale of the hero text block (NuvioTV fork: 75% on 1080p TVs). */
+private const val HERO_CONTENT_SCALE = 0.75f
 private val HERO_TEXT_END_PADDING = 48.dp
 private val HERO_LOGO_HEIGHT = 100.dp
 private val HERO_LOGO_MIN_WIDTH = 100.dp
@@ -1096,6 +1099,10 @@ private fun HeroInfoPanel(
                 .padding(start = TvDimens.rowPadding, end = HERO_TEXT_END_PADDING, top = HERO_EXPANDED_TOP_PADDING),
         ) {
             val plotScroll = rememberScrollState()
+            // NuvioTV fork look: the hero text is drawn at 75% (its automatic UI scale on 1080p boxes),
+            // logo, details, ratings and plot alike; the start inset and the width stay unscaled.
+            val heroDensity = remember(density) { Density(density.density * HERO_CONTENT_SCALE, density.fontScale) }
+            CompositionLocalProvider(LocalDensity provides heroDensity) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth(if (expanded) HERO_EXPANDED_TEXT_WIDTH_FRACTION else HERO_TEXT_WIDTH_FRACTION)
@@ -1150,7 +1157,13 @@ private fun HeroInfoPanel(
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                // The plot comes before genres, release badge and ratings.
+                // NuvioTV fork order: genres, release badges and ratings first, the plot last.
+                TvHeroMetaRows(
+                    meta = info.meta,
+                    showImdbRating = showImdbRating,
+                    showMdbListRatings = showMdbListRatings,
+                    expanded = expanded,
+                )
                 if (!info.description.isNullOrBlank()) {
                     if (expanded) {
                         // The whole plot; a long one scrolls inside a few lines (up/down).
@@ -1163,6 +1176,9 @@ private fun HeroInfoPanel(
                                 .verticalScroll(plotScroll),
                         )
                     } else {
+                        // Keeps the outline (drawn outside the plot) clear of the details above
+                        // and of the rows below.
+                        Spacer(modifier = Modifier.height(HERO_OUTLINE_INSET - 8.dp + HERO_OUTLINE_WIDTH))
                         // The focus outline surrounds the plot only.
                         Text(
                             text = info.description,
@@ -1172,20 +1188,14 @@ private fun HeroInfoPanel(
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.heroOutline(color = outlineColor, alpha = { outlineAlpha.value }),
                         )
-                        // Keeps the outline (drawn outside the plot) clear of the details below.
                         Spacer(modifier = Modifier.height(HERO_OUTLINE_INSET - 8.dp + HERO_OUTLINE_WIDTH))
                     }
                 }
-                TvHeroMetaRows(
-                    meta = info.meta,
-                    showImdbRating = showImdbRating,
-                    showMdbListRatings = showMdbListRatings,
-                    expanded = expanded,
-                )
                 if (expanded) {
                     Spacer(modifier = Modifier.height(4.dp))
                     actions(info)
                 }
+            }
             }
         }
     }

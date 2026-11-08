@@ -69,8 +69,8 @@ import com.nuvio.tv.settings.TvLayoutSettings
  */
 object TvDimens {
     val screenPadding = 48.dp
-    /** Start/end inset of the home and details rows (NuvioTV `rowHorizontalPadding`). */
-    val rowPadding = 52.dp
+    /** Start/end inset of the home and details rows (NuvioTV fork `rowHorizontalPadding`, new look). */
+    val rowPadding = 24.dp
     /** Space kept free at the top of the pages for the floating sidebar pill. */
     val chromeTopInset = 80.dp
     val rowSpacing = 12.dp
