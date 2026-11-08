@@ -135,7 +135,7 @@ jobs:
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "cmake;3.22.1" > /dev/null
 
       - name: Build full release APKs
-        run: ./gradlew :androidApp:assembleFullRelease --stacktrace -Dorg.gradle.jvmargs="-Xmx8g -XX:MaxMetaspaceSize=1536m -Dfile.encoding=UTF-8" -Pkotlin.daemon.jvmargs=-Xmx3g
+        run: ./gradlew :androidApp:assembleFullRelease --stacktrace -Dorg.gradle.jvmargs="-Xmx7g -XX:MaxMetaspaceSize=1536m -Dfile.encoding=UTF-8" -Pkotlin.daemon.jvmargs=-Xmx6g
 
       - name: Rename APKs
         env:
@@ -231,7 +231,7 @@ jobs:
         run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "cmake;3.22.1" > /dev/null
 
       - name: Build TV release APKs
-        run: ./gradlew :tvApp:assembleFullRelease --stacktrace -Dorg.gradle.jvmargs="-Xmx8g -XX:MaxMetaspaceSize=1536m -Dfile.encoding=UTF-8" -Pkotlin.daemon.jvmargs=-Xmx3g
+        run: ./gradlew :tvApp:assembleFullRelease --stacktrace -Dorg.gradle.jvmargs="-Xmx7g -XX:MaxMetaspaceSize=1536m -Dfile.encoding=UTF-8" -Pkotlin.daemon.jvmargs=-Xmx6g
 
       - name: Rename APKs
         # The "TV" token in the file name is how the in-app updater tells TV APKs apart
