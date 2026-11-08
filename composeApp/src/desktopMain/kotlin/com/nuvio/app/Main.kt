@@ -15,6 +15,9 @@ import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
 import androidx.compose.ui.window.rememberWindowState
 import co.touchlab.kermit.Logger
+import com.nuvio.app.core.ui.NuvioSheetBackdrop
+import com.nuvio.app.core.ui.NuvioSheetBackdropHost
+import com.nuvio.app.core.ui.glass.rememberNuvioBackdrop
 import com.nuvio.app.core.deeplink.handleAppUrl
 import com.nuvio.app.core.logging.AppLogger
 import com.nuvio.app.core.network.dns.DnsOverHttpsRepository
@@ -76,8 +79,13 @@ fun main(args: Array<String>) {
             // Right click is a long press (RightClickAsLongPress): a short timeout opens menus quickly.
             val base = LocalViewConfiguration.current
             val viewConfiguration = remember(base) { DesktopViewConfiguration(base) }
+            // Same as the phone: the sheets refract the app behind them when liquid glass is on.
+            val sheetBackdropSource = rememberNuvioBackdrop()
+            val sheetBackdrop = remember(sheetBackdropSource) { NuvioSheetBackdrop(sheetBackdropSource) }
             CompositionLocalProvider(LocalViewConfiguration provides viewConfiguration) {
-                App()
+                NuvioSheetBackdropHost(sheetBackdrop = sheetBackdrop) {
+                    App()
+                }
             }
         }
     }
