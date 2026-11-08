@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -21,9 +22,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.livetv.LiveTvSport
+import com.nuvio.app.core.ui.Chip
+import com.nuvio.app.features.livetv.LiveTvSportsRemindersRepository
 import com.nuvio.app.features.livetv.LiveTvSportsSettingsRepository
+import com.nuvio.app.features.livetv.liveTvSportsLiveAlertIntervals
+import com.nuvio.app.features.livetv.liveTvSportsReminderLeadChoices
 import com.nuvio.app.features.livetv.liveTvSportsLeagues
-import nuvio.composeapp.generated.resources.Res
+import nuvio.composeapp.generated.resources.*
 import nuvio.composeapp.generated.resources.settings_sports_all_description
 import nuvio.composeapp.generated.resources.settings_sports_all_title
 import nuvio.composeapp.generated.resources.settings_sports_leagues_count
@@ -104,6 +109,10 @@ private fun SportsSettingsSection(isTablet: Boolean) {
             }
         }
 
+        if (LiveTvSportsRemindersRepository.isSupported) {
+            SportsRemindersSection(isTablet = isTablet)
+        }
+
         SettingsSection(
             title = stringResource(Res.string.settings_sports_section_leagues),
             isTablet = isTablet,
@@ -155,6 +164,83 @@ private fun SportsSettingsSection(isTablet: Boolean) {
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SportsRemindersSection(isTablet: Boolean) {
+    val options by remember {
+        LiveTvSportsRemindersRepository.ensureLoaded()
+        LiveTvSportsRemindersRepository.options
+    }.collectAsStateWithLifecycle()
+    val testTitle = stringResource(Res.string.live_tv_sports_notification_test_title)
+    val testBody = stringResource(Res.string.live_tv_sports_notification_test_body)
+
+    SettingsSection(
+        title = stringResource(Res.string.settings_sports_section_reminders),
+        isTablet = isTablet,
+    ) {
+        SettingsGroup(isTablet = isTablet) {
+            SettingsSwitchRow(
+                title = stringResource(Res.string.settings_sports_reminders_title),
+                description = stringResource(Res.string.settings_sports_reminders_description),
+                checked = options.enabled,
+                isTablet = isTablet,
+                onCheckedChange = LiveTvSportsRemindersRepository::setEnabled,
+            )
+            if (options.enabled) {
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsChipRow(
+                    title = stringResource(Res.string.settings_sports_reminder_lead_title),
+                    description = stringResource(Res.string.settings_sports_reminder_lead_description),
+                    isTablet = isTablet,
+                ) {
+                    liveTvSportsReminderLeadChoices.forEach { minutes ->
+                        Chip(
+                            label = if (minutes == 0) {
+                                stringResource(Res.string.settings_sports_reminder_lead_kickoff)
+                            } else {
+                                stringResource(Res.string.settings_sports_reminder_lead_minutes, minutes)
+                            },
+                            selected = minutes in options.leadMinutes,
+                            onClick = { LiveTvSportsRemindersRepository.toggleLeadMinutes(minutes) },
+                        )
+                    }
+                }
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.settings_sports_live_alerts_title),
+                    description = stringResource(Res.string.settings_sports_live_alerts_description),
+                    checked = options.liveAlertsEnabled,
+                    isTablet = isTablet,
+                    onCheckedChange = LiveTvSportsRemindersRepository::setLiveAlertsEnabled,
+                )
+                if (options.liveAlertsEnabled) {
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsChipRow(
+                        title = stringResource(Res.string.settings_sports_live_interval_title),
+                        description = stringResource(Res.string.settings_sports_live_interval_description),
+                        isTablet = isTablet,
+                    ) {
+                        liveTvSportsLiveAlertIntervals.forEach { minutes ->
+                            Chip(
+                                label = stringResource(Res.string.settings_sports_live_interval_minutes, minutes),
+                                selected = options.liveAlertIntervalMinutes == minutes,
+                                onClick = { LiveTvSportsRemindersRepository.setLiveAlertInterval(minutes) },
+                            )
+                        }
+                    }
+                }
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsNavigationRow(
+                    title = stringResource(Res.string.settings_sports_reminder_test_title),
+                    description = stringResource(Res.string.settings_sports_reminder_test_description),
+                    icon = Icons.Rounded.NotificationsActive,
+                    isTablet = isTablet,
+                    onClick = { LiveTvSportsRemindersRepository.sendTestNotification(testTitle, testBody) },
+                )
             }
         }
     }

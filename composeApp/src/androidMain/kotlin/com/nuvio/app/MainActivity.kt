@@ -215,6 +215,7 @@ open class MainActivity : AppCompatActivity() {
         AndroidAppUpdaterPlatform.initialize(applicationContext)
         PlatformLocalAccountDataCleaner.initialize(applicationContext)
         EpisodeReleaseNotificationPlatform.initialize(applicationContext)
+        com.nuvio.app.features.livetv.LiveTvSportsNotificationPlatform.initialize(applicationContext)
         StartupTrace.mark("Storage init done")
         // The Supabase client takes 300-450 ms to build: it is created in background now, so the
         // main thread finds it ready instead of blocking the startup (its Android lifecycle hooks

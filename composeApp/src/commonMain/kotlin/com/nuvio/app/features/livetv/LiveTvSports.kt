@@ -24,6 +24,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.NotificationsNone
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.SportsSoccer
@@ -66,6 +68,8 @@ import nuvio.composeapp.generated.resources.live_tv_sports_finished
 import nuvio.composeapp.generated.resources.live_tv_sports_starts_in
 import nuvio.composeapp.generated.resources.live_tv_sports_today
 import nuvio.composeapp.generated.resources.live_tv_sports_no_channels
+import nuvio.composeapp.generated.resources.live_tv_sports_reminder_add
+import nuvio.composeapp.generated.resources.live_tv_sports_reminder_remove
 import org.jetbrains.compose.resources.stringResource
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -116,6 +120,19 @@ object LiveTvSportsRepository {
     private val _uiState = MutableStateFlow(LiveTvSportsUiState())
     val uiState: StateFlow<LiveTvSportsUiState> = _uiState.asStateFlow()
     private var job: Job? = null
+
+    private val _openSportsRequested = MutableStateFlow(false)
+
+    /** True when something outside asks for Live TV → Sports (a reminder notification), until consumed. */
+    val openSportsRequested: StateFlow<Boolean> = _openSportsRequested.asStateFlow()
+
+    fun requestOpenSports() {
+        _openSportsRequested.value = true
+    }
+
+    fun consumeOpenSportsRequest() {
+        _openSportsRequested.value = false
+    }
 
     /** At most this many leagues are asked at once, so a long list of leagues doesn't flood the network. */
     private const val PARALLEL_LEAGUES = 8
@@ -185,6 +202,7 @@ object LiveTvSportsRepository {
                 .distinctBy { "${it.league.id}:${it.id}" }
                 .sortedWith(liveTvSportsEventOrder)
             val allFailed = results.isNotEmpty() && results.all { it.isFailure }
+            if (!allFailed) LiveTvSportsRemindersRepository.updateFromEvents(events)
             if (allFailed) {
                 log.e(results.first().exceptionOrNull()) { "All sports feeds failed" }
             } else {
@@ -281,6 +299,7 @@ internal fun LiveTvSportsControls(
     selectedFilter: String,
     eventCount: Int,
     onFilterSelected: (String) -> Unit,
+    remindersLabel: String? = null,
 ) {
     val tokens = MaterialTheme.nuvio
     Row(
@@ -307,6 +326,13 @@ internal fun LiveTvSportsControls(
                     onClick = { onFilterSelected(LIVE_TV_SPORTS_FILTER_LIVE) },
                 )
             }
+            if (remindersLabel != null) {
+                LiveTvPanelFilterChip(
+                    label = remindersLabel,
+                    selected = selectedFilter == LIVE_TV_SPORTS_FILTER_REMINDERS,
+                    onClick = { onFilterSelected(LIVE_TV_SPORTS_FILTER_REMINDERS) },
+                )
+            }
             leagues.forEach { league ->
                 LiveTvPanelFilterChip(
                     label = league.label,
@@ -326,12 +352,16 @@ internal fun LiveTvSportsControls(
 
 internal const val LIVE_TV_SPORTS_FILTER_ALL = "all"
 internal const val LIVE_TV_SPORTS_FILTER_LIVE = "live"
+internal const val LIVE_TV_SPORTS_FILTER_REMINDERS = "reminders"
 
 internal fun LazyListScope.liveTvSportsList(
     events: List<LiveTvSportsEvent>,
     matchedChannels: Map<String, List<LiveTvChannel>>,
     nowMillis: Long,
     onChannelClick: (LiveTvChannel) -> Unit,
+    /** Keys of the games with a reminder; null when reminders are off (no bell). */
+    reminderKeys: Set<String>? = null,
+    onReminderToggle: (LiveTvSportsEvent) -> Unit = {},
 ) {
     items(events, key = { "sports:${it.league.id}:${it.id}" }) { event ->
         LiveTvSportsEventCard(
@@ -339,6 +369,10 @@ internal fun LazyListScope.liveTvSportsList(
             channels = matchedChannels["${event.league.id}:${event.id}"].orEmpty(),
             nowMillis = nowMillis,
             onChannelClick = onChannelClick,
+            reminderSet = reminderKeys
+                ?.takeIf { event.state != LiveTvSportsState.Finished }
+                ?.let { liveTvSportsEventKey(event) in it },
+            onReminderToggle = { onReminderToggle(event) },
         )
     }
 }
@@ -349,6 +383,8 @@ private fun LiveTvSportsEventCard(
     channels: List<LiveTvChannel>,
     nowMillis: Long,
     onChannelClick: (LiveTvChannel) -> Unit,
+    reminderSet: Boolean?,
+    onReminderToggle: () -> Unit,
 ) {
     val tokens = MaterialTheme.nuvio
     val isLive = event.state == LiveTvSportsState.Live
@@ -394,6 +430,21 @@ private fun LiveTvSportsEventCard(
                     overflow = TextOverflow.Ellipsis,
                 )
                 LiveTvSportsStatus(event = event, nowMillis = nowMillis)
+                if (reminderSet != null) {
+                    Icon(
+                        imageVector = if (reminderSet) Icons.Rounded.NotificationsActive else Icons.Rounded.NotificationsNone,
+                        contentDescription = stringResource(
+                            if (reminderSet) Res.string.live_tv_sports_reminder_remove else Res.string.live_tv_sports_reminder_add,
+                        ),
+                        tint = if (reminderSet) tokens.colors.accent else tokens.colors.textMuted,
+                        modifier = Modifier
+                            .padding(start = 8.dp)
+                            .clip(RoundedCornerShape(50))
+                            .clickable(onClick = onReminderToggle)
+                            .padding(4.dp)
+                            .size(20.dp),
+                    )
+                }
             }
             if (event.competitors.size >= 2) {
                 event.competitors.forEach { competitor ->

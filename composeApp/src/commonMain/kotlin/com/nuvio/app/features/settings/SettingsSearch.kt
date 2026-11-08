@@ -49,6 +49,7 @@ import androidx.compose.material.icons.rounded.Forum
 import androidx.compose.material.icons.rounded.LiveTv
 import androidx.compose.material.icons.rounded.EmojiEvents
 import com.nuvio.app.features.livetv.LiveTvSport
+import com.nuvio.app.features.livetv.LiveTvSportsRemindersRepository
 import com.nuvio.app.features.livetv.liveTvSportsLeagues
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Palette
@@ -2162,6 +2163,18 @@ private fun addAdditionalSearchEntries(
         stringResource(Res.string.settings_sports_section_leagues),
         icon = Icons.Rounded.EmojiEvents,
     )
+    if (LiveTvSportsRemindersRepository.isSupported) {
+        val sportsRemindersSection = stringResource(Res.string.settings_sports_section_reminders)
+        listOf(
+            PlaybackSearchRow("sports-reminders", stringResource(Res.string.settings_sports_reminders_title), stringResource(Res.string.settings_sports_reminders_description)),
+            PlaybackSearchRow("sports-reminder-lead", stringResource(Res.string.settings_sports_reminder_lead_title), stringResource(Res.string.settings_sports_reminder_lead_description)),
+            PlaybackSearchRow("sports-live-alerts", stringResource(Res.string.settings_sports_live_alerts_title), stringResource(Res.string.settings_sports_live_alerts_description)),
+            PlaybackSearchRow("sports-live-interval", stringResource(Res.string.settings_sports_live_interval_title), stringResource(Res.string.settings_sports_live_interval_description)),
+            PlaybackSearchRow("sports-reminder-test", stringResource(Res.string.settings_sports_reminder_test_title), stringResource(Res.string.settings_sports_reminder_test_description)),
+        ).forEach { item ->
+            row(SettingsPage.Sports, item.key, item.title, item.description, sportsPage, sportsRemindersSection, icon = Icons.Rounded.EmojiEvents)
+        }
+    }
     val sportsLeaguesSection = stringResource(Res.string.settings_sports_section_leagues)
     LiveTvSport.entries.forEach { sport ->
         val leagueNames = liveTvSportsLeagues.filter { it.sport == sport }.joinToString(", ") { it.label }

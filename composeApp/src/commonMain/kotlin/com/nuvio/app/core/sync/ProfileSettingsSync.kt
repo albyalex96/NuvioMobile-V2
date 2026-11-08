@@ -2,6 +2,7 @@ package com.nuvio.app.core.sync
 
 import com.nuvio.app.features.livetv.LiveTvProfileSync
 import com.nuvio.app.features.livetv.LiveTvRepository
+import com.nuvio.app.features.livetv.LiveTvSportsRemindersRepository
 import com.nuvio.app.features.livetv.LiveTvSportsSettingsRepository
 import co.touchlab.kermit.Logger
 import com.nuvio.app.core.auth.AuthRepository
@@ -247,6 +248,7 @@ object ProfileSettingsSync {
                 .distinctUntilChanged(),
             LiveTvRepository.uiState.map { "live_tv_${LiveTvProfileSync.syncSignature(it)}" }.distinctUntilChanged(),
             LiveTvSportsSettingsRepository.settings.map(LiveTvSportsSettingsRepository::syncSignature).distinctUntilChanged(),
+            LiveTvSportsRemindersRepository.options.map(LiveTvSportsRemindersRepository::syncSignature).distinctUntilChanged(),
             HomeCatalogSettingsRepository.uiState.map(HomeHeroProfileSync::syncSignature).distinctUntilChanged(),
             DiscordRpcRepository.uiState.map(DiscordRpcProfileSync::syncSignature).distinctUntilChanged(),
             MalAuthRepository.uiState.map(MalProfileSync::syncSignature).distinctUntilChanged(),
@@ -324,6 +326,7 @@ object ProfileSettingsSync {
                         DnsOverHttpsRepository.exportToSyncPayload() +
                         LiveTvProfileSync.exportToSyncPayload() +
                         LiveTvSportsSettingsRepository.exportToSyncPayload() +
+                        LiveTvSportsRemindersRepository.exportToSyncPayload() +
                         HomeHeroProfileSync.exportToSyncPayload() +
                         DiscordRpcProfileSync.exportToSyncPayload() +
                         MalProfileSync.exportToSyncPayload() +
@@ -404,6 +407,8 @@ object ProfileSettingsSync {
         LiveTvProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
         LiveTvSportsSettingsRepository.onProfileChanged()
         LiveTvSportsSettingsRepository.applyFromSyncPayload(blob.features.streamBadgeSettings)
+        LiveTvSportsRemindersRepository.onProfileChanged()
+        LiveTvSportsRemindersRepository.applyFromSyncPayload(blob.features.streamBadgeSettings)
         HomeHeroProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
         DiscordRpcProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)
         MalProfileSync.applyFromSyncPayload(blob.features.streamBadgeSettings)

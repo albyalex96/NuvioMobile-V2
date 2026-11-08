@@ -127,6 +127,7 @@ import nuvio.composeapp.generated.resources.live_tv_on_demand_unavailable_title
 import nuvio.composeapp.generated.resources.live_tv_sports_empty_message
 import nuvio.composeapp.generated.resources.live_tv_sports_empty_title
 import nuvio.composeapp.generated.resources.live_tv_sports_filter_live
+import nuvio.composeapp.generated.resources.live_tv_sports_filter_reminders
 import nuvio.composeapp.generated.resources.live_tv_sports_load_failed
 import nuvio.composeapp.generated.resources.live_tv_sports_no_leagues
 import org.jetbrains.compose.resources.stringResource
@@ -156,6 +157,14 @@ fun LiveTvScreen(
     var guideChannelId by rememberSaveable { mutableStateOf<String?>(null) }
     val epgNowMillis = rememberLiveTvEpgNowMillis()
     var section by rememberSaveable { mutableStateOf(LiveTvSection.Channels) }
+    // A reminder notification opens the Sports section.
+    val openSportsRequested by LiveTvSportsRepository.openSportsRequested.collectAsStateWithLifecycle()
+    LaunchedEffect(openSportsRequested) {
+        if (openSportsRequested) {
+            LiveTvSportsRepository.consumeOpenSportsRequest()
+            section = LiveTvSection.Sports
+        }
+    }
     val guideScrollState = remember { LiveTvGuideScrollState() }
     val guidePulse = rememberLiveTvGuidePulse()
     val guideTextMeasurer = rememberLiveTvGuideTextMeasurer()
@@ -280,18 +289,30 @@ fun LiveTvScreen(
         liveTvSportsLeagues.filter { it.id in present }
     }
     val hasLiveSports = sportsState.events.any { it.state == LiveTvSportsState.Live }
-    val visibleSports = remember(sportsState.events, sportsFilter) {
+    val reminderOptions by remember {
+        LiveTvSportsRemindersRepository.ensureLoaded()
+        LiveTvSportsRemindersRepository.options
+    }.collectAsStateWithLifecycle()
+    val sportsReminders by LiveTvSportsRemindersRepository.reminders.collectAsStateWithLifecycle()
+    // Bells and the Reminders filter only with reminders turned on (Settings → Sports).
+    val remindersActive = reminderOptions.enabled && LiveTvSportsRemindersRepository.isSupported
+    val reminderKeys = if (remindersActive) sportsReminders.keys else null
+    val hasSportsReminders = remindersActive &&
+        sportsState.events.any { liveTvSportsEventKey(it) in sportsReminders }
+    val visibleSports = remember(sportsState.events, sportsFilter, sportsReminders) {
         sportsState.events.filter { event ->
             when (sportsFilter) {
                 LIVE_TV_SPORTS_FILTER_ALL -> true
                 LIVE_TV_SPORTS_FILTER_LIVE -> event.state == LiveTvSportsState.Live
+                LIVE_TV_SPORTS_FILTER_REMINDERS -> liveTvSportsEventKey(event) in sportsReminders
                 else -> event.league.id == sportsFilter
             }
         }
     }
-    LaunchedEffect(sportsLeagues, hasLiveSports, sportsFilter) {
+    LaunchedEffect(sportsLeagues, hasLiveSports, hasSportsReminders, sportsFilter) {
         val valid = sportsFilter == LIVE_TV_SPORTS_FILTER_ALL ||
             (sportsFilter == LIVE_TV_SPORTS_FILTER_LIVE && hasLiveSports) ||
+            (sportsFilter == LIVE_TV_SPORTS_FILTER_REMINDERS && hasSportsReminders) ||
             sportsLeagues.any { it.id == sportsFilter }
         if (!valid && sportsState.hasLoaded) sportsFilter = LIVE_TV_SPORTS_FILTER_ALL
     }
@@ -452,6 +473,11 @@ fun LiveTvScreen(
                                         selectedFilter = sportsFilter,
                                         eventCount = visibleSports.size,
                                         onFilterSelected = { sportsFilter = it },
+                                        remindersLabel = if (hasSportsReminders) {
+                                            stringResource(Res.string.live_tv_sports_filter_reminders)
+                                        } else {
+                                            null
+                                        },
                                     )
                                 }
 
@@ -550,6 +576,8 @@ fun LiveTvScreen(
                             matchedChannels = sportsMatches,
                             nowMillis = epgNowMillis,
                             onChannelClick = playChannel,
+                            reminderKeys = reminderKeys,
+                            onReminderToggle = LiveTvSportsRemindersRepository::toggle,
                         )
                     }
                 } else if (uiState.hasPlaylist && section == LiveTvSection.OnDemand) {
