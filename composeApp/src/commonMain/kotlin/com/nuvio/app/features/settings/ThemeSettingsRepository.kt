@@ -25,7 +25,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 object ThemeSettingsRepository {
@@ -33,8 +32,6 @@ object ThemeSettingsRepository {
     private const val NAV_BAR_GLASS_KEY = "enhanced_local_nav_bar_glass"
     private const val SEE_THROUGH_DETAIL_CONTROLS_KEY = "enhanced_local_see_through_detail_controls"
     private const val ROUND_PROFILE_BUTTONS_KEY = "enhanced_local_round_profile_buttons"
-    private const val LIQUID_GLASS_GUARD_KEY = "enhanced_local_liquid_glass_guard"
-    private const val LIQUID_GLASS_GUARD_MS = 10_000L
     private const val NAV_BAR_GLASS_EFFECTS_KEY = "enhanced_local_nav_bar_glass_effects"
     private const val NAV_BAR_ICON_COLOR_KEY = "enhanced_local_nav_bar_icon_color"
 
@@ -178,17 +175,7 @@ object ThemeSettingsRepository {
         _topNavBarStyle.value = TopNavBarStyle.fromKey(ThemeSettingsStorage.loadTopNavBarStyle())
         applyDateFormat(DateFormatPreset.fromKey(ThemeSettingsStorage.loadDateFormat()))
         applyEpisodeCodeFormat(EpisodeCodeFormat.fromKey(ThemeSettingsStorage.loadEpisodeCodeFormat()))
-        var glassEnabled = ThemeSettingsStorage.loadLiquidGlassEffectsEnabled() ?: false
-        if (glassEnabled && ThemeSettingsStorage.loadLocalString(LIQUID_GLASS_GUARD_KEY) != null) {
-            // The app died right after the glass was turned on (or right after a start with it on):
-            // turn it off so the app can open again.
-            log.w { "Liquid glass disabled: the previous session crashed shortly after enabling it" }
-            glassEnabled = false
-            ThemeSettingsStorage.saveLiquidGlassEffectsEnabled(false)
-            ThemeSettingsStorage.saveLocalString(LIQUID_GLASS_GUARD_KEY, null)
-        }
-        applyLiquidGlassEffectsEnabled(glassEnabled)
-        if (glassEnabled) armLiquidGlassGuard()
+        applyLiquidGlassEffectsEnabled(ThemeSettingsStorage.loadLiquidGlassEffectsEnabled() ?: false)
         _navBarGlass.value = LiquidGlassStyle.decode(ThemeSettingsStorage.loadLocalString(NAV_BAR_GLASS_KEY))
         _navBarGlassEffects.value = decodeLiquidGlassEffectSettings(
             ThemeSettingsStorage.loadLocalString(NAV_BAR_GLASS_EFFECTS_KEY),
@@ -274,7 +261,6 @@ object ThemeSettingsRepository {
     fun setLiquidGlassEffectsEnabled(enabled: Boolean) {
         ensureLoaded()
         if (_liquidGlassEffectsEnabled.value == enabled) return
-        if (enabled) armLiquidGlassGuard() else ThemeSettingsStorage.saveLocalString(LIQUID_GLASS_GUARD_KEY, null)
         applyLiquidGlassEffectsEnabled(enabled)
         ThemeSettingsStorage.saveLiquidGlassEffectsEnabled(enabled)
         log.i { "Liquid glass effects ${if (enabled) "enabled" else "disabled"}" }
@@ -325,15 +311,6 @@ object ThemeSettingsRepository {
         setNavBarGlassEffects(LiquidGlassEffectDefaults.floatingBar)
         setNavBarIconColor(null)
         log.i { "Nav bar glass reset to defaults" }
-    }
-
-    /** Marks the glass as "on probation" for a few seconds; a crash in that window turns it off. */
-    private fun armLiquidGlassGuard() {
-        ThemeSettingsStorage.saveLocalString(LIQUID_GLASS_GUARD_KEY, "1")
-        scope.launch {
-            delay(LIQUID_GLASS_GUARD_MS)
-            ThemeSettingsStorage.saveLocalString(LIQUID_GLASS_GUARD_KEY, null)
-        }
     }
 
     private fun applyLiquidGlassEffectsEnabled(enabled: Boolean) {
