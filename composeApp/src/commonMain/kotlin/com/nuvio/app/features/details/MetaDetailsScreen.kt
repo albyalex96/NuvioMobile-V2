@@ -1,5 +1,7 @@
 package com.nuvio.app.features.details
 
+import com.nuvio.app.features.settings.ThemeSettingsRepository
+import com.nuvio.app.core.ui.LocalOnBackdrop
 import com.nuvio.app.core.ui.glass.LocalLiquidGlassBackdrop
 import com.nuvio.app.core.ui.glass.isLiquidGlassSupported
 import com.nuvio.app.core.ui.glass.nuvioBackdropSource
@@ -1221,8 +1223,10 @@ fun MetaDetailsScreen(
                     val cinematicGlassEnabled = !useTabletLayout &&
                         backgroundMode == MetaScreenBackgroundMode.Cinematic &&
                         isLiquidGlassSupported()
+                    val seeThroughControls by ThemeSettingsRepository.seeThroughDetailControls.collectAsStateWithLifecycle()
                     CompositionLocalProvider(
                         LocalLiquidGlassBackdrop provides if (cinematicGlassEnabled) cinematicArtworkBackdrop else null,
+                        LocalOnBackdrop provides (seeThroughControls && backgroundMode.usesBackdropBackground),
                     ) {
                     Box(modifier = Modifier.fillMaxSize()) {
                         Box(Modifier.fillMaxSize().detailsContentReveal(metaScreenSettingsUiState.posterTransitionEnabled)) {

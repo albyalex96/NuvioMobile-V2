@@ -97,6 +97,8 @@ import nuvio.composeapp.generated.resources.settings_meta_episodes_description
 import nuvio.composeapp.generated.resources.settings_meta_blur_unwatched_episodes
 import nuvio.composeapp.generated.resources.settings_meta_blur_unwatched_episodes_description
 import nuvio.composeapp.generated.resources.settings_meta_background_mode
+import nuvio.composeapp.generated.resources.settings_meta_see_through_controls
+import nuvio.composeapp.generated.resources.settings_meta_see_through_controls_description
 import nuvio.composeapp.generated.resources.settings_meta_background_mode_cinematic
 import nuvio.composeapp.generated.resources.settings_meta_background_mode_cinematic_description
 import nuvio.composeapp.generated.resources.settings_meta_background_mode_description
@@ -152,6 +154,17 @@ internal fun LazyListScope.metaScreenSettingsContent(
                             onClick = { MetaScreenSettingsRepository.setBackgroundMode(mode) },
                         )
                     }
+                }
+                if (uiState.backgroundMode.usesBackdropBackground) {
+                    val seeThrough by ThemeSettingsRepository.seeThroughDetailControls.collectAsStateWithLifecycle()
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.settings_meta_see_through_controls),
+                        description = stringResource(Res.string.settings_meta_see_through_controls_description),
+                        checked = seeThrough,
+                        isTablet = isTablet,
+                        onCheckedChange = ThemeSettingsRepository::setSeeThroughDetailControls,
+                    )
                 }
                 if (supportsPosterNavigationMotion) {
                     SettingsGroupDivider(isTablet = isTablet)

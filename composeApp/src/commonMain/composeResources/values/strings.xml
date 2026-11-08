@@ -2596,6 +2596,8 @@
     <string name="settings_nav_bar_icon_color_description">Color of the unselected icons and labels in the floating bar.</string>
     <string name="settings_nav_bar_glass_reset">Reset glass to default</string>
     <string name="compose_player_picture_in_picture">Picture-in-picture</string>
+    <string name="settings_meta_see_through_controls">See-through buttons</string>
+    <string name="settings_meta_see_through_controls_description">Over the cinematic or dominant color background, buttons and chips become see-through so the artwork shows behind them.</string>
     <string name="settings_playback_control_glass">Glass backgrounds on controls</string>
     <string name="settings_playback_control_glass_description">Show the translucent round and pill backgrounds behind player buttons and time pills. Turn off for plain icons and text.</string>
     <string name="settings_playback_show_skip_buttons">Show skip buttons</string>

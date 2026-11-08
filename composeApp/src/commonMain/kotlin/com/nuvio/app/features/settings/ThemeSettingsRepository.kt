@@ -31,6 +31,7 @@ import kotlinx.coroutines.launch
 object ThemeSettingsRepository {
     private val log = Logger.withTag("LiquidGlass")
     private const val NAV_BAR_GLASS_KEY = "enhanced_local_nav_bar_glass"
+    private const val SEE_THROUGH_DETAIL_CONTROLS_KEY = "enhanced_local_see_through_detail_controls"
     private const val LIQUID_GLASS_GUARD_KEY = "enhanced_local_liquid_glass_guard"
     private const val LIQUID_GLASS_GUARD_MS = 10_000L
     private const val NAV_BAR_GLASS_EFFECTS_KEY = "enhanced_local_nav_bar_glass_effects"
@@ -74,6 +75,10 @@ object ThemeSettingsRepository {
     /** ARGB color of the unselected nav bar icons and labels; null keeps the theme color. */
     private val _navBarIconColor = MutableStateFlow<Int?>(null)
     val navBarIconColor: StateFlow<Int?> = _navBarIconColor.asStateFlow()
+
+    /** Details buttons and chips turn see-through over the cinematic / dominant-color backdrop. */
+    private val _seeThroughDetailControls = MutableStateFlow(true)
+    val seeThroughDetailControls: StateFlow<Boolean> = _seeThroughDetailControls.asStateFlow()
 
     private val _liquidGlassEffectsEnabled = MutableStateFlow(false)
     val liquidGlassEffectsEnabled: StateFlow<Boolean> = _liquidGlassEffectsEnabled.asStateFlow()
@@ -134,6 +139,7 @@ object ThemeSettingsRepository {
         _navBarGlass.value = LiquidGlassStyle.Default
         _navBarGlassEffects.value = LiquidGlassEffectDefaults.floatingBar
         _navBarIconColor.value = null
+        _seeThroughDetailControls.value = true
     }
 
     private fun loadFromDisk() {
@@ -185,6 +191,7 @@ object ThemeSettingsRepository {
         )
         _navBarIconColor.value = ThemeSettingsStorage.loadLocalString(NAV_BAR_ICON_COLOR_KEY)
             ?.toLongOrNull(16)?.toInt()
+        _seeThroughDetailControls.value = ThemeSettingsStorage.loadLocalString(SEE_THROUGH_DETAIL_CONTROLS_KEY) != "0"
     }
 
     fun setTheme(theme: AppTheme) {
@@ -290,6 +297,13 @@ object ThemeSettingsRepository {
         if (_navBarIconColor.value == argb) return
         _navBarIconColor.value = argb
         ThemeSettingsStorage.saveLocalString(NAV_BAR_ICON_COLOR_KEY, argb?.toUInt()?.toString(16))
+    }
+
+    fun setSeeThroughDetailControls(enabled: Boolean) {
+        ensureLoaded()
+        if (_seeThroughDetailControls.value == enabled) return
+        _seeThroughDetailControls.value = enabled
+        ThemeSettingsStorage.saveLocalString(SEE_THROUGH_DETAIL_CONTROLS_KEY, if (enabled) null else "0")
     }
 
     fun resetNavBarGlass() {

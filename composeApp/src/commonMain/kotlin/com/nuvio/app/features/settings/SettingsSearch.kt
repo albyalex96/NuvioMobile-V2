@@ -1181,6 +1181,7 @@ internal fun settingsSearchEntries(
     }
     listOf(
         PlaybackSearchRow("meta-background-mode", stringResource(Res.string.settings_meta_background_mode), stringResource(Res.string.settings_meta_background_mode_description)),
+        PlaybackSearchRow("meta-see-through-controls", stringResource(Res.string.settings_meta_see_through_controls), stringResource(Res.string.settings_meta_see_through_controls_description)),
         PlaybackSearchRow("meta-tabs", stringResource(Res.string.settings_meta_tab_layout), stringResource(Res.string.settings_meta_tab_layout_description)),
         PlaybackSearchRow(
             "meta-overall-ratings",
