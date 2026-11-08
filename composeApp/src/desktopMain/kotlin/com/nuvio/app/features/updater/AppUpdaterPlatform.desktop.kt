@@ -16,8 +16,8 @@ import java.time.Duration
 import kotlin.system.exitProcess
 
 /**
- * Desktop updates: the release MSI is downloaded to the cache, then `msiexec` installs it over
- * the current version (same upgrade code) and the app closes so files can be replaced.
+ * Desktop updates: the release MSI is downloaded to the cache, then the bundled Nuvio updater
+ * window (`resources/updater/nuvio-updater.ps1`) replaces the current version and the app closes.
  * The shared API still speaks of "APK": here it is the MSI file.
  */
 actual object AppUpdaterPlatform {
@@ -106,10 +106,45 @@ actual object AppUpdaterPlatform {
     actual fun installDownloadedApk(path: String): Result<Unit> = runCatching {
         val msi = File(path)
         check(msi.isFile) { "Installer not found" }
-        log.i { "Starting installer ${msi.name}, closing the app" }
-        // msiexec shows its own progress; the app must exit so its files can be replaced.
-        ProcessBuilder("msiexec.exe", "/i", msi.absolutePath, "/passive", "/norestart").start()
         DesktopPreferencesRegistry.flush()
+        val updaterStarted = runCatching { startNuvioUpdater(msi) }
+            .onFailure { log.e(it) { "Nuvio updater window could not start, falling back to msiexec" } }
+            .getOrDefault(false)
+        if (!updaterStarted) {
+            log.w { "Starting msiexec directly for ${msi.name}" }
+            ProcessBuilder("msiexec.exe", "/i", msi.absolutePath, "/passive", "/norestart").start()
+        }
+        // The app must exit so its files can be replaced.
         exitProcess(0)
+    }
+
+    /**
+     * Starts the Nuvio-styled updater window (PowerShell + WPF script bundled in the resources).
+     * It waits for the app to exit, uninstalls the old version, installs the new MSI silently in
+     * the same folder, checks Nuvio.exe exists and reopens the app. Returns false if it can't start.
+     */
+    private fun startNuvioUpdater(msi: File): Boolean {
+        val appExe = System.getProperty("jpackage.app-path")?.let(::File)
+        val installDir = appExe?.parentFile
+        if (installDir == null || !installDir.isDirectory) {
+            log.w { "Install folder unknown (jpackage.app-path=${appExe?.path})" }
+            return false
+        }
+        val script = File(updatesDir, "nuvio-updater.ps1")
+        val resource = AppUpdaterPlatform::class.java.getResourceAsStream("/updater/nuvio-updater.ps1")
+            ?: return false.also { log.w { "Updater script missing from resources" } }
+        resource.use { input -> script.outputStream().use { input.copyTo(it) } }
+        val lang = if (java.util.Locale.getDefault().language == "it") "it" else "en"
+        log.i { "Starting Nuvio updater for ${msi.name} into ${installDir.path} (lang=$lang), closing the app" }
+        ProcessBuilder(
+            "powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden",
+            "-File", script.absolutePath,
+            "-Msi", msi.absolutePath,
+            "-InstallDir", installDir.absolutePath,
+            "-AppPid", ProcessHandle.current().pid().toString(),
+            "-Lang", lang,
+            "-LogDir", updatesDir.absolutePath,
+        ).start()
+        return true
     }
 }

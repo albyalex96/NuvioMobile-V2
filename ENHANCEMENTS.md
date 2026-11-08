@@ -189,3 +189,4 @@ Ported from [luqmanfadlli/NuvioMobile-Enhanced](https://github.com/luqmanfadlli/
 - Centralized versioning in `version.json` with automatic version code.
 - Own app identity (`com.nuvioenhanced.alby`, "Nuvio Enhanced"): installs alongside the official app.
 - The updater downloads releases from this fork and picks the right APK (phone or TV) for the installed app.
+- On Windows the update runs in a Nuvio-styled window (English or Italian): it removes the old version, installs the new one in the same folder, checks it is really there and reopens Nuvio. If something fails it shows the error, the log path and a "Try again" button.
