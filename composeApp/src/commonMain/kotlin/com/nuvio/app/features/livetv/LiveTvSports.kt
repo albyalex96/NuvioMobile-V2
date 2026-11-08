@@ -26,13 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Schedule
-import androidx.compose.material.icons.rounded.SportsBaseball
-import androidx.compose.material.icons.rounded.SportsBasketball
-import androidx.compose.material.icons.rounded.SportsFootball
-import androidx.compose.material.icons.rounded.SportsHockey
-import androidx.compose.material.icons.rounded.SportsMma
 import androidx.compose.material.icons.rounded.SportsSoccer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -50,7 +44,6 @@ import coil3.compose.AsyncImage
 import co.touchlab.kermit.Logger
 import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.core.ui.nuvio
-import com.nuvio.app.features.addons.httpGetTextWithHeaders
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -58,26 +51,20 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.contentOrNull
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.live_tv_sports_broadcast
 import nuvio.composeapp.generated.resources.live_tv_sports_finished
 import nuvio.composeapp.generated.resources.live_tv_sports_starts_in
+import nuvio.composeapp.generated.resources.live_tv_sports_today
 import nuvio.composeapp.generated.resources.live_tv_sports_no_channels
 import org.jetbrains.compose.resources.stringResource
 import kotlin.time.Clock
@@ -86,43 +73,6 @@ import kotlin.time.Instant
 // ---------------------------------------------------------------------------------------------
 // Models
 // ---------------------------------------------------------------------------------------------
-
-/** One ESPN scoreboard feed. Public, keyless endpoints, so this works the same on Android and iOS. */
-data class LiveTvSportsLeague(
-    val id: String,
-    val label: String,
-    val path: String,
-) {
-    /** Icon of the sport, from the ESPN path ("soccer/eng.1" -> soccer). */
-    val icon: ImageVector
-        get() = when (path.substringBefore('/')) {
-            "basketball" -> Icons.Rounded.SportsBasketball
-            "football" -> Icons.Rounded.SportsFootball
-            "hockey" -> Icons.Rounded.SportsHockey
-            "baseball" -> Icons.Rounded.SportsBaseball
-            "mma" -> Icons.Rounded.SportsMma
-            else -> Icons.Rounded.SportsSoccer
-        }
-}
-
-internal val liveTvSportsLeagues = listOf(
-    LiveTvSportsLeague("eng.1", "Premier League", "soccer/eng.1"),
-    LiveTvSportsLeague("esp.1", "LaLiga", "soccer/esp.1"),
-    LiveTvSportsLeague("ita.1", "Serie A", "soccer/ita.1"),
-    LiveTvSportsLeague("ita.2", "Serie B", "soccer/ita.2"),
-    LiveTvSportsLeague("ita.coppa_italia", "Coppa Italia", "soccer/ita.coppa_italia"),
-    LiveTvSportsLeague("ita.super_cup", "Supercoppa Italiana", "soccer/ita.super_cup"),
-    LiveTvSportsLeague("ger.1", "Bundesliga", "soccer/ger.1"),
-    LiveTvSportsLeague("fra.1", "Ligue 1", "soccer/fra.1"),
-    LiveTvSportsLeague("uefa.champions", "Champions League", "soccer/uefa.champions"),
-    LiveTvSportsLeague("uefa.europa", "Europa League", "soccer/uefa.europa"),
-    LiveTvSportsLeague("idn.1", "Liga 1 Indonesia", "soccer/idn.1"),
-    LiveTvSportsLeague("nba", "NBA", "basketball/nba"),
-    LiveTvSportsLeague("nfl", "NFL", "football/nfl"),
-    LiveTvSportsLeague("nhl", "NHL", "hockey/nhl"),
-    LiveTvSportsLeague("mlb", "MLB", "baseball/mlb"),
-    LiveTvSportsLeague("ufc", "UFC", "mma/ufc"),
-)
 
 enum class LiveTvSportsState { Upcoming, Live, Finished }
 
@@ -144,6 +94,8 @@ data class LiveTvSportsEvent(
     val statusDetail: String,
     val competitors: List<LiveTvSportsCompetitor>,
     val broadcasts: List<String>,
+    /** False for events that come with a date only (sporting-events.org): no start time to show. */
+    val hasTime: Boolean = true,
 )
 
 data class LiveTvSportsUiState(
@@ -161,18 +113,22 @@ data class LiveTvSportsUiState(
 object LiveTvSportsRepository {
     private val log = Logger.withTag("LiveTvSports")
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
-    private val json = Json { ignoreUnknownKeys = true; isLenient = true }
-    private val headers = mapOf("Accept" to "application/json", "User-Agent" to "Nuvio/1.0")
     private val _uiState = MutableStateFlow(LiveTvSportsUiState())
     val uiState: StateFlow<LiveTvSportsUiState> = _uiState.asStateFlow()
     private var job: Job? = null
+
+    /** At most this many leagues are asked at once, so a long list of leagues doesn't flood the network. */
+    private const val PARALLEL_LEAGUES = 8
+
+    /** The leagues to load. */
+    internal fun enabledLeagues(): List<LiveTvSportsLeague> = liveTvSportsLeagues.filter { it.defaultEnabled }
 
     /** Refreshes when stale: every minute while something is live, otherwise every five minutes. */
     fun refreshIfStale() {
         val state = _uiState.value
         if (state.isLoading) return
         val now = Clock.System.now().toEpochMilliseconds()
-        val maxAge = if (state.events.any { it.state == LiveTvSportsState.Live }) 60_000L else 5 * 60_000L
+        val maxAge = if (state.events.any { it.state == LiveTvSportsState.Live }) MINUTE_MILLIS else 5 * MINUTE_MILLIS
         if (state.hasLoaded && now - state.updatedAtMillis < maxAge) return
         refresh()
     }
@@ -181,29 +137,35 @@ object LiveTvSportsRepository {
         job?.cancel()
         _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
         job = scope.launch {
-            val now = Clock.System.now()
-            val days = espnDays(now.toEpochMilliseconds())
+            val nowMillis = Clock.System.now().toEpochMilliseconds()
+            val window = LiveTvSportsWindow.around(nowMillis)
+            val leagues = enabledLeagues()
+            val gate = Semaphore(PARALLEL_LEAGUES)
             val results = withContext(Dispatchers.Default) {
-                liveTvSportsLeagues.map { league ->
+                leagues.map { league ->
                     async {
-                        try {
-                            Result.success(fetchLeague(league, days))
-                        } catch (error: CancellationException) {
-                            throw error
-                        } catch (error: Throwable) {
-                            log.w { "ESPN ${league.id} failed: ${error.message}" }
-                            Result.failure(error)
+                        gate.withPermit {
+                            try {
+                                Result.success(LiveTvSportsFeeds.fetch(league, window))
+                            } catch (error: CancellationException) {
+                                throw error
+                            } catch (error: Throwable) {
+                                log.w { "${league.id} failed: ${error.message}" }
+                                Result.failure(error)
+                            }
                         }
                     }
                 }.awaitAll()
             }
-            val nowMillis = now.toEpochMilliseconds()
             val events = results
                 .flatMap { it.getOrNull().orEmpty() }
                 .filter { event ->
                     when (event.state) {
                         LiveTvSportsState.Live -> true
-                        LiveTvSportsState.Upcoming -> event.startMillis - nowMillis <= 48 * HOUR_MILLIS
+                        // Up to two days ahead; a start more than a day gone means the feed never
+                        // marked it finished (date-only fixtures), so it's dropped.
+                        LiveTvSportsState.Upcoming -> event.startMillis - nowMillis <= 48 * HOUR_MILLIS &&
+                            nowMillis - event.startMillis <= DAY_MILLIS
                         LiveTvSportsState.Finished -> nowMillis - event.startMillis <= 18 * HOUR_MILLIS
                     }
                 }
@@ -211,11 +173,11 @@ object LiveTvSportsRepository {
                 .sortedWith(liveTvSportsEventOrder)
             val allFailed = results.isNotEmpty() && results.all { it.isFailure }
             if (allFailed) {
-                log.e(results.first().exceptionOrNull()) { "All ESPN scoreboards failed" }
+                log.e(results.first().exceptionOrNull()) { "All sports feeds failed" }
             } else {
                 log.i {
-                    "Loaded ${events.size} events (${events.count { it.state == LiveTvSportsState.Live }} live), " +
-                        "${results.count { it.isFailure }}/${results.size} leagues failed"
+                    "Loaded ${events.size} events (${events.count { it.state == LiveTvSportsState.Live }} live) " +
+                        "from ${leagues.size} leagues, ${results.count { it.isFailure }} failed"
                 }
             }
             _uiState.value = LiveTvSportsUiState(
@@ -227,83 +189,7 @@ object LiveTvSportsRepository {
             )
         }
     }
-
-    /**
-     * ESPN rejects date ranges ("dates=YYYYMMDD-YYYYMMDD" answers 400 for every league), so each
-     * day is requested on its own, in parallel. A league fails only if every day fails.
-     */
-    private suspend fun fetchLeague(league: LiveTvSportsLeague, days: List<String>): List<LiveTvSportsEvent> =
-        coroutineScope {
-            val results = days.map { day ->
-                async {
-                    runCatching {
-                        val url = "https://site.api.espn.com/apis/site/v2/sports/${league.path}/scoreboard?dates=$day"
-                        val root = json.parseToJsonElement(httpGetTextWithHeaders(url, headers)) as? JsonObject
-                        root?.arr("events").orEmpty().mapNotNull { element ->
-                            parseEvent(element as? JsonObject ?: return@mapNotNull null, league)
-                        }
-                    }.onFailure { error ->
-                        if (error is CancellationException) throw error
-                        log.d { "ESPN ${league.id} $day failed: ${error.message}" }
-                    }
-                }
-            }.awaitAll()
-            if (results.all { it.isFailure }) throw results.first().exceptionOrNull()!!
-            results.flatMap { it.getOrNull().orEmpty() }
-        }
-
-    private fun parseEvent(event: JsonObject, league: LiveTvSportsLeague): LiveTvSportsEvent? {
-        val id = event.str("id") ?: return null
-        val startMillis = event.str("date")?.let(::parseEspnDate) ?: return null
-        val statusType = (event.obj("status") ?: event.arr("competitions").firstObj()?.obj("status"))?.obj("type")
-        val state = when (statusType?.str("state")) {
-            "in" -> LiveTvSportsState.Live
-            "post" -> LiveTvSportsState.Finished
-            else -> LiveTvSportsState.Upcoming
-        }
-        val competitions = event.arr("competitions").mapNotNull { it as? JsonObject }
-        // Fight cards list every bout as a competition; the main event comes last.
-        val competition = if (league.id == "ufc") competitions.lastOrNull() else competitions.firstOrNull()
-        val competitors = competition?.arr("competitors").orEmpty().mapNotNull { element ->
-            val item = element as? JsonObject ?: return@mapNotNull null
-            val team = item.obj("team")
-            val athlete = item.obj("athlete")
-            val name = team?.str("displayName") ?: athlete?.str("displayName") ?: return@mapNotNull null
-            LiveTvSportsCompetitor(
-                name = name,
-                shortName = team?.str("shortDisplayName") ?: athlete?.str("shortName") ?: name,
-                logoUrl = team?.str("logo") ?: athlete?.obj("flag")?.str("href"),
-                score = item.str("score"),
-                isHome = item.str("homeAway") == "home",
-                isWinner = (item["winner"] as? JsonPrimitive)?.contentOrNull == "true",
-            )
-        }.sortedBy { if (it.isHome) 1 else 0 }
-        val broadcasts = buildList {
-            competitions.forEach { comp ->
-                comp.arr("broadcasts").forEach { broadcast ->
-                    (broadcast as? JsonObject)?.arr("names")?.forEach { name ->
-                        (name as? JsonPrimitive)?.contentOrNull?.let(::add)
-                    }
-                }
-                comp.arr("geoBroadcasts").forEach { broadcast ->
-                    (broadcast as? JsonObject)?.obj("media")?.str("shortName")?.let(::add)
-                }
-            }
-        }.map(String::trim).filter(String::isNotBlank).distinctBy(String::lowercase)
-        return LiveTvSportsEvent(
-            id = id,
-            league = league,
-            name = event.str("name") ?: event.str("shortName") ?: competitors.joinToString(" vs ") { it.name },
-            startMillis = startMillis,
-            state = state,
-            statusDetail = statusType?.str("shortDetail") ?: statusType?.str("detail").orEmpty(),
-            competitors = competitors,
-            broadcasts = broadcasts,
-        )
-    }
 }
-
-private const val HOUR_MILLIS = 60L * 60L * 1000L
 
 private val liveTvSportsEventOrder = Comparator<LiveTvSportsEvent> { a, b ->
     val rank = { event: LiveTvSportsEvent ->
@@ -320,30 +206,6 @@ private val liveTvSportsEventOrder = Comparator<LiveTvSportsEvent> { a, b ->
         else -> a.startMillis.compareTo(b.startMillis)
     }
 }
-
-/** Yesterday to the day after tomorrow (UTC), one "YYYYMMDD" per day. */
-private fun espnDays(nowMillis: Long): List<String> = (-1..2).map { offset ->
-    val date = Instant.fromEpochMilliseconds(nowMillis + offset * 24 * HOUR_MILLIS).toLocalDateTime(TimeZone.UTC).date
-    "${date.year}${date.monthNumber.toString().padStart(2, '0')}${date.dayOfMonth.toString().padStart(2, '0')}"
-}
-
-private val espnDateRegex = Regex("""(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?""")
-
-private fun parseEspnDate(value: String): Long? {
-    val match = espnDateRegex.find(value) ?: return null
-    val (y, mo, d, h, mi) = match.destructured
-    val seconds = match.groupValues.getOrNull(6)?.toIntOrNull() ?: 0
-    return runCatching {
-        LocalDateTime(y.toInt(), mo.toInt(), d.toInt(), h.toInt(), mi.toInt(), seconds)
-            .toInstant(TimeZone.UTC)
-            .toEpochMilliseconds()
-    }.getOrNull()
-}
-
-private fun JsonObject.str(key: String) = (this[key] as? JsonPrimitive)?.contentOrNull?.trim()?.takeIf(String::isNotBlank)
-private fun JsonObject.obj(key: String) = this[key] as? JsonObject
-private fun JsonObject.arr(key: String): List<JsonElement> = (this[key] as? JsonArray)?.toList().orEmpty()
-private fun List<JsonElement>.firstObj() = firstOrNull() as? JsonObject
 
 // ---------------------------------------------------------------------------------------------
 // Channel matching
@@ -600,7 +462,11 @@ private fun LiveTvSportsStatus(event: LiveTvSportsEvent, nowMillis: Long) {
                     modifier = Modifier.size(14.dp),
                 )
                 Text(
-                    text = if (minutesToStart in 0L until 60L) {
+                    text = if (!event.hasTime) {
+                        // A date only: "Today" or the day, never a made-up time.
+                        formatSportsDay(event.startMillis, nowMillis)
+                            ?: stringResource(Res.string.live_tv_sports_today)
+                    } else if (minutesToStart in 0L until 60L) {
                         // Countdown in the last hour before the start.
                         stringResource(Res.string.live_tv_sports_starts_in, "${minutesToStart.coerceAtLeast(1L)} min")
                     } else {
@@ -619,6 +485,15 @@ private fun LiveTvSportsStatus(event: LiveTvSportsEvent, nowMillis: Long) {
             color = tokens.colors.textMuted,
         )
     }
+}
+
+/** "dd/MM" of a date-only event, or null when it's today. */
+private fun formatSportsDay(startMillis: Long, nowMillis: Long): String? {
+    val zone = TimeZone.currentSystemDefault()
+    val start = Instant.fromEpochMilliseconds(startMillis).toLocalDateTime(zone).date
+    val today = Instant.fromEpochMilliseconds(nowMillis).toLocalDateTime(zone).date
+    if (start <= today) return null
+    return "${start.dayOfMonth.toString().padStart(2, '0')}/${start.monthNumber.toString().padStart(2, '0')}"
 }
 
 private fun formatSportsStart(startMillis: Long, nowMillis: Long): String {

@@ -608,6 +608,12 @@
     <string name="settings_licenses_attributions_simkl_body">Nuvio connects to Simkl for account authentication, watchlists, watched history, playback progress, and scrobbling. Movie, TV, and anime tracking data is provided by Simkl. Nuvio is not affiliated with or endorsed by Simkl.</string>
     <string name="settings_licenses_attributions_espn_title">ESPN</string>
     <string name="settings_licenses_attributions_espn_body">Nuvio uses the public ESPN scoreboard data to list live and upcoming sports events in the Live TV Sports section. Nuvio is not affiliated with or endorsed by ESPN.</string>
+    <string name="settings_licenses_attributions_sportingevents_title">sporting-events.org</string>
+    <string name="settings_licenses_attributions_sportingevents_body">Nuvio uses the free sporting-events.org fixture files to list the dates of sports events ESPN does not cover (MotoGP, boxing, darts, snooker and more) in the Live TV Sports section. Nuvio is not affiliated with or endorsed by sporting-events.org.</string>
+    <string name="settings_licenses_attributions_hockeytech_title">HockeyTech</string>
+    <string name="settings_licenses_attributions_hockeytech_body">Nuvio connects to the public HockeyTech feeds to list the games and scores of the AHL, ECHL, PWHL and junior hockey leagues in the Live TV Sports section. Nuvio is not affiliated with or endorsed by HockeyTech or these leagues.</string>
+    <string name="settings_licenses_attributions_mlbstats_title">MLB Stats API</string>
+    <string name="settings_licenses_attributions_mlbstats_body">Nuvio connects to the public MLB Stats API to list Minor League Baseball games and scores in the Live TV Sports section. Nuvio is not affiliated with or endorsed by MLB.</string>
     <string name="settings_licenses_attributions_premiumize_title">Premiumize</string>
     <string name="settings_licenses_attributions_premiumize_body">Nuvio connects to Premiumize for account authentication, cloud library access, cache checks, and cloud playback features. Nuvio is not affiliated with or endorsed by Premiumize.</string>
     <string name="settings_licenses_attributions_torbox_title">TorBox</string>
