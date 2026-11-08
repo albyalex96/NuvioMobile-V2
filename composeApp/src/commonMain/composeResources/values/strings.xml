@@ -2969,4 +2969,7 @@
     <string name="live_tv_recordings_exact_alarm_title">Exact alarms</string>
     <string name="live_tv_recordings_exact_alarm_on">Allowed: scheduled recordings start on time, even with the app closed</string>
     <string name="live_tv_recordings_exact_alarm_off">Not allowed: scheduled recordings may not start while the app is closed. Tap to allow</string>
+    <string name="live_tv_recording_converting">Converting to MP4/MKV… %1$d%</string>
+    <string name="live_tv_recordings_convert_title">Convert to MP4/MKV</string>
+    <string name="live_tv_recordings_convert_description">At the end the recording is converted without re-encoding to MP4 (MKV when the codecs need it), like the downloads, and the .ts is deleted. If the conversion fails, the .ts file is kept.</string>
 </resources>

@@ -2200,6 +2200,7 @@ private fun addAdditionalSearchEntries(
         val scheduleSection = stringResource(Res.string.live_tv_recordings_settings_section_schedule)
         listOf(
             PlaybackSearchRow("live-tv-recordings-folder", stringResource(Res.string.live_tv_recordings_folder_title), stringResource(Res.string.live_tv_recordings_folder_app), storageSection),
+            PlaybackSearchRow("live-tv-recordings-convert", stringResource(Res.string.live_tv_recordings_convert_title), stringResource(Res.string.live_tv_recordings_convert_description), storageSection),
             PlaybackSearchRow("live-tv-recordings-folder-reset", stringResource(Res.string.live_tv_recordings_folder_reset_title), stringResource(Res.string.live_tv_recordings_folder_reset_description), storageSection),
             PlaybackSearchRow("live-tv-recordings-exact-alarms", stringResource(Res.string.live_tv_recordings_exact_alarm_title), stringResource(Res.string.live_tv_recordings_exact_alarm_on), scheduleSection),
             PlaybackSearchRow("live-tv-recordings-margin-before", stringResource(Res.string.live_tv_recordings_margin_before_title), stringResource(Res.string.live_tv_recordings_margin_before_description), scheduleSection),

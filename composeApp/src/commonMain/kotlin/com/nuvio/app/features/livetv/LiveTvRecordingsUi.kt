@@ -102,7 +102,9 @@ internal fun LazyListScope.liveTvRecordingsList(
         LiveTvRecordingStatus.Failed to Res.string.live_tv_recordings_group_failed,
     )
     groups.forEach { (status, titleRes) ->
-        val inGroup = recordings.filter { it.status == status }.let { list ->
+        val inGroup = recordings.filter {
+            it.status == status || (status == LiveTvRecordingStatus.Recording && it.status == LiveTvRecordingStatus.Converting)
+        }.let { list ->
             if (status == LiveTvRecordingStatus.Scheduled) list.sortedBy { it.startMillis } else list.sortedByDescending { it.startMillis }
         }
         if (inGroup.isEmpty()) return@forEach
@@ -195,6 +197,10 @@ private fun LiveTvRecordingCard(
                         formatRecordingClock(recording.endMillis),
                         formatRecordingSize(recording.sizeBytes),
                     )
+                    LiveTvRecordingStatus.Converting -> stringResource(
+                        Res.string.live_tv_recording_converting,
+                        ((recording.conversionProgress ?: 0f) * 100).toInt(),
+                    )
                     LiveTvRecordingStatus.Completed -> formatRecordingSize(recording.sizeBytes)
                     LiveTvRecordingStatus.Failed -> recording.errorMessage.orEmpty()
                 }
@@ -231,6 +237,7 @@ private fun LiveTvRecordingCard(
                         onClick = { LiveTvRecordingsRepository.delete(recording.id) },
                     )
                 }
+                LiveTvRecordingStatus.Converting -> Unit
                 LiveTvRecordingStatus.Failed -> RecordingAction(
                     icon = Icons.Rounded.Delete,
                     description = stringResource(Res.string.live_tv_recordings_action_delete),

@@ -19,7 +19,7 @@ import kotlin.time.Clock
 import kotlinx.datetime.toLocalDateTime
 
 @Serializable
-enum class LiveTvRecordingStatus { Scheduled, Recording, Completed, Failed }
+enum class LiveTvRecordingStatus { Scheduled, Recording, Converting, Completed, Failed }
 
 /** Where a recording was started from (for the logs and the list). */
 @Serializable
@@ -45,6 +45,8 @@ data class LiveTvRecording(
     val fileName: String? = null,
     val sizeBytes: Long = 0L,
     val errorMessage: String? = null,
+    /** 0..1 while the .ts is being converted to MP4/MKV. */
+    val conversionProgress: Float? = null,
 ) {
     val durationMillis: Long get() = endMillis - startMillis
 }
@@ -54,6 +56,8 @@ data class LiveTvRecording(
 data class LiveTvRecordingOptions(
     val marginBeforeMinutes: Int = 2,
     val marginAfterMinutes: Int = 10,
+    /** At the end, the .ts is converted to MP4 (or MKV) without re-encoding, like the downloads. */
+    val convertToMp4: Boolean = true,
 )
 
 internal val liveTvRecordingMarginChoices = listOf(0, 2, 5, 10, 15, 30)
@@ -111,9 +115,15 @@ object LiveTvRecordingsRepository {
         } ?: LiveTvRecordingOptions()
         // A recording left "in progress" by a killed process is not running any more.
         val now = Clock.System.now().toEpochMilliseconds()
-        _recordings.value.filter { it.status == LiveTvRecordingStatus.Recording && now > it.endMillis }.forEach { stale ->
+        // A conversion cut short leaves the .ts, which stays playable.
+        _recordings.value.filter {
+            (it.status == LiveTvRecordingStatus.Recording && now > it.endMillis) || it.status == LiveTvRecordingStatus.Converting
+        }.forEach { stale ->
             update(stale.id) {
-                it.copy(status = if (it.sizeBytes > 0) LiveTvRecordingStatus.Completed else LiveTvRecordingStatus.Failed)
+                it.copy(
+                    status = if (it.sizeBytes > 0) LiveTvRecordingStatus.Completed else LiveTvRecordingStatus.Failed,
+                    conversionProgress = null,
+                )
             }
         }
     }
@@ -252,6 +262,8 @@ object LiveTvRecordingsRepository {
     fun setMarginBefore(minutes: Int) = updateOptions { it.copy(marginBeforeMinutes = minutes) }
 
     fun setMarginAfter(minutes: Int) = updateOptions { it.copy(marginAfterMinutes = minutes) }
+
+    fun setConvertToMp4(enabled: Boolean) = updateOptions { it.copy(convertToMp4 = enabled) }
 
     private fun updateOptions(transform: (LiveTvRecordingOptions) -> LiveTvRecordingOptions) {
         ensureLoaded()

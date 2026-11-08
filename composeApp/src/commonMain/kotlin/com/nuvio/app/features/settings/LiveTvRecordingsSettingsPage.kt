@@ -59,6 +59,14 @@ private fun LiveTvRecordingsSettingsSection(isTablet: Boolean) {
                     isTablet = isTablet,
                     onClick = { pickFolder?.invoke() },
                 )
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.live_tv_recordings_convert_title),
+                    description = stringResource(Res.string.live_tv_recordings_convert_description),
+                    checked = options.convertToMp4,
+                    isTablet = isTablet,
+                    onCheckedChange = LiveTvRecordingsRepository::setConvertToMp4,
+                )
                 if (folderLabel != null) {
                     SettingsGroupDivider(isTablet = isTablet)
                     SettingsNavigationRow(

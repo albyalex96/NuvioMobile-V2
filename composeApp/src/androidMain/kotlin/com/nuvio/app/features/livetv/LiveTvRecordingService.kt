@@ -17,6 +17,12 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.ServiceCompat
 import co.touchlab.kermit.Logger
 import com.nuvio.app.features.downloads.SafDownloadTree
+import com.nuvio.app.features.downloads.hls.HlsConversionRequest
+import com.nuvio.app.features.downloads.hls.HlsConverter
+import com.nuvio.app.features.downloads.hls.HlsMediaSource
+import com.nuvio.app.features.downloads.hls.HlsSegmentFormat
+import com.nuvio.app.features.downloads.hls.HlsSourceKind
+import com.nuvio.app.features.downloads.videoMimeType
 import com.nuvio.app.features.settings.AppIconPlatform
 import com.nuvio.app.features.settings.ThemeSettingsStorage
 import java.io.File
@@ -33,6 +39,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.live_tv_recording_channel_name
+import nuvio.composeapp.generated.resources.live_tv_recording_converting
 import nuvio.composeapp.generated.resources.live_tv_recording_notification_failed
 import nuvio.composeapp.generated.resources.live_tv_recording_notification_finished
 import nuvio.composeapp.generated.resources.live_tv_recording_notification_progress
@@ -102,7 +109,9 @@ class LiveTvRecordingService : Service() {
             var fileUri: String? = null
             try {
                 val streamUrl = resolveStreamUrl(recording)
-                val (stream, uri, name) = openOutput(recording)
+                // With the conversion on, the .ts is written locally first (the converter reads files).
+                val convert = LiveTvRecordingsRepository.options.value.convertToMp4
+                val (stream, uri, name) = if (convert) openLocalOutput(recording) else openOutput(recording)
                 output = stream
                 fileUri = uri
                 LiveTvRecordingsRepository.update(id) {
@@ -126,13 +135,33 @@ class LiveTvRecordingService : Service() {
                 } catch (stopped: CancellationException) {
                     // Stopped by the user: what was recorded is kept.
                 }
+                runCatching { stream.close() }
+                output = null
+                val recorded = recorder.bytesWritten > 0
                 LiveTvRecordingsRepository.update(id) {
                     it.copy(
-                        status = if (recorder.bytesWritten > 0) LiveTvRecordingStatus.Completed else LiveTvRecordingStatus.Failed,
+                        status = when {
+                            !recorded -> LiveTvRecordingStatus.Failed
+                            convert -> LiveTvRecordingStatus.Converting
+                            else -> LiveTvRecordingStatus.Completed
+                        },
                         sizeBytes = recorder.bytesWritten,
                         endMillis = minOf(it.endMillis, System.currentTimeMillis()),
-                        errorMessage = if (recorder.bytesWritten > 0) null else "No data received",
+                        errorMessage = if (recorded) null else "No data received",
                     )
+                }
+                if (recorded && convert) {
+                    val final = finishLocalRecording(id, File(Uri.parse(uri).path!!))
+                    LiveTvRecordingsRepository.update(id) {
+                        it.copy(
+                            status = LiveTvRecordingStatus.Completed,
+                            fileUri = final.uri,
+                            fileName = final.name,
+                            sizeBytes = final.sizeBytes,
+                            conversionProgress = null,
+                        )
+                    }
+                    fileUri = final.uri
                 }
                 log.i { "Recording finished: '${recording.title}', ${recorder.bytesWritten / 1_048_576} MB" }
                 notifyResult(recording, success = recorder.bytesWritten > 0)
@@ -177,6 +206,69 @@ class LiveTvRecordingService : Service() {
             ).streamUrl
         }.onFailure { log.w(it) { "Portal link not refreshed, using the saved one" } }
             .getOrDefault(recording.streamUrl)
+    }
+
+    private class FinalFile(val uri: String, val name: String, val sizeBytes: Long)
+
+    /** The .ts in the app folder, to be converted (and moved to the chosen folder) at the end. */
+    private fun openLocalOutput(recording: LiveTvRecording): Triple<OutputStream, String, String> {
+        val name = recordingFileName(recording)
+        val file = File(LiveTvRecordingPlatform.appFolder(this), name)
+        return Triple(FileOutputStream(file), Uri.fromFile(file).toString(), name)
+    }
+
+    /**
+     * Converts the recorded .ts to MP4 (MKV when the codecs don't fit MP4) without re-encoding,
+     * like the downloads, then moves the result to the chosen folder. The .ts is deleted only
+     * when the conversion worked; otherwise it is kept as it is.
+     */
+    private suspend fun finishLocalRecording(id: String, tsFile: File): FinalFile {
+        var result = tsFile
+        val recording = LiveTvRecordingsRepository.get(id)
+        val durationUs = ((recording?.durationMillis ?: 0L) * 1000L).coerceAtLeast(1L)
+        refreshNotification()
+        runCatching {
+            HlsConverter(
+                HlsConversionRequest(
+                    sources = listOf(
+                        HlsMediaSource(
+                            kind = HlsSourceKind.Video,
+                            track = null,
+                            format = HlsSegmentFormat.Ts,
+                            groupFiles = mapOf(0 to tsFile),
+                        ),
+                    ),
+                    subtitles = emptyList(),
+                    groupOffsetsUs = listOf(0L),
+                    totalDurationUs = durationUs,
+                    includeMuxedAudio = true,
+                    muxedAudioLanguage = null,
+                    muxedAudioName = null,
+                ),
+            ).convert(File(tsFile.parentFile, tsFile.nameWithoutExtension)) { progress ->
+                LiveTvRecordingsRepository.update(id) { it.copy(conversionProgress = progress) }
+                refreshNotification()
+            }.file
+        }.onSuccess { converted ->
+            log.i { "Recording converted to ${converted.extension.uppercase()}: ${converted.name}" }
+            tsFile.delete()
+            result = converted
+        }.onFailure { error ->
+            log.w(error) { "Recording conversion failed, the .ts file is kept" }
+        }
+        // Moves the file to the chosen folder (SAF), if there is one.
+        val tree = LiveTvRecordingPlatform.treeUri()
+        if (tree != null) {
+            val moved = runCatching {
+                val target = SafDownloadTree(this, tree).createFile(result.name, videoMimeType(result.name))
+                contentResolver.openOutputStream(target, "w")!!.use { out -> result.inputStream().use { it.copyTo(out, 256 * 1024) } }
+                val size = result.length()
+                result.delete()
+                FinalFile(target.toString(), result.name, size)
+            }.onFailure { log.w(it) { "Recording not moved to the chosen folder, kept in the app folder" } }.getOrNull()
+            if (moved != null) return moved
+        }
+        return FinalFile(Uri.fromFile(result).toString(), result.name, result.length())
     }
 
     /** The output file: in the chosen folder (SAF) or in the app's own Recordings folder. */
@@ -230,6 +322,11 @@ class LiveTvRecordingService : Service() {
             getString(Res.string.live_tv_recording_notification_title, first?.title ?: "…")
         }
         val text = first?.let {
+            if (it.status == LiveTvRecordingStatus.Converting) {
+                return@let runBlocking {
+                    getString(Res.string.live_tv_recording_converting, ((it.conversionProgress ?: 0f) * 100).toInt())
+                }
+            }
             runBlocking {
                 getString(
                     Res.string.live_tv_recording_notification_progress,

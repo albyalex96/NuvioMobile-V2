@@ -2948,4 +2948,7 @@
   <string name="live_tv_recordings_exact_alarm_title">Sveglie esatte</string>
   <string name="live_tv_recordings_exact_alarm_on">Consentite: le registrazioni programmate iniziano in orario, anche ad app chiusa</string>
   <string name="live_tv_recordings_exact_alarm_off">Non consentite: le registrazioni programmate potrebbero non partire ad app chiusa. Tocca per consentirle</string>
+  <string name="live_tv_recording_converting">Conversione in MP4/MKV… %1$d%</string>
+  <string name="live_tv_recordings_convert_title">Converti in MP4/MKV</string>
+  <string name="live_tv_recordings_convert_description">Al termine la registrazione viene convertita senza ricodifica in MP4 (MKV se i codec lo richiedono), come i download, e il .ts viene eliminato. Se la conversione non riesce, resta il file .ts.</string>
 </resources>
