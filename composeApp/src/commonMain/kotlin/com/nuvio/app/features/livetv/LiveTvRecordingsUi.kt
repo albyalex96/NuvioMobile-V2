@@ -22,13 +22,10 @@ import androidx.compose.material.icons.rounded.FiberManualRecord
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.Tv
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TimeInput
-import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -295,7 +292,7 @@ internal suspend fun toggleLiveTvProgramRecording(channel: LiveTvChannel, progra
 /**
  * Manual recording of [channel]: now for a chosen length, or on a day between two times.
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun LiveTvManualRecordingDialog(
     channel: LiveTvChannel,
@@ -307,8 +304,9 @@ internal fun LiveTvManualRecordingDialog(
     var scheduleMode by remember { mutableStateOf(false) }
     var durationMinutes by remember { mutableStateOf(60) }
     var dayOffset by remember { mutableStateOf(0) }
-    val startState = rememberTimePickerState(initialHour = (today.hour + 1) % 24, initialMinute = 0, is24Hour = true)
-    val endState = rememberTimePickerState(initialHour = (today.hour + 2) % 24, initialMinute = 0, is24Hour = true)
+    // Minutes of the day; − / + buttons instead of a text field, usable with a TV remote too.
+    var startMinutes by remember { mutableStateOf(((today.hour + 1) % 24) * 60) }
+    var endMinutes by remember { mutableStateOf(((today.hour + 2) % 24) * 60) }
     val tokens = MaterialTheme.nuvio
     val scheduledToast = stringResource(Res.string.live_tv_record_scheduled_toast, channel.name)
 
@@ -352,11 +350,17 @@ internal fun LiveTvManualRecordingDialog(
                         )
                     }
                 }
-                RecordingDialogLabel(stringResource(Res.string.live_tv_record_start))
-                TimeInput(state = startState)
-                RecordingDialogLabel(stringResource(Res.string.live_tv_record_end))
-                TimeInput(state = endState)
-                val endsNextDay = endState.hour * 60 + endState.minute <= startState.hour * 60 + startState.minute
+                RecordingTimeStepper(
+                    label = stringResource(Res.string.live_tv_record_start),
+                    minutes = startMinutes,
+                    onChange = { startMinutes = it },
+                )
+                RecordingTimeStepper(
+                    label = stringResource(Res.string.live_tv_record_end),
+                    minutes = endMinutes,
+                    onChange = { endMinutes = it },
+                )
+                val endsNextDay = endMinutes <= startMinutes
                 if (endsNextDay) {
                     Text(
                         text = stringResource(Res.string.live_tv_record_end_next_day),
@@ -382,8 +386,8 @@ internal fun LiveTvManualRecordingDialog(
                             )
                         } else {
                             val date: LocalDate = today.date.plus(DatePeriod(days = dayOffset))
-                            val start = LocalDateTime(date, LocalTime(startState.hour, startState.minute)).toInstant(zone).toEpochMilliseconds()
-                            var end = LocalDateTime(date, LocalTime(endState.hour, endState.minute)).toInstant(zone).toEpochMilliseconds()
+                            val start = LocalDateTime(date, LocalTime(startMinutes / 60, startMinutes % 60)).toInstant(zone).toEpochMilliseconds()
+                            var end = LocalDateTime(date, LocalTime(endMinutes / 60, endMinutes % 60)).toInstant(zone).toEpochMilliseconds()
                             if (end <= start) end += DAY_MILLIS
                             LiveTvRecordingsRepository.schedule(
                                 channel = channel,
@@ -401,6 +405,56 @@ internal fun LiveTvManualRecordingDialog(
         }
     }
 }
+
+/** "Start  [−] 21:00 [+]": hours and minutes in steps (minutes by 5), wrapping around midnight. */
+@Composable
+private fun RecordingTimeStepper(label: String, minutes: Int, onChange: (Int) -> Unit) {
+    val tokens = MaterialTheme.nuvio
+    fun shift(delta: Int) = onChange(((minutes + delta) % DAY_MINUTES + DAY_MINUTES) % DAY_MINUTES)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelLarge,
+            color = tokens.colors.textSecondary,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.weight(1f),
+        )
+        StepperButton("−1h") { shift(-60) }
+        StepperButton("−5") { shift(-5) }
+        Text(
+            text = "${(minutes / 60).toString().padStart(2, '0')}:${(minutes % 60).toString().padStart(2, '0')}",
+            style = MaterialTheme.typography.titleMedium,
+            color = tokens.colors.textPrimary,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 4.dp),
+        )
+        StepperButton("+5") { shift(5) }
+        StepperButton("+1h") { shift(60) }
+    }
+}
+
+@Composable
+private fun StepperButton(label: String, onClick: () -> Unit) {
+    val tokens = MaterialTheme.nuvio
+    Surface(
+        onClick = onClick,
+        color = tokens.colors.overlaySelected,
+        shape = tokens.shapes.chip,
+    ) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelMedium,
+            color = tokens.colors.textPrimary,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+        )
+    }
+}
+
+private const val DAY_MINUTES = 24 * 60
 
 @Composable
 private fun RecordingDialogLabel(text: String) {
