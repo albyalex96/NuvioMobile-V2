@@ -297,7 +297,7 @@ internal fun AppGate(
         if (!renderMainContent) {
             appGateController?.beginContentReload()
         }
-        ProfileRepository.selectProfile(profile.profileIndex)
+        StartupTrace.measure("ProfileRepository.selectProfile") { ProfileRepository.selectProfile(profile.profileIndex) }
         if (sync) {
             SyncManager.pullAllForProfile(profile.profileIndex)
         }
@@ -336,6 +336,16 @@ internal fun AppGate(
 
     LaunchedEffect(authState, networkStatusUiState.condition, profileState.profiles) {
         val cachedProfiles = profileState.profiles
+        if (ownsAppRuntime && gateScreen == AppGateScreen.Loading.name) {
+            // Shows whether the cached profiles let the gate open the home before the online
+            // session check (class names are obfuscated in release builds).
+            val stateName = when (authState) {
+                is AuthState.Loading -> "Loading"
+                is AuthState.Unauthenticated -> "Unauthenticated"
+                is AuthState.Authenticated -> "Authenticated"
+            }
+            StartupTrace.mark("Gate check auth=$stateName cachedProfiles=${cachedProfiles.size}")
+        }
         val hasCachedProfileAccess =
             cachedProfiles.isNotEmpty() &&
                 authState !is AuthState.Authenticated
