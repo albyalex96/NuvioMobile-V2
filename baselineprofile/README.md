@@ -15,9 +15,13 @@ not in the profile.
 
 ## Steps
 
+The benchmark library reinstalls the app before recording, so its data is wiped: the generator
+continues without an account, creates a local profile and installs Cinemeta by itself. On MIUI
+confirm the "Install via USB" prompt twice (install step, and about 20 s after the generate step
+starts).
+
 ```powershell
 .\baselineprofile\generate.ps1 -App phone -Step install
-# on the device: open "Nuvio" (benchmark), sign in, enable "remember last profile", reach the home
 .\baselineprofile\generate.ps1 -App phone -Step generate
 ```
 
