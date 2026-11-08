@@ -24,25 +24,17 @@ import org.jetbrains.compose.resources.stringResource
 
 /** Settings → Live TV → Recordings: folder, margins and exact alarms. */
 internal fun LazyListScope.liveTvRecordingsSettingsContent(isTablet: Boolean) {
-    item(key = "live_tv_recordings_settings") {
-        LiveTvRecordingsSettingsSection(isTablet = isTablet)
-    }
+    item(key = "live_tv_recordings_storage") { LiveTvRecordingsStorageSection(isTablet = isTablet) }
+    item(key = "live_tv_recordings_schedule") { LiveTvRecordingsScheduleSection(isTablet = isTablet) }
 }
 
 @Composable
-private fun LiveTvRecordingsSettingsSection(isTablet: Boolean) {
+private fun LiveTvRecordingsStorageSection(isTablet: Boolean) {
     val options by remember {
         LiveTvRecordingsRepository.ensureLoaded()
         LiveTvRecordingsRepository.options
     }.collectAsStateWithLifecycle()
     val folderLabel by LiveTvRecordingPlatform.folderLabel.collectAsStateWithLifecycle()
-    // The permission is granted in the system settings: checked again when the page comes back.
-    var exactAlarms by remember { mutableStateOf(LiveTvRecordingPlatform.canScheduleExactAlarms()) }
-    LifecycleResumeEffect(Unit) {
-        exactAlarms = LiveTvRecordingPlatform.canScheduleExactAlarms()
-        if (exactAlarms) LiveTvRecordingsRepository.rearmAll()
-        onPauseOrDispose { }
-    }
     val pickFolder = rememberDownloadsFolderPicker { treeUri -> LiveTvRecordingPlatform.selectFolder(treeUri) }
 
     Column {
@@ -79,6 +71,23 @@ private fun LiveTvRecordingsSettingsSection(isTablet: Boolean) {
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun LiveTvRecordingsScheduleSection(isTablet: Boolean) {
+    val options by remember {
+        LiveTvRecordingsRepository.ensureLoaded()
+        LiveTvRecordingsRepository.options
+    }.collectAsStateWithLifecycle()
+    // The permission is granted in the system settings: checked again when the page comes back.
+    var exactAlarms by remember { mutableStateOf(LiveTvRecordingPlatform.canScheduleExactAlarms()) }
+    LifecycleResumeEffect(Unit) {
+        exactAlarms = LiveTvRecordingPlatform.canScheduleExactAlarms()
+        if (exactAlarms) LiveTvRecordingsRepository.rearmAll()
+        onPauseOrDispose { }
+    }
+    Column {
         SettingsSection(
             title = stringResource(Res.string.live_tv_recordings_settings_section_schedule),
             isTablet = isTablet,

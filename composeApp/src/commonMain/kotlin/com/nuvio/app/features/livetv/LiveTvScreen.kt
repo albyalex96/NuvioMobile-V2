@@ -429,7 +429,7 @@ fun LiveTvScreen(
                     }
                 }
 
-                if (uiState.hasPlaylist && section != LiveTvSection.Channels) {
+                if (uiState.hasPlaylist && section != LiveTvSection.Channels && section != LiveTvSection.Recordings) {
                     val sectionControls: @Composable () -> Unit = {
                         LiveTvSectionControlsSurface(
                             topPadding = if (isTv) 0.dp else controlsTopPadding,

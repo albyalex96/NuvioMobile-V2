@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
@@ -54,10 +55,21 @@ import nuvio.composeapp.generated.resources.settings_sports_sport_volleyball
 import org.jetbrains.compose.resources.StringResource
 import org.jetbrains.compose.resources.stringResource
 
-/** Settings → Sports: which leagues the Live TV Sports section shows, grouped by sport. */
+/**
+ * Settings → Sports: which leagues the Live TV Sports section shows, grouped by sport. One list
+ * item per section and per sport, so the page scrolls (and follows the TV focus) like the others.
+ */
 internal fun LazyListScope.sportsSettingsContent(isTablet: Boolean) {
-    item(key = "sports_settings") {
-        SportsSettingsSection(isTablet = isTablet)
+    item(key = "sports_general") { SportsGeneralSection(isTablet = isTablet) }
+    if (LiveTvSportsRemindersRepository.isSupported) {
+        item(key = "sports_reminders") { SportsRemindersSection(isTablet = isTablet) }
+    }
+    item(key = "sports_leagues_header") {
+        SettingsSection(title = stringResource(Res.string.settings_sports_section_leagues), isTablet = isTablet) {}
+    }
+    val sports = LiveTvSport.entries.filter { sport -> liveTvSportsLeagues.any { it.sport == sport } }
+    items(sports, key = { "sports_sport_${it.name}" }) { sport ->
+        SportLeaguesGroup(sport = sport, isTablet = isTablet)
     }
 }
 
@@ -81,88 +93,77 @@ internal val LiveTvSport.labelRes: StringResource
     }
 
 @Composable
-private fun SportsSettingsSection(isTablet: Boolean) {
+private fun SportsGeneralSection(isTablet: Boolean) {
     val settings by remember {
         LiveTvSportsSettingsRepository.ensureLoaded()
         LiveTvSportsSettingsRepository.settings
     }.collectAsStateWithLifecycle()
-    val bySport = remember { liveTvSportsLeagues.groupBy { it.sport } }
-    // Expanded sports, saved as names so the choice survives configuration changes.
-    var expanded by rememberSaveable { mutableStateOf(emptyList<String>()) }
+    SettingsSection(
+        title = stringResource(Res.string.settings_sports_section_general),
+        isTablet = isTablet,
+    ) {
+        SettingsGroup(isTablet = isTablet) {
+            SettingsNavigationRow(
+                title = stringResource(Res.string.settings_sports_reset_title),
+                description = stringResource(Res.string.settings_sports_reset_description),
+                icon = Icons.Rounded.RestartAlt,
+                enabled = settings.isCustom,
+                isTablet = isTablet,
+                onClick = LiveTvSportsSettingsRepository::resetToDefaults,
+            )
+        }
+    }
+}
+
+/** One sport: a row with the count of active leagues that opens its league switches. */
+@Composable
+private fun SportLeaguesGroup(sport: LiveTvSport, isTablet: Boolean) {
+    val settings by remember {
+        LiveTvSportsSettingsRepository.ensureLoaded()
+        LiveTvSportsSettingsRepository.settings
+    }.collectAsStateWithLifecycle()
+    val leagues = remember(sport) { liveTvSportsLeagues.filter { it.sport == sport } }
+    var isExpanded by rememberSaveable(sport.name) { mutableStateOf(false) }
+    val active = leagues.count(settings::isEnabled)
     val tokens = MaterialTheme.nuvio
     val nestedPadding = if (isTablet) 40.dp else 32.dp
 
-    Column {
-        SettingsSection(
-            title = stringResource(Res.string.settings_sports_section_general),
+    SettingsGroup(isTablet = isTablet) {
+        SettingsNavigationRow(
+            title = stringResource(sport.labelRes),
+            description = stringResource(Res.string.settings_sports_leagues_count, active, leagues.size),
+            icon = sport.icon,
             isTablet = isTablet,
-        ) {
-            SettingsGroup(isTablet = isTablet) {
-                SettingsNavigationRow(
-                    title = stringResource(Res.string.settings_sports_reset_title),
-                    description = stringResource(Res.string.settings_sports_reset_description),
-                    icon = Icons.Rounded.RestartAlt,
-                    enabled = settings.isCustom,
-                    isTablet = isTablet,
-                    onClick = LiveTvSportsSettingsRepository::resetToDefaults,
+            trailingContent = {
+                Icon(
+                    imageVector = if (isExpanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = tokens.colors.textMuted,
+                    modifier = Modifier.size(22.dp),
                 )
-            }
-        }
-
-        if (LiveTvSportsRemindersRepository.isSupported) {
-            SportsRemindersSection(isTablet = isTablet)
-        }
-
-        SettingsSection(
-            title = stringResource(Res.string.settings_sports_section_leagues),
-            isTablet = isTablet,
-        ) {
-            SettingsGroup(isTablet = isTablet) {
-                LiveTvSport.entries.filter { it in bySport }.forEachIndexed { index, sport ->
-                    val leagues = bySport.getValue(sport)
-                    val active = leagues.count(settings::isEnabled)
-                    val isExpanded = sport.name in expanded
-                    if (index > 0) SettingsGroupDivider(isTablet = isTablet)
-                    SettingsNavigationRow(
-                        title = stringResource(sport.labelRes),
-                        description = stringResource(Res.string.settings_sports_leagues_count, active, leagues.size),
-                        icon = sport.icon,
+            },
+            onClick = { isExpanded = !isExpanded },
+        )
+        AnimatedVisibility(visible = isExpanded) {
+            Column {
+                SettingsGroupDivider(isTablet = isTablet)
+                SettingsSwitchRow(
+                    title = stringResource(Res.string.settings_sports_all_title),
+                    description = stringResource(Res.string.settings_sports_all_description),
+                    checked = active == leagues.size,
+                    isTablet = isTablet,
+                    horizontalPadding = nestedPadding,
+                    onCheckedChange = { LiveTvSportsSettingsRepository.setSportEnabled(sport, it) },
+                )
+                leagues.forEach { league ->
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = league.label,
+                        checked = settings.isEnabled(league),
                         isTablet = isTablet,
-                        trailingContent = {
-                            Icon(
-                                imageVector = if (isExpanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
-                                contentDescription = null,
-                                tint = tokens.colors.textMuted,
-                                modifier = Modifier.size(22.dp),
-                            )
-                        },
-                        onClick = {
-                            expanded = if (isExpanded) expanded - sport.name else expanded + sport.name
-                        },
+                        horizontalPadding = nestedPadding,
+                        onCheckedChange = { LiveTvSportsSettingsRepository.setLeagueEnabled(league, it) },
                     )
-                    AnimatedVisibility(visible = isExpanded) {
-                        Column {
-                            SettingsGroupDivider(isTablet = isTablet)
-                            SettingsSwitchRow(
-                                title = stringResource(Res.string.settings_sports_all_title),
-                                description = stringResource(Res.string.settings_sports_all_description),
-                                checked = active == leagues.size,
-                                isTablet = isTablet,
-                                horizontalPadding = nestedPadding,
-                                onCheckedChange = { LiveTvSportsSettingsRepository.setSportEnabled(sport, it) },
-                            )
-                            leagues.forEach { league ->
-                                SettingsGroupDivider(isTablet = isTablet)
-                                SettingsSwitchRow(
-                                    title = league.label,
-                                    checked = settings.isEnabled(league),
-                                    isTablet = isTablet,
-                                    horizontalPadding = nestedPadding,
-                                    onCheckedChange = { LiveTvSportsSettingsRepository.setLeagueEnabled(league, it) },
-                                )
-                            }
-                        }
-                    }
                 }
             }
         }
