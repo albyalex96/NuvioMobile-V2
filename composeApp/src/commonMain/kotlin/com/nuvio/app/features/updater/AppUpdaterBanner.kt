@@ -191,7 +191,9 @@ private fun AppUpdateBanner(
     val containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
     val isWhiteTheme = MaterialTheme.appTheme == AppTheme.WHITE
     val progressBrush = MaterialTheme.themePalette.accentBrush()
-    val progressAlpha = if (isWhiteTheme) 0.18f else 1f
+    // Translucent fill: the texts run over the filled and the empty part alike, so they keep the
+    // surface text colors and stay readable at any progress.
+    val progressAlpha = if (isWhiteTheme) 0.18f else 0.35f
     val dividerColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.7f)
     val debugTestComplete = state.isDebugTest && !state.isDownloading && !state.isUpdateAvailable
     val subtitle = when {
@@ -263,8 +265,9 @@ private fun AppUpdateBanner(
                     style = MaterialTheme.typography.bodySmall,
                     color = when {
                         state.errorMessage != null -> MaterialTheme.colorScheme.error
-                        state.isDownloading && isWhiteTheme -> MaterialTheme.colorScheme.onSurface
-                        state.isDownloading -> MaterialTheme.colorScheme.onPrimary
+                        // The banner background is the surface, not the primary color: onPrimary
+                        // (dark in the dark themes) made the progress text unreadable.
+                        state.isDownloading -> MaterialTheme.colorScheme.onSurface
                         else -> MaterialTheme.colorScheme.onSurfaceVariant
                     },
                     maxLines = 2,
