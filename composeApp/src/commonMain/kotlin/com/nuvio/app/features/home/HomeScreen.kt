@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.setValue
@@ -987,7 +988,46 @@ fun HomeScreen(
         val isPosterSaved = remember(libraryUiState) {
             { item: MetaPreview -> LibraryRepository.isSaved(item.id, item.type) || isSavedToAnimeTracker(item.id, item.type) }
         }
-        tvShell.home(
+        // The model is rebuilt only when its data changes, and its callbacks keep their identity:
+        // HomeScreen recomposes for many unrelated states (progress, network, cloud library) and a
+        // new model each time would recompose the whole TV home on every one of them.
+        val retryAddons by rememberUpdatedState(addonsUiState.addons)
+        val onRetry = remember {
+            {
+                NetworkStatusRepository.requestRefresh(force = true)
+                AddonRepository.refreshAll()
+                HomeRepository.refresh(retryAddons.enabledAddons(), force = true)
+            }
+        }
+        val isPosterWatched = remember(watchedUiState.watchedKeys, fullyWatchedSeriesKeys) {
+            { item: MetaPreview ->
+                WatchingState.isPosterWatched(
+                    watchedKeys = watchedUiState.watchedKeys,
+                    item = item,
+                    fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
+                )
+            }
+        }
+        val top10Titles = Top10Kind.entries.associateWith { kind -> top10RowTitle(kind) }
+        val stablePosterClick = rememberStableCallback(onPosterClick)
+        val stablePosterLongClick = rememberStableCallback(onPosterLongClick)
+        val stableContinueWatchingClick = rememberStableCallback(onContinueWatchingClick)
+        val stableContinueWatchingLongPress = rememberStableCallback(onContinueWatchingLongPress)
+        val stableCatalogClick = rememberStableCallback(onCatalogClick)
+        val stableFolderClick = rememberStableCallback(onFolderClick)
+        val stableToggleSaved = rememberStableCallback(onPosterLibraryToggle)
+        val stablePlay = rememberStableCallback(onPosterPlay)
+        val stablePlayLongClick = rememberStableCallback(onPosterPlayLongClick)
+        val hasContentSources = hasActiveAddons || hasServerLibraries || hasRenderableCollectionRows
+        val tvHomeModel = remember(
+            homeUiState, enabledHomeItems, sectionsMap, collectionsMap, continueWatchingItems,
+            upcomingItems, top10Titles, continueWatchingPreferences.isVisible,
+            isInitialHomeContentLoading, hasContentSources, addonManifestErrorMessage, isPosterWatched,
+            homeHeroState.items, homeHeroState.showImdbRating, homeHeroState.showMdbListRatings,
+            isPosterSaved, stablePosterClick, stablePosterLongClick, stableContinueWatchingClick,
+            stableContinueWatchingLongPress, stableCatalogClick, stableFolderClick, stableToggleSaved,
+            stablePlay, stablePlayLongClick,
+        ) {
             buildTvHomeModel(
                 homeUiState = homeUiState,
                 enabledHomeItems = enabledHomeItems,
@@ -995,38 +1035,29 @@ fun HomeScreen(
                 collectionsMap = collectionsMap,
                 continueWatchingItems = continueWatchingItems,
                 upcomingItems = upcomingItems,
-                top10Titles = Top10Kind.entries.associateWith { kind -> top10RowTitle(kind) },
+                top10Titles = top10Titles,
                 showContinueWatching = continueWatchingPreferences.isVisible,
                 isInitialLoading = isInitialHomeContentLoading,
-                hasContentSources = hasActiveAddons || hasServerLibraries || hasRenderableCollectionRows,
+                hasContentSources = hasContentSources,
                 addonManifestErrorMessage = addonManifestErrorMessage,
-                isPosterWatched = { item ->
-                    WatchingState.isPosterWatched(
-                        watchedKeys = watchedUiState.watchedKeys,
-                        item = item,
-                        fullyWatchedSeriesKeys = fullyWatchedSeriesKeys,
-                    )
-                },
-                onPosterClick = onPosterClick,
-                onPosterLongClick = onPosterLongClick,
-                onContinueWatchingClick = onContinueWatchingClick,
-                onContinueWatchingLongPress = onContinueWatchingLongPress,
-                onCatalogClick = onCatalogClick,
-                onFolderClick = onFolderClick,
-                onRetry = {
-                    NetworkStatusRepository.requestRefresh(force = true)
-                    AddonRepository.refreshAll()
-                    HomeRepository.refresh(addonsUiState.addons.enabledAddons(), force = true)
-                },
+                isPosterWatched = isPosterWatched,
+                onPosterClick = stablePosterClick,
+                onPosterLongClick = stablePosterLongClick,
+                onContinueWatchingClick = stableContinueWatchingClick,
+                onContinueWatchingLongPress = stableContinueWatchingLongPress,
+                onCatalogClick = stableCatalogClick,
+                onFolderClick = stableFolderClick,
+                onRetry = onRetry,
                 heroItems = homeHeroState.items,
                 showImdbRating = homeHeroState.showImdbRating,
                 showMdbListRatings = homeHeroState.showMdbListRatings,
                 isSaved = isPosterSaved,
-                onToggleSaved = onPosterLibraryToggle,
-                onPlay = onPosterPlay,
-                onPlayLongClick = onPosterPlayLongClick,
-            ),
-        )
+                onToggleSaved = stableToggleSaved,
+                onPlay = stablePlay,
+                onPlayLongClick = stablePlayLongClick,
+            )
+        }
+        tvShell.home(tvHomeModel)
         return
     }
 
@@ -2141,3 +2172,23 @@ private fun ContinueWatchingItem.isCloudLibraryContinueWatchingItem(): Boolean =
 private fun WatchProgressEntry.isCloudLibraryProgressEntry(): Boolean =
     contentType.equals(CloudLibraryContentType, ignoreCase = true) ||
         parentMetaType.equals(CloudLibraryContentType, ignoreCase = true)
+
+/**
+ * Callback that keeps its identity across recompositions (null stays null) and always calls the
+ * latest [callback]: a model holding it stays equal when only the caller's lambda was recreated.
+ */
+@Composable
+private fun <T> rememberStableCallback(callback: ((T) -> Unit)?): ((T) -> Unit)? {
+    val current by rememberUpdatedState(callback)
+    return remember(callback != null) {
+        if (callback == null) null else { value: T -> current?.invoke(value) }
+    }
+}
+
+@Composable
+private fun rememberStableCallback(callback: ((String, String) -> Unit)?): ((String, String) -> Unit)? {
+    val current by rememberUpdatedState(callback)
+    return remember(callback != null) {
+        if (callback == null) null else { first: String, second: String -> current?.invoke(first, second) }
+    }
+}
