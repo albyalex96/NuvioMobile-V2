@@ -10,6 +10,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.tv_layout_settings_title
 import nuvio.composeapp.generated.resources.tv_logs_title
+import nuvio.composeapp.generated.resources.settings_sports_title
 import nuvio.composeapp.generated.resources.tv_remote_settings_title
 import nuvio.composeapp.generated.resources.live_tv_channels_title
 import nuvio.composeapp.generated.resources.compose_settings_category_about
@@ -240,6 +241,11 @@ internal enum class SettingsPage(
         titleRes = Res.string.live_tv_channels_title,
         category = SettingsCategory.General,
         parentPage = LiveTv,
+    ),
+    Sports(
+        titleRes = Res.string.settings_sports_title,
+        category = SettingsCategory.General,
+        parentPage = Root,
     ),
     DiscordRpc(
         titleRes = Res.string.compose_settings_page_discord_rpc,

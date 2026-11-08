@@ -111,6 +111,8 @@ class SettingsSearchIndexCoverageTest {
 
         /** String keys of rows that intentionally have no search entry. */
         val ignoredKeys = setOf(
+            // Sports page: "X of Y active" counter under each sport; the sports themselves are indexed.
+            "settings_sports_leagues_count",
             // TV remote: action shown only while the paired TV is unreachable, not a setting.
             "tv_remote_reconnect",
             // Debug-only row.

@@ -128,6 +128,7 @@ import nuvio.composeapp.generated.resources.live_tv_sports_empty_message
 import nuvio.composeapp.generated.resources.live_tv_sports_empty_title
 import nuvio.composeapp.generated.resources.live_tv_sports_filter_live
 import nuvio.composeapp.generated.resources.live_tv_sports_load_failed
+import nuvio.composeapp.generated.resources.live_tv_sports_no_leagues
 import org.jetbrains.compose.resources.stringResource
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -165,6 +166,10 @@ fun LiveTvScreen(
     var vodSearchQuery by rememberSaveable { mutableStateOf("") }
     var seriesSheetItemId by rememberSaveable { mutableStateOf<String?>(null) }
     val sportsState by LiveTvSportsRepository.uiState.collectAsStateWithLifecycle()
+    val sportsLeaguesSettings by remember {
+        LiveTvSportsSettingsRepository.ensureLoaded()
+        LiveTvSportsSettingsRepository.settings
+    }.collectAsStateWithLifecycle()
     val onDemandState by LiveTvOnDemandRepository.uiState.collectAsStateWithLifecycle()
 
     val allChannelsLabel = stringResource(Res.string.live_tv_group_all_channels)
@@ -530,7 +535,13 @@ fun LiveTvScreen(
                         visibleSports.isEmpty() -> item(key = "sports-empty") {
                             HomeEmptyStateCard(
                                 title = stringResource(Res.string.live_tv_sports_empty_title),
-                                message = stringResource(Res.string.live_tv_sports_empty_message),
+                                message = stringResource(
+                                    if (sportsLeaguesSettings.enabledLeagues().isEmpty()) {
+                                        Res.string.live_tv_sports_no_leagues
+                                    } else {
+                                        Res.string.live_tv_sports_empty_message
+                                    },
+                                ),
                             )
                         }
 

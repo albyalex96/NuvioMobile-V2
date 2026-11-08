@@ -769,6 +769,7 @@ private fun MobileSettingsScreen(
                                 onAppearanceClick = { onPageChange(SettingsPage.Appearance) },
                                 onAdvancedClick = { onPageChange(SettingsPage.Advanced) },
                                 onNotificationsClick = { onPageChange(SettingsPage.Notifications) },
+                                onSportsClick = { onPageChange(SettingsPage.Sports) },
                                 onContentDiscoveryClick = { onPageChange(SettingsPage.ContentDiscovery) },
                                 onIntegrationsClick = { onPageChange(SettingsPage.Integrations) },
                                 onTrackingClick = { onPageChange(SettingsPage.TraktAuthentication) },
@@ -903,6 +904,7 @@ private fun MobileSettingsScreen(
                         onTop10Click = { onPageChange(SettingsPage.Top10) },
                     )
                     SettingsPage.Top10 -> top10SettingsContent(isTablet = false)
+                    SettingsPage.Sports -> sportsSettingsContent(isTablet = false)
                     SettingsPage.Addons -> addonsSettingsContent()
                     SettingsPage.MediaServers -> mediaServersSettingsContent(
                         isTablet = false,
@@ -1318,6 +1320,7 @@ private fun TabletSettingsScreen(
                                     onAppearanceClick = { openInlinePage(SettingsPage.Appearance) },
                                     onAdvancedClick = { openInlinePage(SettingsPage.Advanced) },
                                     onNotificationsClick = { openInlinePage(SettingsPage.Notifications) },
+                                    onSportsClick = { openInlinePage(SettingsPage.Sports) },
                                     onContentDiscoveryClick = { openInlinePage(SettingsPage.ContentDiscovery) },
                                     onIntegrationsClick = { openInlinePage(SettingsPage.Integrations) },
                                     onTrackingClick = { openInlinePage(SettingsPage.TraktAuthentication) },
@@ -1456,6 +1459,7 @@ private fun TabletSettingsScreen(
                             onTop10Click = { openInlinePage(SettingsPage.Top10) },
                         )
                         SettingsPage.Top10 -> top10SettingsContent(isTablet = true)
+                        SettingsPage.Sports -> sportsSettingsContent(isTablet = true)
                         SettingsPage.Addons -> addonsSettingsContent()
                         SettingsPage.MediaServers -> mediaServersSettingsContent(
                             isTablet = true,

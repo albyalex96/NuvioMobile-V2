@@ -30,6 +30,7 @@ private val enhancedSettingsPages: Set<SettingsPage> = setOf(
     SettingsPage.MyAnimeList,
     SettingsPage.OpenSubtitles,
     SettingsPage.SkipDb,
+    SettingsPage.Sports,
     SettingsPage.SubDl,
     SettingsPage.Telegram,
     SettingsPage.Top10,

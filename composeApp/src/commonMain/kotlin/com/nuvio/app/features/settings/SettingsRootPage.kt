@@ -80,6 +80,9 @@ import nuvio.composeapp.generated.resources.tv_remote_settings_description
 import nuvio.composeapp.generated.resources.tv_remote_settings_title
 import nuvio.composeapp.generated.resources.tv_remote_settings_tv_description
 import androidx.compose.material.icons.rounded.Cast
+import androidx.compose.material.icons.rounded.EmojiEvents
+import nuvio.composeapp.generated.resources.settings_sports_description
+import nuvio.composeapp.generated.resources.settings_sports_title
 import com.nuvio.app.tv.TvAppRuntime
 import org.jetbrains.compose.resources.stringResource
 
@@ -92,6 +95,8 @@ internal fun LazyListScope.settingsRootContent(
     onAppearanceClick: () -> Unit,
     onAdvancedClick: () -> Unit,
     onNotificationsClick: () -> Unit,
+    /** Settings → Sports (leagues of the Live TV Sports section). Null hides the row. */
+    onSportsClick: (() -> Unit)? = null,
     onContentDiscoveryClick: () -> Unit,
     onIntegrationsClick: () -> Unit,
     onTrackingClick: () -> Unit,
@@ -226,6 +231,16 @@ internal fun LazyListScope.settingsRootContent(
                         isTablet = isTablet,
                         onClick = onNotificationsClick,
                     )
+                    if (onSportsClick != null) {
+                        SettingsGroupDivider(isTablet = isTablet)
+                        SettingsNavigationRow(
+                            title = stringResource(Res.string.settings_sports_title),
+                            description = stringResource(Res.string.settings_sports_description),
+                            icon = Icons.Rounded.EmojiEvents,
+                            isTablet = isTablet,
+                            onClick = onSportsClick,
+                        )
+                    }
                 }
             }
         }

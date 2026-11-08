@@ -47,6 +47,9 @@ import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.NewReleases
 import androidx.compose.material.icons.rounded.Forum
 import androidx.compose.material.icons.rounded.LiveTv
+import androidx.compose.material.icons.rounded.EmojiEvents
+import com.nuvio.app.features.livetv.LiveTvSport
+import com.nuvio.app.features.livetv.liveTvSportsLeagues
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.People
@@ -2129,6 +2132,42 @@ private fun addAdditionalSearchEntries(
         PlaybackSearchRow("live-tv-epg-auto", stringResource(Res.string.live_tv_settings_epg_auto_title), stringResource(Res.string.live_tv_settings_epg_auto_description), liveTvEpg),
     ).forEach { item ->
         row(SettingsPage.LiveTv, item.key, item.title, item.description, liveTvPage, item.sectionOverride.orEmpty(), icon = Icons.Rounded.LiveTv)
+    }
+
+    // Sports: leagues of the Live TV Sports section (custom layout, rows named after the leagues)
+    val sportsPage = stringResource(Res.string.settings_sports_title)
+    addPage(
+        SettingsPage.Sports,
+        "sports",
+        sportsPage,
+        stringResource(Res.string.settings_sports_description),
+        generalCategory,
+        Icons.Rounded.EmojiEvents,
+    )
+    row(
+        SettingsPage.Sports,
+        "sports-reset",
+        stringResource(Res.string.settings_sports_reset_title),
+        stringResource(Res.string.settings_sports_reset_description),
+        sportsPage,
+        stringResource(Res.string.settings_sports_section_general),
+        icon = Icons.Rounded.EmojiEvents,
+    )
+    row(
+        SettingsPage.Sports,
+        "sports-all-leagues",
+        stringResource(Res.string.settings_sports_all_title),
+        stringResource(Res.string.settings_sports_all_description),
+        sportsPage,
+        stringResource(Res.string.settings_sports_section_leagues),
+        icon = Icons.Rounded.EmojiEvents,
+    )
+    val sportsLeaguesSection = stringResource(Res.string.settings_sports_section_leagues)
+    LiveTvSport.entries.forEach { sport ->
+        val leagueNames = liveTvSportsLeagues.filter { it.sport == sport }.joinToString(", ") { it.label }
+        if (leagueNames.isNotEmpty()) {
+            row(SettingsPage.Sports, "sports-${sport.name}", stringResource(sport.labelRes), leagueNames, sportsPage, sportsLeaguesSection, icon = sport.icon)
+        }
     }
 
     // Integrations: Live TV → Manage channels (custom layout)

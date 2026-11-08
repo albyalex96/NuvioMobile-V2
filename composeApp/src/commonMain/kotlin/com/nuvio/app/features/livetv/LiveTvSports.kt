@@ -120,8 +120,19 @@ object LiveTvSportsRepository {
     /** At most this many leagues are asked at once, so a long list of leagues doesn't flood the network. */
     private const val PARALLEL_LEAGUES = 8
 
-    /** The leagues to load. */
-    internal fun enabledLeagues(): List<LiveTvSportsLeague> = liveTvSportsLeagues.filter { it.defaultEnabled }
+    /** Leagues of the last load, so a change in the settings reloads at once. */
+    private var loadedSignature: String? = null
+
+    /** The leagues to load: the ones picked in Settings → Sports (or the defaults). */
+    internal fun enabledLeagues(): List<LiveTvSportsLeague> {
+        LiveTvSportsSettingsRepository.ensureLoaded()
+        return LiveTvSportsSettingsRepository.settings.value.enabledLeagues()
+    }
+
+    private fun currentSignature(): String {
+        LiveTvSportsSettingsRepository.ensureLoaded()
+        return LiveTvSportsSettingsRepository.settings.value.signature()
+    }
 
     /** Refreshes when stale: every minute while something is live, otherwise every five minutes. */
     fun refreshIfStale() {
@@ -129,7 +140,8 @@ object LiveTvSportsRepository {
         if (state.isLoading) return
         val now = Clock.System.now().toEpochMilliseconds()
         val maxAge = if (state.events.any { it.state == LiveTvSportsState.Live }) MINUTE_MILLIS else 5 * MINUTE_MILLIS
-        if (state.hasLoaded && now - state.updatedAtMillis < maxAge) return
+        val leaguesChanged = loadedSignature != null && loadedSignature != currentSignature()
+        if (state.hasLoaded && !leaguesChanged && now - state.updatedAtMillis < maxAge) return
         refresh()
     }
 
@@ -139,6 +151,7 @@ object LiveTvSportsRepository {
         job = scope.launch {
             val nowMillis = Clock.System.now().toEpochMilliseconds()
             val window = LiveTvSportsWindow.around(nowMillis)
+            loadedSignature = currentSignature()
             val leagues = enabledLeagues()
             val gate = Semaphore(PARALLEL_LEAGUES)
             val results = withContext(Dispatchers.Default) {
