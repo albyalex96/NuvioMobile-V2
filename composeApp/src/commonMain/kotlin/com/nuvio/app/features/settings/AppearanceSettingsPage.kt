@@ -2,6 +2,8 @@ package com.nuvio.app.features.settings
 
 import com.nuvio.app.core.ui.glass.isLiquidGlassAvailable
 import nuvio.composeapp.generated.resources.settings_appearance_liquid_glass_effects
+import nuvio.composeapp.generated.resources.settings_appearance_round_profile_buttons
+import nuvio.composeapp.generated.resources.settings_appearance_round_profile_buttons_description
 import nuvio.composeapp.generated.resources.settings_appearance_liquid_glass_effects_description
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -190,6 +192,17 @@ internal fun LazyListScope.appearanceSettingsContent(
                         checked = liquidGlassEffectsEnabled,
                         isTablet = isTablet,
                         onCheckedChange = ThemeSettingsRepository::setLiquidGlassEffectsEnabled,
+                    )
+                }
+                if (!TvAppRuntime.isTvApp) {
+                    val roundProfileButtons by ThemeSettingsRepository.roundProfileButtons.collectAsStateWithLifecycle()
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.settings_appearance_round_profile_buttons),
+                        description = stringResource(Res.string.settings_appearance_round_profile_buttons_description),
+                        checked = roundProfileButtons,
+                        isTablet = isTablet,
+                        onCheckedChange = ThemeSettingsRepository::setRoundProfileButtons,
                     )
                 }
                 SettingsGroupDivider(isTablet = isTablet)

@@ -1,5 +1,9 @@
 package com.nuvio.app.features.profiles
 
+import com.nuvio.app.features.settings.ThemeSettingsRepository
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material.icons.rounded.Save
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -115,6 +119,44 @@ fun ProfileEditScreen(
         parseHexColor(visibleAvatarItem?.bgColor ?: fallbackColorHex)
     }
 
+    val saveEnabled = name.isNotBlank() && !avatarUrlIsInvalid && !customBackgroundUrlIsInvalid && !isSaving
+    val saveLabel = if (isSaving) {
+        stringResource(Res.string.profile_saving)
+    } else if (isNew) {
+        stringResource(Res.string.profile_create_profile)
+    } else {
+        stringResource(Res.string.collections_editor_save_changes)
+    }
+    val handleSave: () -> Unit = {
+        isSaving = true
+        scope.launch {
+            val avatarColorHex = visibleAvatarItem?.bgColor ?: fallbackColorHex
+            if (isNew) {
+                ProfileRepository.createProfile(
+                    name = name,
+                    avatarColorHex = avatarColorHex,
+                    avatarId = if (customAvatarUrl == null) selectedAvatarId else null,
+                    avatarUrl = customAvatarUrl,
+                    usesPrimaryAddons = usesPrimaryAddons,
+                )
+            } else {
+                ProfileRepository.updateProfile(
+                    profileIndex = currentProfile!!.profileIndex,
+                    name = name,
+                    avatarColorHex = avatarColorHex,
+                    avatarId = if (customAvatarUrl == null) selectedAvatarId else null,
+                    avatarUrl = customAvatarUrl,
+                    profileBackgroundId = selectedBackgroundId,
+                    profileBackgroundUrl = selectedBackgroundUrl,
+                    usesPrimaryAddons = usesPrimaryAddons,
+                )
+            }
+            isSaving = false
+            onSaved()
+        }
+    }
+    val roundSaveButton by ThemeSettingsRepository.roundProfileButtons.collectAsStateWithLifecycle()
+
     NuvioScreen(modifier = modifier) {
         stickyHeader {
             NuvioScreenHeader(
@@ -124,6 +166,16 @@ fun ProfileEditScreen(
                     stringResource(Res.string.profile_edit_edit_title)
                 },
                 onBack = onBack,
+                actions = {
+                    if (roundSaveButton) {
+                        ProfileSaveIconButton(
+                            enabled = saveEnabled,
+                            isSaving = isSaving,
+                            contentDescription = saveLabel,
+                            onClick = handleSave,
+                        )
+                    }
+                },
             )
         }
 
@@ -315,44 +367,13 @@ fun ProfileEditScreen(
 
         item {
             Spacer(modifier = Modifier.height(8.dp))
-            NuvioPrimaryButton(
-                text = if (isSaving) {
-                    stringResource(Res.string.profile_saving)
-                } else if (isNew) {
-                    stringResource(Res.string.profile_create_profile)
-                } else {
-                    stringResource(Res.string.collections_editor_save_changes)
-                },
-                enabled = name.isNotBlank() && !avatarUrlIsInvalid && !customBackgroundUrlIsInvalid && !isSaving,
-                onClick = {
-                    isSaving = true
-                    scope.launch {
-                        val avatarColorHex = visibleAvatarItem?.bgColor ?: fallbackColorHex
-                        if (isNew) {
-                            ProfileRepository.createProfile(
-                                name = name,
-                                avatarColorHex = avatarColorHex,
-                                avatarId = if (customAvatarUrl == null) selectedAvatarId else null,
-                                avatarUrl = customAvatarUrl,
-                                usesPrimaryAddons = usesPrimaryAddons,
-                            )
-                        } else {
-                            ProfileRepository.updateProfile(
-                                profileIndex = currentProfile!!.profileIndex,
-                                name = name,
-                                avatarColorHex = avatarColorHex,
-                                avatarId = if (customAvatarUrl == null) selectedAvatarId else null,
-                                avatarUrl = customAvatarUrl,
-                                profileBackgroundId = selectedBackgroundId,
-                                profileBackgroundUrl = selectedBackgroundUrl,
-                                usesPrimaryAddons = usesPrimaryAddons,
-                            )
-                        }
-                        isSaving = false
-                        onSaved()
-                    }
-                },
-            )
+            if (!roundSaveButton) {
+                NuvioPrimaryButton(
+                    text = saveLabel,
+                    enabled = saveEnabled,
+                    onClick = handleSave,
+                )
+            }
         }
 
         if (!isNew && (currentProfile?.profileIndex ?: 0) > 1) {
@@ -638,5 +659,38 @@ fun PinSetupDialog(
             },
             onDismiss = onDismiss,
         )
+    }
+}
+
+/** Round save button for the Edit Profile header (the "round profile buttons" option). */
+@Composable
+private fun ProfileSaveIconButton(
+    enabled: Boolean,
+    isSaving: Boolean,
+    contentDescription: String,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = if (enabled || isSaving) 1f else 0.35f))
+            .then(if (enabled) Modifier.clickable(onClick = onClick) else Modifier),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (isSaving) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(18.dp),
+                color = Color.Black,
+                strokeWidth = 2.dp,
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Rounded.Save,
+                contentDescription = contentDescription,
+                tint = Color.Black,
+                modifier = Modifier.size(20.dp),
+            )
+        }
     }
 }

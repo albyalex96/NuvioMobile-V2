@@ -150,6 +150,7 @@ Ported from [luqmanfadlli/NuvioMobile-Enhanced](https://github.com/luqmanfadlli/
 
 - **Full AMOLED mode:** extra toggle that also turns surfaces and cards pure black.
 - **See-through details buttons:** over the cinematic or dominant color background, the details buttons and chips (actions, seasons, trailers) become see-through so the artwork shows behind them; can be turned off in the details page settings.
+- **Round profile buttons:** on phones, edit/switch profile sit as round icon buttons on the profile header and Edit Profile saves from a round button in the top bar; can be turned off in Appearance to get the full-width buttons back.
 - **Liquid glass navigation bar:** with liquid glass on, the floating bar can be Liquid, Frosted, Clear or Solid, with adjustable blur, refraction and tint, toggles for vibrancy, edge highlight, shadow, chromatic aberration and a liquid lens under the selected tab, plus a custom color for the unselected icons (Navigation bar sheet, with reset). If the app closes right after the glass is turned on, it is switched off automatically at the next start.
 - **Liquid glass effects:** optional toggle (off by default, not on TV) that turns sheets, player controls and panels, the skip button, stream cards and stream filters into liquid glass, refracting the video or the content behind them. With the cinematic background, the streams screen and the details page (phone) refract the artwork too.
 - **Date format** presets (system, DD/MM/YYYY, MM/DD/YYYY, YYYY-MM-DD, DD MMM YYYY…) applied to every date in the app.

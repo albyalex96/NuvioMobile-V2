@@ -1416,6 +1416,8 @@
   <string name="settings_nav_bar_icon_color_description">Colore delle icone e delle etichette non selezionate nella barra flottante.</string>
   <string name="settings_nav_bar_glass_reset">Ripristina il vetro predefinito</string>
   <string name="compose_player_picture_in_picture">Picture-in-picture</string>
+  <string name="settings_appearance_round_profile_buttons">Pulsanti del profilo rotondi</string>
+  <string name="settings_appearance_round_profile_buttons_description">Sul telefono, modifica, cambia e salva profilo diventano pulsanti rotondi con icona nell'angolo in alto, al posto dei pulsanti larghi.</string>
   <string name="settings_meta_see_through_controls">Pulsanti trasparenti</string>
   <string name="settings_meta_see_through_controls_description">Con lo sfondo cinematico o a colore dominante, pulsanti e chip diventano trasparenti e lasciano vedere l'artwork dietro.</string>
   <string name="settings_playback_control_glass">Sfondi di vetro sui controlli</string>

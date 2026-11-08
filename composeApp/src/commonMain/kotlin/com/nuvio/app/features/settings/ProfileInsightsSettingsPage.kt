@@ -1,5 +1,6 @@
 package com.nuvio.app.features.settings
 
+import androidx.compose.material.icons.rounded.People
 import co.touchlab.kermit.Logger
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -207,7 +208,10 @@ private fun ProfileInsightsBody(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(if (isTablet) 18.dp else 14.dp),
     ) {
-        if (onSwitchProfile != null || onEditProfile != null) {
+        // Phones can move the actions into round buttons on the hero; tablets keep the full-width row.
+        val roundProfileButtons by ThemeSettingsRepository.roundProfileButtons.collectAsStateWithLifecycle()
+        val actionsInHero = roundProfileButtons && !isTablet
+        if (!actionsInHero && (onSwitchProfile != null || onEditProfile != null)) {
             ProfileManagementActions(
                 isTablet = isTablet,
                 onSwitchProfile = onSwitchProfile,
@@ -220,6 +224,8 @@ private fun ProfileInsightsBody(
             profileName = profileName,
             stats = stats,
             isTablet = isTablet,
+            onSwitchProfile = onSwitchProfile.takeIf { actionsInHero },
+            onEditProfile = onEditProfile.takeIf { actionsInHero },
         )
         SettingsSection(
             title = stringResource(Res.string.profile_insights_section_overview),
@@ -305,12 +311,38 @@ private fun ProfileManagementActions(
 }
 
 @Composable
+private fun ProfileHeaderIconButton(
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = 0.14f))
+            .border(1.dp, Color.White.copy(alpha = 0.16f), CircleShape)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = Color.White,
+            modifier = Modifier.size(18.dp),
+        )
+    }
+}
+
+@Composable
 private fun ProfileInsightsHero(
     profile: NuvioProfile?,
     avatarItem: AvatarCatalogItem?,
     profileName: String,
     stats: ProfileInsightsStats,
     isTablet: Boolean,
+    onSwitchProfile: (() -> Unit)? = null,
+    onEditProfile: (() -> Unit)? = null,
 ) {
     val tokens = MaterialTheme.nuvio
     val accent = profile?.avatarColorHex?.let(::parseHexColor) ?: tokens.colors.accent
@@ -392,6 +424,27 @@ private fun ProfileInsightsHero(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
+                    if (onSwitchProfile != null || onEditProfile != null) {
+                        Row(
+                            modifier = Modifier.align(Alignment.End),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            if (onSwitchProfile != null) {
+                                ProfileHeaderIconButton(
+                                    icon = Icons.Rounded.People,
+                                    contentDescription = stringResource(Res.string.profile_insights_switch_profile),
+                                    onClick = onSwitchProfile,
+                                )
+                            }
+                            if (onEditProfile != null) {
+                                ProfileHeaderIconButton(
+                                    icon = Icons.Rounded.Edit,
+                                    contentDescription = stringResource(Res.string.profile_insights_edit_profile),
+                                    onClick = onEditProfile,
+                                )
+                            }
+                        }
+                    }
                     Text(
                         text = stringResource(Res.string.profile_insights_title, profileName),
                         style = if (isTablet) {

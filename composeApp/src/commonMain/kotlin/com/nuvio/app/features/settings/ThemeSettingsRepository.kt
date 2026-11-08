@@ -32,6 +32,7 @@ object ThemeSettingsRepository {
     private val log = Logger.withTag("LiquidGlass")
     private const val NAV_BAR_GLASS_KEY = "enhanced_local_nav_bar_glass"
     private const val SEE_THROUGH_DETAIL_CONTROLS_KEY = "enhanced_local_see_through_detail_controls"
+    private const val ROUND_PROFILE_BUTTONS_KEY = "enhanced_local_round_profile_buttons"
     private const val LIQUID_GLASS_GUARD_KEY = "enhanced_local_liquid_glass_guard"
     private const val LIQUID_GLASS_GUARD_MS = 10_000L
     private const val NAV_BAR_GLASS_EFFECTS_KEY = "enhanced_local_nav_bar_glass_effects"
@@ -79,6 +80,10 @@ object ThemeSettingsRepository {
     /** Details buttons and chips turn see-through over the cinematic / dominant-color backdrop. */
     private val _seeThroughDetailControls = MutableStateFlow(true)
     val seeThroughDetailControls: StateFlow<Boolean> = _seeThroughDetailControls.asStateFlow()
+
+    /** Profile edit/switch/save actions as round icon buttons in the header instead of full-width buttons. */
+    private val _roundProfileButtons = MutableStateFlow(true)
+    val roundProfileButtons: StateFlow<Boolean> = _roundProfileButtons.asStateFlow()
 
     private val _liquidGlassEffectsEnabled = MutableStateFlow(false)
     val liquidGlassEffectsEnabled: StateFlow<Boolean> = _liquidGlassEffectsEnabled.asStateFlow()
@@ -140,6 +145,7 @@ object ThemeSettingsRepository {
         _navBarGlassEffects.value = LiquidGlassEffectDefaults.floatingBar
         _navBarIconColor.value = null
         _seeThroughDetailControls.value = true
+        _roundProfileButtons.value = true
     }
 
     private fun loadFromDisk() {
@@ -192,6 +198,7 @@ object ThemeSettingsRepository {
         _navBarIconColor.value = ThemeSettingsStorage.loadLocalString(NAV_BAR_ICON_COLOR_KEY)
             ?.toLongOrNull(16)?.toInt()
         _seeThroughDetailControls.value = ThemeSettingsStorage.loadLocalString(SEE_THROUGH_DETAIL_CONTROLS_KEY) != "0"
+        _roundProfileButtons.value = ThemeSettingsStorage.loadLocalString(ROUND_PROFILE_BUTTONS_KEY) != "0"
     }
 
     fun setTheme(theme: AppTheme) {
@@ -304,6 +311,13 @@ object ThemeSettingsRepository {
         if (_seeThroughDetailControls.value == enabled) return
         _seeThroughDetailControls.value = enabled
         ThemeSettingsStorage.saveLocalString(SEE_THROUGH_DETAIL_CONTROLS_KEY, if (enabled) null else "0")
+    }
+
+    fun setRoundProfileButtons(enabled: Boolean) {
+        ensureLoaded()
+        if (_roundProfileButtons.value == enabled) return
+        _roundProfileButtons.value = enabled
+        ThemeSettingsStorage.saveLocalString(ROUND_PROFILE_BUTTONS_KEY, if (enabled) null else "0")
     }
 
     fun resetNavBarGlass() {

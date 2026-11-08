@@ -2596,6 +2596,8 @@
     <string name="settings_nav_bar_icon_color_description">Color of the unselected icons and labels in the floating bar.</string>
     <string name="settings_nav_bar_glass_reset">Reset glass to default</string>
     <string name="compose_player_picture_in_picture">Picture-in-picture</string>
+    <string name="settings_appearance_round_profile_buttons">Round profile buttons</string>
+    <string name="settings_appearance_round_profile_buttons_description">On phones, edit, switch and save profile become round icon buttons in the top corner instead of full-width buttons.</string>
     <string name="settings_meta_see_through_controls">See-through buttons</string>
     <string name="settings_meta_see_through_controls_description">Over the cinematic or dominant color background, buttons and chips become see-through so the artwork shows behind them.</string>
     <string name="settings_playback_control_glass">Glass backgrounds on controls</string>

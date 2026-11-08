@@ -80,6 +80,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nuvio.app.core.ui.glass.isLiquidGlassAvailable
 import nuvio.composeapp.generated.resources.settings_appearance_liquid_glass_effects
+import nuvio.composeapp.generated.resources.settings_appearance_round_profile_buttons
+import nuvio.composeapp.generated.resources.settings_appearance_round_profile_buttons_description
 import nuvio.composeapp.generated.resources.settings_appearance_liquid_glass_effects_description
 import com.nuvio.app.features.downloads.downloadsPowerSettingsSupported
 import com.nuvio.app.core.build.AppFeaturePolicy
@@ -603,6 +605,17 @@ internal fun settingsSearchEntries(
             key = "liquid-glass-effects",
             title = stringResource(Res.string.settings_appearance_liquid_glass_effects),
             description = stringResource(Res.string.settings_appearance_liquid_glass_effects_description),
+            pageLabel = layoutPage,
+            section = stringResource(Res.string.settings_appearance_section_display),
+            icon = Icons.Rounded.Palette,
+        )
+    }
+    if (!TvAppRuntime.isTvApp) {
+        addRow(
+            page = SettingsPage.Appearance,
+            key = "round-profile-buttons",
+            title = stringResource(Res.string.settings_appearance_round_profile_buttons),
+            description = stringResource(Res.string.settings_appearance_round_profile_buttons_description),
             pageLabel = layoutPage,
             section = stringResource(Res.string.settings_appearance_section_display),
             icon = Icons.Rounded.Palette,
