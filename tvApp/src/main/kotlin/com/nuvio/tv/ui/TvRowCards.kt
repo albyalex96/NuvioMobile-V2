@@ -22,7 +22,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -31,6 +30,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -90,6 +90,16 @@ fun TvRowCardLabel(title: String, modifier: Modifier = Modifier) {
 }
 
 /**
+ * Fixed width like [Modifier.width], but [width] is read during measurement, so an animated
+ * value only re-measures the element instead of recomposing it.
+ */
+private fun Modifier.measuredWidth(width: () -> Dp): Modifier = layout { measurable, constraints ->
+    val widthPx = width().roundToPx().coerceIn(constraints.minWidth, constraints.maxWidth)
+    val placeable = measurable.measure(constraints.copy(minWidth = widthPx, maxWidth = widthPx))
+    layout(placeable.width, placeable.height) { placeable.place(0, 0) }
+}
+
+/**
  * Portrait (or square) card of a home catalog row. With [expanded] it widens to 16:9 and shows
  * the [expandedArtwork] backdrop with the clearlogo (NuvioTV "expand focused poster").
  */
@@ -122,12 +132,14 @@ fun TvRowPosterCard(
         return
     }
     val showExpanded = expanded
-    val animatedWidth by animateDpAsState(
+    // The animated width is read only while measuring: the expand/collapse frames re-measure the
+    // card instead of recomposing its whole body (images, logo, label) on every frame.
+    val animatedWidth = animateDpAsState(
         targetValue = if (showExpanded) expandedWidth else width,
         animationSpec = tween(EXPAND_ANIMATION_MS),
         label = "tvRowCardWidth",
     )
-    Column(modifier = modifier.width(animatedWidth)) {
+    Column(modifier = modifier.measuredWidth { animatedWidth.value }) {
         TvRowPosterSurface(height, shape, watched, onClick, onLongClick, onFocused) {
             Crossfade(targetState = showExpanded, animationSpec = tween(EXPAND_ANIMATION_MS), label = "tvRowCardArtwork") { wide ->
                 if (wide) {
