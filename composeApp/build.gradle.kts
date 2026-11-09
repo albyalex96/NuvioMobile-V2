@@ -18,6 +18,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
 import java.net.URI
 import java.security.MessageDigest
 import java.util.Properties
+import java.util.UUID
 
 /** See the packageNuvioMsi registration: Windows installer with Nuvio images, Italian/English by system language. */
 abstract class NuvioMsiTask : DefaultTask() {
@@ -51,6 +52,8 @@ abstract class NuvioMsiTask : DefaultTask() {
         val output = outputDir.get().asFile.apply { deleteRecursively(); mkdirs() }
         val work = File(temporaryDir, "work").apply { deleteRecursively(); mkdirs() }
 
+        // One ProductCode for both languages (the Italian transform must not change it), new at every build.
+        val productCode = UUID.randomUUID().toString().uppercase()
         val msiByLanguage = listOf("en" to 1033, "it" to 1040).associate { (language, lcid) ->
             val resources = File(work, "$language/resources").apply { mkdirs() }
             val dest = File(work, "$language/out")
@@ -64,6 +67,7 @@ abstract class NuvioMsiTask : DefaultTask() {
                 <?xml version="1.0" encoding="utf-8"?>
                 <Include>
                   <?define JpProductLanguage=$lcid ?>
+                  <?define NuvioProductCode="{$productCode}" ?>
                   <?define NuvioBannerBmp="${installer.resolve("banner.bmp").absolutePath}" ?>
                   <?define NuvioDialogBmp="${installer.resolve("dialog.bmp").absolutePath}" ?>
                 </Include>
