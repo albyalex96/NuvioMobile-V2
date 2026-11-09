@@ -28,6 +28,10 @@ internal actual object LiveTvRecordingPlatform {
     private val folder = MutableStateFlow<String?>(null)
 
     actual val isSupported: Boolean = true
+
+    actual val usesExactAlarms: Boolean = true
+
+    actual val defaultFolderLabel: String? = null
     actual val folderLabel: StateFlow<String?> = folder.asStateFlow()
 
     fun initialize(context: Context) {

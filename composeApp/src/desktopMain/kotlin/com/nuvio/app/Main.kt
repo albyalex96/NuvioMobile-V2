@@ -5,6 +5,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.nuvio.app.features.livetv.CloseWhileRecordingDialog
+import com.nuvio.app.features.livetv.DesktopLiveTvRecorder
+import com.nuvio.app.features.livetv.LiveTvRecordingPlatform
+import com.nuvio.app.features.livetv.LiveTvRecordingsRepository
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.platform.ViewConfiguration
 import androidx.compose.runtime.snapshotFlow
@@ -47,8 +54,26 @@ fun main(args: Array<String>) {
         handleAppUrl(url)
     }
 
+    // Opened by a Windows scheduled task for a Live TV recording: start minimised.
+    val launchedForRecording = LiveTvRecordingPlatform.LAUNCH_FLAG in args
+    if (launchedForRecording) {
+        // Another Nuvio is already open and records it: this one is not needed.
+        if (!LiveTvRecordingPlatform.recorderLock()) {
+            log.i { "Opened by a scheduled recording, but Nuvio is already running: exiting" }
+            DesktopPreferencesRegistry.flush()
+            return
+        }
+        log.i { "Opened by a scheduled recording" }
+    }
+    // Timers (and Windows tasks) for the scheduled recordings; a passed start records at once.
+    runCatching { LiveTvRecordingsRepository.rearmAll() }
+        .onFailure { log.e(it) { "Scheduled recordings not re-armed" } }
+
     Runtime.getRuntime().addShutdownHook(
-        Thread { runCatching { DesktopPreferencesRegistry.flush() } },
+        Thread {
+            runCatching { DesktopLiveTvRecorder.stopAll() }
+            runCatching { DesktopPreferencesRegistry.flush() }
+        },
     )
 
     com.nuvio.app.desktop.RightClickAsLongPress.install()
@@ -57,11 +82,18 @@ fun main(args: Array<String>) {
         val windowState = rememberWindowState(
             size = DpSize(1280.dp, 800.dp),
             position = WindowPosition.Aligned(androidx.compose.ui.Alignment.Center),
+            isMinimized = launchedForRecording,
         )
+        var confirmCloseWhileRecording by remember { mutableStateOf(false) }
+        val closeApp = {
+            DesktopLiveTvRecorder.stopAll()
+            DesktopPreferencesRegistry.flush()
+            exitApplication()
+        }
         Window(
             onCloseRequest = {
-                DesktopPreferencesRegistry.flush()
-                exitApplication()
+                // Closing Nuvio stops the recordings: asked first.
+                if (DesktopLiveTvRecorder.active.value > 0) confirmCloseWhileRecording = true else closeApp()
             },
             state = windowState,
             title = "Nuvio",
@@ -85,6 +117,16 @@ fun main(args: Array<String>) {
             CompositionLocalProvider(LocalViewConfiguration provides viewConfiguration) {
                 NuvioSheetBackdropHost(sheetBackdrop = sheetBackdrop) {
                     App()
+                }
+                if (confirmCloseWhileRecording) {
+                    CloseWhileRecordingDialog(
+                        onMinimize = {
+                            confirmCloseWhileRecording = false
+                            windowState.isMinimized = true
+                        },
+                        onClose = closeApp,
+                        onDismiss = { confirmCloseWhileRecording = false },
+                    )
                 }
             }
         }

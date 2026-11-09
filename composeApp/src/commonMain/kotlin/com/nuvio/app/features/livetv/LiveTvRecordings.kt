@@ -62,9 +62,15 @@ data class LiveTvRecordingOptions(
 
 internal val liveTvRecordingMarginChoices = listOf(0, 2, 5, 10, 15, 30)
 
-/** Starts, stops and stores the recordings (Android only for now). */
+/** Starts, stops and stores the recordings (Android and Windows). */
 internal expect object LiveTvRecordingPlatform {
     val isSupported: Boolean
+
+    /** Android: the "Exact alarms" permission row is shown in the settings. */
+    val usesExactAlarms: Boolean
+
+    /** Path of the default folder when none is chosen; null = the Android app-folder text. */
+    val defaultFolderLabel: String?
 
     fun loadIndex(): String?
     fun saveIndex(raw: String)

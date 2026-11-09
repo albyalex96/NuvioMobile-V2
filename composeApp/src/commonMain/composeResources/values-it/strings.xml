@@ -2906,6 +2906,10 @@
   <string name="live_tv_recordings_group_completed">Completate</string>
   <string name="live_tv_recordings_group_failed">Non riuscite</string>
   <string name="live_tv_recordings_empty_title">Nessuna registrazione</string>
+  <string name="live_tv_recordings_close_title">Registrazione in corso</string>
+  <string name="live_tv_recordings_close_message">Chiudendo Nuvio la registrazione si ferma (quello che è già registrato resta). Riducilo a icona per continuare a registrare.</string>
+  <string name="live_tv_recordings_close_minimize">Riduci a icona</string>
+  <string name="live_tv_recordings_close_close">Chiudi comunque</string>
   <string name="live_tv_recordings_empty_message">Registra un programma dalla guida di un canale, o una partita dalla sezione Sport.</string>
   <string name="live_tv_recordings_starts_at">Inizia %1$s</string>
   <string name="live_tv_recordings_until">Fino alle %1$s · %2$s</string>

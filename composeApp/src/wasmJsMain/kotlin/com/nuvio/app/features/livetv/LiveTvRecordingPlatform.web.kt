@@ -6,6 +6,8 @@ import kotlinx.coroutines.flow.StateFlow
 /** Live TV recordings are Android only for now. */
 internal actual object LiveTvRecordingPlatform {
     actual val isSupported: Boolean = false
+    actual val usesExactAlarms: Boolean = false
+    actual val defaultFolderLabel: String? = null
     actual val folderLabel: StateFlow<String?> = MutableStateFlow(null)
 
     actual fun loadIndex(): String? = null

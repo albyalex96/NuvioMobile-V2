@@ -51,6 +51,7 @@ import androidx.compose.material.icons.rounded.EmojiEvents
 import com.nuvio.app.features.livetv.LiveTvSport
 import com.nuvio.app.features.livetv.LiveTvSportsRemindersRepository
 import com.nuvio.app.features.livetv.LiveTvRecordingsRepository
+import com.nuvio.app.features.livetv.LiveTvRecordingPlatform
 import com.nuvio.app.features.livetv.liveTvSportsLeagues
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Palette
@@ -2184,7 +2185,7 @@ private fun addAdditionalSearchEntries(
         }
     }
 
-    // Integrations: Live TV → Recordings (Android only)
+    // Integrations: Live TV → Recordings (Android and Windows)
     if (LiveTvRecordingsRepository.isSupported) {
         val recordingsPage = stringResource(Res.string.live_tv_recordings_settings_title)
         addPage(
@@ -2199,13 +2200,14 @@ private fun addAdditionalSearchEntries(
         val storageSection = stringResource(Res.string.live_tv_recordings_settings_section_storage)
         val scheduleSection = stringResource(Res.string.live_tv_recordings_settings_section_schedule)
         listOf(
-            PlaybackSearchRow("live-tv-recordings-folder", stringResource(Res.string.live_tv_recordings_folder_title), stringResource(Res.string.live_tv_recordings_folder_app), storageSection),
+            PlaybackSearchRow("live-tv-recordings-folder", stringResource(Res.string.live_tv_recordings_folder_title), LiveTvRecordingPlatform.defaultFolderLabel ?: stringResource(Res.string.live_tv_recordings_folder_app), storageSection),
             PlaybackSearchRow("live-tv-recordings-convert", stringResource(Res.string.live_tv_recordings_convert_title), stringResource(Res.string.live_tv_recordings_convert_description), storageSection),
             PlaybackSearchRow("live-tv-recordings-folder-reset", stringResource(Res.string.live_tv_recordings_folder_reset_title), stringResource(Res.string.live_tv_recordings_folder_reset_description), storageSection),
-            PlaybackSearchRow("live-tv-recordings-exact-alarms", stringResource(Res.string.live_tv_recordings_exact_alarm_title), stringResource(Res.string.live_tv_recordings_exact_alarm_on), scheduleSection),
+            PlaybackSearchRow("live-tv-recordings-exact-alarms", stringResource(Res.string.live_tv_recordings_exact_alarm_title), stringResource(Res.string.live_tv_recordings_exact_alarm_on), scheduleSection)
+                .takeIf { LiveTvRecordingPlatform.usesExactAlarms },
             PlaybackSearchRow("live-tv-recordings-margin-before", stringResource(Res.string.live_tv_recordings_margin_before_title), stringResource(Res.string.live_tv_recordings_margin_before_description), scheduleSection),
             PlaybackSearchRow("live-tv-recordings-margin-after", stringResource(Res.string.live_tv_recordings_margin_after_title), stringResource(Res.string.live_tv_recordings_margin_after_description), scheduleSection),
-        ).forEach { item ->
+        ).filterNotNull().forEach { item ->
             row(SettingsPage.LiveTvRecordings, item.key, item.title, item.description, recordingsPage, item.sectionOverride.orEmpty(), icon = Icons.Rounded.LiveTv)
         }
     }

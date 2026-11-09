@@ -2927,6 +2927,10 @@
     <string name="live_tv_recordings_group_completed">Completed</string>
     <string name="live_tv_recordings_group_failed">Failed</string>
     <string name="live_tv_recordings_empty_title">No recordings</string>
+    <string name="live_tv_recordings_close_title">Recording in progress</string>
+    <string name="live_tv_recordings_close_message">Closing Nuvio stops the recording (what was recorded so far is kept). Minimise it to keep recording.</string>
+    <string name="live_tv_recordings_close_minimize">Minimise</string>
+    <string name="live_tv_recordings_close_close">Close anyway</string>
     <string name="live_tv_recordings_empty_message">Record a program from a channel's guide, or a game from the Sports section.</string>
     <string name="live_tv_recordings_starts_at">Starts %1$s</string>
     <string name="live_tv_recordings_until">Until %1$s · %2$s</string>

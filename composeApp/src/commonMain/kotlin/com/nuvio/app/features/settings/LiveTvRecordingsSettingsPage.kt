@@ -45,7 +45,7 @@ private fun LiveTvRecordingsStorageSection(isTablet: Boolean) {
             SettingsGroup(isTablet = isTablet) {
                 SettingsNavigationRow(
                     title = stringResource(Res.string.live_tv_recordings_folder_title),
-                    description = folderLabel ?: stringResource(Res.string.live_tv_recordings_folder_app),
+                    description = folderLabel ?: LiveTvRecordingPlatform.defaultFolderLabel ?: stringResource(Res.string.live_tv_recordings_folder_app),
                     icon = Icons.Rounded.Folder,
                     enabled = pickFolder != null,
                     isTablet = isTablet,
@@ -93,6 +93,8 @@ private fun LiveTvRecordingsScheduleSection(isTablet: Boolean) {
             isTablet = isTablet,
         ) {
             SettingsGroup(isTablet = isTablet) {
+                // Android only: on Windows a scheduled task opens Nuvio, no permission is needed.
+                if (LiveTvRecordingPlatform.usesExactAlarms) {
                 SettingsNavigationRow(
                     title = stringResource(Res.string.live_tv_recordings_exact_alarm_title),
                     description = stringResource(
@@ -104,6 +106,7 @@ private fun LiveTvRecordingsScheduleSection(isTablet: Boolean) {
                     onClick = LiveTvRecordingPlatform::openExactAlarmSettings,
                 )
                 SettingsGroupDivider(isTablet = isTablet)
+                }
                 SettingsChipRow(
                     title = stringResource(Res.string.live_tv_recordings_margin_before_title),
                     description = stringResource(Res.string.live_tv_recordings_margin_before_description),
