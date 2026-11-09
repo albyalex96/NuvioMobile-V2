@@ -469,6 +469,7 @@ fun LiveTvScreen(
                                             onJumpToNow = {
                                                 coroutineScope.launch { guideScrollState.animateTo(guideNowOffsetPx.toFloat()) }
                                             },
+                                            listState = listState,
                                         )
                                     }
                                 }
@@ -539,6 +540,7 @@ fun LiveTvScreen(
                             onProgramClick = { channel, program ->
                                 if (program.isAiringAt(epgNowMillis)) playChannel(channel) else guideChannelId = channel.id
                             },
+                            listState = listState,
                         )
 
                         uiState.isEpgLoading || guideChannelsResult == null -> liveTvLoadingItem()

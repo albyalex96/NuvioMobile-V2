@@ -25,6 +25,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.input.pointer.positionChange
+import co.touchlab.kermit.Logger
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -167,6 +174,49 @@ internal class LiveTvGuideScrollState {
     }
 }
 
+private val guideDragLog = Logger.withTag("LiveTvGuide")
+
+/**
+ * Mouse click-and-drag (desktop): moves the timeline horizontally and the channel list vertically.
+ * Touch is left to the normal scroll gestures. Runs in the Initial pass and consumes the gesture once
+ * it becomes a drag, so releasing after a drag does not also open a programme or a channel.
+ */
+internal fun Modifier.liveTvGuideMouseDrag(
+    scrollState: LiveTvGuideScrollState,
+    listState: LazyListState?,
+): Modifier = pointerInput(scrollState, listState) {
+    awaitEachGesture {
+        val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+        if (down.type != PointerType.Mouse) return@awaitEachGesture
+        var dragging = false
+        var total = Offset.Zero
+        while (true) {
+            val event = awaitPointerEvent(PointerEventPass.Initial)
+            val change = event.changes.firstOrNull { it.id == down.id } ?: break
+            if (!change.pressed) {
+                if (dragging) {
+                    change.consume()
+                    guideDragLog.d { "Mouse drag ended" }
+                }
+                break
+            }
+            val delta = change.positionChange()
+            if (!dragging) {
+                total += delta
+                if (total.getDistance() > viewConfiguration.touchSlop) {
+                    dragging = true
+                    guideDragLog.d { "Mouse drag started" }
+                }
+            }
+            if (dragging) {
+                scrollState.scrollable.dispatchRawDelta(delta.x)
+                listState?.dispatchRawDelta(-delta.y)
+                change.consume()
+            }
+        }
+    }
+}
+
 /** One pulse animation for the whole guide (instead of one infinite transition per row). */
 @Composable
 internal fun rememberLiveTvGuidePulse(): State<Float> =
@@ -184,6 +234,7 @@ internal fun LiveTvGuideTimeRuler(
     nowMillis: Long,
     pulse: State<Float>,
     onJumpToNow: () -> Unit = {},
+    listState: LazyListState? = null,
 ) {
     val tokens = MaterialTheme.nuvio
     val measurer = rememberTextMeasurer(cacheSize = 32)
@@ -232,6 +283,7 @@ internal fun LiveTvGuideTimeRuler(
                 .fillMaxHeight()
                 .clipToBounds()
                 .scrollable(scrollState.scrollable, Orientation.Horizontal)
+                .liveTvGuideMouseDrag(scrollState, listState)
                 .drawBehind {
                     val offset = scrollState.offsetPx
                     val slotPx = pxPerMinute * (LIVE_TV_GUIDE_SLOT_MILLIS / 60_000L)
@@ -282,6 +334,7 @@ internal fun LazyListScope.liveTvGuideRows(
     textMeasurer: TextMeasurer,
     onChannelClick: (LiveTvChannel) -> Unit,
     onProgramClick: (LiveTvChannel, LiveTvEpgProgram) -> Unit,
+    listState: LazyListState? = null,
 ) {
     items(channels, key = { "guide:${it.id}" }, contentType = { "guide-row" }) { channel ->
         LiveTvGuideRow(
@@ -294,6 +347,7 @@ internal fun LazyListScope.liveTvGuideRows(
             textMeasurer = textMeasurer,
             onChannelClick = { onChannelClick(channel) },
             onProgramClick = { program -> onProgramClick(channel, program) },
+            listState = listState,
         )
     }
 }
@@ -327,6 +381,7 @@ private fun LiveTvGuideRow(
     textMeasurer: TextMeasurer,
     onChannelClick: () -> Unit,
     onProgramClick: (LiveTvEpgProgram) -> Unit,
+    listState: LazyListState?,
 ) {
     val tokens = MaterialTheme.nuvio
     val density = LocalDensity.current
@@ -375,6 +430,7 @@ private fun LiveTvGuideRow(
         modifier = Modifier
             .fillMaxWidth()
             .height(LiveTvGuideRowHeight)
+            .liveTvGuideMouseDrag(scrollState, listState)
             .padding(vertical = 3.dp),
     ) {
         Column(
