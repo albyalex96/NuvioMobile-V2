@@ -66,6 +66,7 @@ A Windows app built from the same code, distributed as an MSI installer with in-
 - **P2P streaming** with the Nuvio engine, **JS scraper plugins** on QuickJS.
 - Downloads folder, episode folders and HLS downloads with FFmpeg.
 - Mouse-friendly interface: rows draggable with the mouse, right mouse button as long press, per-device poster width, hover scale and hover preview; desktop counts as its own device for the per-device player settings.
+- **Animated collection images:** GIF (and animated WebP) images set on collections play on Windows too, like on phone and TV.
 
 ## Live TV and EPG
 

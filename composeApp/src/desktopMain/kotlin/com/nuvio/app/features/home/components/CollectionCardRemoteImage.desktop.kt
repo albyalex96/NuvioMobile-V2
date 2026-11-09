@@ -4,9 +4,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import coil3.compose.LocalPlatformContext
 import coil3.compose.AsyncImage
+import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
+import com.nuvio.app.core.ui.AnimatedArtworkImage
+import com.nuvio.app.core.ui.AnimatedArtworkMode
 
 @Composable
 internal actual fun CollectionCardRemoteImage(
@@ -25,10 +27,21 @@ internal actual fun CollectionCardRemoteImage(
             .build()
     }
 
-    AsyncImage(
-        model = request,
-        contentDescription = contentDescription,
-        modifier = modifier,
-        contentScale = contentScale,
-    )
+    if (animateIfPossible) {
+        // Skia has no built-in GIF playback: AnimatedArtworkImage decodes every frame and plays them.
+        AnimatedArtworkImage(
+            model = request,
+            contentDescription = contentDescription,
+            modifier = modifier,
+            contentScale = contentScale,
+            mode = AnimatedArtworkMode.Always,
+        )
+    } else {
+        AsyncImage(
+            model = request,
+            contentDescription = contentDescription,
+            modifier = modifier,
+            contentScale = contentScale,
+        )
+    }
 }
