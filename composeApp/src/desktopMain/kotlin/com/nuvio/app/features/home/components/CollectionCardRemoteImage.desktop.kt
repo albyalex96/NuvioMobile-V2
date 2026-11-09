@@ -4,12 +4,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import coil3.compose.AsyncImage
 import coil3.compose.LocalPlatformContext
 import coil3.request.ImageRequest
 import com.nuvio.app.core.ui.AnimatedArtworkImage
 import com.nuvio.app.core.ui.AnimatedArtworkMode
 
+/**
+ * Like Android, every animated image on a collection card plays (cover image or focus GIF):
+ * Skia has no built-in GIF playback, so the request always asks SkiaGifDecoder for all frames.
+ * Static images are still decoded by Coil's default decoder.
+ */
 @Composable
 internal actual fun CollectionCardRemoteImage(
     imageUrl: String,
@@ -27,21 +31,11 @@ internal actual fun CollectionCardRemoteImage(
             .build()
     }
 
-    if (animateIfPossible) {
-        // Skia has no built-in GIF playback: AnimatedArtworkImage decodes every frame and plays them.
-        AnimatedArtworkImage(
-            model = request,
-            contentDescription = contentDescription,
-            modifier = modifier,
-            contentScale = contentScale,
-            mode = AnimatedArtworkMode.Always,
-        )
-    } else {
-        AsyncImage(
-            model = request,
-            contentDescription = contentDescription,
-            modifier = modifier,
-            contentScale = contentScale,
-        )
-    }
+    AnimatedArtworkImage(
+        model = request,
+        contentDescription = contentDescription,
+        modifier = modifier,
+        contentScale = contentScale,
+        mode = AnimatedArtworkMode.Always,
+    )
 }
