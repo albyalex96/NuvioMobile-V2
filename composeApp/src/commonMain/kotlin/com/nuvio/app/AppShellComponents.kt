@@ -106,6 +106,8 @@ internal data class AppTabActions(
     /** Long press on the play button of the expanded TV hero: menu with the secondary play options. */
     val onPosterPlayLongClick: ((MetaPreview) -> Unit)? = null,
     val onLiveTvChannelClick: (LiveTvChannel) -> Unit = {},
+    val onLiveTvChannelExternalClick: (LiveTvChannel) -> Unit = {},
+    val onLiveTvChannelPrivateClick: (LiveTvChannel) -> Unit = {},
     val onLiveTvVodClick: (LiveTvVodPlayback) -> Unit = {},
     val onSwitchProfile: (() -> Unit)? = null,
     val onEditProfile: (() -> Unit)? = null,
@@ -197,6 +199,8 @@ internal fun AppTabHost(
                     scrollToTopRequests = requests.liveTvScrollToTopRequests,
                     onChannelClick = actions.onLiveTvChannelClick,
                     onVodClick = actions.onLiveTvVodClick,
+                    onChannelExternalClick = actions.onLiveTvChannelExternalClick,
+                    onChannelPrivateClick = actions.onLiveTvChannelPrivateClick,
                 )
             }
 

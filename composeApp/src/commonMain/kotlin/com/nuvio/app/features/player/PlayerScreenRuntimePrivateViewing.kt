@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import com.nuvio.app.core.ui.NuvioToastController
 import nuvio.composeapp.generated.resources.Res
+import nuvio.composeapp.generated.resources.live_tv_private_notice
 import nuvio.composeapp.generated.resources.private_viewing_item_notice
 import org.jetbrains.compose.resources.getString
 
@@ -12,6 +13,8 @@ import org.jetbrains.compose.resources.getString
 internal fun PlayerScreenRuntime.BindPrivateViewingNotice() {
     LaunchedEffect(privateViewingKey) {
         if (privateViewingKey == null || playerSettingsUiState.privateViewingEnabled) return@LaunchedEffect
-        NuvioToastController.show(getString(Res.string.private_viewing_item_notice))
+        NuvioToastController.show(
+            getString(if (isLiveTvPlayback) Res.string.live_tv_private_notice else Res.string.private_viewing_item_notice),
+        )
     }
 }

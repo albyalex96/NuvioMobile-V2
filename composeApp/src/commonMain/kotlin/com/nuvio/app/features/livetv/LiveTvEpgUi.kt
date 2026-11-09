@@ -1,6 +1,16 @@
 package com.nuvio.app.features.livetv
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import nuvio.composeapp.generated.resources.action_back
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -186,8 +196,16 @@ fun LiveTvEpgGuideSheet(
     channel: LiveTvChannel,
     programs: List<LiveTvEpgProgram>,
     nowMillis: Long,
-    onPlayClick: () -> Unit,
+    /** Null hides the Play button (the guide opened from the player, the channel is already playing). */
+    onPlayClick: (() -> Unit)?,
     onDismiss: () -> Unit,
+    /**
+     * Shows a Back button that takes the focus when the sheet opens (TV, guide opened from the player).
+     * The Back key closes the sheet in any case.
+     */
+    showBackButton: Boolean = false,
+    /** Media keys of the remote (play/pause) while the sheet is open; returns true when handled. */
+    onMediaKey: ((Key) -> Boolean)? = null,
     /** Manual recording of the channel; null hides the button (recordings not supported). */
     onRecordClick: (() -> Unit)? = null,
     /** Records (or cancels the recording of) one program; null hides the record buttons. */
@@ -202,10 +220,30 @@ fun LiveTvEpgGuideSheet(
         coroutineScope.launch { dismissNuvioBottomSheet(sheetState = sheetState, onDismiss = onDismiss) }
     }
 
+    val backFocusRequester = remember { FocusRequester() }
+    if (showBackButton) {
+        LaunchedEffect(Unit) {
+            // The sheet has its own window: retry until it is attached and can take the focus.
+            repeat(10) {
+                if (runCatching { backFocusRequester.requestFocus() }.isSuccess) return@LaunchedEffect
+                delay(50)
+            }
+        }
+    }
+
     NuvioModalBottomSheet(
         onDismissRequest = dismiss,
         sheetState = sheetState,
     ) {
+      Column(
+          modifier = Modifier.onPreviewKeyEvent { event ->
+              val handler = onMediaKey ?: return@onPreviewKeyEvent false
+              if (event.key != Key.MediaPlayPause && event.key != Key.MediaPlay && event.key != Key.MediaPause) {
+                  return@onPreviewKeyEvent false
+              }
+              if (event.type == KeyEventType.KeyDown) handler(event.key) else true
+          },
+      ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -213,6 +251,25 @@ fun LiveTvEpgGuideSheet(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            if (showBackButton) {
+                var backFocused by remember { mutableStateOf(false) }
+                Surface(
+                    onClick = dismiss,
+                    modifier = Modifier
+                        .focusRequester(backFocusRequester)
+                        .onFocusChanged { backFocused = it.isFocused },
+                    color = tokens.colors.overlaySelected,
+                    shape = tokens.shapes.chip,
+                    border = if (backFocused) BorderStroke(2.dp, tokens.colors.focusRing) else null,
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription = stringResource(Res.string.action_back),
+                        tint = tokens.colors.textPrimary,
+                        modifier = Modifier.padding(10.dp).size(20.dp),
+                    )
+                }
+            }
             Box(
                 modifier = Modifier
                     .size(52.dp)
@@ -271,7 +328,7 @@ fun LiveTvEpgGuideSheet(
                     )
                 }
             }
-            Surface(
+            if (onPlayClick != null) Surface(
                 onClick = onPlayClick,
                 color = tokens.colors.overlaySelected,
                 shape = tokens.shapes.chip,
@@ -329,6 +386,7 @@ fun LiveTvEpgGuideSheet(
                 }
             }
         }
+      }
     }
 }
 

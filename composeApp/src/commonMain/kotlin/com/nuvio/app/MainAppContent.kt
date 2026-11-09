@@ -156,6 +156,7 @@ import com.nuvio.app.features.party.PartyMedia
 import com.nuvio.app.features.party.PartyRepository
 import com.nuvio.app.features.party.PartyScreen
 import com.nuvio.app.features.party.PartySync
+import com.nuvio.app.features.player.ExternalPlayerPlaybackRequest
 import com.nuvio.app.features.player.ExternalPlayerIntentResult
 import com.nuvio.app.features.player.externalPlaybackSession
 import com.nuvio.app.features.player.infusePlaybackCallbacks
@@ -1562,12 +1563,7 @@ internal fun MainAppContent(
                 }
         }
 
-        val onLiveTvChannelClick: (LiveTvChannel) -> Unit = { channel ->
-            coroutineScope.launch {
-                val playableChannel = runCatching {
-                    LiveTvRepository.prepareForPlayback(channel)
-                }.getOrDefault(channel)
-                val launchId = PlayerLaunchStore.put(
+        fun liveTvChannelLaunch(playableChannel: LiveTvChannel, privateViewing: Boolean = false) =
                     PlayerLaunch(
                         profileId = activePlaybackProfileId,
                         title = playableChannel.name,
@@ -1583,9 +1579,56 @@ internal fun MainAppContent(
                         videoId = playableChannel.id,
                         parentMetaId = playableChannel.id,
                         parentMetaType = "live",
-                    ),
-                )
+                        privateViewing = privateViewing,
+                    )
+
+        val onLiveTvChannelClick: (LiveTvChannel) -> Unit = { channel ->
+            coroutineScope.launch {
+                val playableChannel = runCatching {
+                    LiveTvRepository.prepareForPlayback(channel)
+                }.getOrDefault(channel)
+                val launchId = PlayerLaunchStore.put(liveTvChannelLaunch(playableChannel))
                 navController.navigate(PlayerRoute(launchId = launchId, title = playableChannel.name))
+            }
+        }
+
+        // Channel menu: "Watch privately" (not saved as last watched, hidden from Discord).
+        val onLiveTvChannelPrivateClick: (LiveTvChannel) -> Unit = { channel ->
+            coroutineScope.launch {
+                val playableChannel = runCatching {
+                    LiveTvRepository.prepareForPlayback(channel)
+                }.getOrDefault(channel)
+                Logger.i("LiveTvChannelMenu") { "Private playback of ${playableChannel.name}" }
+                val launchId = PlayerLaunchStore.put(liveTvChannelLaunch(playableChannel, privateViewing = true))
+                navController.navigate(PlayerRoute(launchId = launchId, title = playableChannel.name))
+            }
+        }
+
+        // Channel menu: "Open in external player". No subtitles, skip segments or progress for live channels.
+        val onLiveTvChannelExternalClick: (LiveTvChannel) -> Unit = { channel ->
+            coroutineScope.launch {
+                val playableChannel = runCatching {
+                    LiveTvRepository.prepareForPlayback(channel)
+                }.getOrDefault(channel)
+                lastExternalPlayerLaunch = null
+                val request = ExternalPlayerPlaybackRequest(
+                    sourceUrl = playableChannel.streamUrl,
+                    title = playableChannel.name,
+                    streamTitle = playableChannel.name,
+                    sourceHeaders = playableChannel.headers,
+                )
+                when (val intentResult = ExternalPlayerPlatform.buildIntent(request, playerSettingsUiState.externalPlayerId)) {
+                    is ExternalPlayerIntentResult.Success -> {
+                        val launched = launchExternalPlayer(intentResult)
+                        Logger.i("LiveTvChannelMenu") { "External player for ${playableChannel.name}: launched=$launched" }
+                        if (!launched) NuvioToastController.show(externalPlayerFailedText)
+                    }
+                    ExternalPlayerIntentResult.NotConfigured -> NuvioToastController.show(externalPlayerNotConfiguredText)
+                    ExternalPlayerIntentResult.Failed -> {
+                        Logger.w("LiveTvChannelMenu") { "External player intent failed for ${playableChannel.name}" }
+                        NuvioToastController.show(externalPlayerFailedText)
+                    }
+                }
             }
         }
 
@@ -1889,6 +1932,8 @@ internal fun MainAppContent(
                                 onContinueWatchingClick = onContinueWatchingClick,
                                 onContinueWatchingLongPress = onContinueWatchingLongPress,
                                 onLiveTvChannelClick = onLiveTvChannelClick,
+                                onLiveTvChannelExternalClick = onLiveTvChannelExternalClick,
+                                onLiveTvChannelPrivateClick = onLiveTvChannelPrivateClick,
                                 onLiveTvVodClick = onLiveTvVodClick,
                                 onSwitchProfile = onSwitchProfile,
                                 onEditProfile = onEditProfile,

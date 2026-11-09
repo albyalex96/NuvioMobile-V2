@@ -12,6 +12,7 @@ enum class PlayerToolbarButton(val storageId: String, val topBar: Boolean = fals
     EPISODES("episodes"),
     CHAPTERS("chapters"),
     LIVE_CHANNELS("live_channels"),
+    LIVE_GUIDE("live_guide"),
     SWITCH_ENGINE("switch_engine"),
     SPEED("speed"),
     RESIZE("resize"),

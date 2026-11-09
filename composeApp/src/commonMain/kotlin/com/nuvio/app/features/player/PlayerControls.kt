@@ -1,5 +1,7 @@
 package com.nuvio.app.features.player
 
+import androidx.compose.material.icons.rounded.Schedule
+import nuvio.composeapp.generated.resources.live_tv_player_guide
 import com.nuvio.app.core.format.formatEpisodeCodeWithSelectedFormat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -135,6 +137,7 @@ internal fun PlayerControlsShell(
     onEpisodesClick: (() -> Unit)? = null,
     onChaptersClick: (() -> Unit)? = null,
     onLiveChannelsClick: (() -> Unit)? = null,
+    onLiveGuideClick: (() -> Unit)? = null,
     onOpenInExternalPlayer: (() -> Unit)? = null,
     onSubmitIntroClick: (() -> Unit)? = null,
     onSwitchEngineClick: (() -> Unit)? = null,
@@ -311,6 +314,7 @@ internal fun PlayerControlsShell(
                     onEpisodesClick = onEpisodesClick,
                     onChaptersClick = onChaptersClick,
                     onLiveChannelsClick = onLiveChannelsClick,
+                    onLiveGuideClick = onLiveGuideClick,
                     modifier = Modifier
                         .onSizeChanged { size -> legacyProgressHeight = with(density) { size.height.toDp() } }
                         .align(Alignment.BottomCenter)
@@ -410,6 +414,7 @@ internal fun PlayerControlsShell(
                         onEpisodesClick = onEpisodesClick,
                         onChaptersClick = onChaptersClick,
                         onLiveChannelsClick = onLiveChannelsClick,
+                        onLiveGuideClick = onLiveGuideClick,
                         onNextEpisodeClick = onNextEpisodeClick,
                         onSwitchEngineClick = onSwitchEngineClick,
                         onSpeedClick = onSpeedClick,
@@ -862,6 +867,7 @@ private fun ProgressControls(
     onEpisodesClick: (() -> Unit)? = null,
     onChaptersClick: (() -> Unit)? = null,
     onLiveChannelsClick: (() -> Unit)? = null,
+    onLiveGuideClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val aspectRatioPainter = appIconPainter(AppIconResource.PlayerAspectRatio)
@@ -968,6 +974,13 @@ private fun ProgressControls(
                             label = stringResource(Res.string.compose_player_channels),
                             icon = Icons.Rounded.Tv,
                             onClick = onLiveChannelsClick,
+                        )
+                    }
+                    if (onLiveGuideClick != null) {
+                        PlayerActionPillButton(
+                            label = stringResource(Res.string.live_tv_player_guide),
+                            icon = Icons.Rounded.Schedule,
+                            onClick = onLiveGuideClick,
                         )
                     }
                 }

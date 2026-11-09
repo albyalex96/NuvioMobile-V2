@@ -46,6 +46,7 @@ internal val PlayerToolbarButton.labelRes: StringResource
         PlayerToolbarButton.EPISODES -> Res.string.compose_player_episodes
         PlayerToolbarButton.CHAPTERS -> Res.string.player_chapters
         PlayerToolbarButton.LIVE_CHANNELS -> Res.string.compose_player_channels
+        PlayerToolbarButton.LIVE_GUIDE -> Res.string.live_tv_player_guide
         PlayerToolbarButton.SWITCH_ENGINE -> Res.string.cd_switch_player_engine
         PlayerToolbarButton.SPEED -> Res.string.compose_player_speed
         PlayerToolbarButton.RESIZE -> Res.string.player_toolbar_button_resize

@@ -49,7 +49,7 @@ private const val KEY_VOLUME_STEP = 0.05f
 private val shortcutLog = Logger.withTag("PlayerShortcuts")
 
 private fun PlayerScreenRuntime.isAnyPanelOpen(): Boolean =
-    showSourcesPanel || showEpisodesPanel || showChaptersPanel || showLiveChannelsPanel ||
+    showSourcesPanel || showEpisodesPanel || showChaptersPanel || showLiveChannelsPanel || showLiveGuideSheet ||
         showSubmitIntroModal || showAudioModal || showSubtitleModal || showVideoSettingsModal ||
         showPartyPanel || showCastPicker || postPlay.uiState.isVisible
 

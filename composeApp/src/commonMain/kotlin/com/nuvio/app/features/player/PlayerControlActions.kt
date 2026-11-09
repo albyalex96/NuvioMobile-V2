@@ -1,5 +1,7 @@
 package com.nuvio.app.features.player
 
+import androidx.compose.material.icons.rounded.Schedule
+import nuvio.composeapp.generated.resources.live_tv_player_guide
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.material.icons.rounded.PictureInPictureAlt
 import androidx.compose.foundation.border
@@ -156,6 +158,7 @@ internal fun PlayerControlActions(
     onEpisodesClick: (() -> Unit)?,
     onChaptersClick: (() -> Unit)? = null,
     onLiveChannelsClick: (() -> Unit)? = null,
+    onLiveGuideClick: (() -> Unit)? = null,
     onNextEpisodeClick: (() -> Unit)?,
     onSwitchEngineClick: (() -> Unit)?,
     onSpeedClick: () -> Unit,
@@ -203,6 +206,12 @@ internal fun PlayerControlActions(
             put(PlayerToolbarButton.LIVE_CHANNELS, PlayerControlAction(
                 stringResource(Res.string.compose_player_channels), it,
                 icon = Icons.Rounded.Tv,
+            ))
+        }
+        onLiveGuideClick?.let {
+            put(PlayerToolbarButton.LIVE_GUIDE, PlayerControlAction(
+                stringResource(Res.string.live_tv_player_guide), it,
+                icon = Icons.Rounded.Schedule,
             ))
         }
         onSwitchEngineClick?.let {

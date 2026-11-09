@@ -41,6 +41,8 @@ import kotlin.math.ceil
 import kotlinx.coroutines.launch
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
+import com.nuvio.app.features.livetv.LiveTvPlayerGuideSheet
+import androidx.compose.ui.input.key.Key
 import com.nuvio.app.features.livetv.LiveTvRepository
 import com.nuvio.app.features.livetv.currentProgram
 import com.nuvio.app.features.livetv.rememberLiveTvEpgNowMillis
@@ -498,6 +500,12 @@ private fun PlayerScreenRuntime.RenderPlayerControls(displayedPositionMs: Long, 
                     controlsVisible = false
                 }
             } else null,
+            onLiveGuideClick = if (isLiveTvPlayback) {
+                {
+                    showLiveGuideSheet = true
+                    controlsVisible = false
+                }
+            } else null,
             onOpenInExternalPlayer = args.onOpenInExternalPlayer
                 ?.takeUnless { ServerStreams.isServerSourceId(activeProviderAddonId) }
                 ?.let { openExternal ->
@@ -865,5 +873,32 @@ private fun PlayerScreenRuntime.RenderPlayerModals(displayedPositionMs: Long) {
                 controlsVisible = true
             },
         )
+        if (showLiveGuideSheet) {
+            val guideChannel = liveTvState.channels.firstOrNull { it.id == activeVideoId }
+                ?: liveTvState.channels.firstOrNull { it.streamUrl == activeSourceUrl }
+            if (guideChannel == null) {
+                LaunchedEffect(Unit) {
+                    co.touchlab.kermit.Logger.w("LiveTvChannelMenu") { "Player guide: channel playing not found" }
+                    showLiveGuideSheet = false
+                }
+            } else {
+                LiveTvPlayerGuideSheet(
+                    channel = guideChannel,
+                    onDismiss = {
+                        showLiveGuideSheet = false
+                        controlsVisible = true
+                    },
+                    onMediaKey = { key ->
+                        val playing = playbackSnapshot.isPlaying
+                        when (key) {
+                            Key.MediaPlay -> if (!playing) togglePlayback()
+                            Key.MediaPause -> if (playing) togglePlayback()
+                            else -> togglePlayback()
+                        }
+                        true
+                    },
+                )
+            }
+        }
     }
 }

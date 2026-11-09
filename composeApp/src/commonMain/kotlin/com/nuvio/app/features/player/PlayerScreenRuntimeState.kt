@@ -178,6 +178,8 @@ internal class PlayerScreenRuntime(
     var showEpisodesPanel by mutableStateOf(false)
     var showChaptersPanel by mutableStateOf(false)
     var showLiveChannelsPanel by mutableStateOf(false)
+    /** Programme guide of the channel playing (playback keeps going under it). */
+    var showLiveGuideSheet by mutableStateOf(false)
     var showSubmitIntroModal by mutableStateOf(false)
     var submitIntroSegmentType by mutableStateOf("intro")
     var submitIntroStartTimeStr by mutableStateOf("00:00")

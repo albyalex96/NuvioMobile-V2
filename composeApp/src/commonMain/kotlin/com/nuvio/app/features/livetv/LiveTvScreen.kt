@@ -5,6 +5,12 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import kotlin.coroutines.cancellation.CancellationException
+import com.nuvio.app.tv.tvLongPressKeys
+import nuvio.composeapp.generated.resources.live_tv_channel_link_copied
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -142,6 +148,10 @@ fun LiveTvScreen(
     scrollToTopRequests: Flow<Unit> = emptyFlow(),
     onChannelClick: (LiveTvChannel) -> Unit,
     onVodClick: (LiveTvVodPlayback) -> Unit = {},
+    /** Channel menu: plays the channel in the external player. */
+    onChannelExternalClick: (LiveTvChannel) -> Unit = {},
+    /** Channel menu: plays the channel privately (not saved as last watched, hidden from Discord). */
+    onChannelPrivateClick: (LiveTvChannel) -> Unit = {},
 ) {
     val uiState by remember {
         LiveTvRepository.ensureChannelsLoaded()
@@ -158,6 +168,9 @@ fun LiveTvScreen(
     var filterMode by rememberSaveable { mutableStateOf(LiveTvChannelFilterMode.All) }
     var selectedCategoryName by rememberSaveable { mutableStateOf<String?>(null) }
     var guideChannelId by rememberSaveable { mutableStateOf<String?>(null) }
+    var menuChannelId by rememberSaveable { mutableStateOf<String?>(null) }
+    val clipboardManager = LocalClipboardManager.current
+    val linkCopiedText = stringResource(Res.string.live_tv_channel_link_copied)
     val epgNowMillis = rememberLiveTvEpgNowMillis()
     var section by rememberSaveable { mutableStateOf(LiveTvSection.Channels) }
     val recordings by remember {
@@ -783,6 +796,7 @@ fun LiveTvScreen(
                                 epgPrograms = uiState.epgPrograms,
                                 nowMillis = epgNowMillis,
                                 onGuideClick = { channel -> guideChannelId = channel.id },
+                                onLongClick = { channel -> menuChannelId = channel.id },
                             )
                         }
                     }
@@ -813,6 +827,31 @@ fun LiveTvScreen(
                             listState.animateScrollToItem(0)
                         }
                     },
+                )
+            }
+
+            val menuChannel = menuChannelId?.let { channelId -> uiState.channels.firstOrNull { it.id == channelId } }
+            if (menuChannel != null) {
+                LiveTvChannelMenuSheet(
+                    channel = menuChannel,
+                    onDismiss = { menuChannelId = null },
+                    onShowEpg = { guideChannelId = menuChannel.id },
+                    onCopyLink = {
+                        coroutineScope.launch {
+                            // Portals (Stalker, Xtream) resolve the real stream link first.
+                            val playable = runCatching { LiveTvRepository.prepareForPlayback(menuChannel) }
+                                .onFailure { error ->
+                                    if (error is CancellationException) throw error
+                                    liveTvChannelMenuLog.w(error) { "Could not resolve the link of ${menuChannel.name}, copying the original" }
+                                }
+                                .getOrDefault(menuChannel)
+                            clipboardManager.setText(AnnotatedString(playable.streamUrl))
+                            liveTvChannelMenuLog.i { "Link copied: ${menuChannel.name}" }
+                            NuvioToastController.show(linkCopiedText)
+                        }
+                    },
+                    onOpenExternal = { onChannelExternalClick(menuChannel) },
+                    onWatchPrivately = { onChannelPrivateClick(menuChannel) },
                 )
             }
 
@@ -1267,6 +1306,7 @@ private fun LazyListScope.liveTvChannelList(
     epgPrograms: Map<String, List<LiveTvEpgProgram>> = emptyMap(),
     nowMillis: Long = 0L,
     onGuideClick: (LiveTvChannel) -> Unit = {},
+    onLongClick: (LiveTvChannel) -> Unit = {},
 ) {
     items(
         items = channels,
@@ -1281,10 +1321,12 @@ private fun LazyListScope.liveTvChannelList(
             programs = epgPrograms[channel.id].orEmpty(),
             nowMillis = nowMillis,
             onGuideClick = { onGuideClick(channel) },
+            onLongClick = { onLongClick(channel) },
         )
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun LiveTvChannelCard(
     channel: LiveTvChannel,
@@ -1296,11 +1338,17 @@ private fun LiveTvChannelCard(
     programs: List<LiveTvEpgProgram> = emptyList(),
     nowMillis: Long = 0L,
     onGuideClick: () -> Unit = {},
+    /** Channel menu: long press (touch), OK held or Menu (TV), right click (desktop). */
+    onLongClick: (() -> Unit)? = null,
 ) {
     val tokens = MaterialTheme.nuvio
     Surface(
-        modifier = modifier.fillMaxWidth(),
-        onClick = onPlayClick,
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(tokens.shapes.compactCard)
+            .then(if (onLongClick != null) Modifier.liveTvSecondaryClick(onLongClick) else Modifier)
+            .tvLongPressKeys(onClick = onPlayClick, onLongClick = onLongClick)
+            .combinedClickable(onClick = onPlayClick, onLongClick = onLongClick),
         color = tokens.colors.surface,
         shape = tokens.shapes.compactCard,
     ) {

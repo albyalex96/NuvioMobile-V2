@@ -147,4 +147,9 @@
     <string name="live_tv_on_demand_season">Stagione %1$d</string>
     <string name="live_tv_on_demand_episode">E%1$d · %2$s</string>
     <string name="live_tv_on_demand_no_episodes">Nessun episodio trovato</string>
+    <string name="live_tv_channel_menu_show_epg">Mostra EPG</string>
+    <string name="live_tv_channel_menu_copy_link">Copia link</string>
+    <string name="live_tv_channel_link_copied">Link copiato</string>
+    <string name="live_tv_private_notice">Guardi in privato: il canale non verrà salvato come ultimo visto</string>
+    <string name="live_tv_player_guide">Guida</string>
 </resources>
