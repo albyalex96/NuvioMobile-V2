@@ -3,7 +3,9 @@ import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
+import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
+import org.gradle.api.tasks.Internal
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.OutputDirectory
 import org.gradle.api.tasks.TaskAction
@@ -16,6 +18,96 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompilationTask
 import java.net.URI
 import java.security.MessageDigest
 import java.util.Properties
+
+/** See the packageNuvioMsi registration: Windows installer with Nuvio images, Italian/English by system language. */
+abstract class NuvioMsiTask : DefaultTask() {
+    @get:InputDirectory
+    abstract val appImage: DirectoryProperty
+
+    @get:InputDirectory
+    abstract val installerDir: DirectoryProperty
+
+    @get:Internal
+    abstract val wixDir: DirectoryProperty
+
+    @get:InputFile
+    abstract val iconFile: RegularFileProperty
+
+    @get:Input
+    abstract val appVersion: Property<String>
+
+    @get:OutputDirectory
+    abstract val outputDir: DirectoryProperty
+
+    @TaskAction
+    fun build() {
+        val javaVersion = Runtime.version().feature()
+        check(javaVersion >= 21) {
+            "packageNuvioMsi must run on Java 21+ (Gradle's JDK is used for jpackage); found $javaVersion"
+        }
+        val jpackage = File(System.getProperty("java.home"), "bin/jpackage.exe").absolutePath
+        val installer = installerDir.get().asFile
+        val wix = wixDir.get().asFile
+        val output = outputDir.get().asFile.apply { deleteRecursively(); mkdirs() }
+        val work = File(temporaryDir, "work").apply { deleteRecursively(); mkdirs() }
+
+        val msiByLanguage = listOf("en" to 1033, "it" to 1040).associate { (language, lcid) ->
+            val resources = File(work, "$language/resources").apply { mkdirs() }
+            val dest = File(work, "$language/out")
+            installer.resolve("main.wxs").copyTo(resources.resolve("main.wxs"))
+            // Always saved as jpackage's own MsiInstallerStrings_en.wxl so it replaces the default texts: with an
+            // extra file light.exe would see the jpackage strings twice and fail (LGHT0100).
+            installer.resolve("MsiInstallerStrings_$language.wxl")
+                .copyTo(resources.resolve("MsiInstallerStrings_en.wxl"))
+            resources.resolve("overrides.wxi").writeText(
+                """
+                <?xml version="1.0" encoding="utf-8"?>
+                <Include>
+                  <?define JpProductLanguage=$lcid ?>
+                  <?define NuvioBannerBmp="${installer.resolve("banner.bmp").absolutePath}" ?>
+                  <?define NuvioDialogBmp="${installer.resolve("dialog.bmp").absolutePath}" ?>
+                </Include>
+                """.trimIndent(),
+            )
+            run(
+                wix,
+                jpackage,
+                "--type", "msi",
+                "--app-image", appImage.get().asFile.absolutePath,
+                "--resource-dir", resources.absolutePath,
+                "--dest", dest.absolutePath,
+                "--name", "Nuvio",
+                "--app-version", appVersion.get(),
+                "--vendor", "Nuvio Enhanced",
+                "--description", "Nuvio Enhanced media center",
+                "--icon", iconFile.get().asFile.absolutePath,
+                "--win-upgrade-uuid", "8f0d6c1e-6a52-4c39-9a57-3c0e2b6d7f41",
+                "--win-dir-chooser",
+                "--win-per-user-install",
+                "--win-shortcut",
+                "--win-menu",
+            )
+            language to dest.listFiles { file -> file.extension == "msi" }!!.single()
+        }
+        val base = msiByLanguage.getValue("en")
+        run(
+            wix,
+            "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass",
+            "-File", installer.resolve("merge-languages.ps1").absolutePath,
+            "-BaseMsi", base.absolutePath,
+            "-ItalianMsi", msiByLanguage.getValue("it").absolutePath,
+            "-WixDir", wix.absolutePath,
+            "-OutputMsi", File(output, base.name).absolutePath,
+        )
+    }
+
+    private fun run(wix: File, vararg command: String) {
+        val process = ProcessBuilder(*command).inheritIO().apply {
+            environment()["PATH"] = wix.absolutePath + File.pathSeparator + System.getenv("PATH")
+        }.start()
+        check(process.waitFor() == 0) { "${command.first()} failed with exit code ${process.exitValue()}" }
+    }
+}
 
 abstract class GenerateRuntimeConfigsTask : DefaultTask() {
     @get:OutputDirectory
@@ -809,6 +901,21 @@ compose.desktop {
             }
         }
     }
+}
+
+// Windows installer with Nuvio images and texts that follow the system language (Italian or English):
+// jpackage builds an English and an Italian MSI from the createDistributable app image, using the resources in
+// desktopInstaller/, then merge-languages.ps1 embeds the Italian one as a language transform of the English one.
+val packageNuvioMsi = tasks.register<NuvioMsiTask>("packageNuvioMsi") {
+    group = "compose desktop"
+    description = "Builds the Nuvio Windows installer (Nuvio images, Italian/English by system language)."
+    dependsOn("createDistributable", ":unzipWix")
+    appImage.set(layout.buildDirectory.dir("compose/binaries/main/app/Nuvio"))
+    installerDir.set(layout.projectDirectory.dir("desktopInstaller"))
+    wixDir.set(rootProject.layout.buildDirectory.dir("wix311"))
+    iconFile.set(layout.projectDirectory.file("desktopIcons/nuvio.ico"))
+    appVersion.set(releaseAppVersionName.substringBefore('-'))
+    outputDir.set(layout.buildDirectory.dir("compose/binaries/main/msi"))
 }
 
 // Desktop render benchmark (MpvRenderBenchmarkTest): -Pnuvio.desktop.benchmark=true

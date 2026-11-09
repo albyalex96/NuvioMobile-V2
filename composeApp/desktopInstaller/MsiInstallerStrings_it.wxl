@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Testi italiani del setup di Nuvio Enhanced (stringhe di jpackage + sostituzioni di WixUI). -->
+<WixLocalization Culture="it-it" xmlns="http://schemas.microsoft.com/wix/2006/localization" Codepage="1252">
+  <String Id="message.install.dir.exist">La cartella [INSTALLDIR] esiste già. Vuoi installare Nuvio Enhanced lì comunque?</String>
+  <String Id="MainFeatureTitle">Nuvio Enhanced</String>
+  <String Id="DowngradeErrorMessage">È già installata una versione più recente di Nuvio Enhanced. L'installazione verrà chiusa.</String>
+  <String Id="DisallowUpgradeErrorMessage">È già installata una versione precedente di Nuvio Enhanced che non può essere aggiornata. L'installazione verrà chiusa.</String>
+
+  <String Id="ShortcutPromptDlg_Title">Installazione di Nuvio Enhanced</String>
+  <String Id="ShortcutPromptDlgTitle">{\WixUI_Font_Title}Collegamenti</String>
+  <String Id="ShortcutPromptDlgBannerBitmap">WixUI_Bmp_Banner</String>
+  <String Id="ShortcutPromptDlgDescription">Scegli dove aggiungere i collegamenti a Nuvio Enhanced.</String>
+  <String Id="ShortcutPromptDlgDesktopShortcutControlLabel">Crea un collegamento sul desktop</String>
+  <String Id="ShortcutPromptDlgStartMenuShortcutControlLabel">Crea un collegamento nel menu Start</String>
+  <String Id="InstallDirNotEmptyDlg_Title">Installazione di Nuvio Enhanced</String>
+  <String Id="ContextMenuCommandLabel">Apri con Nuvio Enhanced</String>
+
+  <String Id="WelcomeDlg_Title">Installazione di Nuvio Enhanced</String>
+  <String Id="WelcomeDlgTitle">{\WixUI_Font_Bigger}Benvenuto in Nuvio Enhanced</String>
+  <String Id="WelcomeDlgDescription">Questa procedura installerà Nuvio Enhanced, il tuo media center, su questo computer. Fai clic su Avanti per continuare o su Annulla per uscire.</String>
+  <String Id="WelcomeUpdateDlgDescriptionUpdate">Questa procedura aggiornerà Nuvio Enhanced alla versione [ProductVersion]. Fai clic su Avanti per continuare o su Annulla per uscire.</String>
+  <String Id="InstallDirDlg_Title">Installazione di Nuvio Enhanced</String>
+  <String Id="VerifyReadyDlg_Title">Installazione di Nuvio Enhanced</String>
+  <String Id="ProgressDlg_Title">Installazione di Nuvio Enhanced</String>
+  <String Id="ExitDialog_Title">Installazione di Nuvio Enhanced</String>
+  <String Id="ExitDialogTitle">{\WixUI_Font_Bigger}Nuvio Enhanced è pronto</String>
+  <String Id="ExitDialogDescription">L'installazione è terminata. Puoi aprire Nuvio Enhanced dal menu Start o dal collegamento sul desktop.</String>
+  <String Id="MaintenanceWelcomeDlg_Title">Installazione di Nuvio Enhanced</String>
+  <String Id="MaintenanceTypeDlg_Title">Installazione di Nuvio Enhanced</String>
+  <String Id="UserExit_Title">Installazione di Nuvio Enhanced</String>
+  <String Id="FatalError_Title">Installazione di Nuvio Enhanced</String>
+</WixLocalization>

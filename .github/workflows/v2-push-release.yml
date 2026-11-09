@@ -287,7 +287,8 @@ jobs:
 
       - name: Build MSI
         # downloadDesktopLibmpv (libmpv-2.dll, verified by SHA-256) runs as part of packaging.
-        run: ./gradlew :composeApp:packageMsi --stacktrace -Dorg.gradle.jvmargs="-Xmx6g -XX:MaxMetaspaceSize=1536m -Dfile.encoding=UTF-8"
+        # packageNuvioMsi: Nuvio images and Italian/English texts chosen by the Windows language.
+        run: ./gradlew :composeApp:packageNuvioMsi --stacktrace -Dorg.gradle.jvmargs="-Xmx6g -XX:MaxMetaspaceSize=1536m -Dfile.encoding=UTF-8"
 
       - name: Rename MSI
         run: |
