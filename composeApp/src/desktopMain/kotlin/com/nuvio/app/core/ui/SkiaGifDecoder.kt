@@ -1,5 +1,6 @@
 package com.nuvio.app.core.ui
 
+import co.touchlab.kermit.Logger
 import coil3.ImageLoader
 import coil3.asImage
 import coil3.decode.DecodeResult
@@ -151,9 +152,15 @@ class SkiaGifDecoder(
         ): Decoder? {
             val mimeType = result.mimeType
             val fileName = result.source.fileOrNull()?.name
-            val isGif = mimeType?.equals("image/gif", ignoreCase = true) == true ||
-                fileName?.endsWith(".gif", ignoreCase = true) == true
             val animate = options.extras[NuvioAnimatedImageKey] == true
+            // Many hosts send GIFs as application/octet-stream or text/plain, and disk-cache files have no
+            // extension, so animated requests also sniff the "GIF8" signature.
+            val isGif = mimeType?.equals("image/gif", ignoreCase = true) == true ||
+                fileName?.endsWith(".gif", ignoreCase = true) == true ||
+                (animate && result.source.hasGifSignature())
+            if (animate) {
+                log.d { "Animated request: mimeType=$mimeType isGif=$isGif" }
+            }
             val isWebp = mimeType?.equals("image/webp", ignoreCase = true) == true ||
                 fileName?.endsWith(".webp", ignoreCase = true) == true
             if (!isGif) {
@@ -176,6 +183,17 @@ private fun ImageSource.isAnimatedWebp(): Boolean = runCatching {
     matches(0, "RIFF") && matches(8, "WEBP") && matches(12, "VP8X") &&
         header[20].toInt() and ANIMATION_FLAG != 0
 }.getOrDefault(false)
+
+/** True when the source starts with the "GIF87a"/"GIF89a" signature. Reads 4 bytes without consuming. */
+private fun ImageSource.hasGifSignature(): Boolean = runCatching {
+    val peek = source().peek()
+    if (!peek.request(4)) return@runCatching false
+    val header = peek.readByteArray(4)
+    header[0] == 'G'.code.toByte() && header[1] == 'I'.code.toByte() &&
+        header[2] == 'F'.code.toByte() && header[3] == '8'.code.toByte()
+}.getOrDefault(false)
+
+private val log = Logger.withTag("AnimatedImage")
 
 private const val HEADER_BYTES = 21L
 private const val ANIMATION_FLAG = 0x02
