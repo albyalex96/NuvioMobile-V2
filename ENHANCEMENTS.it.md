@@ -59,6 +59,7 @@ Un'app dedicata ad Android TV, distribuita come APK separato (`Nuvio-Enhanced-Al
 Un'app per Windows costruita dallo stesso codice, distribuita come installer MSI con aggiornamenti dall'app.
 
 - **Setup in stile Nuvio:** il setup per Windows ha immagini e testi di Nuvio e si mostra in italiano o in inglese in base alla lingua di Windows (un unico file MSI).
+- **Barra del titolo scura:** la barra del titolo della finestra segue il colore del tema di Nuvio (modalità scura, sfondo del tema su Windows 11), con l'icona di Nuvio e il titolo "Nuvio Enhanced".
 - **Player libmpv** con scorciatoie da tastiera, volume con la rotellina del mouse, pulsante schermo intero, cursore che si nasconde da solo, controlli mostrati muovendo il mouse, anteprima al passaggio sulla barra di avanzamento con **miniature generate da FFmpeg**, prompt di ripresa compatto.
 - Trailer nell'app e riproduzione del trailer nell'hero, modalità di riproduzione delle artwork animate.
 - **Chromecast** tramite il protocollo Cast v2 (ricevitori trovati anche attraverso il firewall di Windows), con un **proxy multimediale LAN** per i flussi protetti da header e quelli locali.

@@ -31,9 +31,9 @@ import com.nuvio.app.core.network.dns.DnsOverHttpsRepository
 import com.nuvio.app.desktop.DesktopStorageBootstrap
 import com.nuvio.app.desktop.compat.DesktopPreferencesRegistry
 import com.nuvio.app.features.plugins.configureDesktopQuickJsLibrary
-import org.jetbrains.compose.resources.painterResource
-import nuvio.composeapp.generated.resources.Res
-import nuvio.composeapp.generated.resources.app_logo_wordmark
+import androidx.compose.ui.graphics.painter.BitmapPainter
+import com.nuvio.app.desktop.NuvioWindowsTitleBar
+import org.jetbrains.compose.resources.decodeToImageBitmap
 
 private val log = Logger.withTag("DesktopApp")
 
@@ -84,6 +84,10 @@ fun main(args: Array<String>) {
             position = WindowPosition.Aligned(androidx.compose.ui.Alignment.Center),
             isMinimized = launchedForRecording,
         )
+        val windowIcon = remember {
+            val bytes = Thread.currentThread().contextClassLoader.getResourceAsStream("window/nuvio-icon.png")!!.use { it.readBytes() }
+            BitmapPainter(bytes.decodeToImageBitmap())
+        }
         var confirmCloseWhileRecording by remember { mutableStateOf(false) }
         val closeApp = {
             DesktopLiveTvRecorder.stopAll()
@@ -96,9 +100,11 @@ fun main(args: Array<String>) {
                 if (DesktopLiveTvRecorder.active.value > 0) confirmCloseWhileRecording = true else closeApp()
             },
             state = windowState,
-            title = "Nuvio",
-            icon = painterResource(Res.drawable.app_logo_wordmark),
+            title = "Nuvio Enhanced",
+            // Only the play glyph: the wordmark (white text) was unreadable in the title bar.
+            icon = windowIcon,
         ) {
+            NuvioWindowsTitleBar(window)
             // Fullscreen for the player (F, double click): the window owns it.
             LaunchedEffect(windowState) {
                 PlayerWindowFullscreen.handler = { fullscreen ->

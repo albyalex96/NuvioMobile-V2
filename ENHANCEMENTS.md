@@ -59,6 +59,7 @@ A dedicated Android TV app, released as a separate APK (`Nuvio-Enhanced-Alby-TV-
 A Windows app built from the same code, distributed as an MSI installer with in-app updates.
 
 - **Nuvio-styled installer:** the Windows setup has Nuvio images and texts, and shows itself in Italian or English depending on the Windows language (one single MSI file).
+- **Dark title bar:** the window title bar follows the Nuvio theme colour (dark mode, theme background on Windows 11), with the Nuvio icon and the "Nuvio Enhanced" title.
 - **libmpv player** with keyboard shortcuts, mouse wheel volume, fullscreen button, cursor auto-hide, controls shown on mouse movement, seek bar hover preview with **FFmpeg seek thumbnails**, compact resume prompt.
 - In-app trailers and hero trailer playback, animated artwork playback modes.
 - **Chromecast** through the Cast v2 protocol (receivers found through the Windows firewall), with a **LAN media proxy** for header-protected and local streams.
