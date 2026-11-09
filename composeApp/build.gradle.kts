@@ -2,6 +2,8 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.file.DirectoryProperty
 import org.gradle.api.file.RegularFileProperty
 import org.gradle.api.provider.Property
+import org.gradle.api.provider.Provider
+import org.gradle.jvm.toolchain.JavaLanguageVersion
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.InputFile
@@ -37,16 +39,19 @@ abstract class NuvioMsiTask : DefaultTask() {
     @get:Input
     abstract val appVersion: Property<String>
 
+    /** JDK 21 used for jpackage, found through the Gradle toolchains (whatever JDK Gradle itself runs on). */
+    @get:Internal
+    abstract val jdkHome: Property<String>
+
     @get:OutputDirectory
     abstract val outputDir: DirectoryProperty
 
     @TaskAction
     fun build() {
-        val javaVersion = Runtime.version().feature()
-        check(javaVersion >= 21) {
-            "packageNuvioMsi must run on Java 21+ (Gradle's JDK is used for jpackage); found $javaVersion"
-        }
-        val jpackage = File(System.getProperty("java.home"), "bin/jpackage.exe").absolutePath
+        val jpackageFile = File(jdkHome.get(), "bin/jpackage.exe")
+        check(jpackageFile.isFile) { "jpackage not found in the JDK 21 toolchain: ${jpackageFile.absolutePath}" }
+        logger.lifecycle("packageNuvioMsi: jpackage from ${jdkHome.get()}")
+        val jpackage = jpackageFile.absolutePath
         val installer = installerDir.get().asFile
         val wix = wixDir.get().asFile
         val output = outputDir.get().asFile.apply { deleteRecursively(); mkdirs() }
@@ -877,9 +882,18 @@ tasks.matching { it.name == "prepareAppResources" }.configureEach {
     dependsOn(downloadDesktopLibmpv)
 }
 
+// JDK 21 for the Windows app: bundled runtime (createDistributable) and jpackage (packageNuvioMsi). Taken from the
+// Gradle toolchains (installed JDKs or ~/.gradle/jdks), so it does not depend on JAVA_HOME (often Java 17 locally):
+// packaging with Gradle's own Java 17 gave a Java 17 runtime that, installed over a Java 21 one, broke the app.
+val nuvioDesktopJdkHome: Provider<String> = javaToolchains
+    .launcherFor { languageVersion.set(JavaLanguageVersion.of(21)) }
+    .map { it.metadata.installationPath.asFile.absolutePath }
+
 compose.desktop {
     application {
         mainClass = "com.nuvio.app.MainKt"
+        // Resolved only if a JDK 21 exists: builds without desktop packaging must not fail for it.
+        runCatching { nuvioDesktopJdkHome.get() }.getOrNull()?.let { javaHome = it }
         jvmArgs += listOf(
             "--add-opens=java.desktop/java.awt=ALL-UNNAMED",
             "--add-opens=java.desktop/sun.awt.windows=ALL-UNNAMED",
@@ -919,6 +933,7 @@ val packageNuvioMsi = tasks.register<NuvioMsiTask>("packageNuvioMsi") {
     wixDir.set(rootProject.layout.buildDirectory.dir("wix311"))
     iconFile.set(layout.projectDirectory.file("desktopIcons/nuvio.ico"))
     appVersion.set(releaseAppVersionName.substringBefore('-'))
+    jdkHome.set(nuvioDesktopJdkHome)
     outputDir.set(layout.buildDirectory.dir("compose/binaries/main/msi"))
 }
 
