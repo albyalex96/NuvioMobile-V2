@@ -2215,6 +2215,9 @@
   <string name="settings_licenses_attributions_backdrop_title">Backdrop 2.0.1</string>
   <string name="settings_licenses_attributions_backdrop_body">Usata per gli effetti Liquid Glass. Creata da Kyant.</string>
   <string name="settings_licenses_attributions_backdrop_license">Distribuita con licenza Apache License, Version 2.0.</string>
+  <string name="settings_licenses_attributions_inter_title">Inter</string>
+  <string name="settings_licenses_attributions_inter_body">La forma del numero 6 nelle righe Top 10 viene dal carattere Inter di Rasmus Andersson.</string>
+  <string name="settings_licenses_attributions_inter_license">Distribuito con licenza SIL Open Font License, Version 1.1.</string>
   <string name="settings_licenses_attributions_aniskip_logo_title">Logo di AniSkip</string>
   <string name="settings_licenses_attributions_aniskip_logo_body">L'icona di AniSkip mostrata nelle integrazioni proviene dall'estensione per browser di AniSkip. Copyright (c) 2021 Lexes Jan Mantiquilla.</string>
   <string name="settings_licenses_attributions_aniskip_logo_license">Distribuita con licenza MIT.</string>

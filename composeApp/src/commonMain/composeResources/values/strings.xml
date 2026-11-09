@@ -595,6 +595,9 @@
     <string name="settings_licenses_attributions_backdrop_title">Backdrop 2.0.1</string>
     <string name="settings_licenses_attributions_backdrop_body">Used for liquid glass effects. Created by Kyant.</string>
     <string name="settings_licenses_attributions_backdrop_license">Licensed under the Apache License, Version 2.0.</string>
+    <string name="settings_licenses_attributions_inter_title">Inter</string>
+    <string name="settings_licenses_attributions_inter_body">The shape of the number 6 in the Top 10 rows comes from the Inter typeface by Rasmus Andersson.</string>
+    <string name="settings_licenses_attributions_inter_license">Licensed under the SIL Open Font License, Version 1.1.</string>
     <string name="settings_licenses_attributions_nuvio_title">Nuvio Mobile</string>
     <string name="settings_licenses_attributions_nuvio_body">Source code and license terms are available in the project repository.</string>
     <string name="settings_licenses_attributions_nuvio_license">Licensed under the GNU General Public License v3.0.</string>

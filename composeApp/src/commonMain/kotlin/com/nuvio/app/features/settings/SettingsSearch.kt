@@ -425,6 +425,7 @@ internal fun settingsSearchEntries(
         PlaybackSearchRow("animeskip-attribution", stringResource(Res.string.settings_licenses_attributions_animeskip_title), stringResource(Res.string.settings_licenses_attributions_animeskip_body)),
         PlaybackSearchRow("aniskip-attribution", stringResource(Res.string.settings_licenses_attributions_aniskip_title), stringResource(Res.string.settings_licenses_attributions_aniskip_body)),
         PlaybackSearchRow("aniskip-logo-license", stringResource(Res.string.settings_licenses_attributions_aniskip_logo_title), stringResource(Res.string.settings_licenses_attributions_aniskip_logo_body) + " " + stringResource(Res.string.settings_licenses_attributions_aniskip_logo_license)),
+        PlaybackSearchRow("inter-font-license", stringResource(Res.string.settings_licenses_attributions_inter_title), stringResource(Res.string.settings_licenses_attributions_inter_body)),
         PlaybackSearchRow("opensubtitles-attribution", stringResource(Res.string.settings_licenses_attributions_opensubtitles_title), stringResource(Res.string.settings_licenses_attributions_opensubtitles_body)),
         PlaybackSearchRow("subdl-attribution", stringResource(Res.string.settings_licenses_attributions_subdl_title), stringResource(Res.string.settings_licenses_attributions_subdl_body)),
         PlaybackSearchRow("cloudstream-attribution", stringResource(Res.string.settings_licenses_attributions_cloudstream_title), stringResource(Res.string.settings_licenses_attributions_cloudstream_body))
